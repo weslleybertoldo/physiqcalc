@@ -3,6 +3,7 @@ import type { Database } from "@/nutricao/editor/lib/banco";
 import { lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao } from "@/nutricao/servidor";
 import { ordenarMedidas, palavrasBusca, type FiltrosAlimentos, type MedidaNova, type RegistroAlimento } from "@/nutricao/editor/lib/alimentosUtil";
+import { PALAVRA_MAX, TEXTO_FILTRO_MAX } from "../../../../supabase-principal/functions/_shared/nutricao-leituras";
 
 // Acesso às tabelas `alimentos` e `medidas_caseiras` (RLS: TACO é de todo mundo e só leitura; alimento próprio só da
 // dona; master vê tudo). Exclusão do alimento é SOFT (deleted_at → Lixeira, W32); as medidas seguem o alimento.
@@ -41,10 +42,13 @@ const colunas = (r: RegistroAlimento) => ({
  * Os params da busca (a consulta alimentos_busca do servidor): cada palavra é um `ilike` na coluna `busca` (as do palavrasBusca — até 6,
  * sem os caracteres de controle), o grupo e a fonte; a ordem (alfabética sem acento/caixa, empate → 'proprio' antes de 'taco') é a do
  * servidor. Quem chama põe a faixa (offset + limite) e, na lista do painel, o "meus" (TACO ou os seus, com o desempate pelo id).
+ * hml-20c (revisão ⚪4): o termo é cortado no teto do servidor (TEXTO_FILTRO_MAX) e cada palavra no dela (PALAVRA_MAX) ANTES de mandar —
+ * a palavra longa colada dá "nenhum resultado", como antes (o ilike não achava), e não o "pedido fora do formato" do servidor.
  */
 export function paramsDaBusca(f: FiltrosAlimentos): { palavras?: string[]; grupo?: string; fonte?: string } {
-  const palavras = palavrasBusca(f.q);
-  return { ...(palavras.length ? { palavras } : {}), ...(f.grupo ? { grupo: f.grupo } : {}), ...(f.fonte ? { fonte: f.fonte } : {}) };
+  const palavras = palavrasBusca((f.q ?? "").slice(0, TEXTO_FILTRO_MAX)).map((p) => p.slice(0, PALAVRA_MAX));
+  const grupo = (f.grupo ?? "").slice(0, TEXTO_FILTRO_MAX);
+  return { ...(palavras.length ? { palavras } : {}), ...(grupo ? { grupo } : {}), ...(f.fonte ? { fonte: f.fonte } : {}) };
 }
 
 export async function listarAlimentos(f: FiltrosAlimentos, offset: number, limit: number): Promise<{ itens: Alimento[]; total: number }> {

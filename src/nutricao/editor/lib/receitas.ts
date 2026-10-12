@@ -5,6 +5,7 @@ import { lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 import type { Alimento, MedidaCaseira } from "@/nutricao/editor/lib/alimentos";
 import { ordenarMedidas, palavrasBusca } from "@/nutricao/editor/lib/alimentosUtil";
+import { TEXTO_FILTRO_MAX } from "../../../../supabase-principal/functions/_shared/nutricao-leituras";
 import { criarItensEmLote, type Item } from "@/nutricao/editor/lib/planos";
 import { escalarIngredientes, medidaInteira, ordenarGrupos, ordenarIngredientes, ordenarReceitas, type RegistroIngrediente, type RegistroReceita } from "@/nutricao/editor/lib/receitasUtil";
 
@@ -110,9 +111,10 @@ export function lerPaginaReceitas(bruto: unknown): { ids: string[]; total: numbe
  */
 export async function listarReceitasPagina(f: FiltrosReceitas, pagina: number): Promise<PaginaReceitas> {
   const filtros: Record<string, string> = {};
-  const q = palavrasBusca(f.q).join(" ");
+  // hml-20c (revisão ⚪4): o termo e o grupo no teto do servidor (TEXTO_FILTRO_MAX) — a busca longa dá "nenhum resultado", como antes
+  const q = palavrasBusca(f.q.slice(0, TEXTO_FILTRO_MAX)).join(" ").slice(0, TEXTO_FILTRO_MAX);
   if (q) filtros.q = q;
-  if (f.grupo) filtros.grupo = f.grupo;
+  if (f.grupo) filtros.grupo = f.grupo.slice(0, TEXTO_FILTRO_MAX);
   if (f.favoritas) filtros.favoritas = "true";
   // hml-20c: a RPC e as receitas da página pelos ids NA MESMA IDA (o servidor relê os ids que a RPC devolveu, como a pessoa)
   const lido = await lerNutricao("receitas_pagina", { filtros, offset: deslocamento(pagina), limite: POR_PAGINA });
@@ -130,7 +132,8 @@ export async function listarReceitasPagina(f: FiltrosReceitas, pagina: number): 
  * a lista inteira (a mesma base do nomeCopia).
  */
 export async function nomesParaCopia(nutricionistaId: string, nome: string): Promise<string[]> {
-  const base = nome.replace(/\s*\(cópia(?: \d+)?\)\s*$/i, "").trim() || nome.trim();
+  // hml-20c (revisão ⚪4): o nome-base no teto do servidor (TEXTO_FILTRO_MAX), como a busca
+  const base = (nome.replace(/\s*\(cópia(?: \d+)?\)\s*$/i, "").trim() || nome.trim()).slice(0, TEXTO_FILTRO_MAX);
   // hml-20c: o servidor escapa o \ % _ e põe o % do "começa com" (o mesmo de antes) e filtra pelo dono do TOKEN (o nutricionistaId que
   // quem chama manda é o próprio uid — fica na assinatura, como nas outras libs)
   const r = await lerNutricao("receita_nome", { base });

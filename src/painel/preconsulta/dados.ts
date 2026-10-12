@@ -12,6 +12,7 @@
 import type { Database } from "@/integrations/principal/types";
 import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { lerNutricao } from "@/nutricao/leitura";
+import { TEXTO_FILTRO_MAX } from "../../../supabase-principal/functions/_shared/nutricao-leituras";
 import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 import { copiaDeFormulario, type RegistroFormulario } from "./preconsultaUtil";
 import {
@@ -100,7 +101,9 @@ export { carregarFormularioPublico, responderFormularioPublico, type FormularioP
  * e os títulos do filtro — tudo no banco (respostas_da_conta, com a RLS de quem chama). Erro do banco → lança (a tela mostra o erro).
  */
 export async function listarRespostasPagina(contaId: string, f: FiltrosRespostas, pagina: number): Promise<PaginaRespostas<RespostaDaLista>> {
-  const r = await lerNutricao("respostas_da_conta", { conta: contaId, filtros: filtrosParaBanco(f), offset: deslocamento(pagina), limite: POR_PAGINA });
+  // hml-20c (revisão ⚪4): cada texto do filtro no teto do servidor (TEXTO_FILTRO_MAX) — a busca longa dá a página vazia, como antes
+  const filtros = Object.fromEntries(Object.entries(filtrosParaBanco(f)).map(([k, v]) => [k, v.slice(0, TEXTO_FILTRO_MAX)]));
+  const r = await lerNutricao("respostas_da_conta", { conta: contaId, filtros, offset: deslocamento(pagina), limite: POR_PAGINA });
   const p = normalizarPaginaRespostas<RespostaDaLista>(r.valor);
   if (!p) throw new Error("A lista de respostas voltou num formato inesperado.");
   return p;
