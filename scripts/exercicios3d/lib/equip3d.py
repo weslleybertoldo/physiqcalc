@@ -5876,3 +5876,245 @@ class PoliaNoPlano(Polia):
         self.saida, self.comprimento = T, L
         return L
 # ===== fim: Polia com a saída no plano da roldana ===================================================================================
+
+
+# ===== Kettlebell ===================================================================================================================
+# ── KETTLEBELL DE FERRO FUNDIDO (Agachamento Goblet com Kettlebell, lote 13, 11/10/2026) ─────────────────────────────────────────────
+# Peso livre de PEÇA ÚNICA de ferro fundido (Kettlebell Kings, Powder Coat Kettlebell: "No Welds. Made from a single piece of cast
+# iron."): o CORPO — a bola, um pouco achatada, com a BASE chata embaixo, onde ele fica em pé no chão (Titan: "machined with flat bases
+# that allow for push-ups and no wobbling") — e a ALÇA em cima, um tubo redondo que sai do corpo de um lado, sobe pela LATERAL (os
+# "horns", por onde as 2 mãos seguram no goblet), faz o canto arredondado, atravessa por cima (o pegador de cima) e desce pela outra
+# lateral até o corpo; a JANELA fica no meio, entre as laterais, o pegador de cima e o alto do corpo. As laterais afinam ~9° descendo pro
+# corpo (a alça é mais larga em cima que onde entra nele), como nas fotos do fabricante.
+# Medidas do kettlebell de ferro fundido de 16 kg de fabricante: Titan Fitness, 16 KG Cast Iron Kettlebell
+# (https://titan.fitness/products/16-kg-cast-iron-kettlebell): "Overall Height 10-in." (254 mm, da base ao alto da alça), "Handle Width
+# 7.75-in." (197 mm, a alça por fora), "Handle Diameter 33 mm", "Base Width 4-in." (102 mm, a base chata), "Material Cast Iron";
+# Kettlebell Kings, Powder Coat Kettlebell (cópia do Internet Archive de 01/12/2024), tabela "Size guide" (HANDLE DIAMETER | DISTANCE
+# BETWEEN HANDLES | HANDLE OUTSIDE DISTANCE | TOTAL HEIGHT): "16 KG | 33 mm | 127 mm | 193 mm | 241 mm" — confere a alça de 33 mm e a
+# janela de 127–131 mm por dentro (197 − 2 × 33 = 131). Sem número de fábrica, medidos na foto de frente da Titan (fundo branco), em escala
+# pela largura da alça: o corpo com ~170 mm de diâmetro (422 px × 197 mm ÷ 488 px), a janela com ~79 mm de altura no meio e o canto da
+# alça com ~35 mm de raio por dentro (52 mm na linha do eixo do tubo); com a altura de 254 mm e a alça de 33 mm, o corpo fica com 254 − 33 − 79 = 142 mm de altura até a
+# base chata de 102 mm: uma bola achatada de 170 × 157 mm (semieixos de 85 e 78,7 mm) cortada embaixo, com a borda da base arredondada.
+# Massa nominal: 16 kg (o desenho é o de fora; o ferro de dentro não muda a forma).
+# Uso numa cena (o kettlebell anda inteiro com a raiz; as mãos seguram as laterais):
+#   kb = e3.kettlebell("kettlebell")
+#   no pose(t): kb.raiz.matrix_world = M                  # Z local = do corpo pra alça; X local = de lado a lado da alça
+#   c, u = kb.mundo(s)                                     # meio do trecho reto da lateral do lado s (+1 = +X local) e a direção dela
+#   Cena(pose, [kb.raiz], pegadas=[("Left", ck.Barra(kb.pegadores[1], kb.raio, kb.meia)),
+#                                  ("Right", ck.Barra(kb.pegadores[-1], kb.raio, kb.meia))], ...)
+# A raiz "<nome>" é um vazio no CENTRO DO CORPO (o centro da bola), com o Z local subindo pro meio do pegador de cima e o X local de lado a
+# lado da alça; filhos dela: "<nome>_corpo" (a bola com a base), "<nome>_alca" (o tubo da alça, que entra no corpo dos 2 lados) e os
+# vazios "<nome>_pegador+1" e "<nome>_pegador-1" no meio do trecho RETO de cada lateral (entre onde ela sai do corpo e o começo do canto,
+# onde a mão fecha), com o X local ao longo dela, subindo (como os pegadores da barra_puxada): ck.Barra(kb.pegadores[s], kb.raio,
+# kb.meia) mede a mão nele. kb.base / kb.topo = z local da base chata e do alto da alça; kb.centro_de_massa = centro de massa (local) do
+# ferro (corpo + alça, densidade uniforme); kb.sdf(P) = distância com sinal dos pontos P até o kettlebell (a alça exata, o corpo pela
+# conta do elipsoide), pra medir a pele das mãos e do peito encostando.
+FERRO_FUNDIDO = (0.03, 0.031, 0.034, 1)
+
+
+def mat_ferro_fundido():
+    """Ferro fundido pintado a pó, preto fosco (Titan: "Finish Powder-Coated Black")."""
+    return b3.material_liso("FerroFundido", FERRO_FUNDIDO, rug=0.6, metal=0.2)
+
+
+def _revolucao(nome, perfil, mat, pai=None, lados=48, chata_embaixo=True):
+    """Malha fechada de revolução em volta do Z local: `perfil` = [(r, z), ...] de baixo (r = 0, no eixo) até em cima (r = 0); os
+    triângulos da base (o 1º leque) ficam chatos (sem sombra suave) com chata_embaixo."""
+    verts, faces, aneis = [], [], []
+    for r, z in perfil:
+        if r <= 1e-9:
+            aneis.append([len(verts)])
+            verts.append((0.0, 0.0, z))
+            continue
+        aneis.append(list(range(len(verts), len(verts) + lados)))
+        verts += [(r * math.cos(2 * math.pi * k / lados), r * math.sin(2 * math.pi * k / lados), z) for k in range(lados)]
+    for A, B in zip(aneis, aneis[1:]):
+        for k in range(lados):
+            k1 = (k + 1) % lados
+            if len(A) == 1:
+                faces.append((A[0], B[k1], B[k]))                      # leque de baixo: normal pra baixo
+            elif len(B) == 1:
+                faces.append((A[k], A[k1], B[0]))                      # leque de cima: normal pra cima
+            else:
+                faces.append((A[k], A[k1], B[k1], B[k]))               # anel: normal pra fora
+    me = bpy.data.meshes.new(nome)
+    me.from_pydata(verts, [], faces)
+    me.update()
+    for i, pl in enumerate(me.polygons):
+        pl.use_smooth = not (chata_embaixo and len(aneis[0]) == 1 and i < lados)
+    me.materials.append(mat)
+    o = bpy.data.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    if pai is not None:
+        o.parent = pai
+    return o
+
+
+def _volume_e_centro(o):
+    """Volume (m³) e centro (local) da malha fechada do objeto, pela soma dos tetraedros origem → triângulo."""
+    me = o.data
+    me.calc_loop_triangles()
+    V, C = 0.0, Vector()
+    for t in me.loop_triangles:
+        a, b, c = (me.vertices[i].co for i in t.vertices)
+        v = a.dot(b.cross(c)) / 6.0
+        V += v
+        C += (a + b + c) * (v / 4.0)
+    return V, (C / V if abs(V) > 1e-12 else C)
+
+
+class Kettlebell:
+    """Kettlebell pronto na cena (kettlebell())."""
+
+    def __init__(self, raiz, corpo, alca, pegadores, raio, meia, laterais, base, topo, centro_de_massa, caminho, semieixos):
+        self.raiz, self.corpo, self.alca = raiz, corpo, alca
+        self.pegadores = pegadores            # {+1, −1}: vazio no meio do trecho reto da lateral, X local ao longo dela (subindo)
+        self.raio = raio                      # raio da alça (m)
+        self.meia = meia                      # meio comprimento do trecho reto da lateral (m), fora do corpo e antes do canto
+        self.laterais = laterais              # {s: (ponto do meio, direção subindo)} no referencial da raiz
+        self.base, self.topo = base, topo     # z local da base chata e do alto da alça
+        self.centro_de_massa = centro_de_massa    # local
+        self.caminho = caminho                # linha do eixo da alça (local), com os cantos arredondados
+        self.semieixos = semieixos            # (de lado a lado, de baixo pra cima) da bola do corpo, com o centro na raiz
+
+    def mundo(self, s):
+        """Meio do trecho reto da lateral do lado s e a direção dela (subindo), no mundo, com o kettlebell onde ele está agora."""
+        p, u = self.laterais[s]
+        M = self.raiz.matrix_world
+        return M @ p, (M.to_3x3() @ u).normalized()
+
+    def sdf(self, P, M=None):
+        """Distância com sinal (m, − = dentro) dos pontos P (N×3, mundo) até o kettlebell, com a raiz na matriz M (padrão: onde ela
+        está agora): a alça é exata (tubo de `raio` em volta da linha do caminho, com os cantos arredondados); o corpo é a bola achatada
+        cortada na base chata, pela conta aproximada do elipsoide (k0·(k0 − 1)/k1: exata na superfície, erro de poucos % perto dela) —
+        pra medir pele encostando (mão, peito), não pra medir longe."""
+        import numpy as np
+        M = np.array(self.raiz.matrix_world if M is None else M, float)
+        Q = (np.asarray(P, float) - M[:3, 3]) @ M[:3, :3]               # mundo → local (a raiz não tem escala)
+        a, c = self.semieixos
+        e = Q / np.array((a, a, c))
+        k0 = np.linalg.norm(e, axis=1)
+        k1 = np.linalg.norm(Q / np.array((a * a, a * a, c * c)), axis=1)
+        corpo = np.maximum(k0 * (k0 - 1.0) / np.maximum(k1, 1e-12), self.base - Q[:, 2])
+        L = np.array([tuple(p) for p in self.caminho], float)
+        A, B = L[:-1], L[1:]
+        AB = B - A
+        t = np.clip(np.einsum("nij,ij->ni", Q[:, None, :] - A[None], AB) / np.einsum("ij,ij->i", AB, AB)[None], 0.0, 1.0)
+        d = np.linalg.norm(Q[:, None, :] - (A[None] + t[..., None] * AB[None]), axis=2).min(axis=1) - self.raio
+        return np.minimum(corpo, d)
+
+
+def _dobrar_raios(pontos, raios, n=4):
+    """Como o _dobrar (bloco da Panturrilha em pé), com um raio por ponto do meio (raios[i] no ponto i; o 1º e o último não contam)."""
+    P = [Vector(p) for p in pontos]
+    out = [P[0]]
+    for i, (a, b, c) in enumerate(zip(P, P[1:], P[2:]), start=1):
+        r = min(raios[i], (b - a).length / 2, (c - b).length / 2)
+        p1, p2 = b + (a - b).normalized() * r, b + (c - b).normalized() * r
+        out += [p1 * (1 - k / n) ** 2 + b * 2 * (k / n) * (1 - k / n) + p2 * (k / n) ** 2 for k in range(n + 1)]
+    out.append(P[-1])
+    return out
+
+
+def kettlebell(nome="kettlebell", altura=0.254, largura_alca=0.197, raio=0.0165, base=0.102, corpo=(0.085, 0.0787),
+               janela=0.0793, afina=9.0, canto=0.052, juncao=(0.014,), lados=48):
+    """Kettlebell de ferro fundido (ver o bloco acima), em pé, com a raiz no centro do corpo. Medidas em m (padrão: o de 16 kg da Titan,
+    com o corpo e a janela medidos na foto do fabricante):
+      altura       = da base chata ao alto da alça;      largura_alca = a alça por fora, de lado a lado (no ponto mais largo);
+      raio         = raio do tubo da alça;                base         = diâmetro da base chata;
+      corpo        = (semieixo de lado a lado, semieixo de baixo pra cima) da bola achatada — a altura dela até a base sai daí;
+      janela       = do alto do corpo até a face de baixo do pegador de cima, no meio (com a altura, diz onde o corpo fica);
+      afina        = graus que cada lateral inclina pra dentro descendo pro corpo;
+      canto        = raio dos cantos da alça (na linha do eixo do tubo);
+      juncao       = (raio,): onde a lateral entra no corpo ela vira pro centro dele numa curva desse raio (m).
+    Devolve um Kettlebell (raiz, corpo, alca, pegadores, raio, meia, laterais, base, topo, centro_de_massa, mundo())."""
+    a_c, c_c = corpo
+    rb = base / 2
+    if rb >= a_c:
+        raise ValueError("kettlebell: a base (%.3f) é mais larga que o corpo (%.3f)" % (base, 2 * a_c))
+    zc = c_c * math.sqrt(1.0 - (rb / a_c) ** 2)            # centro do corpo acima da base chata (o corte da bola na base)
+    z_top = altura - raio                                    # eixo do pegador de cima (a partir da base)
+    if abs((z_top - raio) - (zc + c_c) - janela) > 0.003:
+        raise ValueError("kettlebell: altura %.3f, alça %.3f e corpo %s não dão a janela de %.3f m (dá %.3f)" % (
+            altura, 2 * raio, corpo, janela, (z_top - raio) - (zc + c_c)))
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    raiz.empty_display_size = 0.05
+    # ── corpo: bola achatada cortada embaixo (base chata), com a borda da base arredondada ─────────────────────────────────────────
+    psi0 = math.asin(zc / c_c)                                # ângulo da bola na borda da base (a partir do equador, pra baixo)
+    elipse = lambda p: (a_c * math.cos(p), c_c * math.sin(p))  # (r, z) a partir do centro do corpo
+    psi1 = -psi0 + 0.07                                       # a borda da base arredonda até aqui
+    r1, z1 = elipse(psi1)
+    P0, Q, P2 = Vector((rb - 0.004, -zc)), Vector((rb, -zc)), Vector((r1, z1))
+    perfil = [(0.0, -zc)]
+    perfil += [tuple(P0 * (1 - k / 6) ** 2 + Q * 2 * (k / 6) * (1 - k / 6) + P2 * (k / 6) ** 2) for k in range(7)]
+    n_el = 30
+    perfil += [elipse(psi1 + (math.pi / 2 - psi1) * k / n_el) for k in range(1, n_el)]
+    perfil.append((0.0, c_c))
+    o_corpo = _revolucao(nome + "_corpo", perfil, mat_ferro_fundido(), pai=raiz, lados=lados)
+    # ── alça: tubo do eixo da alça, entrando no corpo dos 2 lados; laterais afinando `afina` graus descendo ─────────────────────────
+    # o ponto mais largo da linha do eixo fica no canto arredondado: o canto (antes de arredondar) vai pra fora até a alça dar
+    # `largura_alca` por fora
+    b_ = math.radians(afina)
+    d_lat = Vector((-math.sin(b_), -math.cos(b_)))            # descendo pela lateral do lado +X (no plano XZ local: (x, z))
+    zt = z_top - zc                                           # eixo do pegador de cima, no referencial da raiz
+
+    def linha(xq):
+        q = Vector((xq, zt))
+        return q, q + d_lat * 0.165                          # canto (antes de arredondar) e a ponta enterrada no corpo
+
+    def mais_larga(xq):
+        """x mais pra fora da linha do eixo no canto arredondado (a Bézier do _dobrar), com o canto em xq."""
+        q, a = linha(xq)
+        p1 = q + (a - q).normalized() * canto
+        p2 = q + Vector((-1.0, 0.0)) * canto
+        return max((p1 * (1 - k / 200) ** 2 + q * 2 * (k / 200) * (1 - k / 200) + p2 * (k / 200) ** 2).x for k in range(201))
+
+    lo, hi = largura_alca / 2 - raio - 0.01, largura_alca / 2 - raio + 0.03
+    for _ in range(40):                                       # x do canto que deixa a alça com `largura_alca` por fora
+        m_ = (lo + hi) / 2
+        if mais_larga(m_) + raio < largura_alca / 2:
+            lo = m_
+        else:
+            hi = m_
+    xq = (lo + hi) / 2
+    q, a = linha(xq)
+    # ── trecho reto de cada lateral: de onde o eixo sai do corpo até o começo do canto; o pegador no meio dele ──────────────────────
+    sobe = Vector((math.sin(b_), 0.0, math.cos(b_)))         # subindo pela lateral do lado +X
+    A = Vector((a.x, 0.0, a.y))
+    fora = lambda p: (p.x / a_c) ** 2 + (p.z / c_c) ** 2 > 1.0
+    lo_s, hi_s = 0.0, 0.165 - canto
+    for _ in range(40):                                       # onde o eixo da lateral sai do corpo (a partir da ponta enterrada)
+        m_ = (lo_s + hi_s) / 2
+        if fora(A + sobe * m_):
+            hi_s = m_
+        else:
+            lo_s = m_
+    s0, s1 = hi_s, 0.165 - canto                              # sai do corpo · começa o canto
+    # a lateral entra no corpo virando pro centro dele (a curva começa logo antes de onde o eixo sai do corpo): reta até lá, o tubo
+    # passava rente à bola por fora e deixava uma lasca pontuda entre a mão e o corpo
+    J = A + sobe * (s0 - juncao[0] * 0.5)
+    E = J + (-J).normalized() * 0.05
+    Q = Vector((q.x, 0.0, q.y))
+    pts = [Vector((-E.x, 0.0, E.z)), Vector((-J.x, 0.0, J.z)), Vector((-Q.x, 0.0, Q.z)), Q, J, E]
+    caminho = _dobrar_raios(pts, [0.0, juncao[0], canto, canto, juncao[0], 0.0], n=8)
+    o_alca = _em_aneis(_tubo_caminho(nome + "_alca", caminho, raio, mat_ferro_fundido(), pai=raiz, lados=24), passo=0.02)
+    meia = (s1 - s0) / 2
+    laterais, pegadores = {}, {}
+    for s in (1, -1):
+        p = A + sobe * ((s0 + s1) / 2)
+        p, u = Vector((s * p.x, 0.0, p.z)), Vector((s * sobe.x, 0.0, sobe.z))
+        laterais[s] = (p, u)
+        o = bpy.data.objects.new(nome + "_pegador%+d" % s, None)
+        bpy.context.scene.collection.objects.link(o)
+        o.empty_display_size = 0.03
+        o.parent = raiz
+        y = Vector((0.0, 1.0, 0.0))
+        o.matrix_basis = Matrix.Translation(p) @ Matrix((u, y, u.cross(y))).transposed().to_4x4()
+        pegadores[s] = o
+    bpy.context.view_layer.update()
+    v_c, c_c0 = _volume_e_centro(o_corpo)
+    v_a, c_a = _volume_e_centro(o_alca)
+    cm = (c_c0 * v_c + c_a * v_a) / (v_c + v_a)              # a alça entra no corpo: a parte de dentro conta 2 vezes (pouca)
+    return Kettlebell(raiz, o_corpo, o_alca, pegadores, raio, meia, laterais, -zc, z_top + raio - zc, cm, caminho, (a_c, c_c))
+# ===== fim: Kettlebell ==============================================================================================================
