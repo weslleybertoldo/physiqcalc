@@ -508,6 +508,31 @@ describe("rodada — a renovação (até 50, 5 por vez, as que vencem em < 30 di
     expect(linhas.find((l) => l.nivel === "excecao")?.campos).toMatchObject({ codigo: "mp_renovar_conta_falhou", ref: conta(1), schema: "staging" });
     expect(integDe(db, 1).mp_renovando_ate).toBeNull();                    // a trava foi solta (o finally da renovarConta)
   });
+
+  it("revisão I-1: desligada NO MEIO do POST da renovação → o par novo gravado, ela SEGUE desconectada e a próxima rodada não a pega (nem a renovação, nem o diário)", async () => {
+    const mp = mpFalso();
+    const db = criarDb({ contas: contas(1), recebimento_integracoes: [await integracao(1, { mp_expira_em: iso(10 * DIA) }, mp)] });
+    const desligadaEm = iso(0);
+    const doMp = globalThis.fetch;
+    vi.stubGlobal("fetch", (entrada: string | URL | Request, init?: RequestInit) => {
+      const url = typeof entrada === "string" ? entrada : entrada instanceof URL ? entrada.href : entrada.url;
+      // o dono desliga enquanto o POST /oauth/token está no ar: o gatilho contas_saiu_do_mp_conta (status, data e a trava; o refresh igual)
+      if (new URL(url).pathname === "/oauth/token") Object.assign(integDe(db, 1), { status: "desconectada", desconectada_em: desligadaEm, mp_renovando_ate: null });
+      return doMp(entrada, init);
+    });
+    const { r } = rodada(db);
+    expect(await R.rodada(r)).toMatchObject({ renovadas: 1, erros: 0 });
+    const l = integDe(db, 1);
+    expect(l).toMatchObject({ status: "desconectada", desconectada_em: desligadaEm, mp_renovando_ate: null });
+    const access = await decifrar(String(l.mp_access_token), dadoAssociado("staging", conta(1), "access"), CHAVE);
+    expect(access).toMatch(new RegExp(`^APP_USR-novo-\\d+-${vendedor(1)}-renovado$`));   // o par novo (o velho morreu no MP: os 7 dias de leitura seguem)
+    expect(mp.refreshes.has(refreshDe(1))).toBe(false);
+    const idas = mp.idas.length;
+    const { r: r2 } = rodada(db);
+    expect(await R.rodada(r2)).toMatchObject({ renovadas: 0, conferidas: 0, sem_acesso: 0, vencidas: 0, erros: 0 });
+    expect(mp.idas.slice(idas)).toEqual([]);                               // nem /oauth/token nem /users/me para quem desligou
+    expect(db.tabelas.avisos).toEqual([]);
+  });
 });
 
 // ───────────────────────── as vencidas ─────────────────────────

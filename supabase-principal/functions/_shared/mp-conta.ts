@@ -214,20 +214,34 @@ export async function renovarConta(db: SupabaseClient, ctx: ContextoMpConta, con
     const r = await postOauth(ctx, { grant_type: "refresh_token", refresh_token: refresh });
     const t = r.status >= 200 && r.status < 300 ? lerTokenDoMp(r.body) : null;
     if (t) {
-      const novo = {
+      const par = {
         mp_access_token: await cifrar(t.access, dadoAssociado(ctx.schema, contaId, "access"), ctx.chave),
         mp_refresh_token: t.refresh ? await cifrar(t.refresh, dadoAssociado(ctx.schema, contaId, "refresh"), ctx.chave) : l.mp_refresh_token,
         mp_expira_em: t.expiraEm, mp_public_key: t.publicKey ?? undefined, mp_renovado_em: new Date().toISOString(), mp_renovando_ate: null,
-        mp_renovar_tentativas: 0, mp_renovar_proxima_em: null, mp_erro: t.renovavel ? null : "sem_renovacao", status: "ativa",
+        mp_renovar_tentativas: 0, mp_renovar_proxima_em: null,
+      };
+      // revisão I-1 (+ M-4): a renovação NÃO decide a situação da conexão. Ativa ou em erro (o "erro" que um 401 de antes marcou — a renovação
+      // boa prova o acesso) → ativa, na MESMA gravação do par (condicional ao status: nunca a partir da desconectada). A desligada no meio do
+      // POST (o gatilho contas_saiu_do_mp_conta só troca status, data e trava — o refresh da linha é o mesmo) ganha SÓ o par: o MP já girou o
+      // refresh e o par velho morreu (sem o novo, os 7 dias de leitura da decisão 10 acabavam) — e SEGUE desconectada (a faxina apaga em 7 dias).
+      const gravar = async (): Promise<{ erro: unknown; resultado: "ligada" | "desconectada" | "outra_renovou" }> => {
+        const condicional = (valores: Record<string, unknown>) => db.from("recebimento_integracoes").update(valores).eq("conta_id", contaId)
+          .eq("provedor", "mercadopago").eq("mp_refresh_token", l.mp_refresh_token);
+        const { data: a, error: ea } = await condicional({ ...par, mp_erro: t.renovavel ? null : "sem_renovacao", status: "ativa" })
+          .in("status", ["ativa", "erro"]).select("conta_id");
+        if (ea) return { erro: ea, resultado: "outra_renovou" };
+        if ((a ?? []).length) return { erro: null, resultado: "ligada" };
+        const { data: d, error: ed } = await condicional(par).select("conta_id");
+        if (ed) return { erro: ed, resultado: "outra_renovou" };
+        return { erro: null, resultado: (d ?? []).length ? "desconectada" : "outra_renovou" };
       };
       // o MP JÁ girou o refresh: a gravação tenta 3× (a perda do par novo = o dono reconecta — log.excecao avisa o Weslley)
       for (let i = 0; i < 3; i++) {
-        const { data: g, error: eg } = await db.from("recebimento_integracoes").update(novo).eq("conta_id", contaId).eq("provedor", "mercadopago")
-          .eq("mp_refresh_token", l.mp_refresh_token).select("conta_id");
+        const { erro: eg, resultado } = await gravar();
         if (!eg) {
           soltar = false;
-          ctx.log.info({ codigo: "mp_conta_renovada", schema: ctx.schema, ref: contaId });
-          return (g ?? []).length ? "renovada" : "outra_renovou";
+          ctx.log.info({ codigo: "mp_conta_renovada", schema: ctx.schema, ref: contaId, ...(resultado === "desconectada" ? { resultado } : {}) });
+          return resultado === "outra_renovou" ? "outra_renovou" : "renovada";
         }
         if (i === 2) ctx.log.excecao(eg, { codigo: "mp_renovacao_nao_gravada", schema: ctx.schema, ref: contaId });
         else await new Promise((ok) => setTimeout(ok, 300 * (i + 1)));
@@ -331,10 +345,15 @@ export async function mpContaFetch<T>(db: SupabaseClient, ctx: ContextoMpConta, 
   let nova: CredencialConta | null = null;
   if (!renovouHaPouco) {
     if (ctx.prazo.restante() < 10_000) throw new MpIndisponivel(599);       // MENOR 12: sem prazo para girar o refresh com segurança
-    let res = await renovarConta(db, ctx, cred.contaId);
+    const res = await renovarConta(db, ctx, cred.contaId);
     if (res === "ocupada") {
+      // revisão M-4: outra renovação está no meio (a trava de 2 min). Espera e relê o token GUARDADO: só um token NOVO é tentado (recusado
+      // também → aí sim o erro, abaixo). O MESMO token = a outra ainda não gravou: sem decisão → MpIndisponivel(599) ("tente de novo"), nunca
+      // o erro nem o aviso ao dono pelo token velho. Fora de ativa (desligada no meio) → MpContaSemAcesso pela credencialDaConta, como antes.
       await new Promise((ok) => setTimeout(ok, 1_500));
-      res = "outra_renovou";                                                // outra renovação estava no meio: relê a credencial
+      const guardada = await credencialDaConta(db, ctx, cred.contaId, { renovar: false });
+      if (guardada.token === cred.token) throw new MpIndisponivel(599);
+      nova = guardada;
     }
     if (res === "fora") throw new MpIndisponivel(599);
     if (res === "renovada" || res === "outra_renovou") nova = await credencialDaConta(db, ctx, cred.contaId, { renovar: false });

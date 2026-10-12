@@ -516,8 +516,11 @@ describe("renovarConta (casos 3 a 7, 14)", () => {
     expect(await M.renovarConta(db.cliente, ctx, CONTA)).toBe("renovada");
     expect(db.pedidos[0]).toMatchObject({ op: "rpc", tabela: "mp_integracao_reservar", args: { p_conta: CONTA, p_segundos: 120 } });
     expect(oauth.idas.map((i) => i.corpo)).toEqual([{ client_id: CLIENT.clientId, client_secret: CLIENT.clientSecret, grant_type: "refresh_token", refresh_token: REFRESH_A }]);
-    const [upd] = gravacoes(db, "recebimento_integracoes");
-    expect(upd.filtros).toEqual([{ col: "conta_id", op: "eq", v: CONTA }, { col: "provedor", op: "eq", v: "mercadopago" }, { col: "mp_refresh_token", op: "eq", v: antiga }]);
+    const [upd, ...resto] = gravacoes(db, "recebimento_integracoes");
+    // revisão I-1: a gravação do par novo liga a conexão SÓ se ela está ativa ou em erro (a desconectada no meio do POST só ganha o par)
+    expect(upd.filtros).toEqual([{ col: "conta_id", op: "eq", v: CONTA }, { col: "provedor", op: "eq", v: "mercadopago" }, { col: "mp_refresh_token", op: "eq", v: antiga },
+      { col: "status", op: "in", v: ["ativa", "erro"] }]);
+    expect(resto).toEqual([]);                                              // acertou: 1 gravação só
     expect(upd.valores).toMatchObject({ mp_renovando_ate: null, status: "ativa", mp_erro: null, mp_renovar_tentativas: 0, mp_renovar_proxima_em: null });
     const l = integ(db);
     expect(await decifrar(String(l.mp_access_token), ad("access"), CHAVE)).toBe(TOKEN_B);
@@ -615,6 +618,36 @@ describe("renovarConta (casos 3 a 7, 14)", () => {
     const { ctx } = contexto({ token: () => ({ status: 200, body: { ok: true } }) });
     expect(await M.renovarConta(db.cliente, ctx, CONTA)).toBe("recusada");
     expect(integ(db)).toEqual({ ...antes, mp_renovando_ate: null });
+  });
+  it("revisão I-1: desligada NO MEIO do POST (o gatilho contas_saiu_do_mp_conta) → o par novo é GRAVADO (o refresh girou no MP) e ela SEGUE desconectada", async () => {
+    const db = criarDb({ recebimento_integracoes: [await integracao()], contas: [{ id: CONTA, dono_id: DONO }] });
+    const desligadaEm = new Date().toISOString();
+    const { ctx, linhas } = contexto({ token: () => {
+      // o que o gatilho grava (status, desconectada_em e a trava) — o refresh da linha continua o mesmo
+      Object.assign(integ(db), { status: "desconectada", desconectada_em: desligadaEm, mp_renovando_ate: null });
+      return { status: 200, body: respostaDoToken() };
+    } });
+    expect(await M.renovarConta(db.cliente, ctx, CONTA)).toBe("renovada");
+    const l = integ(db);
+    expect(l).toMatchObject({ status: "desconectada", desconectada_em: desligadaEm, mp_renovando_ate: null, mp_erro: null });
+    expect(await decifrar(String(l.mp_access_token), ad("access"), CHAVE)).toBe(TOKEN_B);
+    expect(await decifrar(String(l.mp_refresh_token), ad("refresh"), CHAVE)).toBe(REFRESH_B);
+    perto(l.mp_expira_em, 180 * DIA);
+    // nenhuma gravação que ACERTOU a linha desconectada levou status: só a do par
+    expect(linhas).toEqual([{ nivel: "info", campos: { codigo: "mp_conta_renovada", schema: "staging", ref: CONTA, resultado: "desconectada" } }]);
+    expect(db.tabelas.avisos ?? []).toHaveLength(0);
+    // a credencial da hora do uso (exige a ativa) não a devolve: a renovação não religa a conexão
+    await expect(M.credencialDaConta(db.cliente, ctx, CONTA)).rejects.toMatchObject({ name: "MpContaSemAcesso", motivo: "desconectada" });
+  });
+  it("revisão I-1 (a): em ERRO e a renovação boa → volta a ativa (o mp_erro limpo); a gravação que liga é condicional (só ativa ou erro)", async () => {
+    const db = criarDb({ recebimento_integracoes: [await integracao({ status: "erro", mp_erro: "acesso_recusado" })] });
+    const { ctx } = contexto();
+    expect(await M.renovarConta(db.cliente, ctx, CONTA)).toBe("renovada");
+    expect(integ(db)).toMatchObject({ status: "ativa", mp_erro: null, mp_renovando_ate: null });
+    expect(await decifrar(String(integ(db).mp_access_token), ad("access"), CHAVE)).toBe(TOKEN_B);
+    const liga = gravacoes(db, "recebimento_integracoes").filter((p) => p.valores?.status === "ativa");
+    expect(liga.length).toBeGreaterThan(0);
+    for (const p of liga) expect(p.filtros).toContainEqual({ col: "status", op: "in", v: ["ativa", "erro"] });
   });
 });
 
@@ -724,6 +757,63 @@ describe("mpContaFetch — o 401 confere o /users/me antes de renovar (caso 8, r
     expect((await M.mpContaFetch(db.cliente, ctx, credConta(), "/v1/payments/9")).status).toBe(404);
     expect(mp.idas).toHaveLength(1);
   });
+
+  // revisão M-4: a trava ocupada (outra renovação no meio do POST) — espera, relê o token GUARDADO e só o token NOVO decide
+  const ocupada = async () => criarDb({ recebimento_integracoes: [await integracao({ mp_renovando_ate: new Date(Date.now() + 60_000).toISOString() })],
+    contas: [{ id: CONTA, dono_id: DONO }] });
+  /** a outra renovação grava o par novo (o token B) daqui a `ms` — no meio da espera de 1,5 s, ou depois dela */
+  const outraGrava = (db: DbFalso, ms: number) => {
+    const feito = cifrar(TOKEN_B, ad("access"), CHAVE).then((cifra) => new Promise<void>((ok) => setTimeout(() => {
+      Object.assign(integ(db), { mp_access_token: cifra, mp_renovado_em: new Date().toISOString(), mp_renovando_ate: null });
+      ok();
+    }, ms)));
+    return feito;
+  };
+  it("revisão M-4: 'ocupada' e a outra renovação ainda SEM gravar depois da espera → MpIndisponivel(599): nem erro nem aviso (o token velho não decide)", async () => {
+    const db = await ocupada();
+    const mp = rotasDoMp(() => ({ status: 401, body: {} }));
+    const { ctx, oauth } = contexto();
+    await expect(M.mpContaFetch(db.cliente, ctx, credConta(), "/v1/payments/1")).rejects.toMatchObject({ name: "MpIndisponivel", status: 599 });
+    expect(oauth.idas).toHaveLength(0);
+    expect(integ(db)).toMatchObject({ status: "ativa", mp_erro: null });
+    expect(db.tabelas.avisos ?? []).toHaveLength(0);
+    expect(mp.idas.map((i) => [i.caminho, i.token])).toEqual([["/v1/payments/1", TOKEN_A], ["/users/me", TOKEN_A]]);   // o mesmo token não é refeito
+  }, 10_000);
+  it("revisão M-4: 'ocupada' e o token NOVO gravado durante a espera → refaz com ele: 200, sem erro nem aviso", async () => {
+    const db = await ocupada();
+    const mp = rotasDoMp((ida) => (ida.token === TOKEN_B ? { status: 200, body: { id: 1 } } : { status: 401, body: {} }));
+    const { ctx, oauth } = contexto();
+    const gravou = outraGrava(db, 300);
+    const cred = credConta();
+    expect((await M.mpContaFetch(db.cliente, ctx, cred, "/v1/payments/1")).status).toBe(200);
+    await gravou;
+    expect(cred.token).toBe(TOKEN_B);
+    expect(oauth.idas).toHaveLength(0);
+    expect(integ(db)).toMatchObject({ status: "ativa", mp_erro: null });
+    expect(db.tabelas.avisos ?? []).toHaveLength(0);
+    expect(mp.idas.map((i) => [i.caminho, i.token])).toEqual([["/v1/payments/1", TOKEN_A], ["/users/me", TOKEN_A], ["/v1/payments/1", TOKEN_B]]);
+  }, 10_000);
+  it("revisão M-4: 'ocupada' e o token NOVO também recusado → aí sim erro acesso_recusado + 1 aviso ao dono", async () => {
+    const db = await ocupada();
+    const mp = rotasDoMp(() => ({ status: 401, body: {} }));
+    const { ctx } = contexto();
+    const gravou = outraGrava(db, 300);
+    await expect(M.mpContaFetch(db.cliente, ctx, credConta(), "/v1/payments/1")).rejects.toMatchObject({ name: "MpContaSemAcesso", motivo: "acesso_recusado" });
+    await gravou;
+    expect(integ(db)).toMatchObject({ status: "erro", mp_erro: "acesso_recusado" });
+    expect(db.tabelas.avisos).toHaveLength(1);
+    expect(mp.idas.map((i) => i.token)).toEqual([TOKEN_A, TOKEN_A, TOKEN_B]);
+  }, 10_000);
+  it("revisão M-4: 'ocupada' porque saiu de ativa (desligada no meio) → MpContaSemAcesso('desconectada'), sem marcar nada", async () => {
+    const db = await ocupada();
+    integ(db).status = "desconectada";
+    integ(db).desconectada_em = new Date().toISOString();
+    rotasDoMp(() => ({ status: 401, body: {} }));
+    const { ctx } = contexto();
+    await expect(M.mpContaFetch(db.cliente, ctx, credConta(), "/v1/payments/1")).rejects.toMatchObject({ name: "MpContaSemAcesso", motivo: "desconectada" });
+    expect(integ(db)).toMatchObject({ status: "desconectada", mp_erro: null });
+    expect(db.tabelas.avisos ?? []).toHaveLength(0);
+  }, 10_000);
 });
 
 describe("buscarNaConta e chamarMp", () => {
