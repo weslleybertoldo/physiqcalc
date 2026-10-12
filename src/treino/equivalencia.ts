@@ -86,6 +86,13 @@ export const PADROES = [
   { chave: "prancha", rotulo: "Prancha", bloco: "abdomen" },
   // cardio
   { chave: "cardio", rotulo: "Cardio (corrida, bike, elíptico)", bloco: "cardio" },
+  // alongamento e mobilidade (12/10/2026): a parte do corpo — o grupo do seletor já diz que é alongamento
+  { chave: "along_coluna", rotulo: "Coluna", bloco: "alongamento" },
+  { chave: "along_pescoco", rotulo: "Pescoço", bloco: "alongamento" },
+  { chave: "along_ombro", rotulo: "Ombro", bloco: "alongamento" },
+  { chave: "along_punho", rotulo: "Punho e antebraço", bloco: "alongamento" },
+  { chave: "along_posterior", rotulo: "Posterior de coxa", bloco: "alongamento" },
+  { chave: "along_quadril", rotulo: "Quadril", bloco: "alongamento" },
 ] as const;
 
 export type PadraoMovimento = (typeof PADROES)[number]["chave"];

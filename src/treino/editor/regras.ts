@@ -290,7 +290,10 @@ export function diasTreinoDoAluno(d: Pick<DadosEditor, "semana" | "gruposDisponi
 
 // ───────────────────────── volume por grupo (card do Resumo e aba) ─────────────────────────
 
-/** Os grupos da tela 7 ("Séries por semana, por grupo"): os blocos musculares juntados como o profissional fala. */
+/**
+ * Os grupos da tela 7 ("Séries por semana, por grupo"): os blocos musculares juntados como o profissional fala. São também os chips
+ * de grupo da Biblioteca e da folha "Adicionar exercício" (menos "Outros"). `curto` = o rótulo da barra do volume (76 px).
+ */
 export const GRUPOS_VOLUME = [
   { chave: "peito", nome: "Peito", blocos: ["peito"] },
   { chave: "costas", nome: "Costas", blocos: ["costas"] },
@@ -299,11 +302,13 @@ export const GRUPOS_VOLUME = [
   { chave: "bracos", nome: "Braços", blocos: ["biceps", "triceps"] },
   { chave: "abdomen", nome: "Abdômen", blocos: ["abdomen"] },
   { chave: "cardio", nome: "Cardio", blocos: ["cardio"] },
+  { chave: "alongamento", nome: "Alongamento e mobilidade", curto: "Alongamento", blocos: ["alongamento"] },
   { chave: "outros", nome: "Outros", blocos: ["outros"] },
 ] as const;
 
 export interface VolumeGrupo {
   chave: string;
+  /** o rótulo da barra (o `curto` do grupo, quando tem) */
   nome: string;
   /** séries por semana (primário 1, secundário 0,5 — a conta do Volume Semanal) */
   total: number;
@@ -317,7 +322,7 @@ export function volumePorGrupo(blocos: readonly VolumeBloco[]): VolumeGrupo[] {
     const partes = blocos
       .filter((b) => (g.blocos as readonly string[]).includes(b.bloco.key) || (g.chave === "outros" && !conhecidos.has(b.bloco.key)))
       .map((b) => ({ nome: b.bloco.nome, total: b.total }));
-    return { chave: g.chave, nome: g.nome, total: partes.reduce((s, x) => s + x.total, 0), partes };
+    return { chave: g.chave, nome: "curto" in g ? g.curto : g.nome, total: partes.reduce((s, x) => s + x.total, 0), partes };
   }).filter((g) => g.total > 0);
 }
 

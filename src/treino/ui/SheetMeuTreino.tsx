@@ -18,7 +18,9 @@ interface ExercicioLista {
   isPessoal?: boolean;
 }
 
-const GRUPOS_MUSCULARES = ["Peitoral", "Dorsal", "Deltóide", "Bíceps", "Tríceps", "Quadríceps", "Isquiotibiais", "Panturrilha", "Abdômen", "Glúteo", "Corrida"];
+// 12/10/2026: "Alongamento" (o grupoPadrao do bloco "Alongamento e mobilidade" — tem de estar aqui para o seletor mostrar o que grava)
+// e "Mobilidade", os 2 grupos globais novos
+const GRUPOS_MUSCULARES = ["Peitoral", "Dorsal", "Deltóide", "Bíceps", "Tríceps", "Quadríceps", "Isquiotibiais", "Panturrilha", "Abdômen", "Glúteo", "Corrida", "Alongamento", "Mobilidade"];
 // a coluna emoji é NOT NULL no banco; a interface não mostra emoji (decisão 7)
 const EMOJI_PADRAO = "🏋️";
 
@@ -266,7 +268,7 @@ export function SheetMeuTreino({
                 <button key={b.key} type="button" onClick={() => setBloco(b.key)} data-bloco={b.key}
                   className={cn("flex items-center gap-2 rounded-2xl border p-3 text-left", n ? "border-violeta/55 bg-violeta/10" : "border-linha bg-superficie hover:border-linha-2")}>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-semibold text-texto">{b.nome}</span>
+                    <span className="line-clamp-2 text-[13px] font-semibold text-texto">{b.nome}</span>
                     <span className="block text-[11.5px] text-texto-3">{exercicios.length} ex.{n ? ` · ${n} escolhido${n > 1 ? "s" : ""}` : ""}</span>
                   </span>
                   <ChevronRight aria-hidden className="h-4 w-4 flex-none text-texto-3" />

@@ -385,7 +385,7 @@ export function TrocarExercicio({
                   <button key={b.key} type="button" onClick={() => setBloco(b.key)} data-trocar-bloco={b.key}
                     className="flex items-center gap-2 rounded-2xl border border-linha bg-superficie p-3 text-left hover:border-linha-2">
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-semibold text-texto">{b.nome}</span>
+                      <span className="line-clamp-2 text-[13px] font-semibold text-texto">{b.nome}</span>
                       <span className="block text-[11.5px] text-texto-3">{exercicios.length} ex.</span>
                     </span>
                     <ChevronRight aria-hidden className="h-4 w-4 flex-none text-texto-3" />

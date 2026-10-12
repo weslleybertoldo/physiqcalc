@@ -1,9 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
+  BLOCOS_MUSCULARES,
+  MUSCULOS_PRIMARIOS_CONHECIDOS,
   agruparPorBloco,
   blocoDoGrupoMuscular,
   combinaBusca,
+  getBloco,
   musculoPrimario,
+  musculosDosBlocos,
+  nomeDoBloco,
 } from "./gruposMusculares";
 
 describe("musculoPrimario", () => {
@@ -66,6 +71,51 @@ describe("agruparPorBloco", () => {
     const grupos = agruparPorBloco([{ nome: "Corrida", grupo_muscular: "Corrida" }]);
     expect(grupos).toHaveLength(1);
     expect(grupos[0].bloco.nome).toBe("Cardio");
+  });
+});
+
+describe("Alongamento e mobilidade (12/10/2026)", () => {
+  // os 9 globais da migration 20261012150000 (nome e grupo_muscular do DESENHO): nenhum cai em Costas, Pernas ou "Outros"
+  const NOVE = [
+    { nome: "Alongamento Abraçando os Joelhos", grupo_muscular: "Alongamento" },
+    { nome: "Alongamento de Extensão da Coluna", grupo_muscular: "Alongamento" },
+    { nome: "Alongamento de Posterior em Pé", grupo_muscular: "Alongamento" },
+    { nome: "Alongamento de Punho (flexores)", grupo_muscular: "Alongamento" },
+    { nome: "Alongamento de Punho (extensores)", grupo_muscular: "Alongamento" },
+    { nome: "Mobilidade Cervical", grupo_muscular: "Mobilidade" },
+    { nome: "Mobilidade de Coluna Deitado", grupo_muscular: "Mobilidade" },
+    { nome: "Mobilidade de Ombro com Bastão", grupo_muscular: "Mobilidade" },
+    { nome: "Alongamento Borboleta", grupo_muscular: "Alongamento" },
+  ];
+
+  it("o bloco novo entra logo antes de 'Outros' (que continua o último: a reserva do getBloco)", () => {
+    const chaves = BLOCOS_MUSCULARES.map((b) => b.key);
+    expect(chaves.slice(-3)).toEqual(["cardio", "alongamento", "outros"]);
+    expect(getBloco("alongamento")).toMatchObject({ key: "alongamento", nome: "Alongamento e mobilidade", grupoPadrao: "Alongamento" });
+    expect(getBloco("nao-existe").key).toBe("outros");
+  });
+
+  it("'Alongamento' e 'Mobilidade' (sem acento, caixa ou espaço sobrando) → o bloco novo", () => {
+    expect(blocoDoGrupoMuscular("Alongamento")).toBe("alongamento");
+    expect(blocoDoGrupoMuscular("Mobilidade")).toBe("alongamento");
+    expect(blocoDoGrupoMuscular("  MOBILIDADE ")).toBe("alongamento");
+    expect(blocoDoGrupoMuscular("Alongamentos")).toBe("alongamento");
+    expect(blocoDoGrupoMuscular("Alongamento e mobilidade")).toBe("alongamento");
+    expect(nomeDoBloco("Mobilidade")).toBe("Alongamento e mobilidade");
+    for (const e of NOVE) expect(blocoDoGrupoMuscular(e.grupo_muscular), e.nome).toBe("alongamento");
+  });
+
+  it("os músculos que vão ao banco no grupo novo (e que saem de 'Outros')", () => {
+    expect(musculosDosBlocos(["alongamento"])).toEqual(expect.arrayContaining(["alongamento", "mobilidade"]));
+    expect(musculosDosBlocos(["alongamento"]).every((m) => blocoDoGrupoMuscular(m) === "alongamento")).toBe(true);
+    expect(MUSCULOS_PRIMARIOS_CONHECIDOS).toEqual(expect.arrayContaining(["alongamento", "mobilidade"]));
+  });
+
+  it("agrupa os 9 num bloco só, depois do Cardio e antes de 'Outros'", () => {
+    const grupos = agruparPorBloco([{ nome: "Xablau", grupo_muscular: "Xablau" }, ...NOVE, { nome: "Corrida", grupo_muscular: "Corrida" }]);
+    expect(grupos.map((g) => g.bloco.key)).toEqual(["cardio", "alongamento", "outros"]);
+    expect(grupos[1].exercicios).toHaveLength(9);
+    expect(grupos[2].exercicios.map((e) => e.nome)).toEqual(["Xablau"]);
   });
 });
 

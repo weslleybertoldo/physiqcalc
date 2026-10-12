@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { VolumeBloco } from "@/lib/volumeSemanal";
 import { BLOCOS_MUSCULARES } from "@/lib/gruposMusculares";
 import {
+  GRUPOS_VOLUME,
   diasAte,
   extrasPorDia,
   idsDaChave,
@@ -136,6 +137,11 @@ describe("W15 — a linha que o aluno vê (tela 2) e os campos", () => {
     expect(subtituloDoExercicio({ grupo_muscular: "Tríceps", subgrupo: "Tríceps (cabeça longa)" })).toBe("Tríceps · tríceps (cabeça longa)");
     expect(subtituloDoExercicio({ grupo_muscular: "Dorsal / Bíceps", subgrupo: null })).toBe("Costas · dorsal / bíceps");
     expect(subtituloDoExercicio({ grupo_muscular: "", subgrupo: null })).toBe("Exercício");
+    // 12/10/2026: alongamento e mobilidade têm bloco (antes caíam em "Outros": grupo · subgrupo)
+    expect(subtituloDoExercicio({ grupo_muscular: "Mobilidade", subgrupo: "Trapézio superior · elevador da escápula" })).toBe(
+      "Alongamento e mobilidade · trapézio superior",
+    );
+    expect(subtituloDoExercicio({ grupo_muscular: "Alongamento", subgrupo: null })).toBe("Alongamento e mobilidade · alongamento");
   });
 });
 
@@ -196,6 +202,15 @@ describe("W15 — séries por semana por grupo (card da tela 7 = aba)", () => {
   it("sem séries, sem grupo", () => {
     expect(volumePorGrupo([])).toEqual([]);
     expect(volumePorGrupo([bloco("peito", 0)])).toEqual([]);
+  });
+  it("Alongamento e mobilidade (12/10/2026): o chip novo antes de 'Outros' e a barra 'Alongamento' (sem faixa, como o Cardio)", () => {
+    expect(GRUPOS_VOLUME.map((g) => g.chave).slice(-3)).toEqual(["cardio", "alongamento", "outros"]);
+    expect(GRUPOS_VOLUME.find((g) => g.chave === "alongamento")).toMatchObject({ nome: "Alongamento e mobilidade", blocos: ["alongamento"] });
+    const g = volumePorGrupo([bloco("peito", 10), bloco("cardio", 2), bloco("alongamento", 6)]);
+    // a barra do volume tem 76 px de rótulo: o nome curto ("Alongamento"); as partes levam o nome do bloco
+    expect(g.map((x) => [x.chave, x.nome, x.total])).toEqual([["peito", "Peito", 10], ["cardio", "Cardio", 2], ["alongamento", "Alongamento", 6]]);
+    expect(g[2].partes).toEqual([{ nome: "Alongamento e mobilidade", total: 6 }]);
+    expect(g.some((x) => x.chave === "outros")).toBe(false);
   });
 });
 
