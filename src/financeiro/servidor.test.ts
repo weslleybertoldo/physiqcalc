@@ -921,6 +921,18 @@ describe("W2 (Task 9) — o token da conta em TODAS as chamadas do MP da pagamen
     expect(b).not.toMatch(/mpFetch|credencial === "test"/);
   });
 
+  it("revisão M-9: aluno_mp_assinar devolve a VISTA da automática (assinaturaVista) — nunca a linha crua (o mp_collector_id e o payload)", () => {
+    const b = bloco("aluno_mp_assinar");
+    ordem(b, "if (es) throw es;", "return json({ ok: true, assinatura: assinaturaVista(salva), primeira_cobranca: inicio, sandbox, init_point:");
+    expect(b).not.toMatch(/assinatura: salva\b/);
+    // a vista tem o que a tela e os E2E leem da resposta (o status e o valor; a tela, só primeira_cobranca/sandbox/init_point de fora) e nada
+    // do MP além do init_point
+    const vista = ajudante("assinaturaVista");
+    for (const campo of ["id: a.id", "status: a.status", "valor: a.valor === null ? null : Number(a.valor)", "proximo_vencimento: a.proximo_vencimento",
+      "init_point:"]) expect(vista, campo).toContain(campo);
+    expect(vista).not.toMatch(/mp_collector_id|mp_preapproval_id|payload:/);
+  });
+
   it("cancelar e trocar o valor da automática: a credencial DESTA assinatura (escrita); outra conta do MP → 409 mp_outra_conta antes do PUT", () => {
     for (const nome of ["aluno_mp_cancelar"]) {
       ordem(bloco(nome), "credencialDaAssinatura(db, ctxMp, a!, credencial, { escrita: true })", 'falhar("mp_outra_conta", 409)', "await mp<AssinaturaMp>(cred!, `/preapproval/");

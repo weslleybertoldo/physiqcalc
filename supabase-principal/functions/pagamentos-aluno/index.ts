@@ -1518,7 +1518,8 @@ Deno.serve(async (req) => {
         ? await db.from("aluno_assinaturas").update(linha).eq("id", atual.id).select("*").single()
         : await db.from("aluno_assinaturas").insert(linha).select("*").single();
       if (es) throw es;
-      return json({ ok: true, assinatura: salva, primeira_cobranca: inicio, sandbox, init_point: sandbox || checkout ? pre!.init_point ?? null : null }, 200, origin);
+      // revisão M-9: a VISTA (a do aluno_status), nunca a linha crua — o mp_collector_id (o user id do MP do personal) e o payload ficam aqui
+      return json({ ok: true, assinatura: assinaturaVista(salva), primeira_cobranca: inicio, sandbox, init_point: sandbox || checkout ? pre!.init_point ?? null : null }, 200, origin);
     }
 
     if (acao === "aluno_mp_cancelar" || acao === "prof_cancelar_assinatura") {
