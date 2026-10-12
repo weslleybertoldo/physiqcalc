@@ -452,7 +452,7 @@ export const CONSULTAS_NUTRICAO = {
   diario_pagina: {
     params: {
       conta, de: instanteObrigatorio, dias: { tipo: "instantes", max: DIARIO_DIAS_MAX, obrigatorio: true }, aluno: { tipo: "uuid" },
-      nao_reagidas: { tipo: "booleano" }, pagina: { tipo: "inteiro", min: 1, max: INT4_MAX, obrigatorio: true },
+      nao_reagidas: { tipo: "booleano" }, pagina: { tipo: "inteiro", min: 1, max: INT4_MAX, obrigatorio: true }, com_urls: { tipo: "booleano" },
     },
     fonte: {
       tabela: "diario_alimentar", colunas: COLUNAS_DA_DIETA.diario_alimentar, embutidos: [PACIENTE_DO_DIARIO], teto: DIARIO_POR_PAGINA,
@@ -462,6 +462,9 @@ export const CONSULTAS_NUTRICAO = {
       vivas: true, recorte: RECORTE_DO_DIARIO, ordem: [desc("data_hora"), desc("created_at"), desc("id")],
       pagina: { param: "pagina", tamanho: DIARIO_POR_PAGINA }, contar: true, porDia: { coluna: "data_hora", de: "de", dias: "dias" },
     },
+    // a decisão da sessão principal (etapa 2: a série lista → assinar custava +0,5 s): com o com_urls, as miniaturas das linhas que a
+    // consulta leu NA MESMA IDA (o mesmo bucket e o mesmo prazo do diario_urls; nunca um caminho do corpo)
+    assinar: { bucket: "diario", coluna: "path", validade: VALIDADE_URL_LEITURA_S, se: "com_urls" },
   },
   diario_contagem: {
     params: { conta, de: instanteObrigatorio, ate: { tipo: "instante" }, aluno: { tipo: "uuid" }, nao_reagidas: { tipo: "booleano" } },
@@ -483,11 +486,12 @@ export const CONSULTAS_NUTRICAO = {
     },
   },
   diario_hoje: {
-    params: { conta, de: instanteObrigatorio },
+    params: { conta, de: instanteObrigatorio, com_urls: { tipo: "booleano" } },
     fonte: {
       tabela: "diario_alimentar", colunas: COLUNAS_DA_DIETA.diario_alimentar, embutidos: [PACIENTE_DO_DIARIO], teto: TETO_LISTA,
       filtros: [{ param: "de", coluna: "data_hora", op: "gte" }], vivas: true, recorte: RECORTE_DO_DIARIO, ordem: [desc("data_hora"), desc("created_at")],
     },
+    assinar: { bucket: "diario", coluna: "path", validade: VALIDADE_URL_LEITURA_S, se: "com_urls" },
   },
   diario_urls: {
     params: { ids: { tipo: "uuids", max: DIARIO_IDS_MAX, obrigatorio: true } },

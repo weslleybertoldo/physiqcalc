@@ -277,6 +277,11 @@ export interface AssinarLeitura {
    * leu) e a validade `validade` (a do baixar); sem ele, abre no navegador com a validade da consulta (a do ver).
    */
   download?: { param: string; nome: string; validade: number };
+  /**
+   * hml-20c (decisão da sessão principal na etapa 2): a assinatura OPCIONAL — só com o param booleano `se` = true no item (a lista do
+   * Diário e o "Diário de hoje" com as miniaturas na MESMA ida); sem ele, a consulta volta como sempre, sem URL e sem ir ao Storage.
+   */
+  se?: string;
 }
 export interface ConsultaLeitura {
   params: ParamsLeitura;

@@ -72,12 +72,56 @@ const paramsDoDiario = (contaId: string, f: FiltrosDiario) => {
   return { conta: contaId, de: new Date(f.deIso).toISOString(), ...(aluno ? { aluno } : {}), ...(f.soNaoReagidas ? { nao_reagidas: true } : {}) };
 };
 
-/** A página do servidor (os registros, o total e o total de cada dia que ela partiu ao meio) — 1 ida. */
+// ───────────────────────── as miniaturas que vêm COM a lista (o com_urls) ─────────────────────────
+// hml-20c (decisão da sessão principal na etapa 2: a série lista → assinar custava +0,5 s no Diário e no Dashboard): a página do Diário e
+// o "Diário de hoje" pedem as miniaturas NA MESMA IDA — o servidor assina, como a pessoa, só os caminhos das linhas que ELE leu (1 h). A
+// lib guarda as URLs aqui (o id → a URL montada com o domínio do cliente) e devolve as linhas SEM o campo url (o tipo de hoje); o
+// urlsAssinadas (o useMiniaturas da tela) serve daqui primeiro. O cache é de 1 USO (o renovar da imagem que falhou pede uma URL nova ao
+// diario_urls, como hoje) e vence antes da URL (50 min × 1 h).
+const CACHE_URLS_MS = 50 * 60_000;
+const CACHE_URLS_MAX = 300;
+const urlsDaLista = new Map<string, { url: string; ate: number }>();
+
+/** Guarda as URLs que vieram com as linhas e devolve as linhas sem o campo url (o tipo de hoje). */
+function semUrlsNoCache(linhas: unknown[]): RegistroDiarioNutri[] {
+  const agora = Date.now();
+  const saida: RegistroDiarioNutri[] = [];
+  for (const l of linhas as Array<Record<string, unknown>>) {
+    const { url, ...linha } = l;
+    const u = typeof url === "string" ? urlAssinadaDoServidor(url) : null;
+    if (typeof linha.id === "string" && u) {
+      urlsDaLista.delete(linha.id);
+      urlsDaLista.set(linha.id, { url: u, ate: agora + CACHE_URLS_MS });
+    }
+    saida.push(linha as unknown as RegistroDiarioNutri);
+  }
+  // o teto do cache: fora os vencidos e, se ainda passar, os mais antigos (a ordem de entrada do Map)
+  if (urlsDaLista.size > CACHE_URLS_MAX) {
+    for (const [id, v] of urlsDaLista) if (v.ate <= agora) urlsDaLista.delete(id);
+    for (const id of urlsDaLista.keys()) {
+      if (urlsDaLista.size <= CACHE_URLS_MAX) break;
+      urlsDaLista.delete(id);
+    }
+  }
+  return saida;
+}
+
+/** A URL guardada do registro (1 uso: sai do cache), se ainda não venceu. */
+function urlDoCache(id: string): string | null {
+  const v = urlsDaLista.get(id);
+  if (!v) return null;
+  urlsDaLista.delete(id);
+  return v.ate > Date.now() ? v.url : null;
+}
+
+/** A página do servidor (os registros, o total, o total de cada dia que ela partiu ao meio e as miniaturas) — 1 ida. */
 async function lerPaginaDoDiario(contaId: string, f: FiltrosDiario, pagina: number) {
-  const r = await lerNutricao("diario_pagina", { ...paramsDoDiario(contaId, f), dias: diasDoPeriodo(f.deIso), pagina: Math.max(1, Math.floor(pagina) || 1) });
+  const r = await lerNutricao("diario_pagina", {
+    ...paramsDoDiario(contaId, f), dias: diasDoPeriodo(f.deIso), pagina: Math.max(1, Math.floor(pagina) || 1), com_urls: true,
+  });
   if (typeof r.total !== "number") throw new Error("O banco não devolveu a contagem do diário.");
   const porDia = ((r.valor as { por_dia?: unknown } | null)?.por_dia ?? []) as Array<{ dia: string; total: number }>;
-  return { itens: (r.linhas ?? []) as RegistroDiarioNutri[], total: r.total, porDia: Array.isArray(porDia) ? porDia : [] };
+  return { itens: semUrlsNoCache(r.linhas ?? []), total: r.total, porDia: Array.isArray(porDia) ? porDia : [] };
 }
 
 /** UMA página dos registros do período (o aluno e o "só não reagidas" no banco), mais recente primeiro; o total vem junto. */
@@ -141,8 +185,9 @@ export async function listarAlunosDoDiario(contaId: string, uid: string, deIso: 
  * uma JANELA (o "Diário de hoje" do Dashboard e o número da aba: 1 e 7 dias) — no máximo 1000 (D18); a aba Diário usa a página.
  */
 export async function listarDiarioDaConta(contaId: string, uid: string, deIso: string): Promise<RegistroDiarioNutri[]> {
-  const r = await lerNutricao("diario_hoje", { conta: contaId, de: new Date(deIso).toISOString() });
-  return (r.linhas ?? []) as unknown as RegistroDiarioNutri[];
+  // hml-20c: com as miniaturas na MESMA ida (o com_urls) — o urlsAssinadas do Dashboard serve do cache
+  const r = await lerNutricao("diario_hoje", { conta: contaId, de: new Date(deIso).toISOString(), com_urls: true });
+  return semUrlsNoCache(r.linhas ?? []);
 }
 
 /** Reação + comentário (reacao null = tira a reação; o servidor apara o comentário e põe o agora). 0 linha → a frase de antes. */
@@ -176,12 +221,17 @@ export async function urlAssinada(r: Pick<RegistroDiarioRow, "id" | "path">, seg
  */
 export async function urlsAssinadas(registros: Pick<RegistroDiarioRow, "id" | "path">[], segundos = 3600): Promise<Record<string, string>> {
   void segundos;
-  const ids = [...new Set(registros.filter((r) => r.path).map((r) => r.id))];
-  if (!ids.length) return {};
+  const saida: Record<string, string> = {};
+  // hml-20c: as que vieram com a lista (o com_urls) saem do cache, sem ir ao servidor; as outras, pelo diario_urls como antes
+  const ids = [...new Set(registros.filter((r) => r.path).map((r) => r.id))].filter((id) => {
+    const u = urlDoCache(id);
+    if (u) saida[id] = u;
+    return !u;
+  });
+  if (!ids.length) return saida;
   const partes: string[][] = [];
   for (let i = 0; i < ids.length; i += IDS_POR_LEITURA) partes.push(ids.slice(i, i + IDS_POR_LEITURA));
   const respostas = await Promise.all(partes.map((p) => lerNutricao("diario_urls", { ids: p })));
-  const saida: Record<string, string> = {};
   for (const r of respostas) {
     for (const linha of (r.linhas ?? []) as Array<{ id?: unknown; url?: unknown }>) {
       const u = urlAssinadaDoServidor(linha.url);

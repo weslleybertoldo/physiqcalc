@@ -205,13 +205,24 @@ async function lerTabela(c: ContextoLeitura, item: ItemValido, consulta: Consult
       if (r.ok === false) return r;
       porDia.push({ dia: j.dia, total: r.total as number });
     }
-    return { ok: true, linhas, ...total, valor: { por_dia: porDia } };
+    // hml-20c (com_urls): a página com as miniaturas na MESMA ida, quando pedidas
+    return { ok: true, linhas: await assinarSePedido(c, item, consulta.assinar, linhas), ...total, valor: { por_dia: porDia } };
   }
   const a = consulta.assinar;
   if (!a || a.lista) return { ok: true, linhas, ...total };
   if (a.download) return { ok: true, linhas: await assinarCadaUma(c, item, a, linhas), ...total };
+  return { ok: true, linhas: await assinarSePedido(c, item, a, linhas), ...total };
+}
+
+/**
+ * hml-20c: as URLs das linhas que a PRÓPRIA consulta leu (createSignedUrls como a pessoa, no bucket do ambiente) — a assinatura de sempre
+ * (sem `se`) e a opcional (com `se`: só com o param booleano dele = true no item — o com_urls da lista do Diário e do "Diário de hoje";
+ * sem ele, as linhas voltam como vieram, sem URL e sem ir ao Storage).
+ */
+async function assinarSePedido(c: ContextoLeitura, item: ItemValido, a: AssinarLeitura | undefined, linhas: unknown[]): Promise<unknown[]> {
+  if (!a || a.lista || a.download || (a.se !== undefined && item.params[a.se] !== true)) return linhas;
   const urls = await assinar(c, item.q, a, caminhosParaAssinar(linhas, a.coluna));
-  return { ok: true, linhas: comUrls(linhas, a.coluna, urls), ...total };
+  return comUrls(linhas, a.coluna, urls);
 }
 
 /**

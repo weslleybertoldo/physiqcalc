@@ -317,6 +317,13 @@ describe("hml-20a — o catálogo da nutricao (as 3 consultas do app do aluno; a
     if (ehRpc(c.fonte)) for (const e of c.fonte.erros ?? []) expect(e, e).toMatch(/^[a-z_]+$/); // os códigos de propósito: só códigos
     if (c.assinar) {
       expect(c.assinar.validade).toBeLessThanOrEqual(VALIDADE_MAX_S);
+      // hml-20c (com_urls): a assinatura opcional — o param que a liga é um booleano declarado; só em tabela, sem a lista e sem o baixar
+      if (c.assinar.se) {
+        expect(c.params[c.assinar.se], c.assinar.se).toEqual({ tipo: "booleano" });
+        expect(ehRpc(c.fonte)).toBe(false);
+        expect(c.assinar.lista).toBeUndefined();
+        expect(c.assinar.download).toBeUndefined();
+      }
       expect(BUCKETS_DE_LEITURA).toContain(c.assinar.bucket); // a lista fechada (20a: diario, evolucao; 20b: + anexos)
       if (!ehRpc(c.fonte)) expect(c.fonte.colunas).toContain(c.assinar.coluna);
       // hml-20b (revisão): o "baixar com o nome" — só em tabela (1 URL por linha), o nome numa coluna que a PRÓPRIA consulta lê, o param
@@ -1489,6 +1496,12 @@ describe("hml-20c — o catálogo da Dieta, das Dietas, da Pré-consulta e do Da
       tabela: "diario_alimentar", colunas: ["id", "path"], teto: 1, filtros: [{ param: "id", coluna: "id", op: "eq" }], vivas: true, uma: true,
     });
     expect(CONSULTAS_NUTRICAO.diario_foto_url.assinar).toEqual({ bucket: "diario", coluna: "path", validade: 300 });
+    // a decisão da sessão principal (etapa 2): a página do Diário e o "Diário de hoje" assinam as linhas que leram NA MESMA IDA, com o
+    // com_urls (opcional; o mesmo bucket e o mesmo prazo das miniaturas)
+    for (const q of ["diario_pagina", "diario_hoje"] as const) {
+      expect((CONSULTAS_NUTRICAO[q].params as Record<string, unknown>).com_urls, q).toEqual({ tipo: "booleano" });
+      expect(CONSULTAS_NUTRICAO[q].assinar, q).toEqual({ bucket: "diario", coluna: "path", validade: 3600, se: "com_urls" });
+    }
   });
 });
 
@@ -1702,6 +1715,55 @@ describe("hml-20c — as consultas compostas no módulo: a página do diário co
       { tabela: "diario_alimentar", colunas: SELECT_DIARIO, opcoes: { count: "exact", head: true }, passos: [["gte", "data_hora", DIAS[6]], ...filtrosBase, ["lt", "data_hora", DIAS[7]]] },
       { tabela: "diario_alimentar", colunas: SELECT_DIARIO, opcoes: { count: "exact", head: true }, passos: [["gte", "data_hora", DIAS[2]], ...filtrosBase, ["lt", "data_hora", DIAS[3]]] },
     ]);
+  });
+
+  it("diario_pagina/diario_hoje com com_urls: as linhas que a PRÓPRIA consulta leu assinadas NA MESMA IDA (1 h, o diario do ambiente, a URL relativa); o caminho do corpo não vale", async () => {
+    const P1 = `${EU}/${ALUNO}/1.png`;
+    const P2 = `${EU}/${ALUNO}/2.png`;
+    const pagina = [
+      { id: "r1", data_hora: "2026-10-12T20:00:00.000Z", path: P1 }, { id: "r2", data_hora: "2026-10-12T19:00:00.000Z", path: P2 },
+      { id: "r3", data_hora: "2026-10-12T18:00:00.000Z", path: null },
+    ];
+    const url = (p: string) => `${PREFIXO_ASSINADA}diario-staging/${p}?token=t-${p.length}`;
+    const k = contexto20c([{ q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS, pagina: 1, com_urls: true, path: "outro/x.png", caminhos: ["outro/y.png"] }], {
+      tabela: () => ({ data: pagina, error: null, count: 3 }),
+    });
+    const [r] = itensDa(await atenderLeitura(k.c));
+    expect(r).toEqual({
+      ok: true, total: 3, valor: { por_dia: [] },
+      linhas: [{ ...pagina[0], url: url(P1) }, { ...pagina[1], url: url(P2) }, { ...pagina[2], url: null }],
+    });
+    // 1 assinatura em lote, só dos caminhos das linhas lidas (a sem foto fica de fora; o caminho do corpo nunca entra)
+    expect(k.assinaturas).toEqual([{ bucket: "diario-staging", caminhos: [P1, P2], validade: 3600 }]);
+    expect(k.consultas).toHaveLength(1);
+    // o "Diário de hoje" do Dashboard, igual
+    const h = contexto20c([{ q: "diario_hoje", conta: CONTA, de: DIAS[0], com_urls: true }], { tabela: () => ({ data: pagina.slice(0, 1), error: null }) });
+    expect(itensDa(await atenderLeitura(h.c))).toEqual([{ ok: true, linhas: [{ ...pagina[0], url: url(P1) }] }]);
+    expect(h.assinaturas).toEqual([{ bucket: "diario-staging", caminhos: [P1], validade: 3600 }]);
+  });
+
+  it("com_urls: sem o param (ou false) nada é assinado e a linha volta como antes; sem foto nenhuma, nenhuma assinatura; a assinatura que falha = a linha sem URL (aviso)", async () => {
+    const pagina = [{ id: "r1", data_hora: "2026-10-12T20:00:00.000Z", path: `${EU}/${ALUNO}/1.png` }];
+    for (const extra of [{}, { com_urls: false }]) {
+      const sem = contexto20c([{ q: "diario_hoje", conta: CONTA, de: DIAS[0], ...extra }], { tabela: () => ({ data: pagina, error: null }) });
+      expect(itensDa(await atenderLeitura(sem.c))).toEqual([{ ok: true, linhas: pagina }]);
+      expect(sem.assinaturas).toEqual([]);
+    }
+    const semFoto = contexto20c([{ q: "diario_hoje", conta: CONTA, de: DIAS[0], com_urls: true }], {
+      tabela: () => ({ data: [{ id: "r9", data_hora: "2026-10-12T20:00:00.000Z", path: null }], error: null }),
+    });
+    expect(itensDa(await atenderLeitura(semFoto.c))).toEqual([{ ok: true, linhas: [{ id: "r9", data_hora: "2026-10-12T20:00:00.000Z", path: null, url: null }] }]);
+    expect(semFoto.assinaturas).toEqual([]);
+    const falha = contexto20c([{ q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS, pagina: 1, com_urls: true }], {
+      tabela: () => ({ data: pagina, error: null, count: 1 }),
+      assinar: () => ({ data: null, error: { message: "storage fora", statusCode: "500" } }),
+    });
+    expect(itensDa(await atenderLeitura(falha.c))).toEqual([{ ok: true, linhas: [{ ...pagina[0], url: null }], total: 1, valor: { por_dia: [] } }]);
+    expect(falha.log.aviso).toHaveBeenCalledWith(expect.objectContaining({ codigo: "assinar_falhou", acao: "diario_pagina" }));
+    // o com_urls em texto (não booleano) → dados_invalidos naquele item, sem ir ao banco
+    const ruim = contexto20c([{ q: "diario_hoje", conta: CONTA, de: DIAS[0], com_urls: "sim" }], {});
+    expect(itensDa(await atenderLeitura(ruim.c))).toEqual([{ ok: false, erro: "dados_invalidos" }]);
+    expect(ruim.consultas).toEqual([]);
   });
 
   it("diario_pagina: o prazo do pedido esgotado no meio dos dias cortados → tempo_esgotado, sem contar mais (como o laço das páginas — revisão ⚪6)", async () => {

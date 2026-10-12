@@ -510,6 +510,11 @@ describe("hml-20c — as Dietas: Alimentos, Receitas e Diário pelo servidor (as
     expect(p.itens[0].paciente).toEqual({ id: ALUNA, nome: "Ana W5P", apelido: null, link_codigo: "ana1", foto_url: null, conta_id: CONTA, nutricionista_id: EU });
     expect(Object.keys(p.itens[0]).sort()).toEqual([...colunasDoTipo("diario_alimentar"), "paciente"].sort());
     expect(p.porDia).toEqual({}); // a página 1 coube inteira
+    // hml-20c (decisão da sessão principal na etapa 2): as miniaturas vieram NA MESMA IDA (o com_urls) — o urlsAssinadas da tela serve do
+    // cache da lib, sem ir ao servidor (antes: o diario_urls em série), com as MESMAS URLs (o domínio do cliente, 1 h)
+    const urls = await diario.urlsAssinadas(p.itens);
+    expect(urls).toEqual(Object.fromEntries(p.itens.map((r) => [r.id, `${BASE}/storage/v1/object/sign/diario-staging/${r.path}?token=tk-3600`])));
+    expect(h.invoke).toHaveBeenCalledTimes(1);
     expect(await diario.contarDiario(CONTA, EU, { deIso, alunoId: "", soNaoReagidas: true })).toBe(2);
     expect(await diario.contarDiario(CONTA, EU, { deIso, alunoId: OUTRO_ALUNO, soNaoReagidas: false })).toBe(0);
     expect(await diario.listarAlunosDoDiario(CONTA, EU, deIso)).toEqual([{ id: ALUNA, nome: "Ana W5P", apelido: null, link_codigo: "ana1", foto_url: null }]);
@@ -517,6 +522,7 @@ describe("hml-20c — as Dietas: Alimentos, Receitas e Diário pelo servidor (as
     const [pagina] = corposAceitos();
     expect(pagina.q).toBe("diario_pagina");
     expect((pagina.params.dias as string[])[0]).toBe(deIso);
+    expect(pagina.params.com_urls).toBe(true);
     // N1: a conta de outra pessoa → o recorte não acha nada da aluna
     expect((await diario.listarDiarioPaginaComDias(OUTRA_CONTA, EU, { deIso, alunoId: "", soNaoReagidas: false }, 1)).itens).toEqual([]);
   });
