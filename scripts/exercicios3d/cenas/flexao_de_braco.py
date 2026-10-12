@@ -18,8 +18,9 @@
 # quadril estende até o centro dele ficar na reta ombro → tornozelo e o pé faz flexão dorsal (canela × pé ~90°); o corpo todo gira em
 # volta do eixo das bases dos dedos dos pés (cabeça do osso ToeBase) — o corpo é uma prancha rígida que gira na ponta dos pés — e os
 # dedos dos pés voltam deitados no chão, pra frente. As mãos ficam PARADAS no chão, espalmadas (a palma e cada dedo encostando, ~1 mm
-# dentro): o braço vai por IK do ombro até o punho parado, o antebraço gira pra palma e o punho põe os dedos pra frente (o jeito da
-# Flexão Nórdica, lote 4). A clavícula gira em volta do eixo do tronco: protrai em cima e retrai embaixo (Contreras 2012).
+# dentro): o braço vai por IK do ombro até o punho parado, o antebraço gira até a linha dos nós dos dedos ficar de lado e o punho
+# só estende, pondo a palma no chão e os dedos pra frente (o jeito da Flexão Nórdica, lote 4, com o giro do Mergulho no Banco). A
+# clavícula gira em volta do eixo do tronco: protrai em cima e retrai embaixo (Contreras 2012).
 import math
 import numpy as np
 from mathutils import Matrix, Vector
@@ -267,9 +268,14 @@ def montar(bon):
         palma_q = Vector(palma_q)
         palma_q = (palma_q - dedos_q * palma_q.dot(dedos_q)).normalized()
         f0, f1 = p3.cabeca(rig, lado + "ForeArm"), p3.cabeca(rig, lado + "Hand")
-        ax = (f1 - f0).normalized()                       # 1) antebraço gira (pronação/supinação) pra palma
-        quer = palma_q - ax * palma_q.dot(ax)
-        tem = pg._base(rig, lado)[0]
+        # linha dos nós (pg._base[1], indicador → mínimo) da mão no fim: de lado (s · dedos × palma). Conserto de 11/10/2026 (o do
+        # Mergulho no Banco): o giro alinhava a NORMAL DA PALMA, que com o punho dobrado ~90° fica quase na linha do antebraço em
+        # pé — a projeção virava de lado no começo da descida, o antebraço girava ~121° no próprio eixo e o punho torcia junto (a
+        # pele da mão andava 37 mm com a mão parada). A linha dos nós fica perpendicular ao antebraço: a conta é estável.
+        nos_q = dedos_q.cross(palma_q) * (1 if lado == "Left" else -1)
+        ax = (f1 - f0).normalized()                       # 1) antebraço gira (pronação/supinação) até a linha dos nós
+        quer = nos_q - ax * nos_q.dot(ax)                 # (indicador → mínimo) ficar na direção que ela tem no fim
+        tem = pg._base(rig, lado)[1]                      # (de lado): o punho depois só estende, sem torcer
         tem = tem - ax * tem.dot(ax)
         if quer.length > 1e-6 and tem.length > 1e-6:
             quer.normalize()
