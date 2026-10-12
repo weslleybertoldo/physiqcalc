@@ -111,6 +111,27 @@ describe("hml-20a — os erros (por item e da chamada)", () => {
     }
   });
 
+  it("revisão: o PRAZO (o AbortError/TimeoutError do relógio do fetch, dentro do FunctionsFetchError) → tempo_esgotado; a rede caída → rede", async () => {
+    const casos: Array<[string, unknown]> = [
+      ["tempo_esgotado", new DOMException("The operation was aborted.", "AbortError")],
+      ["tempo_esgotado", Object.assign(new Error("signal timed out"), { name: "TimeoutError" })],
+      ["rede", new TypeError("Failed to fetch")],
+    ];
+    for (const [codigo, causa] of casos) {
+      const ler = leitor(funcaoFalsa(() => ({ data: null, error: { name: "FunctionsFetchError", context: causa } })));
+      const p = ler("a").catch((e) => e);
+      await vi.advanceTimersByTimeAsync(JANELA_MS);
+      expect(await p, codigo).toMatchObject({ codigo });
+    }
+    // a invocação que lança o próprio AbortError (sem passar pelo supabase-js) também é o prazo
+    const invocar = vi.fn(async () => {
+      throw new DOMException("aborted", "AbortError");
+    });
+    const p = criarLeitor({ funcao: "nutricao", invocar, erro: (c) => new ErroDeTeste(c) })("a").catch((e) => e);
+    await vi.advanceTimersByTimeAsync(JANELA_MS);
+    expect(await p).toMatchObject({ codigo: "tempo_esgotado" });
+  });
+
   it("a invocação que lança (não devia: o supabase-js devolve o erro) → rede para todas", async () => {
     const invocar = vi.fn(async () => {
       throw new TypeError("Failed to fetch");

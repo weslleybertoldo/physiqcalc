@@ -291,6 +291,20 @@ describe("hml-20a: o bloco da minha_evolucao no index.ts (como a pessoa, o dono 
     expect(bloco).toMatch(/from\("physiq_registros_fotos"\)\.select\(COLUNAS_FOTOS_EVOLUCAO\.join\(", "\)\)\.eq\("user_id", sub\)/);
     expect(bloco).toMatch(/\.limit\(MAX_AVALIACOES_EVOLUCAO\)/);
     expect(bloco).toMatch(/\.limit\(MAX_FOTOS_EVOLUCAO\)/);
+    // hml-14d (B21 · D30): as 200 MAIS NOVAS — a ordem DECRESCENTE no próprio encadeamento de cada consulta (o servidor falso do
+    // fontes.test.ts ordena sozinho; aqui é o código que vai à borda). As avaliações desempatam pelo id; a resposta volta crescente
+    // pela parteDaEvolucao.
+    const cadeia = (tabela: string) => {
+      const i = bloco.indexOf(`from("${tabela}")`);
+      const fim = bloco.indexOf("pessoa.from(", i + 1);
+      return i < 0 ? "" : bloco.slice(i, fim < 0 ? bloco.indexOf("]);", i) : fim);
+    };
+    expect(cadeia("physiq_avaliacoes")).toMatch(
+      /\.order\("data_avaliacao", \{ ascending: false \}\)\s*\.order\("id", \{ ascending: false \}\)\s*\.limit\(MAX_AVALIACOES_EVOLUCAO\)/,
+    );
+    expect(cadeia("physiq_registros_fotos")).toMatch(/\.order\("mes_ref", \{ ascending: false \}\)\s*\.limit\(MAX_FOTOS_EVOLUCAO\)/);
+    expect(cadeia("physiq_avaliacoes")).not.toMatch(/ascending: true/);
+    expect(cadeia("physiq_registros_fotos")).not.toMatch(/ascending: true/);
     expect(bloco).toMatch(/createSignedUrls\(caminhos, VALIDADE_URL_EVOLUCAO_S\)/);
     expect(bloco).not.toMatch(/select\(\s*["'`]\*/);
     // a função da ação nem recebe o corpo: nenhum id do corpo vira filtro

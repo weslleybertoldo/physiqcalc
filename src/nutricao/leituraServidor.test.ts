@@ -10,7 +10,7 @@ import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   LOTE_MAX, LOTE_PARALELO, PREFIXO_ASSINADA, Q_MAX, TETO_MAX, UUIDS_MAX, VALIDADE_MAX_S, argsDaRpc, assinaturaRelativa, caminhosParaAssinar, comUrls,
-  comUrlsNaLista, ehRpc, erroDaLeitura, lerParams, lerPedidoDeLeitura, planoDaTabela, rodarLote, urlsAssinadas, valorDoParam,
+  comUrlsNaLista, ehRpc, erroDaLeitura, lerParams, lerPedidoDeLeitura, planoDaTabela, rodarLote, urlsAssinadas, validadeDaAssinatura, valorDoParam,
   type CatalogoLeitura, type ConsultaLeitura, type FonteTabela, type ItemValido, type ParamLeitura, type RespostaDeItem,
 } from "../../supabase-principal/functions/_shared/leitura-lote";
 import {
@@ -459,10 +459,55 @@ describe("hml-20a — o módulo lê como a pessoa (fonte)", () => {
     expect(fonte).not.toMatch(/SERVICE_ROLE|service_role|createClient\(/);
     expect(fonte).toMatch(/c\.comoPessoa\.rpc\(fonte\.rpc, argsDaRpc\(fonte, item\.params\)\)/);
     expect(fonte).toMatch(/planoDaTabela\(consulta, item\.params, c\.userId\)/);
-    expect(fonte).toMatch(/c\.comoPessoa\.storage\.from\(bucket\)\.createSignedUrls\(caminhos, a\.validade\)/);
+    expect(fonte).toMatch(/c\.comoPessoa\.storage\.from\(bucket\)\.createSignedUrls\(caminhos, validadeDaAssinatura\(a\)\)/);
+    expect(fonte).not.toMatch(/createSignedUrls\(caminhos, a\.validade\)/);
     expect(fonte).toMatch(/caminhosParaAssinar\(/);
     expect(fonte).not.toMatch(/select\(\s*["'`]\*/);
     // o despacho do index.ts chama o módulo
     expect(readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/index.ts"), "utf-8")).toMatch(/case "leitura":\s*return atenderLeitura\(c\);/);
+  });
+});
+
+describe("hml-20a (revisão) — o teto da validade da URL assinada vale para TODO catálogo (no motor)", () => {
+  it("validadeDaAssinatura: a do catálogo, no teto de 1 h e no mínimo 1 s (o que não é número → o teto)", () => {
+    expect(VALIDADE_MAX_S).toBe(3600);
+    expect(validadeDaAssinatura({ validade: 99_999 })).toBe(3600);
+    expect(validadeDaAssinatura({ validade: 3600.9 })).toBe(3600);
+    expect(validadeDaAssinatura({ validade: 60 })).toBe(60);
+    expect(validadeDaAssinatura({ validade: 0 })).toBe(1);
+    expect(validadeDaAssinatura({ validade: -5 })).toBe(1);
+    expect(validadeDaAssinatura({ validade: Number.NaN })).toBe(3600);
+    for (const q of CONSULTAS_DA_NUTRICAO) {
+      const a = (CONSULTAS_NUTRICAO[q] as ConsultaLeitura).assinar;
+      if (a) expect(validadeDaAssinatura(a), q).toBe(a.validade); // o catálogo da 20a já está dentro do teto
+    }
+  });
+
+  it("de ponta a ponta: um catálogo com validade ACIMA do teto (99999 s) assina com 3600 s no módulo", async () => {
+    const caminho = "../../supabase-principal/functions/_shared/nutricao-leituras";
+    vi.resetModules();
+    vi.doMock(caminho, async () => {
+      const real = await vi.importActual<typeof import("../../supabase-principal/functions/_shared/nutricao-leituras")>(caminho);
+      const ev = real.CONSULTAS_NUTRICAO.aluno_evolucao;
+      const CONSULTAS = { ...real.CONSULTAS_NUTRICAO, aluno_evolucao: { ...ev, assinar: { ...ev.assinar, validade: 99_999 } } };
+      return {
+        ...real,
+        CONSULTAS_NUTRICAO: CONSULTAS,
+        consultaDaNutricao: (q: unknown) =>
+          typeof q === "string" && Object.prototype.hasOwnProperty.call(CONSULTAS, q) ? CONSULTAS[q as keyof typeof CONSULTAS] : null,
+      };
+    });
+    try {
+      const { atenderLeitura: atender } = await import("../../supabase-principal/functions/nutricao/leituras");
+      const { c, assinaturas } = contexto({ acao: "ler", itens: [{ q: "aluno_evolucao" }] }, {
+        rpc: () => ({ data: { fotos: [{ path: "a/1.jpg" }] }, error: null }),
+        assinar: (bucket, caminhos) => assinadas(bucket, caminhos),
+      });
+      expect(await atender(c)).toMatchObject({ ok: true, itens: [{ ok: true }] });
+      expect(assinaturas).toEqual([{ bucket: "evolucao-staging", caminhos: ["a/1.jpg"], validade: 3600 }]);
+    } finally {
+      vi.doUnmock(caminho);
+      vi.resetModules();
+    }
   });
 });

@@ -177,6 +177,16 @@ describe("foto do diário (pelo link assinado do servidor; o mesmo registro do l
     h.invoke.mockReset().mockResolvedValue(leitura({ ok: false, erro: "tempo_esgotado" }));
     expect(await urlsDoDiario([{ id: "d1", path: "a/b/1.jpg" }])).toEqual({});
   });
+  it("revisão: o PRAZO da função (25 s) chega como tempo_esgotado (o erro com 'Tentar de novo'), NUNCA sem_internet; a rede caída segue sem_internet", async () => {
+    h.invoke.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new DOMException("The operation was aborted.", "AbortError") } });
+    const prazo = await minhaDieta("2026-09-30").catch((e) => e);
+    expect(prazo).toMatchObject({ codigo: "tempo_esgotado", message: "tempo_esgotado" });
+    expect(prazo.message).not.toBe("sem_internet"); // a Dieta compara d.erro.message === "sem_internet" para o "Sem conexão"
+    h.invoke.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new TypeError("Failed to fetch") } });
+    await expect(minhaDieta("2026-09-30")).rejects.toMatchObject({ message: "sem_internet" });
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    await expect(minhaDieta("2026-09-30")).rejects.toThrow("sem_internet");
+  });
   it("a leitura da dieta que falha no servidor chega com o código na mensagem (a tela mostra o estado de erro, não o 'sem internet')", async () => {
     h.invoke.mockResolvedValue(leitura({ ok: false, erro: "tempo_esgotado" }));
     await expect(minhaDieta("2026-09-30")).rejects.toMatchObject({ codigo: "tempo_esgotado", message: "tempo_esgotado" });

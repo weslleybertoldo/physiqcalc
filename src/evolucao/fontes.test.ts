@@ -121,6 +121,13 @@ describe("hml-20a — a parte do Treino pela admin-avaliacoes › minha_evolucao
     }
   });
 
+  it("revisão: o PRAZO da admin-avaliacoes (o AbortError do fetch) é tempo_esgotado, não rede (a rede caída segue rede)", async () => {
+    h.treino.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new DOMException("aborted", "AbortError") } });
+    await expect(carregarTreino("t1")).rejects.toMatchObject({ parte: "treino", message: "tempo_esgotado" });
+    h.treino.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new TypeError("Failed to fetch") } });
+    await expect(carregarTreino("t1")).rejects.toMatchObject({ parte: "treino", message: "rede" });
+  });
+
   it("a resposta de OUTRA pessoa (a sessão do Treino trocou no meio) não entra na tela nem no aparelho", async () => {
     h.treino.mockResolvedValue(servidorDoTreino("t2", { perfil: { id: "t2", peso: 50 } }));
     await expect(carregarTreino("t1")).rejects.toMatchObject({ parte: "treino", message: "sessao_trocada" });
@@ -165,6 +172,11 @@ describe("hml-20a — a parte do principal pela nutricao › ler (aluno_evolucao
     await expect(carregarPrincipal()).rejects.toMatchObject({ parte: "principal", message: "tempo_esgotado" });
     h.principal.mockResolvedValueOnce(recusa(429, { ok: false, erro: "muitas_acoes" }));
     await expect(carregarPrincipal()).rejects.toMatchObject({ parte: "principal", message: "muitas_acoes" });
+  });
+
+  it("revisão: o PRAZO da nutricao (o AbortError do fetch) chega ao principal como tempo_esgotado", async () => {
+    h.principal.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new DOMException("aborted", "AbortError") } });
+    await expect(carregarPrincipal()).rejects.toMatchObject({ parte: "principal", message: "tempo_esgotado" });
   });
 
   it("sem internet: o principal recusa com sem_internet sem chamar a função", async () => {

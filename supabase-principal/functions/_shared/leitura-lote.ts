@@ -276,6 +276,15 @@ export function itensDaLista(valor: unknown, lista: string): unknown[] {
   return ehObjeto(valor) && Array.isArray(valor[lista]) ? (valor[lista] as unknown[]) : [];
 }
 
+/**
+ * A validade da URL assinada de uma consulta: a do catálogo, no teto de VALIDADE_MAX_S (1 h, a de hoje) e no mínimo 1 s — vale para TODO
+ * catálogo (o da nutricao e, na 20d, o da financeiro): um catálogo com validade maior não passa do teto.
+ */
+export function validadeDaAssinatura(a: Pick<AssinarLeitura, "validade">): number {
+  const v = Number.isFinite(a.validade) ? Math.floor(a.validade) : VALIDADE_MAX_S;
+  return Math.max(1, Math.min(v, VALIDADE_MAX_S));
+}
+
 /** Os caminhos que a PRÓPRIA consulta leu (a coluna de cada linha/item): texto, sem repetição — nunca um caminho vindo do corpo. */
 export function caminhosParaAssinar(itens: readonly unknown[], coluna: string): string[] {
   const saida = new Set<string>();

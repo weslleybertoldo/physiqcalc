@@ -5,8 +5,9 @@
 //   RPC     .rpc(nome, args montados no servidor) → { ok: true, valor }
 //   tabela  .from(t).select(<colunas fechadas>) + os filtros declarados + o dono (= quem chama) + as vivas + ordem + teto → { ok: true, linhas }
 //   assinar só os caminhos que a PRÓPRIA consulta leu → createSignedUrls como a pessoa (a policy de leitura do bucket confere de novo),
-//           no bucket do ambiente, com a validade de hoje → `url` RELATIVA (/storage/v1/object/sign/…) em cada linha/item; a tela monta
-//           com o domínio dela. Não deu para assinar → url null (a tela mostra "Foto indisponível", como hoje) e um aviso no log.
+//           no bucket do ambiente, com a validade de hoje (no teto do motor: validadeDaAssinatura) → `url` RELATIVA
+//           (/storage/v1/object/sign/…) em cada linha/item; a tela monta com o domínio dela. Não deu para assinar → url null (a tela
+//           mostra "Foto indisponível", como hoje) e um aviso no log.
 // Log com campos fixos: 1 linha por pedido (acao "ler", n itens, ms, o desfecho) e 1 por item que falhou (o código e a q) — nunca os
 // params, as linhas ou os caminhos.
 // Este arquivo NÃO importa a porta (_shared/porta-pessoa.ts, que traz o supabase-js do esm.sh e o Deno): o contexto é o pedaço do
@@ -14,7 +15,7 @@
 // o módulo com um cliente falso (src/nutricao/leituraServidor.test.ts) e o tsc do app não puxa o Deno.
 import {
   argsDaRpc, caminhosParaAssinar, comUrls, comUrlsNaLista, ehRpc, erroDaLeitura, itensDaLista, lerPedidoDeLeitura, planoDaTabela, rodarLote,
-  urlsAssinadas, type AssinarLeitura, type ConsultaLeitura, type FonteRpc, type FonteTabela, type ItemValido, type RespostaDeItem,
+  urlsAssinadas, validadeDaAssinatura, type AssinarLeitura, type ConsultaLeitura, type FonteRpc, type FonteTabela, type ItemValido, type RespostaDeItem,
 } from "../_shared/leitura-lote.ts";
 import type { Log } from "../_shared/log.ts";
 import { CONSULTAS_NUTRICAO, bucketDaLeitura, consultaDaNutricao } from "../_shared/nutricao-leituras.ts";
@@ -105,7 +106,8 @@ async function lerTabela(c: ContextoLeitura, item: ItemValido, consulta: Consult
 async function assinar(c: ContextoLeitura, q: string, a: AssinarLeitura, caminhos: string[]): Promise<Map<string, string>> {
   if (!caminhos.length) return new Map();
   const bucket = bucketDaLeitura(a.bucket, c.schema);
-  const { data, error } = await c.comoPessoa.storage.from(bucket).createSignedUrls(caminhos, a.validade);
+  // a validade do catálogo no teto do motor (1 h): nenhum catálogo passa do prazo de hoje
+  const { data, error } = await c.comoPessoa.storage.from(bucket).createSignedUrls(caminhos, validadeDaAssinatura(a));
   if (error || !data) {
     const o = (error ?? {}) as { status?: unknown; statusCode?: unknown };
     const status = typeof o.status === "number" ? o.status : Number(o.statusCode) || 0;

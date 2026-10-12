@@ -46,7 +46,11 @@ function erroDoApp(e: unknown): Error {
   return e instanceof Error ? e : new Error("erro_interno");
 }
 
-/** O erro de uma leitura no app: a mensagem passa a ser o CÓDIGO (rede → sem_internet), como o erroDoApp das gravações. */
+/**
+ * O erro de uma leitura no app: a mensagem passa a ser o CÓDIGO, como o erroDoApp das gravações. sem_internet SÓ quando a rede caiu de
+ * verdade (navigator.onLine === false, que o lote recusa antes de chamar, ou a falha de rede — "rede"); o prazo estourado chega como
+ * tempo_esgotado e a tela mostra o erro com "Tentar de novo" (como a RPC que passava do prazo antes), nunca "Sem conexão".
+ */
 function erroDaLeituraDoApp(e: unknown): Error {
   if (e instanceof ErroLeitura) {
     const codigo = e.codigo === "rede" ? "sem_internet" : e.codigo;

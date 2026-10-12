@@ -18,6 +18,7 @@
 import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { PRINCIPAL_URL, principalConfigurado } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
+import { foiPrazo } from "@/integrations/leituraEmLote";
 import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import type { AntropometriaPrincipal, FotoPrincipal, LinhaFotoTreino, LinhaTreino, ParteTreino, PartePrincipal } from "./tipos";
 
@@ -43,7 +44,10 @@ export function urlDoServidor(base: string, relativa: unknown): string | null {
   return `${base.replace(/\/+$/, "")}${relativa}`;
 }
 
-/** O código do erro da admin-avaliacoes ({ error: <código> }); sem resposta (rede) → "rede"; o resto → erro_interno. */
+/**
+ * O código do erro da admin-avaliacoes ({ error: <código> }); sem resposta: o prazo (o AbortError do relógio do fetch) → tempo_esgotado,
+ * a rede que caiu → "rede"; o resto → erro_interno. (A tela decide "sem conexão" × "erro" pelo navigator.onLine, como antes.)
+ */
 async function codigoDoTreino(erro: unknown): Promise<string> {
   const contexto = (erro as { context?: unknown } | null)?.context;
   if (contexto && typeof (contexto as Response).clone === "function") {
@@ -54,7 +58,8 @@ async function codigoDoTreino(erro: unknown): Promise<string> {
       // corpo que não é JSON: segue
     }
   }
-  return (erro as { name?: unknown } | null)?.name === "FunctionsFetchError" ? "rede" : "erro_interno";
+  if ((erro as { name?: unknown } | null)?.name !== "FunctionsFetchError") return "erro_interno";
+  return foiPrazo((erro as { context?: unknown }).context) ? "tempo_esgotado" : "rede";
 }
 
 /**

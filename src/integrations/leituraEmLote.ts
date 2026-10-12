@@ -4,7 +4,8 @@
 // janelaMs, 5 ms) viram 1 chamada à função: { acao: "ler", itens: [{ ...params, q }] } (a q por último: nenhum param troca a consulta).
 //   · até maxItens (16) por lote — o 17º abre outro lote; `sozinha` = num lote só dela (as consultas pesadas não seguram a tela);
 //   · cada leitura recebe a SUA resposta: o item { ok: false, erro } rejeita só ela; a chamada que falha (rede, 5xx, 429, a porta
-//     recusou) rejeita todas as do lote com o mesmo código;
+//     recusou) rejeita todas as do lote com o mesmo código — a chamada que passou do prazo do fetch (25 s: o AbortError/TimeoutError
+//     dentro do FunctionsFetchError) é tempo_esgotado, NÃO rede (a internet está lá: a tela mostra o erro com "Tentar de novo");
 //   · sem rede (navigator.onLine === false) → sem_internet na hora, sem chamar (como as libs faziam);
 //   · a repetição (1 vez em 5xx/429/rede) é a do fetch dos 2 clientes (src/integrations/repeticao.ts, ACOES_DE_LEITURA) — não daqui.
 // A resposta de cada item: { linhas?, valor?, total? } (o que o motor do servidor devolve: _shared/leitura-lote.ts).
@@ -55,7 +56,16 @@ interface Pendente {
 
 const ehObjeto = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 
-/** O código de uma chamada que falhou: o { erro } que a função respondeu; sem resposta (rede) → "rede"; o resto → erro_interno. */
+/** O erro foi o prazo (o AbortError do relógio do fetch dos 2 clientes, ou um TimeoutError)? */
+export function foiPrazo(e: unknown): boolean {
+  const nome = (e as { name?: unknown } | null)?.name;
+  return nome === "AbortError" || nome === "TimeoutError";
+}
+
+/**
+ * O código de uma chamada que falhou: o { erro } que a função respondeu; sem resposta: o prazo (AbortError/TimeoutError dentro do
+ * FunctionsFetchError) → tempo_esgotado, a rede que caiu de verdade → "rede"; o resto → erro_interno.
+ */
 async function codigoDaFalha(erro: unknown): Promise<{ codigo: string; extra: Record<string, unknown> }> {
   const contexto = (erro as { context?: unknown } | null)?.context;
   if (contexto && typeof (contexto as Response).clone === "function") {
@@ -66,7 +76,9 @@ async function codigoDaFalha(erro: unknown): Promise<{ codigo: string; extra: Re
       // corpo que não é JSON: segue para o código genérico
     }
   }
-  if ((erro as { name?: unknown } | null)?.name === "FunctionsFetchError") return { codigo: "rede", extra: {} };
+  if ((erro as { name?: unknown } | null)?.name === "FunctionsFetchError") {
+    return { codigo: foiPrazo((erro as { context?: unknown }).context) ? "tempo_esgotado" : "rede", extra: {} };
+  }
   return { codigo: "erro_interno", extra: {} };
 }
 
@@ -85,8 +97,8 @@ export function criarLeitor(opcoes: OpcoesLeitor): Leitor {
     let resposta: RespostaDaFuncao;
     try {
       resposta = await opcoes.invocar(opcoes.funcao, { acao: "ler", itens: lote.map((p) => ({ ...p.params, q: p.q })) });
-    } catch {
-      rejeitarTodos(lote, "rede");
+    } catch (e) {
+      rejeitarTodos(lote, foiPrazo(e) ? "tempo_esgotado" : "rede");
       return;
     }
     if (resposta.error) {
