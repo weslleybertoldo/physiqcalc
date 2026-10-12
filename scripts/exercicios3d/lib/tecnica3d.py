@@ -787,3 +787,40 @@ def coxa_em_pe(j):
 
 
 MEDIDAS.update({"coxa_em_pe": coxa_em_pe})
+
+
+# ── escalador (lote 13, 12/10/2026): na prancha alta com UMA perna dobrada embaixo do corpo e a outra esticada pra trás (NSCA, Kinetic
+# Select, Football-Specific Speed Drills: "the athlete flexes one leg at the knee and hip and positions that foot on the ground under the
+# hips. The hips do not rise away from the ground"), a reta do corpo vai do ombro ao tornozelo da perna ESTICADA — o
+# quadril_linha_ombro_tornozelo usa o meio dos 2 tornozelos (na flexão de braço os pés ficam juntos) e, com um pé embaixo do quadril, o
+# meio cai perto do joelho de trás. E a bola do pé da perna que vem pra frente pousa embaixo do quadril e fica parada no chão até a troca.
+def quadril_linha_ombro_tornozelo_lado(j):
+    """Como o quadril_linha_ombro_tornozelo, mas a reta vai do meio dos ombros (cabeças do úmero) até o tornozelo de UM lado, mm [E, D]:
+    o centro das articulações do quadril acima (+, pro lado das costas) ou abaixo (−, pro lado da barriga) da reta ombro → tornozelo
+    esquerdo e da reta ombro → tornozelo direito, no eixo frente do tronco. No escalador vale o lado da perna esticada atrás (a regra da
+    ficha usa "lado"); com os 2 tornozelos juntos (flexão de braço) os 2 números são o do quadril_linha_ombro_tornozelo."""
+    _, _, frente = eixos_tronco(j)
+    ombro = (j["LeftArm"] + j["RightArm"]) / 2
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    out = []
+    for L, _ in LADOS:
+        pe = j[L + "Foot"]
+        u = _u(ombro - pe)
+        d = (quadril - pe) - u * float((quadril - pe) @ u)
+        out.append(-float(d @ frente) * 1000)
+    return out
+
+
+def bola_do_pe_quadril(j):
+    """Bola do pé (cabeça do ToeBase: a articulação da base dos dedos) à frente (+, pro lado da cabeça) ou atrás (−) do centro das
+    articulações do quadril, na direção quadril → pescoço vista de cima (no plano do chão), mm [E, D]: 0 = a bola do pé bem embaixo do
+    quadril. De bruços na prancha alta (escalador), o pé que vem pra frente pousa embaixo do quadril e o de trás fica ~0,7 m atrás; com
+    o tronco parado, o pé parado no chão dá o mesmo número em todo quadro (sem escorregar). Subir ou descer o pé não muda o número; com
+    o tronco em pé (na vertical) a direção some."""
+    frente = _u(_chao(j["Neck"] - j["Hips"]))
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    return [float((j[L + "ToeBase"] - quadril) @ frente) * 1000 for L, _ in LADOS]
+
+
+MEDIDAS.update({"quadril_linha_ombro_tornozelo_lado": quadril_linha_ombro_tornozelo_lado, "bola_do_pe_quadril": bola_do_pe_quadril})
+UNIDADE.update({"quadril_linha_ombro_tornozelo_lado": "mm", "bola_do_pe_quadril": "mm"})

@@ -783,3 +783,32 @@ def test_coxa_em_pe_contra_a_vertical_com_sinal():
     assert tc.coxa_em_pe(girar(coxa(j, 30), 40, (0, 0, 1))) == pytest.approx([30, 30], abs=1e-6)
     assert tc.coxa_em_pe(j)[0] == pytest.approx(math.degrees(math.atan2(0.02, 0.45)), abs=1e-6)   # em_pe: joelho 2 cm à frente
     assert "coxa_em_pe" in tc.MEDIDAS
+
+
+def test_quadril_na_reta_ate_o_tornozelo_de_um_lado_e_bola_do_pe_no_escalador():
+    """Escalador (lote 13): com os 2 tornozelos juntos, os 2 lados dão o quadril_linha_ombro_tornozelo; com o pé esquerdo puxado pra
+    frente (embaixo do quadril) só o número do lado esquerdo muda — o direito continua medindo a reta até o tornozelo de trás. A bola do
+    pé (ToeBase) à frente (+) ou atrás (−) do quadril, vista de cima, na direção da cabeça: de bruços, inclinado ou virado, o mesmo
+    número; subir o pé não muda."""
+    j = em_pe()                                                   # ombros, quadril e tornozelos no eixo x = 0, y = 0 (vista de lado)
+    for L in ("Left", "Right"):
+        j[L + "Foot"] = np.array([j[L + "Foot"][0], 0.0, 0.08])
+    k = dict(j, **{L + "UpLeg": j[L + "UpLeg"] + np.array([0, 0.03, 0]) for L in ("Left", "Right")})   # quadril 3 cm pras costas
+    assert tc.quadril_linha_ombro_tornozelo_lado(k) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.quadril_linha_ombro_tornozelo_lado(k)[0] == pytest.approx(tc.quadril_linha_ombro_tornozelo(k)[0], abs=1e-6)
+    dobrou = dict(k, LeftFoot=np.array([0.10, -0.25, 0.55]))     # o pé esquerdo vai pra frente e pra cima (perna dobrada)
+    assert tc.quadril_linha_ombro_tornozelo_lado(dobrou)[1] == pytest.approx(30, abs=1e-6)
+    assert abs(tc.quadril_linha_ombro_tornozelo_lado(dobrou)[0] - 30) > 5
+    de_brucos = girar(dobrou, 85, (1, 0, 0))
+    assert tc.quadril_linha_ombro_tornozelo_lado(de_brucos)[1] == pytest.approx(30, abs=1e-6)
+    assert tc.quadril_linha_ombro_tornozelo_lado(girar(de_brucos, 35, (0, 0, 1)))[1] == pytest.approx(30, abs=1e-6)
+
+    p = girar(em_pe(), 90, (1, 0, 0), (0, 0, 0.95))                # de bruços: a cabeça pra −Y, o quadril em y = 0
+    quadril = (p["LeftUpLeg"] + p["RightUpLeg"]) / 2
+    p["LeftToeBase"] = quadril + np.array([0.10, 0.20, -0.45])   # 20 cm atrás do quadril, embaixo do corpo
+    p["RightToeBase"] = quadril + np.array([-0.10, 0.75, -0.45])  # 75 cm atrás
+    assert tc.bola_do_pe_quadril(p) == pytest.approx([-200, -750], abs=1e-6)
+    assert tc.bola_do_pe_quadril(girar(p, 30, (0, 0, 1))) == pytest.approx([-200, -750], abs=1e-6)
+    alto = dict(p, LeftToeBase=p["LeftToeBase"] + np.array([0, 0, 0.06]))
+    assert tc.bola_do_pe_quadril(alto) == pytest.approx([-200, -750], abs=1e-6)
+    assert {"quadril_linha_ombro_tornozelo_lado", "bola_do_pe_quadril"} <= set(tc.MEDIDAS)
