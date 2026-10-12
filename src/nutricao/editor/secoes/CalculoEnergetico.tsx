@@ -94,20 +94,19 @@ export default function CalculoEnergetico() {
   const [paraExcluir, setParaExcluir] = useState<Calculo | null>(null);
   const [excluindo, setExcluindo] = useState(false);
 
+  // hml-20c (H-42 · série = 1 ida): os cálculos e as antropometrias não dependem um do outro (os 2 só usam o aluno) — saem JUNTOS, no
+  // mesmo lote da nutricao (antes: um depois do outro); cada resultado com o MESMO tratamento de antes (o erro de um não derruba o outro)
   const carregar = useCallback(async () => {
-    try {
-      setLista(await listarCalculos(p.id));
+    const [calculos, antropometrias] = await Promise.allSettled([listarCalculos(p.id), listarAntropometrias(p.id)]);
+    if (calculos.status === "fulfilled") {
+      setLista(calculos.value);
       setErro(null);
-    } catch (e) {
+    } else {
+      const e: unknown = calculos.reason;
       setErro(e instanceof Error ? e.message : "Não foi possível carregar os cálculos");
       setLista([]);
     }
-    try {
-      const antros = await listarAntropometrias(p.id);
-      setUltimaAntro(antros[0] ?? null);
-    } catch {
-      setUltimaAntro(null);
-    }
+    setUltimaAntro(antropometrias.status === "fulfilled" ? antropometrias.value[0] ?? null : null);
   }, [p.id]);
 
   useEffect(() => {
