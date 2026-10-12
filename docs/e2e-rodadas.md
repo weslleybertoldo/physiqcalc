@@ -29,6 +29,9 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 12/10 09:59 | hml-20b | `2c00c39` | `e2e/hml20/rede.py --area aluno --base staging --canal msedge` | staging | 22/22 | F6 (o staging com o `2c00c39`): a 20a igual — 0 leitura direta do principal; o desvio 23 só no Início e na Evolução; logout do Treino do app 204 |
+| 12/10 09:52 | hml-20b | `2c00c39` | `e2e/hml20/telas.py --area painel-aluno --base staging --canal msedge --prefixo staging2` | staging | 84/87 | F6, o depois no staging: a Avaliação pela parte do principal 0,58 s (nutri) e 0,49 s (personal) ≤ antes + 0,3; as 3 falhas = TEMPO do Resumo pela parte do principal 0,48 × 0,81 s (nutri) e 0,44 × 0,86 s (personal) e do Anexos 0,46 × 0,79 s — a decisão é da sessão principal; prints `staging2_b_*` conferidos; massa limpa (0 linha, 0 arquivo) |
+| 12/10 09:49 | hml-20b | `2c00c39` | `e2e/hml20/rede.py --area painel-aluno --base staging --canal msedge` | staging | 59/60 | F6: 0 leitura direta da área nas 14 telas; 1 `ler` por seção; a falha = a Avaliação da nutri com 2 `ler` (o perfil e a série em lotes separados — o 1º navegador depois do deploy); um diagnóstico só leitura logo depois (fora do repo, 6 aberturas): sempre 1 lote |
 | 12/10 09:19 | hml-20b | `574430e` | `e2e/w25/api.py` | staging | 23/30 | regressão: a mesma base da 20a e das 19a–19d (as 7 da massa do dia); o `w25/massa.py` parou na trava dela ("o Carlos tem login no principal") |
 | 12/10 09:18 | hml-20b | `574430e` | `e2e/w10/api.py` | staging | 22/22 | regressão |
 | 12/10 09:14 | hml-20b | `574430e` | `e2e/w18/telas.py --base http://localhost:8080 --prefixo local20b --canal msedge` | local | 52/52 | regressão: o card Prontuário do Resumo e a aba por papel, as 10 seções, o anexo e o PDF pelo `ler`; a massa da W18 voltou ao começo (SQL só leitura: as mesmas contagens) |
