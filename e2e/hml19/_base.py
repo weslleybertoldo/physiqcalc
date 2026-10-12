@@ -291,6 +291,30 @@ class Sessoes:
             ARQ_SESSOES.unlink()
 
 
+def sair_do_treino_do_navegador(o, pg, rotulo: str) -> None:
+    """hml-20b (decisão 23 da spec hml-20): o logout (scope=local) da sessão do TREINO que a troca do APP abriu neste navegador (a chave
+    padrão do supabase-js, sb-<host>-auth-token; a do principal é a physiq-principal-auth) — o E2E não deixa sessão do Treino aberta. A
+    mesma regra do e2e/hml20/_base.sair_do_treino, para os E2E de tela da hml-19 que abrem o painel de quem tem Treino (a personal da
+    foto mensal do rede_avaliacao)."""
+    try:
+        bruto = pg.evaluate("""() => { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i);
+            if (/^sb-.*-auth-token$/.test(k)) return localStorage.getItem(k); } return null; }""")
+        s = json.loads(bruto) if bruto else None
+    except Exception:  # noqa: BLE001 — a página fechou / o valor não é JSON
+        s = None
+    if isinstance(s, dict):
+        s = s.get("currentSession") or s
+    tok = s.get("access_token") if isinstance(s, dict) else None
+    if not (isinstance(tok, str) and tok):
+        o.linha(f"   ({rotulo}: nenhuma sessão do Treino no navegador para fechar)")
+        return
+    try:
+        st: object = C.sair_local(tok, "treino")
+    except Exception as e:  # noqa: BLE001
+        st = type(e).__name__
+    o.ok(st in (200, 204), f"{rotulo}: logout (scope=local) da sessão do Treino que o app abriu ({st})", parar=False)
+
+
 # ───────────────────────── a função como a tela chama ─────────────────────────
 def funcao(token: str | None, acao: str | None, corpo: dict | None = None, *, origem: str | None = None, schema_: str | None = None,
            sem_auth: bool = False, timeout: int = 60) -> tuple[int, dict, dict, float]:
