@@ -109,7 +109,7 @@ def contar_painel(pedidos: list[dict]) -> dict:
 # ───────────────────────── as telas (a rota do painel é a da matrícula: /painel/alunos/<pacientes.id>) ─────────────────────────
 # (nome, rota relativa ao /painel/alunos/<id>, a marca de que a tela abriu, o teto de chamadas `ler` ao abrir — HIPÓTESE do etapa 1: a
 # casca/Resumo em até 3 voltas (o perfil, depois a série do principal, que espera o perfil; os cards), a seção do Prontuário 1 (a Avaliação
-# 360, 2: os resultados de exame vão num lote só deles — `sozinha`), a Avaliação 2 (a série + o perfil em cache)
+# 360, 2: os resultados de exame vão num lote só deles — `sozinha`), a Avaliação 2 (o perfil da casca, depois a série, que espera o perfil)
 SECOES = (
     ("anotacoes", "[data-secao-anotacoes]", 1), ("consultas", "[data-secao-consultas]", 1), ("anamnese", "[data-secao-anamnese]", 1),
     ("questionarios", "[data-secao-questionarios]", 1), ("exames", "[data-secao-exames]", 1),
@@ -121,11 +121,17 @@ AVALIACAO = ("avaliacao", "/avaliacao", '[data-aba-avaliacao="dados"], [data-aba
 
 
 def telas_da_conta(conta: str) -> list[tuple[str, str, str, int]]:
-    """As telas que cada conta abre: a nutri (e a nutri-legado, na produção), a casca/Resumo, as 10 seções e a Avaliação; a personal, o
-    Resumo e a Avaliação."""
+    """As telas que cada conta abre, NA ORDEM: a Avaliação (a 1ª — a casca e a série sem cache), o Resumo e, a nutri (e a nutri-legado,
+    na produção), as 10 seções do Prontuário; a personal, a Avaliação e o Resumo.
+    hml-20b etapa 2 (12/10 08:17, a 1ª rodada do antes no staging): a Avaliação passou para ANTES do Resumo. A casca (o Cabecalho com os
+    KPIs de peso e gordura), o Resumo e a Avaliação leem a MESMA série (useAvaliacaoDoAluno, staleTime 30 s) e o MESMO perfil
+    (usePerfilAluno, 30 s); com o Resumo antes, a Avaliação da personal abria do cache (0 leitura: o [antes] não tinha o que provar e o
+    tempo media o cache) e a da nutri, depois das 10 seções, dependia do relógio (passou dos 30 s → recarrega; não passou → cache). Com a
+    Avaliação primeiro, ela paga a casca (o perfil, depois a série) nas 2 pontas — igual no antes e no depois — e o Resumo segue com os
+    cards dele (as anotações; a série e o perfil já em cache, como na navegação do app)."""
     if conta == PERSONAL:
-        return [RESUMO, AVALIACAO]
-    return [RESUMO] + [(f"prontuario_{s}", f"/prontuario?secao={s}" if s != "anotacoes" else "/prontuario", m, teto) for s, m, teto in SECOES] + [AVALIACAO]
+        return [AVALIACAO, RESUMO]
+    return [AVALIACAO, RESUMO] + [(f"prontuario_{s}", f"/prontuario?secao={s}" if s != "anotacoes" else "/prontuario", m, teto) for s, m, teto in SECOES]
 
 
 # ───────────────────────── a produção (decisão K do contrato da 20b; revisão 🟡1): SÓ LEITURA, a nutri-legado e o aluno de teste DELA ─────

@@ -1,8 +1,9 @@
 """Physiq hml-20b (H-42 · jeito 2, etapa 2, 12/10/2026) — a REDE e as TELAS do Painel › Aluno no navegador (Edge, painel 1280 × 883):
 o `rede.py --area painel-aluno` e o `telas.py --area painel-aluno`.
 
-Contas (staging, só de TESTE): a w5p-nutri abre a casca/Resumo, o Prontuário ×10 e a Avaliação da w5p-aluna; a w5p-personal, o Resumo e a
-Avaliação (um navegador por vez; a sessão guardada reaproveitada; no fim, o logout da sessão do TREINO que o painel abriu — decisão 23).
+Contas (staging, só de TESTE): a w5p-nutri abre a Avaliação (a 1ª: a casca e a série sem cache — painel.telas_da_conta), o Resumo e o
+Prontuário ×10 da w5p-aluna; a w5p-personal, a Avaliação e o Resumo (um navegador por vez; a sessão guardada reaproveitada; no fim, o
+logout da sessão do TREINO que o painel abriu — decisão 23).
 REDE (rede_hml20b.tsv, antes × depois na mesma planilha): em cada tela a guarda que CONTA (painel.contar_painel) separa
   · as leituras DIRETAS da área (GET das 20 tabelas, POST das 4 RPCs, o "sign" de anexos/evolucao) — depois: 0;
   · as leituras pela função (o `ler`, com as consultas de cada um) — depois: no máximo o teto da tela (a seção do Prontuário, 1);
@@ -125,9 +126,10 @@ def seco(o, qual: str) -> None:
     o.ok(not faltam, f"os {sum(len(v) for v in P.SELETORES.values())} seletores das telas do painel existem no código" + (f" — faltam: {faltam}" if faltam else ""))
     nutri = P.telas_da_conta(P.NUTRI)
     personal = P.telas_da_conta(P.PERSONAL)
-    o.ok(len(nutri) == 12 and [t[0] for t in personal] == ["resumo", "avaliacao"] and nutri[1] == ("prontuario_anotacoes", "/prontuario", "[data-secao-anotacoes]", 1)
-         and nutri[2][1] == "/prontuario?secao=consultas",
-         "as telas: a nutri — o Resumo, as 10 seções do Prontuário (a 1ª é a padrão: /prontuario) e a Avaliação; a personal — o Resumo e a Avaliação")
+    o.ok(len(nutri) == 12 and [t[0] for t in personal] == ["avaliacao", "resumo"] and [t[0] for t in nutri[:2]] == ["avaliacao", "resumo"]
+         and nutri[2] == ("prontuario_anotacoes", "/prontuario", "[data-secao-anotacoes]", 1) and nutri[3][1] == "/prontuario?secao=consultas",
+         "as telas, na ordem: a Avaliação (a 1ª: a casca e a série sem cache), o Resumo e — a nutri — as 10 seções do Prontuário (a 1ª é a "
+         "padrão: /prontuario); a personal — a Avaliação e o Resumo")
     secoes = [s for s, _m, _t in P.SECOES]
     rotas_da_spec = {r for (_c, r) in P.antes_da_spec_painel()}
     o.ok(all(P.rota_da_spec(f"/prontuario?secao={s}") in rotas_da_spec for s in secoes if s != "anotacoes") and P.rota_da_spec("/prontuario") in rotas_da_spec
