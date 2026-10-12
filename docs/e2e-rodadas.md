@@ -29,6 +29,13 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 12/10 07:12 | W2 | `0317e33` | `e2e/hml01/banco.py --schema public` | produção | 12/12 | Task 22: sem regressão depois da migration. Junto (fora do repo): as funções da W2 no public 5/5 só leitura (a volta → `?mp=invalido`; o webhook com `&conta=` inventada → 200 `conta_sem_mp`) |
+| 12/10 07:12 | W2 | `0317e33` | `e2e/w1b/sql_w1b.py --schema public` | produção | 7/7 | Task 22: depois da migration (4 gatilhos em cobrancas, com o novo trg_cobrancas_guard_mp_conta) |
+| 12/10 07:11 | W2 | `0317e33` | `e2e/w1/sql_w1.py --so-catalogo --schema public` | produção | 6/6 | Task 22: a W1 intacta depois da migration |
+| 12/10 07:11 | W2 | `0317e33` | `e2e/w2/sql_w2.py --so-catalogo --schema public` | produção | 15/15 | Task 22: logo depois da migration no public (07:11:17–19, uma vez; backup antes): os 10 corpos = os da migration, C1 (a guarda da W1b ligada), I7, a recebimento_mp_confirmar sem o anon, o job mp-renovar-public, as 2 flags (mercadopago_conta `{"liberada": false}`) |
+| 12/10 07:10 | W2 | `0317e33` | `e2e/hml01/banco.py --schema public` | produção | 12/12 | Task 22: a linha de base, antes da migration |
+| 12/10 07:10 | W2 | `0317e33` | `e2e/w1b/sql_w1b.py --schema public` | produção | 7/7 | Task 22: a linha de base, antes da migration |
+| 12/10 07:09 | W2 | `0317e33` | `e2e/w1/sql_w1.py --so-catalogo --schema public` | produção | 6/6 | Task 22: a linha de base do public ANTES da migration `20261011210000` (só leitura) |
 | 12/10 06:54 | W2 | `0c9e886` | `e2e/w1/telas.py --base staging --canal msedge --sinal ~/…/w2/TRAVA-BANCO-STAGING-OK` | staging | 85/85 | Task 21: a W1 sem regressão no site do staging com a W2 (`0c9e886`, v3.104) e as funções do HEAD; os 15 prints conferidos (a InfiniteTag e as outras contas borradas); desfazer igual, sobras 0; a w27-master sem login novo |
 | 12/10 06:48 | W2 | `0c9e886` | `e2e/w2/telas.py --base staging --canal msedge --sinal ~/…/w2/TRAVA-BANCO-STAGING-OK` | staging | 123/123 | Task 21: o site do staging no `0c9e886` (v3.104; Vercel READY e o `health.json` com o sha) + as funções do HEAD; o Pix SIMULADO do staging (o sandbox respondeu 5xx); o passo 7 com "pagamento pelo app indisponível"; os 21 prints conferidos (nada passa da largura, nenhuma página do MP, o QR e o copia e cola borrados, as outras contas borradas); desfazer igual, sobras 0 |
 | 12/10 06:39 | W2 | `0c9e886` | `e2e/w2/sql_w2.py` | staging | 33/33 | Task 21: de novo no fim da série de servidor (o catálogo e o "nada gravado" iguais) |
@@ -82,6 +89,37 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 | 12/10 02:14 | hml-20a | `ba14cfe` | `e2e/hml20/telas.py --area aluno --base staging --canal msedge` | staging | 9/9 | o antes (f4db482): os prints staging_a_* e os tempos |
 | 12/10 02:09 | hml-20a | `ba14cfe` | `e2e/hml20/rede.py --area aluno --base staging --canal msedge` | staging | 12/12 | o antes (f4db482): as leituras de saúde iam direto do navegador |
 | 12/10 02:07 | hml-20a | `ba14cfe` | `e2e/hml20/api.py --area aluno --base local` | staging | 39/39 | P e N1–N10 das 2 funções (o `--base local` = o schema staging); a massa "hml20 e2e" criada e limpa (SQL só leitura: 0 linha, 0 arquivo) |
+| 12/10 01:55 | W2 | `7366e3c` | `e2e/w2/api.py --seco` | local | 17/17 | Task 14: o final (+ autotestes 43/43) |
+| 12/10 01:54 | W2 | `7366e3c` | `e2e/w2/sql_w2.py` | staging | 33/33 | Task 14: o banco do staging igual depois dos E2E |
+| 12/10 01:53 | W2 | `7366e3c` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | Task 14: regressão |
+| 12/10 01:53 | W2 | `7366e3c` | `e2e/w06/api.py --casos pix,porfora,acesso` | staging | 31/31 | Task 14: regressão (o modo de hoje) |
+| 12/10 01:52 | W2 | `7366e3c` | `e2e/wp/api.py --casos planos,periodo,mensal` | staging | 33/33 | Task 14: regressão |
+| 12/10 01:50 | W2 | `7366e3c` | `e2e/w1/api.py --casos recebimento,link --sinal ~/…/w2/TRAVA-BANCO-STAGING-OK` | staging | 19/19 | Task 14: regressão com as funções da W2 publicadas |
+| 12/10 01:48 | W2 | `7366e3c` | `e2e/w2/api.py --conexao-sql --casos recebimento,guarda,simulada,desconectar,master,erro --sinal ~/…/w2/TRAVA-BANCO-STAGING-OK` | staging | 37/37 | Task 14: as 6 funções publicadas com o verify_jwt certo; a conexão simulada gravada por SQL só no staging; desconectar e o "Desligar" do master com a automática viva → 409 → com o OK cancela; desfazer igual, sobras 0 |
+| 12/10 01:44 | W2 | `9621ff9` | `e2e/w2/api.py --seco` | local | 17/17 | Task 14: com a correção do `--conexao-sql` ainda sem commit (o mesmo código do `7366e3c`) |
+| 12/10 01:36 | W2 | `9621ff9` | `e2e/w07/smoke_prod.py telas --versao 3.102 --canal msedge` | produção | 13/13 | Task 14: a produção na v3.102 |
+| 12/10 01:36 | W2 | `9621ff9` | `e2e/w06/smoke_prod.py --casos aluno` | produção | 8/8 | Task 14: o caso aluno de novo (= os 17/18 de sempre); pagamentos-aluno 200; nada mudou |
+| 12/10 01:35 | W2 | `9621ff9` | `e2e/w06/smoke_prod.py` | produção | 16/18 | Task 14: só leitura; o ❌ antigo "Financeiro (tela antiga até a W19)" + "uma troca de token só (2)" = a corrida conhecida do trocar-token (a mesma da W1b) → o caso aluno de novo, abaixo |
+| 12/10 01:31 | W2 | `9621ff9` | `e2e/w10/api.py --schema public` | produção | 2/2 | Task 14: só leitura, logo depois de publicar as 7 funções da W2 do `9621ff9` (01:29–01:31) com a W2 desligada no public |
+| 12/10 01:17 | W2 | `9621ff9` | `e2e/w2/api.py --seco` | local | 17/17 | Task 13: o final (+ autotestes 41/41) |
+| 12/10 01:15 | W2 | `9621ff9` | `e2e/w2/api.py --local --sinal ~/…/w2/TRAVA-BANCO-STAGING-OK` | local | 123/123 | Task 13, rodada 2: os 34 casos; nenhuma mutação com o token de outro dono (145 pedidos); tudo voltou à foto, sobras 0 |
+| 12/10 01:03 | W2 | `9621ff9` | `e2e/w2/api.py --local --casos master --sinal ~/…/w2/TRAVA-BANCO-STAGING-OK` | local | 11/11 | Task 13, rodada 2a: o master de teste promovido SÓ no staging.profiles durante a rodada e devolvido no desfazer |
+| 12/10 01:00 | W2 | `2ff8184` | `e2e/w2/api.py --seco` | local | 17/17 | Task 13: com a correção ainda sem commit (o mesmo código do `9621ff9`); nada vai ao banco |
+| 12/10 00:55 | W2 | `2ff8184` | `e2e/w2/api.py --local --sinal ~/…/w2/TRAVA-BANCO-STAGING-OK` | local | 116/123 | Task 13, rodada 1 (as funções no Deno local contra o banco do staging): o caso master deu 403 so_master às 6 chamadas (o master de teste é 'pessoa' fora das rodadas — bug do SCRIPT, não do servidor) e 1 ❌ de tokens por consequência; corrigido no `9621ff9` |
+| 12/10 00:35 | W2 | `2ff8184` | `e2e/w1/sql_w1.py --so-catalogo --schema public` | produção | 6/6 | Task 6: só leitura; o public intocado |
+| 12/10 00:35 | W2 | `2ff8184` | `e2e/w1b/sql_w1b.py --schema public` | produção | 7/7 | Task 6: só leitura; o public intocado |
+| 12/10 00:35 | W2 | `2ff8184` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | Task 6: regressão depois da migration |
+| 12/10 00:35 | W2 | `2ff8184` | `e2e/wp/sql_planos.py` | staging | 9/9 | Task 6: regressão depois da migration |
+| 12/10 00:34 | W2 | `2ff8184` | `e2e/w1/sql_w1.py` | staging | 11/11 | Task 6: regressão depois da migration (o prólogo com a guarda nova do modo) |
+| 12/10 00:34 | W2 | `2ff8184` | `e2e/w1b/sql_w1b.py` | staging | 16/16 | Task 6: regressão depois da migration |
+| 12/10 00:34 | W2 | `2ff8184` | `e2e/w2/sql_w2.py` | staging | 33/33 | Task 6: depois da migration SÓ no staging (00:33:00–02, uma vez): os 15 de catálogo (os 10 corpos = os da migration, I7, os 4 gatilhos, o job, as 2 flags, os 2 CHECK) e nada gravado (a foto da conta de TESTE igual) |
+| 12/10 00:32 | W2 | `2ff8184` | `e2e/w1/sql_w1.py --so-catalogo --schema public` | produção | 6/6 | Task 6: só leitura, antes da migration no staging |
+| 12/10 00:32 | W2 | `2ff8184` | `e2e/w1b/sql_w1b.py --schema public` | produção | 7/7 | Task 6: só leitura, antes da migration no staging |
+| 12/10 00:31 | W2 | `2ff8184` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | Task 6: antes da migration |
+| 12/10 00:31 | W2 | `2ff8184` | `e2e/wp/sql_planos.py` | staging | 9/9 | Task 6: antes da migration |
+| 12/10 00:31 | W2 | `2ff8184` | `e2e/w1/sql_w1.py` | staging | 11/11 | Task 6: antes da migration |
+| 12/10 00:31 | W2 | `2ff8184` | `e2e/w1b/sql_w1b.py` | staging | 16/16 | Task 6: antes da migration |
+| 12/10 00:30 | W2 | `2ff8184` | `e2e/w2/sql_w2.py` | staging | 4/33 | Task 6: o retrato ANTES da migration `20261011210000` no staging (o vermelho esperado, o mesmo do ensaio local) |
 | 11/10 23:51 | hml-20a | `d715fa8` | `e2e/hml20/api.py --area aluno --base prod --so-leitura` | produção | 7/7 | o smoke da sessão principal logo depois de publicar as 2 funções |
 | 11/10 23:50 | hml-20a | `d715fa8` | `e2e/hml20/api.py --area aluno --base staging --so-leitura` | staging | 7/7 | o smoke da sessão principal logo depois de publicar as 2 funções |
 | 11/10 20:29 | hml-19d | `fed0f0d` | `e2e/w19/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19d --canal msedge --casos lancamentos,recibos,categorias,aluno_recibo,membro` | staging | 36/36 | F8: as telas da W19 com gravação no staging com o código novo (o local deu 36/36) |
@@ -103,6 +141,14 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 | 11/10 19:39 | hml-19d | `e370f1e` | `e2e/hml19/rede.py --area financeiro --base staging --canal msedge` | staging | 18/19 | o ANTES (7694e8a): a gravação ia direto em todas; a espera do recibo (do E2E) não fechou em 60 s — o recibo saiu certo |
 | 11/10 19:35 | hml-19d | `e370f1e` | `e2e/hml19/api.py --area financeiro --base staging` | staging | 47/47 | P e N1–N9 (financeiro v1 + a migration no staging); limpeza conferida |
 | 11/10 19:32 | hml-19d | `e370f1e` | `e2e/hml19/api.py --area financeiro --base prod --so-leitura` | produção | 5/5 | sessão principal: smoke só leitura depois de publicar |
+| 11/10 18:29 | W1b | `6c44103` | `e2e/w1/telas.py --base prod --canal msedge` | produção | 13/13 | o build 3.101 (`7694e8a`); a InfinitePay escondida pelo servidor; Pagamentos do aluno abre; a Guarda barrou 0; logouts 204 |
+| 11/10 18:28 | W1b | `6c44103` | `e2e/w06/smoke_prod.py` | produção | 17/18 | só leitura; o ❌ é o antigo e conhecido "Financeiro (tela antiga até a W19)"; pagamentos-aluno 200; as cobranças iguais |
+| 11/10 18:25 | W1b | `6c44103` | `e2e/w07/smoke_prod.py telas --versao 3.101 --canal msedge` | produção | 13/13 | rodapé e Aplicativo v3.101; logout local das 2 sessões |
+| 11/10 18:24 | W1b | `6c44103` | `e2e/w10/api.py --schema public` | produção | 2/2 | depois do squash `7694e8a` (PR #184) e da produção v3.101; logout local da sessão que ele abriu |
+| 11/10 17:56 | W1b | `6c44103` | `e2e/w10/api.py --schema public` | produção | 2/2 | só leitura, depois da migration |
+| 11/10 17:56 | W1b | `6c44103` | `e2e/hml01/banco.py --schema public` | produção | 12/12 | sem regressão depois da migration |
+| 11/10 17:56 | W1b | `6c44103` | `e2e/w1b/sql_w1b.py --schema public` | produção | 7/7 | logo depois da migration no public (17:56:01–02, uma vez; backup antes): o gatilho ligado, invoker com search_path vazio, sem EXECUTE para o app e o anon, o corpo = o da migration, as 3 guardas, sinal 0 |
+| 11/10 17:54 | W1b | `6c44103` | `e2e/w1b/sql_w1b.py --schema public` | produção | 2/7 | o retrato ANTES da migration `20261011220000` no public (o vermelho esperado: sem o gatilho e sem a função; ✅ as 15 colunas e nenhum sinal do ataque) |
 | 11/10 17:25 | hml-19c | `8a911bb` | `e2e/hml19/api.py --area avaliacao --base staging --limpar` | staging | 2/2 | F8: nada pendente; conferência só leitura 0/0 (2 bancos, 2 schemas, 4 buckets, avisos) |
 | 11/10 17:24 | hml-19c | `8a911bb` | `e2e/w17/avaliacao_telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging19c --canal msedge` | staging | 63/63 | F8: a aba Avaliação inteira no staging com o código novo (o local deu 64/64) |
 | 11/10 17:20 | hml-19c | `8a911bb` | `e2e/hml19/rede.py --area avaliacao --base staging --canal msedge --prefixo staging2` | staging | 21/21 | F8, o DEPOIS no staging: cada ação só pelas funções, 0 gravação direta; prints staging2_c_* + a folha |
@@ -141,6 +187,15 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 | 11/10 12:58 | hml-19c | `a483a96` | `e2e/hml19/api.py --area dieta --base prod --so-leitura` | produção | 6/6 | sessão principal: smoke só leitura depois de publicar |
 | 11/10 12:58 | hml-19c | `a483a96` | `e2e/hml19/api.py --area prontuario --base prod --so-leitura` | produção | 5/5 | sessão principal: smoke só leitura depois de publicar |
 | 11/10 12:58 | hml-19c | `a483a96` | `e2e/hml19/api.py --area avaliacao --base prod --so-leitura` | produção | 6/6 | sessão principal: smoke só leitura depois de publicar |
+| 11/10 12:33 | W1 | `881480d` | `e2e/w1/telas.py --base prod` | produção | 13/13 | Task 21: a InfinitePay escondida pelo servidor (a flag desligada; o master vê); Pagamentos do aluno abre; a Guarda barrou 0; 3 prints conferidos |
+| 11/10 12:32 | W1 | `881480d` | `e2e/w06/smoke_prod.py` | produção | 17/18 | Task 21: só leitura; o ❌ é o antigo e conhecido "Financeiro (tela antiga até a W19)"; nada mudou nas cobranças |
+| 11/10 12:29 | W1 | `881480d` | `e2e/w10/api.py --schema public` | produção | 2/2 | Task 21: só leitura |
+| 11/10 12:28 | W1 | `881480d` | `e2e/w10/api.py` | staging | 22/22 | Task 21: regressão, só leitura, com staging = main |
+| 11/10 12:27 | W1 | `881480d` | `e2e/w07/smoke_prod.py telas --versao 3.99 --canal msedge` | produção | 13/13 | Task 21: depois do squash `c0d5416` (PR #183) e da release v3.99; rodapé e Aplicativo v3.99 |
+| 11/10 12:06 | W1 | `68d5239` | `e2e/hml01/banco.py --schema public` | produção | 12/12 | Task 21: sem regressão depois da migration |
+| 11/10 12:06 | W1 | `68d5239` | `e2e/wp/sql_planos.py --so-regressao --schema public --comparar ~/…/w1/regressao-public-antes.json` | produção | 1/1 | Task 21: o "pago até" IGUAL depois da migration (5 alunos, 0 diferentes) |
+| 11/10 12:06 | W1 | `68d5239` | `e2e/w1/sql_w1.py --so-catalogo --schema public` | produção | 6/6 | Task 21: logo depois da migration no public (12:06:19–21, uma vez; backup antes); a flag `{"liberada": false}` |
+| 11/10 12:05 | W1 | `68d5239` | `e2e/wp/sql_planos.py --so-regressao --schema public --guardar ~/…/w1/regressao-public-antes.json` | produção | 0/0 | Task 21: a foto do "pago até" do public ANTES da migration `20261011200000` (5 alunos; só leitura — o 0/0 = só grava a foto) |
 | 11/10 11:54 | W1 | `9ca1da5` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | Task 20, com o `9ca1da5` no staging (a migration da W1 sem mudança: o dry-run deu no-op) |
 | 11/10 11:53 | W1 | `9ca1da5` | `e2e/w10/api.py` | staging | 22/22 | Task 20; só leitura |
 | 11/10 11:52 | W1 | `9ca1da5` | `e2e/wp/api.py --casos planos,periodo` | staging | 26/26 | Task 20: a W-P sem regressão; a massa desfeita |
