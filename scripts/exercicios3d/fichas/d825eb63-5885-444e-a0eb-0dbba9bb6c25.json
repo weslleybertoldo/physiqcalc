@@ -1,0 +1,377 @@
+{
+ "uuid": "d825eb63-5885-444e-a0eb-0dbba9bb6c25",
+ "nome": "Elevação Lateral na Máquina",
+ "cena": "elevacao_lateral_na_maquina",
+ "grupo": "Deltóide Lateral",
+ "subgrupo": "Deltoide lateral (médio)",
+ "padrao_movimento": "elevacao_lateral",
+ "equipamento": "maquina",
+ "variacao": "sentado",
+ "alvos": [
+  "deltoide"
+ ],
+ "auxiliares": [
+  "trapezio"
+ ],
+ "camera": {
+  "az": 205,
+  "el": 18,
+  "dist": 4.0,
+  "alvo": [
+   0.0,
+   -0.15,
+   0.85
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.9,
+  "alvo": [
+   -0.1,
+   -0.2,
+   0.8
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Sentado de frente para a máquina, com o peito encostado na almofada, o tronco parado e um pouco inclinado para a frente, os pés chapados no chão e o assento regulado para cada ombro ficar na altura do eixo do braço da máquina do mesmo lado. Os braços ficam ao lado do corpo, com os cotovelos dobrados a 90° e os antebraços para a frente; os rolos da máquina encostam por fora dos braços, logo acima dos cotovelos, e as mãos seguram os pegadores com a pegada neutra (polegares para cima). Empurrando os rolos com os cotovelos, sobe os braços pelos lados até ficarem paralelos ao chão, sem passar disso, com os cotovelos a 90° e os antebraços sempre apontando para a frente (em cima as palmas ficam viradas para o chão e os polegares um para o outro); desce devagar, em 2 a 3 segundos, até os braços voltarem para o lado do corpo. Os braços da máquina giram em volta de eixos de frente para trás que passam pelos ombros e os rolos sobem junto com os braços, sem escorregar. O tronco não balança nem dá impulso, a cabeça fica na linha do tronco e os ombros não sobem em direção às orelhas.",
+ "cinesiologia": {
+  "plano": "frontal: abdução do ombro na subida (de ~15° a 90°) e adução na descida, com o cotovelo na linha do corpo (ExRx, Lever Isolateral Lateral Raise: \"If necessary, lean forward slightly to keep elbows directly lateral to body\"); cadeia cinética aberta. A resistência entra pelo rolo logo acima do cotovelo, não pela mão (ACE: \"lift the pads upward by pressing out through the elbows\"), e cada braço da máquina gira em volta da reta de frente para trás que passa pelo ombro do mesmo lado (Precor RSL0504: \"align their shoulder joints to the pivot points\")",
+  "articulacoes": "ombro (abdução de ~15° a 90° e volta, sem girar o úmero: com o cotovelo a 90° o antebraço continua apontando para a frente e a palma vira de \"para o corpo\" para \"para o chão\", com os polegares um para o outro — o \"thumb-to-thumb\" do Coratella 2020); escápula (rotação para cima, com a clavícula subindo pouco — Ludewig 2009: \"Little clavicular elevation occurred during the raising of the arm in healthy subjects\"; na cena ela sobe 3° e o ombro anda ~8 mm); cotovelo parado a 90° (ACE: \"Keeping the arms bent at 90 degrees\"); punho reto; tronco, quadril, joelhos e tornozelos parados, com o peito na almofada e os pés no chão",
+  "agonistas": "deltoide lateral (médio), em contração concêntrica na subida e excêntrica na descida (ExRx, Lever Lateral Raise: Target \"Deltoid, Lateral\"; Hammer Strength, Plate-Loaded Lateral Raise: \"primarily targets the medial deltoid, the muscle responsible for shoulder width and lateral movement\"; Nautilus, Deltoid Raise: \"Isolating the lateral deltoid and recruiting the anterior deltoid\"; NSCA, Lateral Raises: \"Isolate and develop strength in the lateral deltoids\")",
+  "sinergistas": "deltoide anterior, supraespinal, trapézio (fibras médias e inferiores) e serrátil anterior (fibras inferiores) (ExRx, Lever Lateral Raise: Synergists \"Deltoid, Anterior\", \"Supraspinatus\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\")",
+  "estabilizadores": "trapézio superior e levantador da escápula (ExRx, Lever Lateral Raise: Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\"); deltoides anterior e posterior, trapézio e manguito rotador no controle (Hammer Strength, Plate-Loaded Lateral Raise: \"It also engages supporting muscles like the anterior and posterior deltoids, the trapezius, and the rotator cuff for stability and control\"); o tronco firme, com as escápulas baixas e para trás (ACE, Lateral Raise: \"depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise\"; NSCA: \"pull shoulder blades back and down\")",
+  "fases": "concêntrica (empurra os rolos com os cotovelos até os braços ficarem na horizontal — ExRx: \"Raise arms to sides until upper arms are horizontal\"; ACE: \"lift the pads upward by pressing out through the elbows and raising the upper arms\") e excêntrica, devagar, até os braços voltarem para o lado do corpo (ACE: \"Slowly return to the starting position\"; a dica do app: descer em 2–3 s; Coratella 2020 usou \"2 s for the concentric and 2 s for the eccentric phase\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Isolateral Lateral Raise (https://exrx.net/WeightExercises/DeltoidLateral/LVLateralRaise, lido na cópia do Internet Archive de 06/02/2026 em 11/10/2026; o site responde 403 direto) e Lever Lateral Raise (…/LVLateralRaise2, cópia de 07/03/2025): \"Utility: Basic or Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Sit in machine. Situate bent arms between padded lever and sides of body. Grasp handles if available.\"; Execution: \"Raise arms to sides until upper arms are horizontal. Return and repeat.\"; Comments (a isolateral): \"If necessary, lean forward slightly to keep elbows directly lateral to body.\"; músculos: Target \"Deltoid, Lateral\", Synergists \"Deltoid, Anterior\", \"Supraspinatus\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\", Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\". A de anilhas (Lever Lateral Raise (plate loaded), …/LVLateralRaiseH, cópia de 06/03/2023) não tem pegador: \"Sit in machine. Situate bent arms between padded lever and sides of body.\"",
+  "ACE Exercise Library — Lateral Shoulder Raise (#295; https://www.acefitness.org/resources/everyone/exercise-library/295/lateral-shoulder-raise/, lido em 11/10/2026): \"Target Body Part: Shoulders\", \"Equipment: Weight Machines / Selectorized\"; \"Adjust the weight to the appropriate level before beginning. Sit facing the machine with the feet out in front and arms slightly bent and the pads resting just above the elbows. Keeping the arms bent at 90 degrees, lift the pads upward by pressing out through the elbows and raising the upper arms. Slowly return to the starting position.\"",
+  "ACE Exercise Library — Lateral Raise (#26, com halteres; https://www.acefitness.org/resources/everyone/exercise-library/26/lateral-raise/, lido em 11/10/2026): \"Stiffen your torso by contracting your abdominal and core muscles (\"bracing\"), and depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise. Your head position should be aligned with your spine.\"; \"neutral wrist position (avoid flexion and extension of your wrists)\"; \"Continue raising the dumbbells until your arms are level with your shoulders and approximately parallel with the floor.\"",
+  "NSCA — Sands WA, Wurth JJ, Hewit JK. Basics of Strength and Conditioning Manual, cap. 4, Lateral Raises (p. 40–41, com halteres; cópia do Internet Archive de 05/01/2024 do PDF da NSCA, lida em 11/10/2026): \"Exercise Objective: Isolate and develop strength in the lateral deltoids\"; \"Let arms hang to the sides to the thighs, and pull shoulder blades back and down\"; \"Maintain a constant body position and raise dumbbells to the sides until they are at shoulder level\"; Coaching Points: \"Maintain a constant head, body, and arm position throughout the entire lift\", \"Avoid arching the back to complete the lift\"",
+  "Coratella G, Tornatore G, Longo S, Esposito F, Cè E. An Electromyographic Analysis of Lateral Raise Variations and Frontal Raise in Competitive Bodybuilders. Int J Environ Res Public Health. 2020;17(17):6015 (PMC7503819): \"For LR-flexed, the participants were required to abduct laterally the humerus up to 90°, with the elbow flexed at 90° and the humerus neutrally rotated (i.e., thumb-to-thumb).\"; \"each exercise was performed seated\"; \"Each exercise was performed with the pacing of 2 s for the concentric and 2 s for the eccentric phase\"; \"Medial deltoid was more active during LR with straight vs. flexed elbow.\" — o estudo é só com halteres: não tem máquina nem apoio no cotovelo",
+  "Ludewig PM, Phadke V, Braman JP, Hassett DR, Cieminski CJ, LaPrade RF. Motion of the shoulder complex during multiplanar humeral elevation. J Bone Joint Surg Am. 2009;91(2):378-389 (PMC2657311, cópia do Internet Archive de 17/02/2026): \"elevation (an increase of 6°, from 11° to 17°)\" da clavícula com o braço subindo; \"Little clavicular elevation occurred during the raising of the arm in healthy subjects. Excess clavicular elevation is a consistent finding in patients with shoulder pain\"; \"The average overall scapulohumeral rhythm was 2.1:1 for abduction\"",
+  "Hammer Strength (Life Fitness) — Select Lateral Raise HS-LR (https://www.lifefitness.com.au/commercial/lateral-raise-hs-lr, lido em 11/10/2026; o modelo que a máquina da cena segue: de frente, com a almofada do peito e os pegadores): \"Pad positions are optimised for middle deltoid stimulation, and pivoting handles accommodate users of all sizes.\"; \"Dimensions (L x W x H) | 42\" x 37\" x 55\" (107 cm x 94 cm x 140 cm)\"; \"Axis of rotation marked with red indicator to help cue correct alignment\"; \"Pads are molded with radius on edge for improved comfort\"",
+  "Hammer Strength (Life Fitness) — Plate-Loaded Lateral Raise PL-LR (https://www.lifefitness.com/en-us/catalog/strength-training/plate-loaded/plate-loaded-lateral-raise, lido em 11/10/2026; a alternativa de costas, sem pegador): \"Dimensions (L x W x H): 45 in x 56 in x 47 in (114 cm x 142 cm x 119 cm)\"; \"The back pad is angled at precisely 25 degrees\"; \"The zero-grip workarms on the Lateral Raise machine eliminate traditional hand grips\"; \"The adjustable seat and ergonomic elbow pads allow for proper alignment and positioning\"; \"primarily targets the medial deltoid\"",
+  "Precor — Resolute Lateral Raise RSL0504, ficha de venda (https://static.precor.com/sell-sheet/all/RSL/RSL0504-Lateral-Raise-NA.pdf, lida em 11/10/2026): \"The design of the Resolute Strength Lateral Raise allows exercisers to easily adjust the seat height from a seated position to ensure shoulders are properly aligned with the pivot points.\"; \"The gas-assisted adjustable seat helps exercisers align their shoulder joints to the pivot points so that they’re properly loaded during the movement.\"; \"The fixed position and inward orientation of the handles\"; \"Dimensions (L x W x H): 54 x 49 x 58 in / 137 x 124 x 148 cm\"",
+  "Nautilus (Core Health & Fitness) — Inspiration Deltoid Raise IPDR5, ficha do produto (https://www.corehandf.com/cdn/shop/files/Product_Deltoid_Raise_Inspiration_Nautilus_Product_Sheet.pdf, lida em 11/10/2026): \"Fixed path of motion with the axis of rotation highlighted for precise user positioning\"; \"Wrap-around gas assist seat adjust and floating arm positioning support handles. Plus, an adjustable torso stabilization pad\"; \"Yes, contoured pads and comfortable arm roller pads\"; \"Width 52 in (132 cm)\", \"Length 47 in (119 cm)\", \"Height 64 in (163 cm)\"",
+  "Medidas — Life Fitness Insignia Series Lateral Raise SS-LR (https://www.lifefitness.com/en-us/catalog/strength-training/selectorized/insignia-series-lateral-raise, lido em 11/10/2026): \"Dimensions (L x W x H) | 51.6\" x 52.5\" x 58.1\" (131 cm x 133 cm x 148 cm)\". Nenhum fabricante publica a altura do assento, a dos eixos nem o tamanho das almofadas: a máquina da cena é montada em volta do ombro do boneco"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "elevacao_lateral_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Lateral Raise (\"Sit in machine\"); ACE — Lateral Shoulder Raise (\"Sit facing the machine\")"
+   },
+   {
+    "nome": "peito encostado na almofada do peito",
+    "equipamento": "elevacao_lateral_peito",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Lateral Shoulder Raise (\"Sit facing the machine\"); Nautilus — Deltoid Raise (\"an adjustable torso stabilization pad\"); ExRx — Lever Isolateral Lateral Raise (\"If necessary, lean forward slightly to keep elbows directly lateral to body\")"
+   },
+   {
+    "nome": "rolo esquerdo encostado no braço, logo acima do cotovelo",
+    "equipamento": "elevacao_lateral_rolo_esq",
+    "partes": [
+     "LeftArm"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Lateral Shoulder Raise (\"the pads resting just above the elbows\"); ExRx — Lever Lateral Raise (\"Situate bent arms between padded lever and sides of body\"); Hammer Strength PL-LR (\"ergonomic elbow pads\"). O rolo fica 6,5 cm acima do centro do cotovelo e a espuma afunda ~2 mm na pele"
+   },
+   {
+    "nome": "rolo direito encostado no braço, logo acima do cotovelo",
+    "equipamento": "elevacao_lateral_rolo_dir",
+    "partes": [
+     "RightArm"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "braço esquerdo da máquina × estrutura",
+    "equipamento": "elevacao_lateral_braco_esq",
+    "de": "elevacao_lateral_estrutura",
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "peça não atravessa peça (regra da fábrica): o cubo do braço gira 5 mm atrás do mancal"
+   },
+   {
+    "nome": "braço direito da máquina × estrutura",
+    "equipamento": "elevacao_lateral_braco_dir",
+    "de": "elevacao_lateral_estrutura",
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "braço esquerdo da máquina × almofada do peito",
+    "equipamento": "elevacao_lateral_braco_esq",
+    "de": "elevacao_lateral_peito",
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "braço direito da máquina × almofada do peito",
+    "equipamento": "elevacao_lateral_braco_dir",
+    "de": "elevacao_lateral_peito",
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "eixos": [
+   {
+    "nome": "eixo do braço esquerdo da máquina no ombro esquerdo",
+    "ossos": [
+     "LeftArm"
+    ],
+    "equipamento": "elevacao_lateral_braco_esq",
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "Precor RSL0504 (\"The gas-assisted adjustable seat helps exercisers align their shoulder joints to the pivot points so that they’re properly loaded during the movement.\"); Hammer Strength HS-LR (\"Axis of rotation marked with red indicator to help cue correct alignment\"); Nautilus IPDR5 (\"axis of rotation highlighted for precise user positioning\"). A clavícula sobe 3° com o braço (Ludewig 2009: \"Little clavicular elevation\") e leva o ombro ~8 mm; o eixo da máquina é fixo e fica no ponto que leva o ombro do começo pro do fim com o mesmo giro: a ~6–7 mm dele"
+   },
+   {
+    "nome": "eixo do braço direito da máquina no ombro direito",
+    "ossos": [
+     "RightArm"
+    ],
+    "equipamento": "elevacao_lateral_braco_dir",
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "começo: braço ao lado do corpo, afastado pelo rolo",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     10,
+     22
+    ],
+    "fonte": "ExRx — Lever Lateral Raise (\"Situate bent arms between padded lever and sides of body\"); NSCA — Lateral Raises (\"Let arms hang to the sides to the thighs\"). A cena começa com o braço a 15° da vertical (o rolo por fora do cotovelo)"
+   },
+   {
+    "nome": "fim: braço na horizontal",
+    "medida": "braco_elevacao",
+    "t": 1.0,
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "ExRx — Lever Lateral Raise (\"Raise arms to sides until upper arms are horizontal\"); Coratella 2020 (\"abduct laterally the humerus up to 90°\")"
+   },
+   {
+    "nome": "fim: braço paralelo ao chão (a dica)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "t": 1.0,
+    "graus": [
+     -5,
+     5
+    ],
+    "fonte": "dica do app (\"eleve até os braços ficarem paralelos ao chão\"); ACE — Lateral Raise (\"approximately parallel with the floor\")"
+   },
+   {
+    "nome": "o braço não passa da horizontal",
+    "medida": "braco_elevacao",
+    "t": "todos",
+    "graus": [
+     0,
+     95
+    ],
+    "fonte": "ExRx — Lever Lateral Raise (\"until upper arms are horizontal\"); NSCA — Lateral Raises (\"until they are at shoulder level\")"
+   },
+   {
+    "nome": "sobe pelo lado, com o cotovelo na linha do corpo",
+    "medida": "braco_plano",
+    "t": [
+     0.5,
+     1.0
+    ],
+    "graus": [
+     -10,
+     15
+    ],
+    "fonte": "ExRx — Lever Isolateral Lateral Raise (\"keep elbows directly lateral to body\"); ExRx — Lever Lateral Raise (\"Raise arms to sides\"). 0 = pro lado; no meio a cena fica a ~4° e em cima a ~0°"
+   },
+   {
+    "nome": "cotovelo a 90° e parado",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ACE — Lateral Shoulder Raise (\"Keeping the arms bent at 90 degrees\"); ExRx — Lever Lateral Raise (\"Situate bent arms\")"
+   },
+   {
+    "nome": "antebraço na horizontal (paralelo ao eixo da máquina)",
+    "medida": "inclinacao",
+    "segmento": [
+     "ForeArm",
+     "Hand"
+    ],
+    "t": "todos",
+    "graus": [
+     -8,
+     8
+    ],
+    "fonte": "consequência do cotovelo a 90° (ACE: \"Keeping the arms bent at 90 degrees\") com o braço subindo em volta do eixo de frente pra trás no ombro: o antebraço aponta pra frente, paralelo ao eixo, o movimento todo (o úmero não gira: Coratella 2020, \"humerus neutrally rotated (i.e., thumb-to-thumb)\")"
+   },
+   {
+    "nome": "punho reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Lateral Raise (\"neutral wrist position (avoid flexion and extension of your wrists)\")"
+   },
+   {
+    "nome": "começo: pegada neutra (palma pro corpo, polegar pra cima)",
+    "medida": "palma_dentro",
+    "t": 0.0,
+    "graus": [
+     60,
+     90
+    ],
+    "fonte": "ExRx — Lever Lateral Raise (\"Grasp handles if available\"); Hammer Strength HS-LR (\"pivoting handles\"). +90 = palma virada pro meio do corpo; o pegador fica ao longo da linha dos nós dos dedos e a palma acompanha o braço a 15° da vertical"
+   },
+   {
+    "nome": "fim: palma pro chão, polegares um pro outro (o úmero não gira)",
+    "medida": "palma_cima",
+    "t": 1.0,
+    "graus": [
+     160,
+     180
+    ],
+    "fonte": "Coratella 2020 (\"with the elbow flexed at 90° and the humerus neutrally rotated (i.e., thumb-to-thumb)\"). 180 = palma virada pro chão"
+   },
+   {
+    "nome": "tronco parado, um pouco pra frente (o peito na almofada)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Lever Isolateral Lateral Raise (\"If necessary, lean forward slightly to keep elbows directly lateral to body\"); NSCA — Lateral Raises (\"Maintain a constant head, body, and arm position throughout the entire lift\"); dica do app (\"Sem impulso do tronco\")"
+   },
+   {
+    "nome": "coluna neutra",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NSCA — Lateral Raises (\"Avoid arching the back to complete the lift\")"
+   },
+   {
+    "nome": "escápulas paradas (os ombros não vão pra frente)",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -10,
+     20
+    ],
+    "fonte": "ACE — Lateral Raise (\"depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise\"); NSCA — Lateral Raises (\"pull shoulder blades back and down\"). O boneco mede 8/3 mm parado"
+   },
+   {
+    "nome": "ombros nivelados (sem inclinar o tronco pro lado)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "NSCA — Lateral Raises (\"Maintain a constant head, body, and arm position throughout the entire lift\")"
+   },
+   {
+    "nome": "quadril parado (sentado)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     85,
+     100
+    ],
+    "fonte": "a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 + inclinação do tronco pra frente: ~95°)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ACE — Lateral Shoulder Raise (\"Sit facing the machine with the feet out in front\"); a cena deixa as canelas em pé e os pés chapados"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "cabeça parada na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Lateral Raise (\"Your head position should be aligned with your spine\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}

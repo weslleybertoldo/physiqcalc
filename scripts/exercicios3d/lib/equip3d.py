@@ -7280,3 +7280,251 @@ def eliptico(nome, lig, manete, raio_manopla=0.0175, compr_manopla=0.20, pedal=(
     el.girar(0.0)
     return el
 # ===== fim: Elíptico ================================================================================================================
+
+
+# ===== Elevação lateral na máquina ==================================================================================================
+# ── MÁQUINA DE ELEVAÇÃO LATERAL (Elevação Lateral na Máquina, lote 14, 12/10/2026) ─────────────────────────────────────────────────
+# Máquina de elevação lateral sentada, DE FRENTE pra máquina, com o peito apoiado: o ASSENTO e a ALMOFADA DO PEITO estofados, os 2
+# BRAÇOS da máquina, cada um girando em volta de um EIXO HORIZONTAL DE FRENTE PRA TRÁS (paralelo ao Y) que passa pela articulação do
+# ombro do mesmo lado, cada braço com o ROLO estofado que encosta no lado de fora do braço da pessoa logo acima do cotovelo e o
+# PEGADOR na frente, onde a mão fecha; a estrutura (base no chão, coluna do assento, coluna da frente, a viga de cima, a travessa
+# dos 2 mancais na frente dos ombros e o suporte da almofada do peito) e a pilha de pesos (carenagem parada, na frente da coluna ou
+# do lado dela: o app não mostra a carga). É a "Lever Lateral Raise" do ExRx ("Sit in machine. Situate bent arms between padded lever and sides of
+# body. Grasp handles if available." / "Raise arms to sides until upper arms are horizontal.") e a "Lateral Shoulder Raise" da ACE
+# ("Sit facing the machine with the feet out in front and arms slightly bent and the pads resting just above the elbows. Keeping the
+# arms bent at 90 degrees, lift the pads upward by pressing out through the elbows and raising the upper arms."). O desenho segue a
+# Hammer Strength Select Lateral Raise HS-LR (de frente, com a almofada do peito; "Pad positions are optimised for middle deltoid
+# stimulation, and pivoting handles accommodate users of all sizes."; "Axis of rotation marked with red indicator to help cue
+# correct alignment"; "Dimensions (L x W x H) | 42" x 37" x 55" (107 cm x 94 cm x 140 cm)"); a Nautilus Inspiration Deltoid Raise
+# IPDR5 também é de frente ("an adjustable torso stabilization pad", "comfortable arm roller pads", "floating arm positioning
+# support handles"). Elevar o braço pelo lado é o úmero girando em volta da reta de frente pra trás que passa pela ARTICULAÇÃO DO
+# OMBRO: o eixo de cada braço da máquina fica nessa reta (o assento regula a altura até o ombro chegar nele — Precor Resolute
+# RSL0504: "The gas-assisted adjustable seat helps exercisers align their shoulder joints to the pivot points so that they’re
+# properly loaded during the movement.") e o braço da máquina gira o MESMO ângulo do braço da pessoa: o rolo não escorrega no braço
+# e o pegador não escorrega na mão. Com o cotovelo a 90° e o antebraço pra frente (paralelo ao eixo), o braço inteiro da pessoa gira
+# como uma peça junto com o braço da máquina. Como as outras máquinas, a cena monta a peça EM VOLTA do corpo: ela dá os 2 eixos (os
+# 2 ombros), o plano dos cubos (na frente das mãos), os 2 rolos (no lado de fora do braço, logo acima do cotovelo), os 2 pegadores
+# (onde as mãos fecham), o assento e a almofada do peito; a peça liga tudo com a estrutura.
+# Medidas de máquina de verdade: só as totais (nenhum fabricante publica a altura do assento, dos eixos nem o tamanho das almofadas):
+# HS-LR 107 × 94 × 140 cm (acima); Precor RSL0504 "54 x 49 x 58 in / 137 x 124 x 148 cm"; Nautilus IPDR5 "Width 52 in (132 cm)",
+# "Length 47 in (119 cm)", "Height 64 in (163 cm)". Estofado de 60 mm e pegador de borracha de 29 mm (o cilindro da mão de
+# referência), como o voador; o rolo de 11 cm × 22 cm, os braços (viga de 50 mm: do cubo até a viga do rolo, que corre de frente pra
+# trás por fora do antebraço até o rolo), o suporte do pegador, os cubos, os mancais, as colunas, a base e a pilha (0,40 × 0,32 ×
+# 1,40 m, a do voador, ou 0,32 × 0,32 × 1,40 m do lado da coluna) são escolha da fábrica. Estofados com as quinas chanfradas (a medida de zona de apoio erra o sinal em quina
+# viva). Peças compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; s = +1 é o lado +X, o ESQUERDO dela):
+#   el = e3.elevacao_lateral_maquina("elevacao_lateral", eixos={1: (x, z), -1: (x, z)}, y_cubo=y, rolos={1: (centro, comp, raio),
+#                                    -1: (...)}, pegadores={1: (centro, eixo), -1: (...)}, assento=(...), peito=(...))
+#   no pose(t): el.girar(graus)             # os 2 braços (com o rolo e o pegador) sobem `graus` em volta dos eixos, a partir da montagem
+#               c, u = el.pegada(s)          # centro e eixo do pegador do lado s agora (onde a mão fecha)
+#   Cena(pose, el.equipamentos, pegadas=[("Left", ck.Barra(el.pegadores[1], el.raio_pegador, el.meia_pegador, eixo=(0, 0, 1))),
+#        ...], apoios=el.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (parada; não encosta no corpo),
+# "<nome>_assento" e "<nome>_peito" (APOIO), "<nome>_braco_esq"/"_dir" (giram; não encostam no corpo, fora as mãos nos pegadores) e
+# "<nome>_rolo_esq"/"_dir" (giram junto com o braço do lado; APOIO). Cada braço e cada rolo tem a origem NO EIXO (no centro do cubo)
+# e o X local AO LONGO dele (pra trás, +Y): a regra checagens.eixos da ficha mede o ombro nessa reta. O cubo de cada braço fica 5 mm
+# atrás do mancal (nada passa de um pro outro) e os braços giram atrás da travessa: a regra checagens.folgas mede braço × estrutura
+# sem peça atravessando a outra de propósito.
+_X_PRA_TRAS = Matrix.Rotation(math.radians(90.0), 4, "Z")       # X local → +Y do mundo (o eixo do braço, de frente pra trás)
+
+
+class ElevacaoLateralMaquina:
+    """Máquina de elevação lateral pronta na cena (elevacao_lateral_maquina())."""
+
+    def __init__(self, raizes, eixos, pegadores, raio_pegador, meia_pegador, rolos, medidas):
+        self.raizes = raizes                  # {"estrutura", "assento", "peito", "braco_esq", "braco_dir", "rolo_esq", "rolo_dir"}
+        self.equipamentos = [raizes[k] for k in ("estrutura", "braco_esq", "braco_dir")]
+        self.apoios = [raizes[k] for k in ("assento", "peito", "rolo_esq", "rolo_dir")]
+        self.eixos = eixos                    # {s: Vector}: centro do cubo de cada braço, NO eixo (o eixo é paralelo ao Y)
+        self.pegadores = pegadores            # {+1: pegador do lado +X, −1: do lado −X}; o eixo de cada um no Z local
+        self.rolos = rolos                    # {s: estofado do rolo}; o eixo de cada um no Z local (paralelo ao Y na montagem)
+        self.raio_pegador = raio_pegador
+        self.meia_pegador = meia_pegador
+        self.medidas = medidas                # medidas totais da máquina montada (m), pro relatório
+        self.angulo = 0.0
+        self._M0 = {s: {k: raizes[k + lado].matrix_world.copy() for k in ("braco_", "rolo_")} for s, lado in ((1, "esq"), (-1, "dir"))}
+
+    def _giro(self, s, graus):
+        P = self.eixos[s]
+        return Matrix.Translation(P) @ Matrix.Rotation(math.radians(-s * graus), 4, "Y") @ Matrix.Translation(-P)
+
+    def girar(self, graus):
+        """Os 2 braços (com o rolo e o pegador de cada um) girados `graus` a partir da montagem, cada um em volta do seu eixo de
+        frente pra trás: > 0 levanta os braços pelos lados (o do lado +X gira no sentido horário visto de trás da pessoa, o do −X no
+        anti-horário), < 0 abaixa."""
+        for s, lado in ((1, "esq"), (-1, "dir")):
+            M = self._giro(s, graus)
+            for k in ("braco_", "rolo_"):
+                self.raizes[k + lado].matrix_world = M @ self._M0[s][k]
+        self.angulo = graus
+        bpy.context.view_layer.update()
+
+    def pegada(self, s, graus=None):
+        """Centro e eixo (mundo, unitário) do pegador do lado s com os braços em `graus` (None = como estão agora)."""
+        M = self.pegadores[s].matrix_world
+        if graus is not None:
+            M = self._giro(s, graus - self.angulo) @ M
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+    def rolo(self, s):
+        """Centro e eixo (mundo, unitário) do rolo do lado s agora."""
+        M = self.rolos[s].matrix_world
+        return M.to_translation(), (M.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+
+def elevacao_lateral_maquina(nome="elevacao_lateral", eixos=None, y_cubo=None, rolos=None, pegadores=None, assento=None, peito=None,
+                             y_coluna=None, pegador=(0.13, 0.0145), viga=0.05, pilha=True, x_pilha=0.0):
+    """Máquina de elevação lateral (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM (braços
+    embaixo, no começo do movimento); s = +1 é o lado +X:
+      eixos     = {s: (x, z)}: a reta horizontal de frente pra trás (paralela ao Y) em volta da qual o braço do lado s gira (passa
+                  pela articulação do ombro do mesmo lado);
+      y_cubo    = y do plano dos cubos (na frente das mãos): o braço da máquina sai do cubo nesse plano até a viga do rolo;
+      rolos     = {s: (centro, comprimento, raio)}: rolo estofado (APOIO) com o eixo paralelo ao Y, centrado em `centro`, no lado de
+                  fora do braço logo acima do cotovelo; a viga do rolo vem da frente (do plano dos cubos) e entra na ponta da frente
+                  dele;
+      pegadores = {s: (centro, eixo)}: centro e direção do pegador do lado s (onde a mão fecha); a ponta mais perto da viga do rolo
+                  tem um colar de aço e um suporte até a viga;
+      assento   = (y0, y1, topo, largura, espessura): estofado do assento de y0 a y1 (em qualquer ordem), com o topo em `topo`;
+      peito     = (y_face, angulo, z_baixo, altura, largura, espessura): a face do estofado que encosta no peito passa por
+                  (y_face, z_baixo) e sobe `altura` m inclinada `angulo` graus da vertical pra frente (−Y, pro lado da máquina);
+      y_coluna  = y da coluna da frente (None = 12 cm na frente da travessa dos mancais);
+      pegador   = (comprimento, raio) do pegador de borracha; viga = seção (m) da viga quadrada dos braços; pilha = caixa da pilha
+                  de pesos; x_pilha = x do centro dela: 0 = na frente da coluna, no meio; com |x_pilha| > 0,2 ela fica do lado da coluna
+                  (0,32 × 0,32 × 1,40 m), em pé no pé da frente da base, que vai até embaixo dela.
+    Devolve uma ElevacaoLateralMaquina (raizes, equipamentos, apoios, pegadores, girar(), pegada(), rolo())."""
+    if not eixos or y_cubo is None or not rolos or not pegadores or assento is None or peito is None:
+        raise ValueError("elevacao_lateral_maquina: eixos, y_cubo, rolos, pegadores, assento e peito vêm da cena (a peça é montada "
+                         "em volta do corpo)")
+    comp_p, raio_p = pegador
+    ya0, ya1, topo, larg, esp = assento
+    y_face, ang_p, z_baixo, alt_p, larg_p, esp_p = peito
+    Y = Vector((0.0, 1.0, 0.0))
+
+    def raiz_nova(sufixo, M=None):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        if M is not None:
+            r.matrix_world = M
+        return r
+
+    estr, ass, pei = raiz_nova("estrutura"), raiz_nova("assento"), raiz_nova("peito")
+    bpy.context.view_layer.update()
+    # ── assento: estofado (APOIO) em cima de uma chapa ─────────────────────────────────────────────────────────────────────
+    y_ass, prof = (ya0 + ya1) / 2, abs(ya1 - ya0)
+    caixa(nome + "_assento_estofado", (0, y_ass, topo - esp / 2), (larg, prof, esp), mat_estofado(), pai=ass, chanfro=0.015)
+    z_chapa = topo - esp - 0.012
+    _em_aneis(_reto(caixa(nome + "_assento_chapa", (0, y_ass, z_chapa), (larg - 0.05, prof - 0.04, 0.024), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.06)
+    # ── almofada do peito: estofado (APOIO) inclinado pra frente e a chapa na frente dele ──────────────────────────────────────
+    a = math.radians(ang_p)
+    u_p = Vector((0, -math.sin(a), math.cos(a)))              # ao longo da almofada, pra cima
+    n_p = Vector((0, math.cos(a), math.sin(a)))               # normal da face (pro corpo, +Y)
+    base_p = Vector((0, y_face, z_baixo))
+    caixa(nome + "_peito_estofado", base_p + u_p * (alt_p / 2) - n_p * (esp_p / 2), (larg_p, esp_p, alt_p), mat_estofado(),
+          rot=(a, 0, 0), pai=pei, chanfro=0.015)
+    meio_p = base_p + u_p * (alt_p / 2) - n_p * (esp_p + 0.012)
+    _em_aneis(_reto(caixa(nome + "_peito_chapa", meio_p, (larg_p - 0.05, 0.024, alt_p - 0.05), mat_estrutura(), rot=(a, 0, 0),
+                          pai=estr, chanfro=0)), passo=0.06)
+    # ── travessa dos 2 mancais (na frente dos cubos), coluna da frente e a viga de cima entre as duas ──────────────────────────
+    xs = [x for x, _ in eixos.values()]
+    z_trav = sum(z for _, z in eixos.values()) / len(eixos)
+    y_trav = y_cubo - 0.10
+    if y_coluna is None:
+        y_coluna = y_trav - 0.12
+    _viga(nome + "_travessa", (min(xs) - 0.06, y_trav, z_trav), (max(xs) + 0.06, y_trav, z_trav), 0.07, 0.07, mat_estrutura(),
+          pai=estr)
+    _viga(nome + "_coluna", (0, y_coluna, 0.06), (0, y_coluna, z_trav + 0.035), 0.08, 0.08, mat_estrutura(), pai=estr)
+    if y_coluna + 0.04 < y_trav - 0.035:
+        _viga(nome + "_viga_cima", (0, y_coluna + 0.04, z_trav), (0, y_trav - 0.035, z_trav), 0.07, 0.07, mat_estrutura(), pai=estr)
+    # ── mancal de cada eixo (parado): da travessa até 5 mm na frente do cubo do braço ──────────────────────────────────────────
+    for s, (x, z) in eixos.items():
+        y0, y1 = y_trav + 0.035, y_cubo - 0.035 - 0.005
+        _cilindro(nome + "_mancal%+d" % s, 0.045, y1 - y0, (x, (y0 + y1) / 2, z), (math.radians(90), 0, 0), mat_estrutura(), pai=estr)
+    # ── suporte da almofada do peito: da chapa (atrás dela) até a coluna da frente ─────────────────────────────────────────────
+    p_sup = meio_p - n_p * 0.012
+    _viga(nome + "_peito_suporte", p_sup, (0, y_coluna + 0.04, p_sup.z), 0.06, 0.06, mat_estrutura(), pai=estr)
+    # ── pilha de pesos (carenagem parada): na frente da coluna (x_pilha = 0) ou do lado dela (x_pilha ≠ 0: a torre fica na frente e
+    #    de lado, fora do caminho do braço da máquina e sem tapar o corpo de frente — a HS-LR tem a torre na frente e de lado), em pé
+    #    no pé da frente da base ─────────────────────────────────────────────────────────────────────────────────────────────────────
+    if pilha and abs(x_pilha) > 0.2:
+        y_pilha, tam_p = y_coluna - 0.04, (0.32, 0.32, 1.40)
+        y_fim = y_coluna - 0.04
+    else:
+        y_pilha, tam_p = y_coluna - (0.04 + 0.02 + 0.16), (0.40, 0.32, 1.40)
+        y_fim = (y_pilha - 0.16) if pilha else (y_coluna - 0.04)
+    if pilha:
+        _em_aneis(_reto(caixa(nome + "_pilha", (x_pilha, y_pilha, 0.06 + tam_p[2] / 2), tam_p, mat_carenagem(), pai=estr,
+                              chanfro=0)), passo=0.25)
+    # ── base no chão: viga do meio (ao longo do Y, de trás do assento até a frente da pilha ou da coluna), pé de trás e pé da frente
+    #    (embaixo da pilha, se ela fica do lado); coluna do assento ───────────────────────────────────────────────────────────────
+    y_tras = max(ya0, ya1) - 0.06
+    _em_aneis(_reto(caixa(nome + "_base_meio", (0, (y_tras + y_fim) / 2, 0.03), (0.08, y_tras - y_fim, 0.06), mat_estrutura(),
+                          pai=estr, chanfro=0)), passo=0.08)
+    x0f, x1f = -0.34, 0.34
+    if pilha and abs(x_pilha) > 0.2:
+        x0f, x1f = min(x0f, x_pilha - tam_p[0] / 2), max(x1f, x_pilha + tam_p[0] / 2)
+    for k, (y, x0, x1) in enumerate(((y_tras - 0.04, -0.26, 0.26), (y_fim + 0.04, x0f, x1f))):
+        _em_aneis(_reto(caixa(nome + "_base_pe%d" % k, ((x0 + x1) / 2, y, 0.025), (x1 - x0, 0.08, 0.05), mat_estrutura(), pai=estr,
+                              chanfro=0)), passo=0.08)
+    _viga(nome + "_coluna_assento", (0, y_ass, 0.06), (0, y_ass, z_chapa - 0.012), 0.08, 0.08, mat_estrutura(), pai=estr)
+    # ── os 2 braços (giram): cubo no eixo, viga do cubo até a viga do rolo (no plano dos cubos), junta, viga do rolo de frente pra
+    #    trás até a ponta da frente do rolo, o rolo (APOIO, gira junto) e o pegador com o colar e o suporte até a viga do rolo ──────
+    raizes = {"estrutura": estr, "assento": ass, "peito": pei}
+    pegs, rols, cubos = {}, {}, {}
+    for s, lado in ((1, "esq"), (-1, "dir")):
+        ex, ez = eixos[s]
+        P0 = Vector((ex, y_cubo, ez))
+        cubos[s] = P0
+        M0 = Matrix.Translation(P0) @ _X_PRA_TRAS
+        bra, rol = raiz_nova("braco_" + lado, M0), raiz_nova("rolo_" + lado, M0)
+        raizes.update({"braco_" + lado: bra, "rolo_" + lado: rol})
+        bpy.context.view_layer.update()
+        c_r, comp_r, raio_r = rolos[s]
+        c_r = Vector(c_r)
+        y_rf = c_r.y - comp_r / 2                              # ponta da frente do rolo
+        if y_rf <= y_cubo + viga:
+            raise ValueError("elevacao_lateral_maquina: o rolo do lado %+d começa na frente do plano dos cubos" % s)
+        K = Vector((c_r.x, y_cubo, c_r.z))                     # onde a viga do cubo encontra a viga do rolo
+        rd = (K - P0).normalized()                             # do eixo pra viga do rolo (no plano dos cubos)
+        pecas = [_cilindro(nome + "_cubo_" + lado, 0.05, 0.07, P0, (math.radians(90), 0, 0), mat_estrutura()),
+                 _cilindro(nome + "_cubo_tampa_" + lado, 0.026, 0.006, P0 + Y * 0.038, (math.radians(90), 0, 0), mat_aco())]
+        pecas.append(_caixa_ao_longo(nome + "_braco0_" + lado, P0 + rd * 0.03, K + rd * (viga / 2), viga, viga, Y, mat_estrutura()))
+        pecas.append(_caixa_ao_longo(nome + "_braco1_" + lado, K - Y * (viga / 2), Vector((c_r.x, y_rf + 0.01, c_r.z)), viga, viga, rd,
+                                     mat_estrutura()))
+        pecas.append(_reto(caixa(nome + "_dobra_" + lado, K, (viga + 0.004, viga + 0.004, viga + 0.004), mat_estrutura(),
+                                 rot=_rot_de(rd, Y, rd.cross(Y)), chanfro=0)))
+        # rolo: estofado cilíndrico com as bordas chanfradas (APOIO) e a tampa de aço na ponta da frente
+        est = _em_aneis(_cilindro(nome + "_rolo_estofado_" + lado, raio_r, comp_r, c_r, (math.radians(90), 0, 0), mat_estofado()),
+                        passo=0.03)
+        m = est.modifiers.new("chanfro", "BEVEL")
+        m.width = 0.008
+        m.segments = 3
+        _prender([est, _cilindro(nome + "_rolo_tampa_" + lado, raio_r * 0.55, 0.008, (c_r.x, y_rf - 0.004, c_r.z),
+                                 (math.radians(90), 0, 0), mat_aco())], rol)
+        rols[s] = est
+        # pegador: borracha ao longo do eixo dado, ponta de borracha embaixo, colar de aço em cima e o suporte até a viga do rolo
+        c_g, u_g = Vector(pegadores[s][0]), Vector(pegadores[s][1]).normalized()
+        pontas = (c_g - u_g * (comp_p / 2), c_g + u_g * (comp_p / 2))
+        perto = min(pontas, key=lambda p: (Vector((p.x, p.z)) - Vector((c_r.x, c_r.z))).length)
+        longe = pontas[1] if perto is pontas[0] else pontas[0]
+        u_c = (perto - c_g).normalized()                       # do centro do pegador pra ponta do colar
+        peg = _em_aneis(tubo(nome + "_pegador_" + lado, longe, perto, raio_p, mat_borracha(), vertices=32), passo=0.035)
+        pecas.append(peg)
+        pecas.append(_cilindro(nome + "_pegador_ponta_" + lado, raio_p + 0.004, 0.012, longe - u_c * 0.006,
+                               (u_c.to_track_quat("Z", "Y").to_euler()), mat_borracha()))
+        C1 = perto + u_c * 0.035
+        pecas.append(tubo(nome + "_colar_" + lado, perto, C1, 0.017, mat_aco()))
+        Q = Vector((c_r.x, C1.y, c_r.z))                       # na linha da viga do rolo, na altura (y) do pegador
+        pecas.append(_viga(nome + "_suporte_pegador_" + lado, C1 - (Q - C1).normalized() * 0.012, Q, 0.03, 0.03, mat_estrutura(),
+                           chanfro=0.003))
+        _prender(pecas, bra)
+        pegs[s] = peg
+    bpy.context.view_layer.update()
+    pts = [o.matrix_world @ Vector(c) for r in raizes.values() for o in [r] + list(r.children_recursive) if o.type == "MESH"
+           for c in o.bound_box]
+    lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+    hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+    medidas = dict(total=tuple(round(v, 3) for v in hi - lo), y_cubo=round(y_cubo, 3), y_coluna=round(y_coluna, 3),
+                   z_eixo=round(z_trav, 3))
+    return ElevacaoLateralMaquina(raizes, cubos, pegs, raio_p, comp_p / 2, rols, medidas)
+# ===== fim: Elevação lateral na máquina =============================================================================================
