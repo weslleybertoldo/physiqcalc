@@ -1,0 +1,969 @@
+{
+ "uuid": "217d3ff2-62d0-5df4-90f8-600677209cf2",
+ "nome": "Prancha",
+ "cena": "prancha",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal · transverso do abdômen · oblíquos (isometria)",
+ "padrao_movimento": "prancha",
+ "equipamento": "peso_corporal",
+ "variacao": "frontal",
+ "alvos": [
+  "abdomen",
+  "obliquos"
+ ],
+ "auxiliares": [
+  "quadriceps",
+  "tensor",
+  "peitoral",
+  "gluteo"
+ ],
+ "camera": {
+  "az": 72,
+  "el": 10,
+  "dist": 3.3,
+  "alvo": [
+   0.0,
+   0.05,
+   0.2
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   0.05,
+   0.2
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Prancha pelo Caminho A (decisão do Weslley em 11/10/2026, \"1\": entrar na posição, segurar e sair). t = 0 → 1 é UM ciclo e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar). t = 0 é a prancha montada (a foto parada do app); segura 5 s (ACE: \"Continue to breath while holding this position for a specified time (5+ seconds)\"); o quadril desce em 1,3 s até as coxas encostarem no chão, fica 0,5 s embaixo (o meio do tempo embaixo cai em t = 0,5: os prints de t = 0,5 mostram a saída) e sobe em 0,8 s. Os tempos são os do vídeo antigo do MuscleWiki, Forearm Plank (de lado, 4,68 s, medido quadro a quadro: sobe em ~0,7 s, segura ~2 s, desce em ~1,3 s e fica ~0,5 s embaixo), com a subida um pouco mais lenta pela ACE (\"Slowly lift your entire torso\"). A segurada do fim emenda com a do começo: no app são 5 s parado na prancha entre uma saída e a outra — uma segurada representativa (as fontes falam de 5 s a 45 s: ACE \"5+ seconds\"; NSCA \"Hold this position for 20 s\" e o programa de 15–45 s). ida_s = 7,6 s = 1 ciclo (122 quadros a 16/s); a descida e a subida são suaves (começam e acabam paradas).",
+ "ida_s": 7.6,
+ "movimento": "De bruços no chão, apoiado nos antebraços e na ponta dos pés: os cotovelos bem embaixo dos ombros (o braço em pé), os antebraços deitados no chão, paralelos e apontando para a frente, com as palmas das mãos chapadas no chão; as pernas juntas (os pés quase juntos), na ponta dos pés, com os tornozelos dobrados — os dedos dos pés dobrados no chão e os calcanhares para cima. O corpo fica reto da cabeça aos calcanhares — o quadril sem cair nem subir, os joelhos esticados, o abdômen firme e a cabeça na linha da coluna, olhando para o chão logo à frente das mãos — e segura a posição respirando normalmente. Para sair, desce devagar o quadril até as coxas encostarem no chão, ainda apoiado nos antebraços (o peito continua no ar e os joelhos dobram um pouco); para entrar de novo, sobe o quadril até o corpo ficar reto outra vez e segura. Os antebraços, as mãos e as pontas dos pés não saem do lugar.",
+ "cinesiologia": {
+  "plano": "isométrico na prancha: nada se mexe — o abdômen e os estabilizadores do tronco seguram o corpo reto contra a gravidade, em cadeia cinética fechada nos antebraços e na ponta dos pés (ExRx: \"Muscles are exercised isometrically\"); na entrada e na saída o tronco gira no plano sagital em volta dos ombros, que ficam parados em cima dos cotovelos",
+  "articulacoes": "segurando: ombro com o braço em pé (~80° de flexão em relação ao tronco), cotovelo dobrado ~80° com o antebraço deitado no chão, punho quase neutro com a mão espalmada, escápulas um pouco afastadas, coluna neutra, quadril e joelhos estendidos (o corpo reto), tornozelos em flexão dorsal (~14° além do neutro) e dedos dos pés dobrados no chão — tudo parado. Na saída o quadril desce: a lombar estende ~9° (o tórax fica mais em pé que a pelve, apoiado nos antebraços), o quadril estende ~10° além da linha do corpo e os joelhos dobram ~22° até as coxas deitarem no chão; na entrada, o caminho de volta. Ombros, cotovelos, antebraços, mãos e a bola dos pés não saem do lugar",
+  "agonistas": "reto do abdômen (ExRx, Front Plank: alvo \"Rectus Abdominis\"), oblíquo externo e oblíquo interno: na prancha no chão o oblíquo externo chega a 44,6% da contração voluntária máxima, o oblíquo interno a 29,5% e o reto do abdômen a 26,6% (Lehman et al. 2005, tabela 1); o transverso do abdômen (o catálogo) também trabalha — Okubo et al. 2010 mediu com eletrodo de fio, mas o resumo só dá o maior valor, na variação com braço e perna levantados",
+  "sinergistas": "iliopsoas, tensor da fáscia lata, quadríceps e sartório seguram o quadril e os joelhos estendidos; peitoral maior, coracobraquial, serrátil anterior e peitoral menor seguram os ombros e as escápulas em cima dos cotovelos (ExRx, Front Plank: estabilizadores); glúteos (NSCA: \"contracting the gluteals\"; ACE, Decline Plank: \"Squeeze the muscles of the stomach and glute\")",
+  "estabilizadores": "eretores da espinha (4,98% da contração voluntária máxima na prancha no chão: Lehman 2005), trapézio médio e inferior e romboides como estabilizadores antagonistas (ExRx); o abdômen continua contraído com a respiração normal (NSCA: \"Concentrate on breathing normally without releasing the abdominal contraction throughout the entire exercise\"; ACE: \"Continue to breath while holding this position\")",
+  "fases": "entrada (~0,8 s): de bruços, apoiado nos antebraços com as coxas no chão, o quadril sobe até o corpo ficar reto (ExRx: \"Raise body upward by straightening body in straight line\"; ACE: \"Slowly lift your entire torso off the floor or mat, maintaining a stiff torso and legs\"); segurada (5 s no clipe; ACE: \"for a specified time (5+ seconds)\"; NSCA: \"Hold this position for 20 s\"; free-exercise-db: \"hold this position as long as possible\"); saída (~1,3 s, e ~0,5 s deitado): o quadril desce devagar até as coxas encostarem no chão (ACE: \"gently lower your body back towards the mat or floor before relaxing\"). Tempos de subida e descida do vídeo antigo do MuscleWiki (~0,7 s e ~1,3 s)"
+ },
+ "referencias": [
+  "free-exercise-db (Yuhonas, domínio público) — Plank, o fonte_en do catálogo. https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank.json (lido em 11/10/2026): \"Get into a prone position on the floor, supporting your weight on your toes and your forearms. Your arms are bent and directly below the shoulder.\" / \"Keep your body straight at all times, and hold this position as long as possible.\"; \"force\": \"static\"; \"primaryMuscles\": [\"abdominals\"]. A variação é a prancha de frente nos antebraços (\"prone\", \"on your toes and your forearms\").",
+  "ExRx.net — Front Plank. https://exrx.net/WeightExercises/RectusAbdominis/BWFrontPlank (lido na cópia do Internet Archive de 27/01/2026; o site direto responde 403): \"Lie prone on mat. Place forearms on mat, elbows under shoulders. Place legs together with forefeet on floor.\" / \"Raise body upward by straightening body in straight line. Hold position.\" / \"Muscles are exercised isometrically.\" / \"Exercise can also be performed on bent knees instead of forefeet.\"; músculos: alvo Rectus Abdominis; estabilizadores Obliques, Iliopsoas, Tensor Fasciae Latae, Quadriceps, Sartorius, Pectoralis Major, Coracobrachialis, Serratus Anterior, Pectoralis Minor; estabilizadores antagonistas Erector Spinae, Trapezius Middle, Trapezius Lower, Rhomboids.",
+  "American Council on Exercise (ACE) — Front Plank (Exercise Library #32). https://www.acefitness.org/resources/everyone/exercise-library/32/front-plank/ (lido em 11/10/2026): \"Lie prone (on your stomach) on an exercise mat or floor with your elbows close to your sides and directly under your shoulders, palms down and hands facing forward. Contract your quadriceps to extend your legs and dorsiflex your ankles (pull toes towards your shins).\"; \"Slowly lift your entire torso off the floor or mat, maintaining a stiff torso and legs. Avoid any arching (sagging) in your low back, hiking (upwards) in your hips or bending in the knees. Avoid shrugging your shoulder and keep your shoulders positioned directly over your elbows with your palms facing down. Continue to breath while holding this position for a specified time (5+ seconds).\"; \"Downward Phase: While maintaining a stiff torso and extended knees, gently lower your body back towards the mat or floor before relaxing.\" ACE, Decline Plank (#304, outro exercício, só pelo glúteo): \"Squeeze the muscles of the stomach and glute, and keep the body in a straight line from head to heels.\"",
+  "National Strength and Conditioning Association (NSCA) — Basics of Strength and Conditioning Manual (Sands, Wurth e Hewit), cap. 4, 6b. Elbow Planks (front and sides), pp. 46–47 (lido na cópia do Internet Archive de 12/02/2022 em 11/10/2026): \"Elbows should be directly under shoulders and knees should be directly under hips\"; \"Head remains in a neutral position to keep the body in line\"; \"From the start position, walk feet straight back (staying on toes) until legs are fully extended\"; \"Create a neutral pelvic and spine position by rolling the pelvis forward, contracting the gluteals, and pulling the belly button to the spine by contracting the inner abdominal muscles\"; \"Avoid letting hips sag and arching lower back\"; \"Concentrate on breathing normally without releasing the abdominal contraction throughout the entire exercise\"; \"Keep elbows directly under shoulders throughout the entire exercise\"; \"Hold this position for 20 s\"; programa: \"Ab Planks 2x 15-30 seconds\" a \"3x 30-45 seconds\".",
+  "MuscleWiki — Forearm Plank. O site responde 403; os vídeos abrem direto: o ANTIGO, de lado, https://media.musclewiki.com/media/uploads/videos/branded/male-bodyweight-forearm-plank-side.mp4 (cópia do Internet Archive de 06/09/2023, 4,68 s, lido quadro a quadro em 12/10/2026): deitado com a barriga e as coxas no chão e o tronco apoiado nos antebraços (cotovelo embaixo do ombro), o quadril sobe até o corpo ficar reto (~0,7 s), segura (~2 s) e desce até o chão (~1,3 s), com os antebraços, os ombros e as pontas dos pés parados; os atuais (male-Bodyweight-forearm-plank-side.mp4, 6,27 s, e female-Bodyweight-forearm-plank-side.mp4, 5,17 s) ficam parados na prancha, o homem com os punhos fechados e a mulher com as mãos juntas. O texto (lido pelo pedido em 11/10/2026): \"Place forearms on the ground with your elbows bent at a 90° angle aligned beneath your shoulders\" / \"Your feet should be together, with only your toes touching the floor.\" / \"Lift your belly off the floor and form a straight line from your heels to the crown of your head and hold.\"",
+  "Strand SL, Hjelm J, Shoepe TC, Fajardo MA. Norms for an isometric muscle endurance test. J Hum Kinet. 2014;40:93-102 (texto inteiro, PMC4096102): \"the subject assumed the forearm plank position with elbows in contact with the ground, such that the humerus formed a perpendicular line to the horizontal plane, directly beneath the shoulders. The forearms were in neutral position and hands were directly in front of the elbows. The participant assumed a rigid anatomical body position so that only their forearms and toes supported the body. This position is characterized by a phalangeal extension, neutral ankle position, knee and hip extension, and neutral spinal positions.\"",
+  "Lehman GJ, Hoda W, Oliver S. Trunk muscle activity during bridging exercises on and off a Swiss ball. Chiropr Osteopat. 2005;13:14 (texto inteiro, PMC1187901): \"Subjects assumed a prone position on the floor, and when instructed established a prone plank position with elbows placed beneath the shoulders and upper arms perpendicular to the floor. In this position only the feet and the forearms were touching the floor.\"; tabela 1, prancha no chão (% da contração voluntária máxima): oblíquo interno 29,5 ± 18,8, reto do abdômen 26,6 ± 11,1, oblíquo externo 44,6 ± 14,8, eretor da espinha 4,98 ± 1,05.",
+  "Estudos de EMG da prancha, só os resumos (PubMed): Ekstrom RA et al. J Orthop Sports Phys Ther 2007;37(12):754-762 (\"prone-bridge on the elbows and toes\"; \"All the other exercises produced EMG levels less than 45% MVIC, so they may be more beneficial for training endurance or stabilization in healthy subjects\"); Schoenfeld BJ et al. Sports Biomech 2014;13(3):296-306 (\"Nineteen participants performed all four variations of the plank for 30 seconds\"); Okubo Y et al. J Orthop Sports Phys Ther 2010;40(11):743-750 (\"The exercise showing the greatest activity level for the TrA was elbow-toe exercise with contralateral arm and leg lift\"); Snarr RL, Esco MR. J Strength Cond Res 2014;28(11):3298-3305; García-Jaén M et al. Appl Sci 2023;13(19):10970 (\"Both flexion and extension reported higher exertion rating values compared to neutral\" — a cabeça neutra).",
+  "McGill SM. Low back exercises: evidence for improving exercise regimens. Phys Ther. 1998;78(7):754-765 (texto inteiro pela cópia do Internet Archive): não tem a prancha de frente; sobre o tempo: \"Selection of the appropriate number of repetitions and holding times for each of these exercises is based on the clinician's judgment, because at present there are no data to guide selection for these variables.\"",
+  "Amplitude normal: quadril — Wichman DM et al. 2021 (Physical Examination of the Hip, tabela 1, valores da AAOS): extensão 17,0 ± 3,9°; lombar — Apti A, Kuru Çolak T, Akçay B. Normative values for cervical and lumbar range of motion in healthy young adults. J Turk Spinal Surg. 2023;34:113-117 (doi:10.4274/jtss.galenos.2023.33042, lido em 12/10/2026): \"The mean values for lumbar extension ROM are stated as 25 degrees according to the AAOS and 35 degrees according to Kendall et al.\" e, medido com goniômetro em 300 jovens, \"extension 40±10.2º\"; tornozelo — Alazzawi S et al. World J Orthop 2017;8(1):21-29, tabela 5 (flexão dorsal 0–20°, flexão plantar 0–50°); demais juntas — Norkin CC, White DJ, Measurement of Joint Motion (a referência do limites.py)."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pe_na_ponta": [
+   "E",
+   "D"
+  ],
+  "pe_na_ponta_motivo": "Apoiado na ponta dos pés o ciclo todo (ExRx, Front Plank: \"Place legs together with forefeet on floor\"; ACE: \"dorsiflex your ankles (pull toes towards your shins)\"; free-exercise-db: \"supporting your weight on your toes\"): os 2 pés ficam quase em pé, só a bola do pé e os dedos encostam no chão e o calcanhar fica no alto, como na Flexão de Braço. A planta (a pele mais baixa do pé) continua medida no chão e a base dos dedos (o eixo em que o pé gira na descida) não pode escorregar entre os quadros; o calcanhar sobe de propósito.",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os dois pés chapados no chão (largura dos pés, ponta do pé, os 2 pés virados igual, um pé à frente do outro, joelho na direção do pé, coluna até 20°) foram feitas pra quem está em pé: com o pé quase em pé a ponta_pe (tornozelo → base dos dedos visto de cima) perde o sentido, e o pes_largura (padrão 0,8–2,6) não aceita os pés juntos do ExRx. As que valem estão abaixo, mais estreitas: pés entre juntos e a largura do quadril, sem um à frente do outro, dedos dos pés pra frente, coluna neutra segurando (até 8°), pelve e ombros nivelados e sem girar.",
+  "zonas": [],
+  "alturas": [
+   {
+    "nome": "palma da mão esquerda espalmada no chão",
+    "partes": [
+     "LeftHand"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, Front Plank (#32) (\"palms down and hands facing forward\"; \"keep your shoulders positioned directly over your elbows with your palms facing down\"); pedido: palma encostando, sem afundar mais que ~1 mm e sem escorregar (o antebraço e a mão ficam parados o ciclo todo)"
+   },
+   {
+    "nome": "dedo indicador da mão esquerda no chão",
+    "partes": [
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo médio da mão esquerda no chão",
+    "partes": [
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo anelar da mão esquerda no chão",
+    "partes": [
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo mínimo da mão esquerda no chão",
+    "partes": [
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "polegar da mão esquerda no chão",
+    "partes": [
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "palma da mão direita espalmada no chão",
+    "partes": [
+     "RightHand"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, Front Plank (#32) (\"palms down and hands facing forward\"; \"keep your shoulders positioned directly over your elbows with your palms facing down\"); pedido: palma encostando, sem afundar mais que ~1 mm e sem escorregar (o antebraço e a mão ficam parados o ciclo todo)"
+   },
+   {
+    "nome": "dedo indicador da mão direita no chão",
+    "partes": [
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo médio da mão direita no chão",
+    "partes": [
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo anelar da mão direita no chão",
+    "partes": [
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo mínimo da mão direita no chão",
+    "partes": [
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "polegar da mão direita no chão",
+    "partes": [
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "antebraços apoiados no chão (a pele de baixo, perto do cotovelo, encostando), parados",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "free-exercise-db, Plank (\"supporting your weight on your toes and your forearms\"); ExRx, Front Plank (\"Place forearms on mat, elbows under shoulders\"); Lehman et al. 2005 (\"only the feet and the forearms were touching the floor\"); pedido: encostam sem entrar e não escorregam"
+   },
+   {
+    "nome": "braços (perto do cotovelo) não entram no chão",
+    "partes": [
+     "LeftArm",
+     "RightArm"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     5000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o chão)"
+   },
+   {
+    "nome": "pontas dos pés no chão (a bola do pé e os dedos encostando)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ExRx, Front Plank (\"Place legs together with forefeet on floor\"); free-exercise-db, Plank (\"supporting your weight on your toes\"); Strand et al. 2014 (\"only their forearms and toes supported the body\")"
+   },
+   {
+    "nome": "corpo nunca entra no chão",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     5000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o chão; embaixo a coxa encosta, não entra)"
+   },
+   {
+    "nome": "segurando: só os antebraços e as pontas dos pés apoiam (o corpo longe do chão)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.0,
+     0.296
+    ],
+    "mm": [
+     80,
+     5000
+    ],
+    "fonte": "Lehman et al. 2005 (\"In this position only the feet and the forearms were touching the floor\"); Strand et al. 2014 (\"only their forearms and toes supported the body\")"
+   },
+   {
+    "nome": "segurando de novo: só os antebraços e as pontas dos pés apoiam",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.639,
+     1.0
+    ],
+    "mm": [
+     80,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "embaixo: deitado em cima das coxas (a coxa encostando no chão)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.468,
+     0.532
+    ],
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, Front Plank (\"Lie prone (on your stomach) on an exercise mat or floor\"; \"gently lower your body back towards the mat or floor before relaxing\"); ExRx, Front Plank (\"Lie prone on mat\"); MuscleWiki, Forearm Plank (\"Lift your belly off the floor\"; vídeo antigo: a barriga e as coxas no chão embaixo)"
+   },
+   {
+    "nome": "o peito fica no ar o ciclo todo (apoiado nos antebraços)",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     60,
+     5000
+    ],
+    "fonte": "ExRx, Front Plank (\"Lie prone on mat. Place forearms on mat, elbows under shoulders\"): deitado com os cotovelos embaixo dos ombros, o tórax fica apoiado nos antebraços"
+   },
+   {
+    "nome": "cabeça longe do chão",
+    "partes": [
+     "Head"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     100,
+     5000
+    ]
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços longe da cabeça (sem encostar no rosto nem no cabelo)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     20,
+     2000
+    ],
+    "fonte": "NSCA (\"Head remains in a neutral position to keep the body in line\"): a cabeça fica entre os antebraços, sem encostar"
+   },
+   {
+    "nome": "antebraços e mãos sem entrar no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "uma mão longe da outra (antebraços paralelos)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     100,
+     5000
+    ],
+    "fonte": "ACE, Front Plank (#32) (\"palms down and hands facing forward\"); Strand et al. 2014 (\"hands were directly in front of the elbows\")"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braço em pé: o cotovelo bem embaixo do ombro",
+    "medida": "inclinacao",
+    "t": "todos",
+    "graus": [
+     84,
+     90
+    ],
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "fonte": "free-exercise-db, Plank (\"Your arms are bent and directly below the shoulder\"); ACE (\"directly under your shoulders\"; \"keep your shoulders positioned directly over your elbows\"); NSCA (\"Keep elbows directly under shoulders throughout the entire exercise\"); Strand et al. 2014 (\"the humerus formed a perpendicular line to the horizontal plane, directly beneath the shoulders\"); Lehman et al. 2005 (\"upper arms perpendicular to the floor\"). 90 = vertical"
+   },
+   {
+    "nome": "cotovelo dobrado ~90°",
+    "medida": "flexao",
+    "t": "todos",
+    "graus": [
+     75,
+     95
+    ],
+    "junta": "ForeArm",
+    "fonte": "MuscleWiki, Forearm Plank (\"Place forearms on the ground with your elbows bent at a 90° angle aligned beneath your shoulders\"; o pedido). No boneco o antebraço desce ~9° do cotovelo até o punho (a parte de perto do cotovelo é mais grossa e encosta no chão junto com a palma): ~81° de flexão"
+   },
+   {
+    "nome": "antebraço deitado no chão",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     78,
+     90
+    ],
+    "fonte": "ExRx, Front Plank (\"Place forearms on mat\"); 90 = antebraço na horizontal"
+   },
+   {
+    "nome": "cotovelos na largura dos ombros (embaixo deles)",
+    "medida": "cotovelos_largura",
+    "t": "todos",
+    "faixa": [
+     0.9,
+     1.1
+    ],
+    "fonte": "ACE (\"with your elbows close to your sides and directly under your shoulders\"); a medida divide pela distância entre as cabeças do úmero: 1,0 = cotovelo bem embaixo do ombro"
+   },
+   {
+    "nome": "mãos na frente dos cotovelos (antebraços paralelos)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.85,
+     1.15
+    ],
+    "fonte": "Strand et al. 2014 (\"hands were directly in front of the elbows\"); ACE (\"hands facing forward\")"
+   },
+   {
+    "nome": "palmas viradas pro chão",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     165,
+     180
+    ],
+    "fonte": "ACE, Front Plank (#32) (\"palms down\"; \"with your palms facing down\")"
+   },
+   {
+    "nome": "dedos das mãos pra frente",
+    "medida": "dedos_mao_dentro",
+    "t": "todos",
+    "graus": [
+     -10,
+     10
+    ],
+    "fonte": "ACE, Front Plank (#32) (\"hands facing forward\")"
+   },
+   {
+    "nome": "punho sem dobrar (mão na linha do antebraço)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -20,
+     5
+    ],
+    "fonte": "com a palma e o antebraço no chão o punho fica quase neutro (− = estende); amplitude normal do punho na referência do limites.py (Norkin & White, AAOS)"
+   },
+   {
+    "nome": "punho sem desviar de lado",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -10,
+     10
+    ],
+    "fonte": "ACE (\"hands facing forward\"): a mão segue a linha do antebraço"
+   },
+   {
+    "nome": "escápulas paradas, sem encolher os ombros",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     5,
+     30
+    ],
+    "fonte": "ACE (\"Avoid shrugging your shoulder and keep your shoulders positioned directly over your elbows\"); ExRx (estabilizadores \"Serratus Anterior\" e \"Pectoralis Minor\"; estabilizadores antagonistas \"Trapezius, Middle\", \"Trapezius, Lower\" e \"Rhomboids\"): um pouco afastadas (protração leve), sem afundar entre os ombros"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "tórax sem girar em relação à pelve",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "pelve sem girar",
+    "medida": "pelve_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "pés entre juntos e a largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     0.4,
+     1.6
+    ],
+    "fonte": "ExRx, Front Plank (\"Place legs together with forefeet on floor\"); MuscleWiki (\"Your feet should be together\"); fotos do free-exercise-db, do ExRx, da ACE e do NSCA: pés juntos ou quase. No boneco os pés ficam a ~1,3 × a distância entre os quadris: mais juntos que isso a parte de dentro de uma coxa entra na outra (o boneco musculoso não amassa; o mesmo da Flexão de Braço)"
+   },
+   {
+    "nome": "um pé não fica à frente do outro",
+    "medida": "pes_alinhados",
+    "t": "todos",
+    "mm": [
+     0,
+     20
+    ]
+   },
+   {
+    "nome": "dedos dos pés pra frente",
+    "medida": "ponta_dedos",
+    "t": "todos",
+    "graus": [
+     -10,
+     20
+    ]
+   },
+   {
+    "nome": "tornozelo na amplitude normal",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     70,
+     96
+    ],
+    "fonte": "Alazzawi et al. 2017, tabela 5 (flexão dorsal 0–20°, flexão plantar 0–50°; no boneco ~96° a ~26°, em pé ~76°)"
+   },
+   {
+    "nome": "o quadril não passa da extensão normal",
+    "medida": "quadril_sinal",
+    "t": "todos",
+    "graus": [
+     -16,
+     6
+    ],
+    "fonte": "AAOS (tabela 1 de Wichman et al. 2021): extensão do quadril 17,0 ± 3,9°. O quadril_sinal mede a coxa contra a linha quadril → pescoço: o corpo reto da prancha mede ~−3; embaixo a lombar estende junto e a linha quadril → pescoço sobe — a regra deixa até ~13° além do corpo reto"
+   },
+   {
+    "nome": "a lombar estende só embaixo, dentro da amplitude normal",
+    "medida": "coluna_sinal",
+    "t": "todos",
+    "graus": [
+     -12,
+     3
+    ],
+    "fonte": "Apti et al. 2023 (\"The mean values for lumbar extension ROM are stated as 25 degrees according to the AAOS and 35 degrees according to Kendall et al.\"; medido em 300 jovens: \"extension 40±10.2º\"); embaixo, deitado de bruços apoiado nos cotovelos (a posição de começo do ExRx e da ACE e o embaixo do vídeo do MuscleWiki), o tórax fica mais em pé que a pelve. − = arqueada"
+   },
+   {
+    "nome": "a cabeça nunca levanta (olha pro chão)",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -35,
+     -4
+    ],
+    "fonte": "NSCA (\"Head remains in a neutral position to keep the body in line\"); fotos do ExRx e da ACE: olhando pro chão logo à frente das mãos; García-Jaén et al. 2023: flexão e extensão da cabeça cansam mais que a neutra. Embaixo o pescoço dobra um pouco (o tronco sobe e a cabeça continua olhando pro chão)"
+   },
+   {
+    "nome": "joelhos: esticados segurando, dobram só embaixo",
+    "medida": "flexao",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "junta": "Leg",
+    "fonte": "ACE (\"maintaining a stiff torso and extended knees\" na descida); MuscleWiki, vídeo antigo: embaixo os joelhos encostam no chão com os dedos dos pés dobrados"
+   },
+   {
+    "nome": "corpo reto: quadril na reta ombro → tornozelo, sem cair nem subir",
+    "medida": "quadril_linha_ombro_tornozelo",
+    "t": [
+     0.0,
+     0.296
+    ],
+    "mm": [
+     -25,
+     25
+    ],
+    "fonte": "ExRx, Front Plank (\"Raise body upward by straightening body in straight line. Hold position.\"); free-exercise-db, Plank (\"Keep your body straight at all times\"); ACE, Front Plank (\"Avoid any arching (sagging) in your low back, hiking (upwards) in your hips or bending in the knees\"); NSCA (\"Avoid letting hips sag and arching lower back\"). Nenhuma fonte dá o número: a faixa é a da Flexão de Braço (lote 7); + = o quadril subiu, − = caiu"
+   },
+   {
+    "nome": "quadril estendido, sem dobrar",
+    "medida": "quadril_sinal",
+    "t": [
+     0.0,
+     0.296
+    ],
+    "graus": [
+     -6,
+     6
+    ],
+    "fonte": "ACE (\"Avoid ... hiking (upwards) in your hips\"); Strand et al. 2014 (\"knee and hip extension, and neutral spinal positions\")"
+   },
+   {
+    "nome": "joelho, quadril e cabeça em linha reta",
+    "medida": "linha_joelho_quadril_cabeca",
+    "t": [
+     0.0,
+     0.296
+    ],
+    "graus": [
+     -5,
+     5
+    ],
+    "fonte": "MuscleWiki, Forearm Plank (\"form a straight line from your heels to the crown of your head\"; o pedido); ACE, Decline Plank (\"keep the body in a straight line from head to heels\")"
+   },
+   {
+    "nome": "joelhos estendidos",
+    "medida": "flexao",
+    "t": [
+     0.0,
+     0.296
+    ],
+    "graus": [
+     0,
+     6
+    ],
+    "junta": "Leg",
+    "fonte": "ACE (\"Contract your quadriceps to extend your legs\"; \"Avoid ... bending in the knees\")"
+   },
+   {
+    "nome": "coluna neutra",
+    "medida": "coluna",
+    "t": [
+     0.0,
+     0.296
+    ],
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "Strand et al. 2014 (\"neutral spinal positions\"); NSCA (\"Create a neutral pelvic and spine position\"); ACE (\"Contract your core and abdominal muscles to stiffen your torso\")"
+   },
+   {
+    "nome": "cabeça alinhada com a coluna",
+    "medida": "cabeca_tronco",
+    "t": [
+     0.0,
+     0.296
+    ],
+    "graus": [
+     -18,
+     -4
+    ],
+    "fonte": "NSCA (\"Head remains in a neutral position to keep the body in line\"); o boneco em pé, no repouso, mede ~−11°"
+   },
+   {
+    "nome": "tornozelos em flexão dorsal (na ponta dos pés)",
+    "medida": "tornozelo",
+    "t": [
+     0.0,
+     0.296
+    ],
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "ACE (\"dorsiflex your ankles (pull toes towards your shins)\"); ExRx (\"forefeet on floor\"); limite da flexão dorsal de 20° (Alazzawi 2017) = ~96° no boneco"
+   },
+   {
+    "nome": "corpo reto: quadril na reta ombro → tornozelo, sem cair nem subir (segurando de novo)",
+    "medida": "quadril_linha_ombro_tornozelo",
+    "t": [
+     0.639,
+     1.0
+    ],
+    "mm": [
+     -25,
+     25
+    ],
+    "fonte": "ExRx, Front Plank (\"Raise body upward by straightening body in straight line. Hold position.\"); free-exercise-db, Plank (\"Keep your body straight at all times\"); ACE, Front Plank (\"Avoid any arching (sagging) in your low back, hiking (upwards) in your hips or bending in the knees\"); NSCA (\"Avoid letting hips sag and arching lower back\"). Nenhuma fonte dá o número: a faixa é a da Flexão de Braço (lote 7); + = o quadril subiu, − = caiu"
+   },
+   {
+    "nome": "quadril estendido, sem dobrar (segurando de novo)",
+    "medida": "quadril_sinal",
+    "t": [
+     0.639,
+     1.0
+    ],
+    "graus": [
+     -6,
+     6
+    ],
+    "fonte": "ACE (\"Avoid ... hiking (upwards) in your hips\"); Strand et al. 2014 (\"knee and hip extension, and neutral spinal positions\")"
+   },
+   {
+    "nome": "joelho, quadril e cabeça em linha reta (segurando de novo)",
+    "medida": "linha_joelho_quadril_cabeca",
+    "t": [
+     0.639,
+     1.0
+    ],
+    "graus": [
+     -5,
+     5
+    ],
+    "fonte": "MuscleWiki, Forearm Plank (\"form a straight line from your heels to the crown of your head\"; o pedido); ACE, Decline Plank (\"keep the body in a straight line from head to heels\")"
+   },
+   {
+    "nome": "joelhos estendidos (segurando de novo)",
+    "medida": "flexao",
+    "t": [
+     0.639,
+     1.0
+    ],
+    "graus": [
+     0,
+     6
+    ],
+    "junta": "Leg",
+    "fonte": "ACE (\"Contract your quadriceps to extend your legs\"; \"Avoid ... bending in the knees\")"
+   },
+   {
+    "nome": "coluna neutra (segurando de novo)",
+    "medida": "coluna",
+    "t": [
+     0.639,
+     1.0
+    ],
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "Strand et al. 2014 (\"neutral spinal positions\"); NSCA (\"Create a neutral pelvic and spine position\"); ACE (\"Contract your core and abdominal muscles to stiffen your torso\")"
+   },
+   {
+    "nome": "cabeça alinhada com a coluna (segurando de novo)",
+    "medida": "cabeca_tronco",
+    "t": [
+     0.639,
+     1.0
+    ],
+    "graus": [
+     -18,
+     -4
+    ],
+    "fonte": "NSCA (\"Head remains in a neutral position to keep the body in line\"); o boneco em pé, no repouso, mede ~−11°"
+   },
+   {
+    "nome": "tornozelos em flexão dorsal (na ponta dos pés) (segurando de novo)",
+    "medida": "tornozelo",
+    "t": [
+     0.639,
+     1.0
+    ],
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "ACE (\"dorsiflex your ankles (pull toes towards your shins)\"); ExRx (\"forefeet on floor\"); limite da flexão dorsal de 20° (Alazzawi 2017) = ~96° no boneco"
+   },
+   {
+    "nome": "embaixo: o quadril desceu (deitado de bruços)",
+    "medida": "quadril_linha_ombro_tornozelo",
+    "t": [
+     0.468,
+     0.532
+    ],
+    "mm": [
+     -160,
+     -60
+    ],
+    "fonte": "ACE (\"gently lower your body back towards the mat or floor before relaxing\"); MuscleWiki, vídeo antigo (o quadril desce até a barriga e as coxas encostarem no chão)"
+   }
+  ]
+ }
+}
