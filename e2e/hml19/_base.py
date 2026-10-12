@@ -132,9 +132,11 @@ ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # hml-19b: o registro da etapa 2 DESTA W (o da 19a, logins_etapa2.txt, fica como estava); começa com os 3 logins da sessão principal
 # às 07:48 (o smoke da nutricao v2, já da 19b). hml-19c (decisão G): o registro passa a ser o logins_etapa2_19c.txt (o da 19b fica);
 # a troca do Treino (trocar-token) também entra nele — abre uma sessão nova no Auth do Treino. hml-19d (decisão G): o registro passa a
-# ser o logins_etapa2_19d.txt (o da 19c fica)
-REG_LOGINS = SCRATCH / "agente" / "logins_etapa2_19d.txt"
-MAX_LOGINS = 10
+# ser o logins_etapa2_19d.txt (o da 19c fica). hml-20a (decisão G do contrato da 20a): o registro passa a ser o da hml-20a
+# (hml20/agente/logins_etapa2_20a.txt — o da 19d fica) e o teto, 6 logins na etapa 2 (a sessão principal guarda 4 para o staging); os
+# E2E da hml-20 (e2e/hml20/_base.py) e a regressão da hml-19 contam no MESMO registro
+REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20a.txt"
+MAX_LOGINS = 6
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 
 
@@ -184,7 +186,11 @@ class Sessoes:
 
     @staticmethod
     def logins_feitos() -> int:
-        return len(REG_LOGINS.read_text(encoding="utf-8").splitlines()) if REG_LOGINS.exists() else 0
+        """Os logins do STAGING já feitos (as linhas do registro). hml-20a: o login da PRODUÇÃO (o smoke só leitura da sessão principal —
+        o motivo termina em "prod)", a mesma marca que o prod_f8.py conta) não come o teto do staging da etapa 2."""
+        if not REG_LOGINS.exists():
+            return 0
+        return sum(1 for linha in REG_LOGINS.read_text(encoding="utf-8").splitlines() if linha.strip() and not linha.rstrip().endswith("prod)"))
 
     def sessao(self, conta: str) -> dict:
         email = B5.CONTAS[conta][0]
