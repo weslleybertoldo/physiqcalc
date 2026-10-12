@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Copy, CreditCard, FlaskConical, Loader2, QrCode, RefreshCw, Repeat, TimerOff } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, CreditCard, FlaskConical, Loader2, QrCode, RefreshCw, Repeat, TimerOff } from "lucide-react";
 import { toast } from "sonner";
 import { acaoFinanceiro, ErroFinanceiro, invalidarResumo } from "@/financeiro/api";
 import { dataHoraBR, mensagemErroFinanceiro, reais, tituloDoPagar } from "@/financeiro/regras";
@@ -19,6 +19,10 @@ const INTERVALO_MS = 5000;
  * W-P: no plano em cartão parcelado, o cartão vai até o máximo de parcelas do plano (I6 — o servidor confere as `installments`); a
  * automática só aparece onde a modalidade aceita (B2: mês a mês, plano de 1 mês e o modo de hoje); no período todo o título é
  * "Pagar o plano" (tituloDoPagar).
+ * W2: no Mercado Pago DO PERSONAL (modo 'mercadopago_conta') as mesmas ações (o servidor escolhe a credencial da conta) e o cartão — à
+ * vista e a automática — com a chave pública DELE (o token do cartão nasce na conta que recebe; o aluno_status só a manda com a conexão
+ * ativa). A conexão caída (mp.disponivel false) → só o aviso; sem a chave → só o Pix (decisão 14: nunca o Brick com a chave do Physiq
+ * para pagar o personal).
  */
 export function PagarMercadoPago({
   matricula,
@@ -44,6 +48,11 @@ export function PagarMercadoPago({
   // W-P: o cartão parcelado vai até o máximo do plano (I6); a automática só onde a modalidade aceita (B2)
   const maxParcelas = alvo?.tipo === "mensalidade" ? matricula.mensalidade?.max_parcelas ?? 1 : 1;
   const podeAutomatica = alvo?.tipo === "mensalidade" && (matricula.mensalidade?.automatica ?? true);
+  // W2: o MP do personal — a conexão dele e a chave pública dele para o cartão (no MP do Physiq, a chave do Physiq: o padrão do cartão)
+  const naConta = matricula.conta.modo === "mercadopago_conta";
+  const indisponivel = naConta && matricula.mp?.disponivel === false;
+  const chaveDaConta = naConta ? matricula.mp?.chave_publica || undefined : undefined;
+  const comCartao = !indisponivel && (!naConta || !!chaveDaConta);
   const vencido = !!pix?.pix_expira_em && new Date(pix.pix_expira_em).getTime() < Date.now();
 
   useEffect(() => {
@@ -152,15 +161,22 @@ export function PagarMercadoPago({
     <>
       <PainelDeslizante aberto={!!alvo && !cartao} aoMudar={(a) => !a && aoFechar()} titulo={titulo} descricao={`${reais(valor)} · Mercado Pago`} lado="baixo">
         <div className="flex flex-col gap-4" data-pagar-mp>
-          {!pix ? (
+          {indisponivel ? (
+            <p className="flex items-start gap-2 text-[13.5px] leading-relaxed text-texto-2" role="status" data-mp-indisponivel>
+              <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />
+              <span className="min-w-0">{mensagemErroFinanceiro("mp_conta_indisponivel")}</span>
+            </p>
+          ) : !pix ? (
             <div className="grid grid-cols-1 gap-2">
               <Botao variante="w" icone={QrCode} className="w-full" disabled={gerando} onClick={() => void gerarPix()} data-mp-gerar-pix>
                 {gerando ? "Gerando o Pix…" : `Pagar ${reais(valor)} com Pix`}
               </Botao>
-              <Botao variante="g" icone={CreditCard} className="w-full" onClick={() => setCartao("avista")} data-mp-cartao>
-                {maxParcelas > 1 ? `Pagar com cartão (até ${maxParcelas}×)` : "Pagar com cartão"}
-              </Botao>
-              {podeAutomatica && !matricula.assinatura?.status?.match(/authorized/) && (
+              {comCartao && (
+                <Botao variante="g" icone={CreditCard} className="w-full" onClick={() => setCartao("avista")} data-mp-cartao>
+                  {maxParcelas > 1 ? `Pagar com cartão (até ${maxParcelas}×)` : "Pagar com cartão"}
+                </Botao>
+              )}
+              {comCartao && podeAutomatica && !matricula.assinatura?.status?.match(/authorized/) && (
                 <Botao variante="g" icone={Repeat} className="w-full" onClick={() => setCartao("assinar")} data-mp-assinar>Cobrança automática todo mês</Botao>
               )}
             </div>
@@ -191,16 +207,19 @@ export function PagarMercadoPago({
           )}
         </div>
       </PainelDeslizante>
-      <CartaoPagamento
-        aberto={!!cartao}
-        aoMudar={(a) => !a && setCartao(null)}
-        modo={cartao === "assinar" ? "assinar" : "avista"}
-        valor={valor}
-        email={usuario?.email ?? ""}
-        descricao={cartao === "assinar" ? "Todo mês no mesmo dia, até você cancelar." : maxParcelas > 1 ? `À vista ou em até ${maxParcelas}× no cartão.` : "Pagamento único no cartão."}
-        aoEnviar={pagarCartao}
-        maxParcelas={cartao === "assinar" ? 1 : maxParcelas}
-      />
+      {comCartao && (
+        <CartaoPagamento
+          aberto={!!cartao}
+          aoMudar={(a) => !a && setCartao(null)}
+          modo={cartao === "assinar" ? "assinar" : "avista"}
+          valor={valor}
+          email={usuario?.email ?? ""}
+          descricao={cartao === "assinar" ? "Todo mês no mesmo dia, até você cancelar." : maxParcelas > 1 ? `À vista ou em até ${maxParcelas}× no cartão.` : "Pagamento único no cartão."}
+          aoEnviar={pagarCartao}
+          maxParcelas={cartao === "assinar" ? 1 : maxParcelas}
+          chavePublica={chaveDaConta}
+        />
+      )}
     </>
   );
 }
