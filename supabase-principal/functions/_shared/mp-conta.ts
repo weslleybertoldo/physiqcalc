@@ -61,14 +61,23 @@ export function pkceLigado(ler: LerAmbiente = lerDaFuncao): boolean {
   return ler("MP_OAUTH_PKCE") !== "0";
 }
 
-const TABELA_AUSENTE = /relation|does not exist|42P01|PGRST20|schema cache/i;
+// revisão M-8: só "a tabela (ou a coluna) não existe" desliga a W2 — 42P01/42703 do Postgres, PGRST205/PGRST204 do PostgREST (o cache do
+// schema) ou a mensagem deles. O resto LANÇA (o 500 de verdade): o "permission denied for relation …" (42501, um grant que faltou) casava
+// com "relation" e desligava a W2 calado.
+const TABELA_AUSENTE_CODIGO = /^(?:42P01|42703|PGRST20[45])$/;
+const TABELA_AUSENTE_MSG = /\b(?:relation|table|column)\b.*\bdoes not exist\b|\bcould not find the (?:table|column)\b/i;
+function tabelaAusente(e: { code?: string | null; message?: string | null }): boolean {
+  const msg = e.message ?? "";
+  if (e.code === "42501" || /permission denied/i.test(msg)) return false;
+  return TABELA_AUSENTE_CODIGO.test(e.code ?? "") || TABELA_AUSENTE_MSG.test(msg);
+}
 const W2_NO_SCHEMA = new Map<Schema, { tem: boolean; em: number }>();
 /** O schema já tem a migration da W2? (a função é uma só para public e staging — lição I2 da W1). Guardado 60 s por instância. */
 export async function schemaTemW2(db: SupabaseClient, schema: Schema): Promise<boolean> {
   const g = W2_NO_SCHEMA.get(schema);
   if (g && Date.now() - g.em < 60_000) return g.tem;
   const { error } = await db.from("mp_conexoes").select("id").limit(1);
-  if (error && !TABELA_AUSENTE.test(`${error.code ?? ""} ${error.message ?? ""}`)) throw error;
+  if (error && !tabelaAusente(error)) throw error;
   W2_NO_SCHEMA.set(schema, { tem: !error, em: Date.now() });
   return !error;
 }

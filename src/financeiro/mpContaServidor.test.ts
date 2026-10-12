@@ -1042,6 +1042,21 @@ describe("C2 — a regra da coluna nova (caso 12)", () => {
       ? { data: null, error: { code: "57014", message: "canceling statement due to statement timeout" } } : undefined) });
     await expect(novo.schemaTemW2(caiu.cliente, "public")).rejects.toMatchObject({ code: "57014" });
   });
+  it("revisão M-8: só 'a tabela (ou a coluna) não existe' desliga a W2 — o 'permission denied for relation …' (um grant que faltou) LANÇA", async () => {
+    const com = async (erro: ErroDb) => {
+      vi.resetModules();                                                    // a memória de 60 s: cada erro num módulo novo
+      const mod: ModMpConta = await import("../../supabase-principal/functions/_shared/mp-conta");
+      const db = criarDb({}, { responder: (p) => (p.tabela === "mp_conexoes" ? { data: null, error: erro } : undefined) });
+      return await mod.schemaTemW2(db.cliente, "public");
+    };
+    await expect(com({ code: "42501", message: "permission denied for relation mp_conexoes" })).rejects.toMatchObject({ code: "42501" });
+    await expect(com({ code: "42501", message: "permission denied for table mp_conexoes" })).rejects.toMatchObject({ code: "42501" });
+    await expect(com({ code: "", message: "permission denied for relation mp_conexoes" })).rejects.toMatchObject({ code: "" });
+    expect(await com({ code: "42P01", message: 'relation "public.mp_conexoes" does not exist' })).toBe(false);
+    expect(await com({ code: "42703", message: "column mp_conexoes.id does not exist" })).toBe(false);
+    expect(await com({ code: "PGRST205", message: "Could not find the table 'public.mp_conexoes' in the schema cache" })).toBe(false);
+    expect(await com({ code: "", message: 'relation "staging.mp_conexoes" does not exist' })).toBe(false);
+  });
 });
 
 // ───────────────────────── I1: a rede da cobrança de cada mês da automática ─────────────────────────
