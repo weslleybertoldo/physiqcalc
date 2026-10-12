@@ -1097,15 +1097,19 @@ export type PedidoNutricao =
   | { modulo: "prontuario"; acao: AcaoNutricao }
   | { modulo: "dieta"; acao: AcaoDieta | "padroes_garantir" }
   | { modulo: "aluno"; acao: AcaoAluno }
-  | { modulo: "avaliacao"; acao: AcaoAvaliacao };
+  | { modulo: "avaliacao"; acao: AcaoAvaliacao }
+  | { modulo: "leitura"; acao: "ler" };
 
 /**
  * O módulo e a ação do pedido (null = acao_invalida). Os padrões das 3 seções da Dieta (fórmula, meta, orientação) vão ao módulo da
  * Dieta; os do Prontuário — e qualquer outra seção, que lá vira secao_invalida como antes — seguem no prontuario.ts, sem mudança.
  * hml-19c: as da Avaliação vão ao avaliacao.ts (as 4 listas não se cruzam — o nutricaoServidor.test.ts confere).
+ * hml-20a (H-42): a ação `ler` (as leituras em lote, pelo catálogo _shared/nutricao-leituras.ts) vai ao leituras.ts — ela não está em
+ * nenhuma das 4 listas (o leituraServidor.test.ts confere), então as ações de antes seguem para o mesmo módulo de antes.
  */
 export function moduloDoPedido(corpo: Record<string, unknown>): PedidoNutricao | null {
   const v = corpo.acao;
+  if (v === "ler") return { modulo: "leitura", acao: "ler" };
   if (v === "padroes_garantir" && secaoDoPadraoDaDieta(corpo.secao)) return { modulo: "dieta", acao: "padroes_garantir" };
   const prontuario = acaoDoPedido(v);
   if (prontuario) return { modulo: "prontuario", acao: prontuario };
