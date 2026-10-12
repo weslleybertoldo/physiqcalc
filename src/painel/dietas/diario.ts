@@ -25,6 +25,7 @@ import type { Reacao } from "@/nutricao/app/diarioUtil";
 import { lerNutricao, urlAssinadaDoServidor } from "@/nutricao/leitura";
 import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 import { chaveDia, type AlunoDoDiario } from "./diarioPainel";
+import { DIARIO_DIAS_MAX } from "../../../supabase-principal/functions/_shared/nutricao-leituras";
 
 export type RegistroDiarioRow = Database["public"]["Tables"]["diario_alimentar"]["Row"];
 export type AlunoDoRegistro = AlunoDoDiario & { conta_id: string | null; nutricionista_id: string | null };
@@ -51,13 +52,13 @@ export const alunoDoFiltro = (v: string): string => (!v ? "" : UUID.test(v) ? v 
 /**
  * hml-20c: os inícios de dia LOCAIS do período (o servidor não sabe o fuso do navegador): o 1º é o início do período e os outros, cada
  * meia-noite local seguinte (new Date(y, m, d + k) — a mesma conta do diasQuePodemContinuar), até a de depois de amanhã (o dia de hoje e o
- * de amanhã fecham), no teto do servidor (100: 90 dias + os de depois).
+ * de amanhã fecham), no teto do servidor (DIARIO_DIAS_MAX — a constante do servidor, importada: 90 dias + os de depois cabem).
  */
 export function diasDoPeriodo(deIso: string, agora: Date = new Date()): string[] {
   const inicio = new Date(deIso);
   const saida = [inicio.toISOString()];
   const fim = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + 2).getTime();
-  for (let k = 1; saida.length < 100; k += 1) {
+  for (let k = 1; saida.length < DIARIO_DIAS_MAX; k += 1) {
     const d = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + k);
     saida.push(d.toISOString());
     if (d.getTime() >= fim) break;

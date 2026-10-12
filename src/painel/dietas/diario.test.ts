@@ -31,7 +31,9 @@ vi.mock("@/integrations/principal/client", async () => {
   return { PRINCIPAL_SCHEMA: "staging", principal: { ...banco, functions: { invoke } } };
 });
 
-import { alunoDoFiltro, diasQuePodemContinuar, listarAlunosDoDiario, listarDiarioPaginaComDias } from "./diario";
+import { DIARIO_DIAS_MAX } from "../../../supabase-principal/functions/_shared/nutricao-leituras";
+import { alunoDoFiltro, diasDoPeriodo, diasQuePodemContinuar, listarAlunosDoDiario, listarDiarioPaginaComDias } from "./diario";
+import { PERIODOS, inicioDoPeriodo } from "./diarioPainel";
 
 const ZE = "0f8f6c1e-3a4b-4c5d-8e9f-0a1b2c3d4e5f";
 const DE = new Date(2026, 8, 25).toISOString();
@@ -104,5 +106,22 @@ describe("Diário › página do banco (hml-14b)", () => {
     expect(chamou(0, "gte")).toEqual([["registros.data_hora", DE]]);
     expect(chamou(0, "limit")).toEqual([[1, { referencedTable: "registros" }], [1000]]); // hml-20c: + o teto de 1000 (o max_rows que já valia)
     expect(chamou(0, "order").map((o) => o[0])).toEqual(["nome", "id"]);
+  });
+});
+
+describe("hml-20c (revisão ⚪5) — os inícios de dia do período no teto do servidor (DIARIO_DIAS_MAX: uma constante só, a do servidor)", () => {
+  it("o maior período da aba (diarioPainel.PERIODOS) cabe no teto e chega até depois de amanhã — o teto não corta nenhum período da tela", () => {
+    const agora = new Date(2026, 9, 12, 15, 0, 0);
+    const maior = Math.max(...PERIODOS);
+    const dias = diasDoPeriodo(inicioDoPeriodo(maior, agora).toISOString(), agora);
+    expect(dias.length).toBeLessThanOrEqual(DIARIO_DIAS_MAX);
+    expect(dias).toHaveLength(maior + 2);
+    expect(dias[0]).toBe(inicioDoPeriodo(maior, agora).toISOString());
+    expect(dias.at(-1)).toBe(new Date(2026, 9, 14).toISOString());
+  });
+
+  it("um período acima do teto para no teto (o servidor recusaria acima dele)", () => {
+    const agora = new Date(2026, 9, 12, 15, 0, 0);
+    expect(diasDoPeriodo(inicioDoPeriodo(400, agora).toISOString(), agora)).toHaveLength(DIARIO_DIAS_MAX);
   });
 });
