@@ -7,7 +7,7 @@ nos tamanhos das telas aprovadas (app 390 × 844 × 3,4; painel 1280 × 883 × 2
           mensalidade que veio do Calc pelo script 02 — 1 troca de token
   painel  conta de TESTE do master (admin.teste.claude): Resumo do aluno com o card Financeiro e o número Mensalidade, a aba
           Financeiro (tela 7), Configurações › Recebimento e a página Financeiro antiga (lendo o principal) — 1 troca
-Uso: python3 smoke_prod.py [--base https://physiqcalc.com.br] [--casos aluno,painel]
+Uso: python3 smoke_prod.py [--base https://physiqcalc.com.br] [--casos aluno,painel] [--seco]
 """
 from __future__ import annotations
 
@@ -29,8 +29,37 @@ B.ESTADO["schema"] = "public"
 S = "public"
 
 
+# hml-20d (H-42): o resumo leve do app (a faixa do topo, a trava, o chip do Perfil) sai pelo `ler` da função financeiro (o POST em
+# /functions/v1/financeiro, com o item fin_do_aluno); o front de antes da release lia a RPC financeiro_do_aluno direto — as 2 contam.
+# (antes da 20d o filtro só olhava a RPC: com o front novo ele passava sem testar nada)
+LEITURA_DO_RESUMO = ("/functions/v1/financeiro", "financeiro_do_aluno")
+
+
 def erros_de_rede(c) -> list[str]:
-    return [r for r in c.rede if ("pagamentos-aluno" in r or "financeiro_do_aluno" in r) and not r.startswith("200 ")]
+    return [r for r in c.rede if ("pagamentos-aluno" in r or any(x in r for x in LEITURA_DO_RESUMO)) and not r.startswith("200 ")]
+
+
+def leu_o_resumo(c) -> bool:
+    """O resumo leve do app foi lido e respondeu 200 (o POST da financeiro — o `ler` — ou a RPC direta do front de antes)."""
+    return any(r.startswith("200 POST") and any(x in r for x in LEITURA_DO_RESUMO) for r in c.rede)
+
+
+def seco() -> int:
+    """hml-20d: os filtros da rede sem navegador nem produção (o formato do c.rede: "<status> <método> <fim da URL>")."""
+    class Falso:
+        def __init__(self, rede: list[str]) -> None:
+            self.rede = rede
+
+    api = "api-principal.physiqcalc.com.br"
+    novo = Falso([f"200 OPTIONS {api}/functions/v1/financeiro", f"200 POST {api}/functions/v1/financeiro", f"200 POST {api}/functions/v1/pagamentos-aluno"])
+    antigo = Falso([f"200 POST {api}/rest/v1/rpc/financeiro_do_aluno"])
+    caiu = Falso([f"500 POST {api}/functions/v1/financeiro", f"200 POST {api}/functions/v1/master-financeiro"])
+    nada = Falso([f"200 POST {api}/functions/v1/master-financeiro", f"200 GET {api}/rest/v1/pacientes"])
+    p.check(leu_o_resumo(novo) and not erros_de_rede(novo), "seco: o `ler` da financeiro (o front novo) = o resumo lido, sem erro")
+    p.check(leu_o_resumo(antigo) and not erros_de_rede(antigo), "seco: a RPC direta (o front de antes da release) = o resumo lido, sem erro")
+    p.check(erros_de_rede(caiu) == [caiu.rede[0]] and not leu_o_resumo(caiu), "seco: a financeiro com 500 vira erro de rede (a master-financeiro não conta)")
+    p.check(not leu_o_resumo(nada), "seco: sem o POST da financeiro nem a RPC = o resumo NÃO foi lido (o caso falha em vez de passar calado)")
+    return p.fim()
 
 
 def caso_aluno(nav, a) -> None:
@@ -47,7 +76,8 @@ def caso_aluno(nav, a) -> None:
     txt = c.pg.locator("[data-pagina-pagamentos]").inner_text()
     p.check("R$ 10,00" in txt and c.tem("[data-historico-pagamentos]"), "valor e o histórico (o Mercado Pago cancelado migrado)")
     c.print("app_pagamentos")
-    p.check(not erros_de_rede(c), f"pagamentos-aluno e financeiro_do_aluno responderam 200 ({erros_de_rede(c)[:3]})")
+    p.check(leu_o_resumo(c), "o resumo leve do app foi lido (hml-20d: o `ler` da financeiro; antes da release, a RPC financeiro_do_aluno)")
+    p.check(not erros_de_rede(c), f"pagamentos-aluno e o resumo leve (a financeiro ou a RPC) responderam 200 ({erros_de_rede(c)[:3]})")
     p.check(len(c.trocas) <= 1, f"uma troca de token só ({len(c.trocas)})")
     depois = B.sql_principal(f"select count(*)::int n, coalesce(sum(valor),0)::text s from {S}.cobrancas where paciente_id = '{m['id']}'")[0]
     p.check(antes == depois, f"só leitura: nada mudou nas cobranças do aluno ({antes} = {depois})")
@@ -92,6 +122,8 @@ CASOS = {"aluno": caso_aluno, "painel": caso_painel}
 
 
 def main() -> int:
+    if "--seco" in sys.argv:  # hml-20d: os filtros da rede sem navegador nem produção
+        return seco()
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="https://physiqcalc.com.br")
     ap.add_argument("--casos", default=",".join(CASOS))

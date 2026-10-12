@@ -28,6 +28,7 @@ import argparse
 import concurrent.futures as cf
 import datetime as dt
 import importlib.util
+import json
 import re
 import sys
 import urllib.request
@@ -326,6 +327,67 @@ def s8_meu_plano(o, nav, base: str, prefixo: str, sess) -> None:
         caso.fim()
 
 
+# hml-20d (H-42): o resumo leve do app (a faixa, a trava do inadimplente, o chip do Perfil) não lê mais a RPC financeiro_do_aluno no
+# navegador — sai pelo `ler` da função financeiro (o item { q: "fin_do_aluno" } do lote). O S11 força a trava na RESPOSTA que a tela
+# recebe pelos 2 caminhos (a RPC direta do front de antes e o item do `ler` do front de agora) — nada muda no banco.
+ROTA_DO_LER_FINANCEIRO = re.compile(r"/functions/v1/financeiro(\?.*)?$")
+
+
+def forcar_vencido(lista: object, vencido: str) -> int:
+    """A conta do app com o teste acabado e sem pagamento, na lista do resumo leve (o que a tela recebe); devolve quantas forçou."""
+    n = 0
+    if isinstance(lista, list):
+        for m in lista:
+            if isinstance(m, dict) and m.get("app"):
+                m.update({"pago_ate": vencido, "teste_ate": vencido, "bloquear_inadimplente": True, "pausada": False,
+                          "assinatura_ativa": False, "aguardando": False, "abertas": [], "aguardando_avulsas": 0})
+                n += 1
+    return n
+
+
+def posicoes_do_resumo(corpo: str | None) -> list[int]:
+    """As posições do item fin_do_aluno num corpo `ler` da financeiro (o resto do lote passa como veio); outro corpo: nenhuma."""
+    try:
+        b = json.loads(corpo or "{}")
+    except (ValueError, TypeError):
+        return []
+    itens = b.get("itens") if isinstance(b, dict) and b.get("acao") == "ler" else None
+    return [k for k, it in enumerate(itens or []) if isinstance(it, dict) and it.get("q") == "fin_do_aluno"]
+
+
+def vencer_no_ler(dados: object, posicoes: list[int], vencido: str) -> int:
+    """A resposta do `ler` com o valor (a lista) de cada item fin_do_aluno forçado; devolve quantas contas forçou."""
+    itens = dados.get("itens") if isinstance(dados, dict) else None
+    n = 0
+    for k in posicoes:
+        if isinstance(itens, list) and k < len(itens) and isinstance(itens[k], dict) and itens[k].get("ok") is True:
+            n += forcar_vencido(itens[k].get("valor"), vencido)
+    return n
+
+
+def seco_s11(o) -> None:
+    """hml-20d: o S11 sem rede e sem navegador — o item do `ler` é achado e forçado; o resto do lote e os outros corpos passam como vieram."""
+    vencido = "2026-10-10T00:00:00+00:00"
+    corpo = json.dumps({"acao": "ler", "itens": [{"q": "aluno_dieta", "dia": "2026-10-12"}, {"q": "fin_do_aluno"}]})
+    o.ok(posicoes_do_resumo(corpo) == [1], "S11 seco: o item fin_do_aluno é achado no corpo `ler` da financeiro (a posição 1)")
+    o.ok(posicoes_do_resumo(json.dumps({"acao": "transacao_criar"})) == [] and posicoes_do_resumo("x") == []
+         and posicoes_do_resumo(json.dumps({"action": "ler", "itens": [{"q": "fin_do_aluno"}]})) == [],
+         "S11 seco: a gravação, o corpo ilegível e o `action` disfarçado passam sem mexer")
+    dados = {"ok": True, "itens": [{"ok": True, "valor": {"x": 1}},
+                                   {"ok": True, "valor": [{"app": True, "pago_ate": None}, {"app": False, "pago_ate": "2099-01-01"}]}]}
+    n = vencer_no_ler(dados, [1], vencido)
+    app, outra = dados["itens"][1]["valor"]
+    o.ok(n == 1 and app["bloquear_inadimplente"] is True and app["teste_ate"] == vencido and app["abertas"] == []
+         and outra == {"app": False, "pago_ate": "2099-01-01"} and dados["itens"][0] == {"ok": True, "valor": {"x": 1}},
+         "S11 seco: só a conta do app do item fin_do_aluno fica vencida (a trava); a matrícula comum e o outro item como vieram")
+    o.ok(vencer_no_ler({"ok": True, "itens": [{"ok": False, "erro": "sem_login"}]}, [0], vencido) == 0,
+         "S11 seco: o item que falhou passa como veio (a tela mostra o erro dela)")
+    o.ok(bool(ROTA_DO_LER_FINANCEIRO.search("https://api-principal.physiqcalc.com.br/functions/v1/financeiro"))
+         and not ROTA_DO_LER_FINANCEIRO.search("https://api-principal.physiqcalc.com.br/functions/v1/master-financeiro")
+         and not ROTA_DO_LER_FINANCEIRO.search("https://api-principal.physiqcalc.com.br/functions/v1/financeiro-x"),
+         "S11 seco: a rota pega só a função financeiro (não a master-financeiro)")
+
+
 def s11_trava(o, nav, base: str, prefixo: str, sess) -> None:
     caso = B5.Caso(nav, base, prefixo, "S11", desktop=False)
     forcados = {"n": 0}
@@ -342,16 +404,28 @@ def s11_trava(o, nav, base: str, prefixo: str, sess) -> None:
         except Exception:  # noqa: BLE001
             route.fulfill(response=r)
             return
-        if isinstance(lista, list):
-            for m in lista:
-                if isinstance(m, dict) and m.get("app"):
-                    m.update({"pago_ate": vencido, "teste_ate": vencido, "bloquear_inadimplente": True, "pausada": False,
-                              "assinatura_ativa": False, "aguardando": False, "abertas": [], "aguardando_avulsas": 0})
-                    forcados["n"] += 1
+        forcados["n"] += forcar_vencido(lista, vencido)
         route.fulfill(response=r, json=lista)
+
+    def vencer_ler(route) -> None:
+        # hml-20d: o POST `ler` da financeiro com o item fin_do_aluno — SÓ a resposta desse item muda (o resto do lote passa)
+        req = route.request
+        posicoes = posicoes_do_resumo(req.post_data) if req.method == "POST" else []
+        if not posicoes:
+            route.continue_()
+            return
+        r = route.fetch()
+        try:
+            dados = r.json()
+        except Exception:  # noqa: BLE001
+            route.fulfill(response=r)
+            return
+        forcados["n"] += vencer_no_ler(dados, posicoes, vencido)
+        route.fulfill(response=r, json=dados)
 
     try:
         caso.pg.route("**/rest/v1/rpc/financeiro_do_aluno*", vencer)
+        caso.pg.route(ROTA_DO_LER_FINANCEIRO, vencer_ler)
         entrar(caso, "w7b-vence", "/treino", sess)
         sel_trava = "[data-trava-app='pagamento-pendente-app']"
         o.ok(caso.esperar(lambda: caso.tem(sel_trava), 60), f"S11 a trava da conta do app (forçada {forcados['n']}×)")
@@ -408,6 +482,11 @@ def js_sem_marcas(o, base: str) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    # hml-20d: --seco = a lógica do S11 sem rede nem navegador (o item fin_do_aluno do `ler` da financeiro)
+    if "--seco" in sys.argv:
+        o = C.Saida("telas_hml11_seco", parar=False)
+        seco_s11(o)
+        return o.fim()
     ap.add_argument("--base", required=True)
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--modo", required=True, choices=("staging", "producao"))
