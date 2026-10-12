@@ -424,7 +424,7 @@ describe("hml-20d — os negativos: params ruins, corpo ignorado, outra conta, e
 
   it("q desconhecida → consulta_invalida só naquele item; 17 itens → lote_grande (nada roda); sem itens → dados_invalidos", async () => {
     const { itens } = await ler([{ q: "fin_categorias" }, { q: "aluno_dieta", dia: "2026-10-12" }, { q: "fin_nao_existe" }]);
-    expect(itens.map((i) => (i.ok ? "ok" : i.erro))).toEqual(["ok", "consulta_invalida", "consulta_invalida"]);
+    expect(itens.map((i) => (i.ok === false ? i.erro : "ok"))).toEqual(["ok", "consulta_invalida", "consulta_invalida"]);
     expect(LOTE_MAX).toBe(16);
     const g = await ler(Array.from({ length: 17 }, () => ({ q: "fin_categorias" })));
     expect(g.r).toEqual({ ok: false, erro: "lote_grande" });

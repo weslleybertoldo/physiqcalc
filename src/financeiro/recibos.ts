@@ -6,12 +6,14 @@
 // hml-19d (H-41 · jeito 2): o título e o texto do modelo padrão moram em supabase-principal/functions/_shared/financeiro-gravar-regras.ts
 // (a semente nasce no servidor — função financeiro › padroes_garantir) e são reexportados daqui, idênticos; o excluirRecibo grava pela
 // função (o recibo à Lixeira e a movimentação solta numa transação); o aplicarTags ganhou a opção da MARCA do número (o emitirRecibo).
-import { principal } from "@/integrations/principal/client";
-import { paginar, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
+// hml-20d (H-42 · jeito 2, etapa 2, parte 4): a página dos recibos do aluno vai pela função financeiro (src/financeiro/ler.ts — no lote
+// da tela), com a mesma assinatura e o mesmo tipo; o erro chega com o texto fixo do código.
+import type { Pagina } from "@/lib/paginacao";
 import {
   CONTEUDO_MODELO_PADRAO, MARCA_NUMERO_RECIBO, TITULO_MODELO_PADRAO,
 } from "../../supabase-principal/functions/_shared/financeiro-gravar-regras";
 import { gravarFinanceiro } from "./gravar";
+import { ErroLeitura, lerFinanceiro, paginaDoServidor } from "./ler";
 
 export { CONTEUDO_MODELO_PADRAO, MARCA_NUMERO_RECIBO, TITULO_MODELO_PADRAO };
 
@@ -168,17 +170,13 @@ export interface Recibo {
 
 /**
  * hml-14d (B21 · D31): uma página (20) dos recibos do aluno, o número mais alto primeiro (desempate pelo id), e o total — o cartão
- * mostra os 12 primeiros e o "Ver todos (N)" abre as páginas (antes: todos de uma vez, cortados calados em 1000). Erro do banco lança.
+ * mostra os 12 primeiros e o "Ver todos (N)" abre as páginas (antes: todos de uma vez, cortados calados em 1000). Erro lança.
+ * hml-20d: fin_recibos_do_aluno (a página com o total exato, a mesma ordem), pela função.
  */
-export function paginaRecibosDoAluno(pacienteId: string, pagina: number): Promise<Pagina<Recibo>> {
-  return paginar<Recibo>(
-    (de, ate) =>
-      principal.from("recibos")
-        .select("id, nutricionista_id, paciente_id, transacao_id, modelo_id, numero, valor, data, descricao, texto, created_at", { count: "exact" })
-        .eq("paciente_id", pacienteId).is("deleted_at", null).order("numero", { ascending: false }).order("id", { ascending: true })
-        .range(de, ate) as unknown as PromiseLike<RespostaComContagem<Recibo>>,
-    pagina,
-  );
+export async function paginaRecibosDoAluno(pacienteId: string, pagina: number): Promise<Pagina<Recibo>> {
+  const r = await lerFinanceiro("fin_recibos_do_aluno", { aluno: pacienteId, pagina: paginaDoServidor(pagina) });
+  if (typeof r.total !== "number") throw new ErroLeitura("erro_interno");
+  return { itens: (r.linhas ?? []) as Recibo[], total: r.total };
 }
 
 // hml-14b (B14): o `emitirRecibo` duplicado que morava aqui (sem uso — a emissão é a de src/painel/financeiro/dados.ts, que confere

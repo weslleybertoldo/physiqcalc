@@ -1,9 +1,13 @@
 // Physiq W6 — acesso a dados da cobrança aluno → profissional: a função pagamentos-aluno do banco principal (tudo o que é
 // cobrança, comprovante e Mercado Pago), o financeiro_do_aluno() (resumo leve do app, guardado no aparelho) e o envio do
 // comprovante pelo link assinado (o servidor escolhe o caminho no Storage).
+// hml-20d (H-42 · jeito 2, etapa 2, parte 4): as 2 leituras diretas daqui (os totais do aluno e o resumo leve do app) vão pela função
+// financeiro (src/financeiro/ler.ts: fin_totais_do_aluno e fin_do_aluno), com as mesmas assinaturas, os mesmos tipos e o mesmo desfecho
+// na tela; o badgesDaConta/badgesDoResumo (sem quem chamasse) saíram.
 import { principal } from "@/integrations/principal/client";
 import type { Pagina } from "@/lib/paginacao";
 import type { PixTipo } from "@/lib/pixChave";
+import { ErroLeitura, lerFinanceiro } from "./ler";
 import type { PlanoSalvar } from "./planos";
 import type {
   AlunoResumo, ChaveRecebimento, CobrancaVista, ConexaoMpConfirmada, ConexaoMpIniciada, DetalheDoPagamentoMp, FinanceiroProfissional,
@@ -63,11 +67,19 @@ export const buscarHistoricoDoAluno = (pacienteId: string, tipo: "cobrancas" | "
 /** hml-14d (B21 · D31 · P7): o "Ver todas" das cobranças no Financeiro do aluno — uma página (20) já filtrada por quem pode ver, com o total. */
 export const buscarCobrancasDoAluno = (aluno: string, pagina: number) => paginaDaFuncao<CobrancaVista>("prof_aluno_cobrancas", { aluno, pagina });
 
-/** hml-14d (B21 · D31): os totais dos lançamentos do aluno somados no banco (antes, no navegador sobre até 500). */
+/**
+ * hml-14d (B21 · D31): os totais dos lançamentos do aluno somados no banco (antes, no navegador sobre até 500).
+ * hml-20d: fin_totais_do_aluno, pela função; o erro segue ErroFinanceiro("erro_interno") (o texto do Financeiro do aluno não muda) — com o
+ * código da leitura no extra, nunca a mensagem crua do banco.
+ */
 export async function buscarTotaisDoAluno(pacienteId: string): Promise<TotaisDoAluno> {
-  const { data, error } = await principal.rpc("financeiro_totais_do_aluno" as never, { p_aluno: pacienteId } as never);
-  if (error) throw new ErroFinanceiro("erro_interno", { mensagem: error.message });
-  const d = (data ?? {}) as Record<string, unknown>;
+  let valor: unknown;
+  try {
+    valor = (await lerFinanceiro("fin_totais_do_aluno", { aluno: pacienteId })).valor;
+  } catch (e) {
+    throw new ErroFinanceiro("erro_interno", { codigo: e instanceof ErroLeitura ? e.codigo : "erro_interno" });
+  }
+  const d = (valor ?? {}) as Record<string, unknown>;
   if (d.ok !== true) throw new ErroFinanceiro("erro_interno");
   const data10 = (v: unknown) => (typeof v === "string" && v ? v.slice(0, 10) : null);
   return { recebido: Number(d.recebido) || 0, gasto: Number(d.gasto) || 0, total: Number(d.total) || 0, primeira: data10(d.primeira), ultima: data10(d.ultima) };
@@ -142,13 +154,15 @@ export function assinarResumo(f: () => void): () => void {
   return () => ouvintes.delete(f);
 }
 
-/** 1 chamada em voo por vez (faixa, trava e chip pedem juntos). */
+/**
+ * 1 chamada em voo por vez (faixa, trava e chip pedem juntos). hml-20d: fin_do_aluno, pela função (a aluna chama a financeiro); o erro
+ * chega como ErroLeitura (quem mostra só marca "erro" — o mesmo desfecho de antes).
+ */
 export async function buscarResumo(uid: string): Promise<ResumoMatricula[]> {
   if (!emVoo) {
     emVoo = (async () => {
-      const { data, error } = await principal.rpc("financeiro_do_aluno" as never);
-      if (error) throw error;
-      const lista = (Array.isArray(data) ? data : []) as ResumoMatricula[];
+      const { valor } = await lerFinanceiro("fin_do_aluno");
+      const lista = (Array.isArray(valor) ? valor : []) as ResumoMatricula[];
       guardarResumo(uid, lista);
       return lista;
     })().finally(() => {
@@ -158,38 +172,13 @@ export async function buscarResumo(uid: string): Promise<ResumoMatricula[]> {
   return emVoo;
 }
 
-// ───────────────────────── selos da lista antiga de alunos (Calc) ─────────────────────────
-
-export interface BadgesAlunos {
-  badgesData: Record<string, { s: string; ate: string | null }>;
-  aguardando: Record<string, string>;
-}
-
-/**
- * Selos "pago até / pendente desde" e "comprovante para conferir" por aluno, no formato que a lista antiga do Calc usa
- * (chave = id do Treino, ou o da matrícula para quem não tem treino). Lê o banco principal (W6).
- */
-export async function badgesDaConta(contaId: string, agora = new Date()): Promise<BadgesAlunos> {
-  return badgesDoResumo(await buscarResumoDaConta(contaId), agora);
-}
+// ───────────────────────── o selo do aluno (Mensalidades) ─────────────────────────
 
 /** Selo de um aluno: "pago até" (coberto agora) ou "pendente desde"; sem mensalidade ou com a cobrança parada, nenhum. */
 export function badgeDoAluno(a: Pick<AlunoResumo, "mensalidade_valor" | "pausada" | "pago_ate" | "desde">, agora = new Date()): { s: "pago" | "pendente"; ate: string | null } | null {
   if (!a.mensalidade_valor || a.pausada) return null;
   const coberta = !!a.pago_ate && new Date(a.pago_ate).getTime() > agora.getTime();
   return { s: coberta ? "pago" : "pendente", ate: a.pago_ate ?? a.desde };
-}
-
-export function badgesDoResumo(r: Pick<ResumoConta, "alunos">, agora = new Date()): BadgesAlunos {
-  const badgesData: BadgesAlunos["badgesData"] = {};
-  const aguardando: BadgesAlunos["aguardando"] = {};
-  for (const a of r.alunos) {
-    const id = a.treino_user_id ?? a.paciente_id;
-    const b = badgeDoAluno(a, agora);
-    if (b) badgesData[id] = b;
-    if (a.aguardando) aguardando[id] = a.aguardando;
-  }
-  return { badgesData, aguardando };
 }
 
 // ───────────────────────── W-P — a aba Planos (prof_planos · prof_plano_salvar · prof_plano_ativo) ─────────────────────────
