@@ -8,7 +8,8 @@ no diário da aluna (pela aluna, a ação da hml-19b) para o Diário e o Dashboa
 REDE (rede_hml20c.tsv, antes × depois na mesma planilha): em cada tela a guarda que CONTA (dieta.contar_dieta) separa
   · as leituras DIRETAS da área (as tabelas/RPCs da 20c e da casca da 20b, o "sign" do diario) — depois: 0;
   · as leituras pela função (o `ler`, com as consultas de cada um) — depois: 1 ≤ `ler` ≤ o teto da tela (hipótese da etapa 1);
-  · as de FORA da área (o Dashboard: alunos, agenda e financeiro — H-43/20d; a Pré-consulta: a equipe; a casca: H-43): listadas à parte;
+  · as de FORA da área (o Dashboard: alunos e agenda — H-43; a Pré-consulta: a equipe; a casca: H-43): listadas à parte (hml-20d: o
+    financeiro do Dashboard saiu da lista — o rede.py --area financeiro o conta);
   · as gravações ao abrir: 0, fora as que já existem e não são desta W (o padroes_garantir do 1º acesso e o aluno_acesso — H-43);
   e a PRÉ-CONSULTA PELA TELA (decisão D / H-102): criar o formulário de teste, editar, a resposta anônima pelo /f/:slug (a RPC de hoje),
   ligar à aluna, desligar e excluir a resposta, excluir o formulário — depois: cada gravação = 1 POST na nutricao com a ação certa e 0
@@ -153,7 +154,7 @@ def seco(o, qual: str) -> None:  # noqa: PLR0915
         {"metodo": "POST", "tipo": "storage", "nome": "sign", "url": f"{Pp}/storage/v1/object/sign/diario-staging", "corpo": "{}"},
         {"metodo": "POST", "tipo": "rpc", "nome": "painel_resumo", "url": f"{Pp}/rest/v1/rpc/painel_resumo", "corpo": "{}"},
         {"metodo": "POST", "tipo": "rpc", "nome": "aluno_perfil", "url": f"{Pp}/rest/v1/rpc/aluno_perfil", "corpo": "{}"},
-        # fora da área (H-43 e 20d): listadas à parte
+        # fora da área (H-43): listadas à parte (hml-20d: o financeiro do Dashboard saiu da lista — é da guarda da 20d, rede --area financeiro)
         {"metodo": "POST", "tipo": "rpc", "nome": "alunos_da_conta", "url": f"{Pp}/rest/v1/rpc/alunos_da_conta", "corpo": "{}"},
         {"metodo": "GET", "tipo": "tab", "nome": "agendamentos", "url": f"{Pp}/rest/v1/agendamentos?select=*", "corpo": ""},
         {"metodo": "GET", "tipo": "tab", "nome": "pacientes", "url": f"{Pp}/rest/v1/pacientes?select=id", "corpo": ""},
@@ -164,8 +165,7 @@ def seco(o, qual: str) -> None:  # noqa: PLR0915
          "corpo": json.dumps({"action": "avaliacoes"})},
     ]
     c = D.contar_dieta(antes)
-    o.ok(sum(c["diretas"].values()) == 6 and c["fora"] == {"rpc:alunos_da_conta": 1, "tab:agendamentos": 1, "tab:pacientes": 1, "rpc:financeiro_resumo_periodo": 1,
-                                                            "rpc:aluno_acesso": 1}
+    o.ok(sum(c["diretas"].values()) == 6 and c["fora"] == {"rpc:alunos_da_conta": 1, "tab:agendamentos": 1, "tab:pacientes": 1, "rpc:aluno_acesso": 1}
          and c["gravacoes_aceitas"] == {"rpc:aluno_acesso": 1} and not c["gravacoes_novas"],
          f"a guarda do ANTES: 6 leituras diretas da área (as da 20c e a casca da 20b — o aluno_perfil); as de fora da área à parte: {c['diretas']}")
     corpo_ler = json.dumps({"acao": "ler", "itens": [{"aluno": pac, "q": "calculos_do_aluno"}, {"aluno": pac, "q": "antropometrias_do_aluno"}]})

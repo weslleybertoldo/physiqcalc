@@ -67,11 +67,13 @@ TABELAS_DA_GUARDA = TABELAS_DA_AREA | P20B.TABELAS_DA_AREA
 RPCS_DA_GUARDA = RPCS_DA_AREA | P20B.RPCS_DA_AREA
 BUCKETS_DA_GUARDA = BUCKETS_DA_AREA | P20B.BUCKETS_DA_AREA
 # FORA DA ÁREA (de outra W, lido direto, listado à parte — não é falha): o Dashboard lê os alunos (alunos_da_conta, alunos_novos_por_mes,
-# pacientes — H-43), a agenda (agendamentos, agenda_tags — H-43) e o financeiro (financeiro_resumo_periodo, cobrancas, financeiro_recibos — 20d);
-# a Pré-consulta, a equipe (equipe_da_conta — H-43); a casca do aluno, o que a 20b deixou de outra W (o acesso, os compromissos, o responsável)
-FORA_RPCS = {"alunos_da_conta", "alunos_novos_por_mes", "financeiro_resumo_periodo", "financeiro_recibos", "financeiro_lancamentos", "equipe_da_conta",
-             "aluno_compromissos", "aluno_responsavel", "aluno_acesso", "paciente_dado_livre", "mensagens_desligadas"}
-FORA_TABELAS = {"pacientes", "agendamentos", "agenda_tags", "cobrancas", "transacoes", "recibos", "categorias_financeiras"}
+# pacientes — H-43) e a agenda (agendamentos, agenda_tags — H-43); a Pré-consulta, a equipe (equipe_da_conta — H-43); a casca do aluno, o que a
+# 20b deixou de outra W (o acesso, os compromissos, o responsável). hml-20d: o financeiro do Dashboard (financeiro_resumo_periodo, cobrancas,
+# financeiro_recibos) SAIU daqui — a 20d o levou ao servidor (o `ler` da financeiro); quem conta a parte do Financeiro do Dashboard é o
+# rede.py --area financeiro (financeiro.py, a guarda da 20d)
+FORA_RPCS = {"alunos_da_conta", "alunos_novos_por_mes", "equipe_da_conta", "aluno_compromissos", "aluno_responsavel", "aluno_acesso", "paciente_dado_livre",
+             "mensagens_desligadas"}
+FORA_TABELAS = {"pacientes", "agendamentos", "agenda_tags"}
 # as gravações que já existem ao abrir (não são desta W): o padrão do 1º acesso (hml-19a/19b, padroes_garantir: Manipulados, Metas e
 # Orientações — e o Prontuário) e o aluno_acesso da casca (H-43)
 GRAVACOES_ACEITAS = {"fn:nutricao(padroes_garantir)", "rpc:aluno_acesso"}
