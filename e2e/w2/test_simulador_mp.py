@@ -597,6 +597,23 @@ class ApiPecasPurasTest(unittest.TestCase):
         est["assinaturas"] = ["x1", "x2"]
         self.assertIn("not (id = any(array['x1', 'x2']::uuid[]))", API.comandos_do_desfazer(est)[0])
 
+    def test_master_de_teste_so_no_staging_profiles_e_devolvido_no_desfazer(self) -> None:
+        # o master de teste é 'pessoa' fora das rodadas (hml-02/H-04): a rodada o põe master SÓ no staging.profiles (nunca no Auth nem
+        # no public) e o desfazer devolve o papel da foto — só se ainda for 'master' (não pisa numa troca de outra pessoa)
+        self.assertEqual(API.comando_dar_master("m1"),
+                         "update staging.profiles set role = 'master' where id = 'm1' and role is distinct from 'master'")
+        est = {"paciente": "p1", "conta_id": "c1", "t0": "t", "aluno_uid": "a1", "dono_uid": "d1", "assinaturas": [],
+               "conta": {"modo": "pix_manual", "bloquear": False}, "vivas": [], "flags": {}, "jobs": {},
+               "pacientes": {"plano_aluno_id": None, "plano_modalidade": None, "plano_valor_negociado": None, "mensalidade_valor": "10",
+                             "mensalidade_desde": None, "cobranca_pausada": False},
+               "master_uid": "m1", "master_papel": "pessoa"}
+        perfis = [c for c in API.comandos_do_desfazer(est) if "profiles" in c]
+        self.assertEqual(perfis, ["update staging.profiles set role = 'pessoa' where id = 'm1' and role = 'master'"])
+        for papel in ("master", None):                    # já era master (ou sem perfil): nada a devolver
+            self.assertFalse([c for c in API.comandos_do_desfazer({**est, "master_papel": papel}) if "profiles" in c])
+        sem = {k: v for k, v in est.items() if k != "master_papel"}  # um estado de antes da correção: não mexe no perfil
+        self.assertFalse([c for c in API.comandos_do_desfazer(sem) if "profiles" in c])
+
     def test_importar_nao_abre_rede(self) -> None:
         self.assertIsNone(API.B)   # a base só carrega no main
         self.assertEqual(API.PORTAS["sim"], 8798)

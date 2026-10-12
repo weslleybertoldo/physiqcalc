@@ -113,7 +113,8 @@ integração da conta gravada pelo e2e com tokens do simulador cifrados pela cha
   Limites das instâncias (pagamentos-aluno: 60/min por pessoa e 10 prof_mp_conectar por hora; a mp-conectar-retorno 30/min por IP; o aviso,
   os tetos do caso teto): antes do que passaria, a função local recomeça; cada volta e cada aviso vai com um X-Forwarded-For próprio.
 Desfazer: ANTES de mexer, a foto (a matrícula do aluno2, a conta do prof2 — forma e bloqueio —, as flags mercadopago_conta e mp_webhook, as
-mensalidades e as automáticas de antes e, no --local, os 2 jobs) vai para ~/projetos/physiqcalc-scratch/w2/api-estado.json (600) com os ids
+mensalidades e as automáticas de antes, o papel do master de teste no staging.profiles — ele é 'pessoa' fora das rodadas e vira master SÓ
+ali durante a rodada, hml-02/H-04: nunca no Auth — e, no --local, os 2 jobs) vai para ~/projetos/physiqcalc-scratch/w2/api-estado.json (600) com os ids
 à parte (conta, matrícula, quem); no fim (ou na próxima rodada / --limpar, se esta cair no meio) saem as automáticas da rodada (ANTES do modo:
 a guarda contas_guard_mp recusa sair de um MP com automática viva — também para o postgres), a integração do MP da conta, as conexões, as
 cobranças, os avisos, os eventos, a fila e os planos "W2 e2e …" da rodada; o resto volta à foto e o último ✅ confere campo a campo. No padrão,
@@ -397,6 +398,11 @@ def comandos_do_desfazer(est: dict) -> list[str]:
     cmds = [
         f"delete from {S}.aluno_assinaturas where paciente_id = '{pac}' and (criado_em >= {t0}::timestamptz"
         + (f" or not (id = any(array[{antes}]::uuid[])))" if antes else " or true)"),
+    ]
+    # o master de teste volta ao papel da foto LOGO no começo (o menor tempo master se algo abaixo quebrar) — só se ainda for 'master'
+    if est.get("master_uid") and est.get("master_papel") not in (None, "master"):
+        cmds.append(f"update {S}.profiles set role = {lit(est['master_papel'])} where id = {lit(est['master_uid'])} and role = 'master'")
+    cmds += [
         f"update {S}.contas set recebimento_modo = {lit(est['conta']['modo'])}, bloquear_app_inadimplente = "
         f"{str(bool(est['conta']['bloquear'])).lower()} where id = '{conta}'",
         f"delete from {S}.recebimento_integracoes where conta_id = '{conta}' and provedor = 'mercadopago'",
@@ -421,6 +427,12 @@ def comandos_do_desfazer(est: dict) -> list[str]:
         if ativo is not None:
             cmds.append(f"select cron.alter_job(j.jobid, active := {str(bool(ativo)).lower()}) from cron.job j where j.jobname = {lit(nome)}")
     return cmds
+
+
+def comando_dar_master(uid: str) -> str:
+    """O master de teste é 'pessoa' fora das rodadas (hml-02/H-04): vira master SÓ no staging.profiles (nunca no Auth nem no public — o
+    molde do e2e/w07b/api.py e do dar_master do e2e/w1/telas.py); a master-contas (ehMaster) e o sou_master() do banco aceitam esse perfil."""
+    return f"update {S}.profiles set role = 'master' where id = {lit(uid)} and role is distinct from 'master'"
 
 
 # ───────────────────────── o simulador ─────────────────────────
@@ -844,7 +856,7 @@ def parar_jobs() -> None:
         sql(f"select cron.alter_job(j.jobid, active := false) from cron.job j where j.jobname = {lit(j)}")
 
 
-def foto(pac: str, conta: str) -> dict:
+def foto(pac: str, conta: str, master_uid: str | None = None) -> dict:
     pa = um(f"""select plano_aluno_id::text as plano_aluno_id, plano_modalidade, plano_valor_negociado::text as plano_valor_negociado,
                        mensalidade_valor::text as mensalidade_valor, mensalidade_desde::text as mensalidade_desde, cobranca_pausada
                   from {S}.pacientes where id = '{pac}'""")
@@ -854,7 +866,9 @@ def foto(pac: str, conta: str) -> dict:
     vivas = [x["id"] for x in sql(f"""select id::text as id from {S}.cobrancas where paciente_id = '{pac}' and tipo = 'mensalidade'
                                          and deleted_at is null order by id""")]
     assin = [x["id"] for x in sql(f"select id::text as id from {S}.aluno_assinaturas where paciente_id = '{pac}' order by id")]
-    return {"pacientes": pa, "conta": co, "integracao_mp": integ, "flags": flags, "vivas": vivas, "assinaturas": assin, "jobs": jobs()}
+    papel = (um(f"select role from {S}.profiles where id = {lit(master_uid)}") or {}).get("role") if master_uid else None
+    return {"pacientes": pa, "conta": co, "integracao_mp": integ, "flags": flags, "vivas": vivas, "assinaturas": assin, "jobs": jobs(),
+            "master_papel": papel}
 
 
 def preparar() -> None:
@@ -873,14 +887,18 @@ def preparar() -> None:
                     order by p.created_at limit 1""")
     sql(f"select {S}.mensalidade_recalcular('{pac}')")
     t0 = um("select clock_timestamp()::text as t0")["t0"]
+    master_uid = B.uid(MASTER)
     # os ids vão À PARTE da foto (a foto tem a chave "conta" — forma e bloqueio — e cobriria o id: a lição de 11/10 da W1)
     est = {"t0": t0, "modo_da_rodada": "local" if CTX.get("local") else "padrao", "paciente": pac, "conta_id": conta,
-           "aluno_uid": m["aluno_uid"], "dono_uid": m["dono_uid"], "master_uid": B.uid(MASTER), "outra_matricula": outra and outra["id"],
-           "mp_criados": [], **foto(pac, conta)}
+           "aluno_uid": m["aluno_uid"], "dono_uid": m["dono_uid"], "master_uid": master_uid, "outra_matricula": outra and outra["id"],
+           "mp_criados": [], **foto(pac, conta, master_uid)}
     if est["jobs"].get("mp-renovar-staging") is None:
         print("   (o job mp-renovar-staging não existe: a migration da W2 está mesmo no staging?)", flush=True)
     gravar_estado(est)
     CTX.update(estado=est, pac=pac, conta=conta, aluno_uid=m["aluno_uid"], dono_uid=m["dono_uid"], t0=t0, outra=est["outra_matricula"])
+    # o master de teste vira master SÓ no staging.profiles durante a rodada (o papel de antes já está na foto gravada acima; o desfazer devolve)
+    if master_uid:
+        sql(comando_dar_master(master_uid))
     # o ponto de partida: as mensalidades de antes escondidas (voltam no fim), R$ 10,00 vencida, Pix na chave, a flag do MP da conta ligada,
     # a assinatura exigida DESLIGADA e, no --local, os 2 jobs parados
     if est["vivas"]:
@@ -933,7 +951,7 @@ def desfazer(est: dict) -> None:
             cancelar_no_sandbox(est)
         for cmd in comandos_do_desfazer(est):
             sql(cmd)
-        agora = foto(est["paciente"], est["conta_id"])
+        agora = foto(est["paciente"], est["conta_id"], est.get("master_uid"))
         t0 = lit(est["t0"])
         sobra = um(f"""select (select count(*) from {S}.cobrancas where paciente_id = '{est['paciente']}' and created_at >= {t0}::timestamptz)::int as cobrancas,
                               (select count(*) from {S}.mp_conexoes where conta_id = '{est['conta_id']}' and criado_em >= {t0}::timestamptz)::int as conexoes,
@@ -942,7 +960,8 @@ def desfazer(est: dict) -> None:
     except Exception as e:  # noqa: BLE001
         p.check(False, f"a limpeza quebrou ({e!r}) — o estado ficou em {ESTADO_ARQ}: rode  python3 e2e/w2/api.py --limpar"[:500])
         return
-    antes = {k: est.get(k) for k in ("pacientes", "conta", "integracao_mp", "flags", "vivas", "assinaturas", "jobs")}
+    chaves = ("pacientes", "conta", "integracao_mp", "flags", "vivas", "assinaturas", "jobs") + (("master_papel",) if "master_papel" in est else ())
+    antes = {k: est.get(k) for k in chaves}
     difs = [f"{k}: {antes[k]!r} → {agora[k]!r}" for k in antes if antes[k] != agora[k]]
     p.check(not difs and not any(sobra.values()), f"tudo voltou à foto e nada da rodada ficou ({'; '.join(difs) or 'igual'} · sobras {sobra})")
     ESTADO_ARQ.unlink(missing_ok=True)
