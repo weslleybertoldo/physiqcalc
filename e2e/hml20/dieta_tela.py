@@ -364,7 +364,7 @@ class FluxoPreconsulta:
         item = t.pg.locator(f'[data-formulario-titulo="{titulo}"]').first
         fid, slug = item.get_attribute("data-formulario"), item.get_attribute("data-formulario-slug")
         if C.eh_uuid(fid):
-            self.e.linha("formularios_preconsulta", fid)
+            D.anotar(self.e, "formularios_preconsulta", fid)
         banco = B.ler_principal(f"select nutricionista_id::text as dono, slug from {s}.formularios_preconsulta where id = {C.txt(C.uuid_ok(fid))}") if C.eh_uuid(fid) else []
         self.o.ok(bool(banco) and banco[0]["slug"] == slug and bool(re.match(r"^[abcdefghijkmnpqrstuvwxyz23456789]{8}$", str(slug))),
                   f"[{self.base}] o formulário criado pela tela está no banco com o slug que a lista mostra (no alfabeto da tela)")
@@ -382,7 +382,7 @@ class FluxoPreconsulta:
         # a resposta anônima pelo /f/:slug (a RPC de hoje, como a página pública)
         st, rid = D.responder_como_anonimo(str(slug), self.rodada, "tela")
         if C.eh_uuid(rid):
-            self.e.linha("respostas_preconsulta", rid)
+            D.anotar(self.e, "respostas_preconsulta", rid)
         if not self.o.ok(st == 200 and C.eh_uuid(rid), f"[{self.base}] a resposta anônima ao formulário criado pela tela ({st})"):
             return
         B.navegar(t, "/painel/pre-consulta?aba=respostas", primeira=True)

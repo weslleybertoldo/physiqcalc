@@ -574,6 +574,15 @@ def responder_como_anonimo(slug: str, rodada: str, origem: str = "api") -> tuple
     return st, (str(rid) if C.eh_uuid(rid) else None)
 
 
+def anotar(estado, tabela: str, id_: object) -> None:
+    """Uma linha da massa no Estado (o e2e_estado.json), na lista `linhas` que o --limpar desta área apaga pelos ids. O Estado.linha da
+    hml-19 só aceita as tabelas DELA (o Prontuário, a Dieta, a Avaliação) e IGNORA em silêncio as da Pré-consulta — foi assim que a 1ª
+    rodada da etapa 2 (13:53) deixou o formulário e a resposta dela no staging (achados pela conferência por SQL e apagados pelos ids)."""
+    if tabela in TABELAS_DA_MASSA and C.eh_uuid(id_) and [tabela, id_] not in estado.d["linhas"]:
+        estado.d["linhas"].append([tabela, id_])
+        estado.salvar()
+
+
 def criar_foto_do_diario(o, estado, token_aluna: str, pac: str, rodada: str) -> dict | None:
     """1 foto no diário da aluna, como o app faz (a ação da hml-19b: preparar → PUT → enviar; o comentário com a marca)."""
     import datetime as dt  # noqa: PLC0415
@@ -594,7 +603,7 @@ def criar_foto_do_diario(o, estado, token_aluna: str, pac: str, rodada: str) -> 
                                                                          "comentario": f"{B.MARCA} {rodada} diario", "data_hora": agora})
     reg = (r.get("registro") or {}).get("id")
     if C.eh_uuid(reg):
-        estado.linha("diario_alimentar", reg)
+        anotar(estado, "diario_alimentar", reg)
     if not o.ok(st_put in (200, 201) and st == 200 and C.eh_uuid(reg), f"massa: 1 foto no diário da aluna (o PUT {st_put}; o registro {st} {r.get('erro')})"):
         return None
     return {"id": reg, "path": caminho, "bytes": len(png), "bucket": link["bucket"]}

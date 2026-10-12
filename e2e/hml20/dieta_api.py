@@ -90,6 +90,19 @@ def igual(a: object, b: object, conjunto: bool = False) -> bool:
     return canonico(a) == canonico(b)
 
 
+def sem_dado(v: object) -> bool:
+    """O valor não traz dado nenhum: os números 0, as listas vazias (ou de zeros), os objetos com tudo assim, o null (o "ok" não conta)."""
+    if isinstance(v, dict):
+        return all(sem_dado(x) for k, x in v.items() if k != "ok")
+    if isinstance(v, list):
+        return all(sem_dado(x) for x in v)
+    if isinstance(v, bool):
+        return v is False
+    if isinstance(v, (int, float)):
+        return v == 0
+    return v is None
+
+
 def ids_de(valor: object) -> set[str]:
     achados: set[str] = set()
 
@@ -401,6 +414,29 @@ def seco(o) -> None:  # noqa: PLR0915
             recusas += 1
     o.ok(recusas == 6, "a limpeza recusa outro schema, o DELETE sem id (ou só com id que não é uuid), tabela que não é da massa e o diário sem a "
          "aluna de teste")
+
+    class _Estado:
+        def __init__(self) -> None:
+            self.d = {"linhas": []}
+
+        def salvar(self) -> None:
+            pass
+
+    e = _Estado()
+    for t in D.TABELAS_DA_MASSA:
+        D.anotar(e, t, FALSO)
+    D.anotar(e, "pacientes", FALSO)
+    D.anotar(e, "formularios_preconsulta", "nao-e-uuid")
+    D.anotar(e, "formularios_preconsulta", FALSO)
+    hml19 = B.B19.Estado({"rodada": "seco", "schema": "staging", "linhas": [], "storage": [], "n8": None})
+    hml19.salvar = lambda: None  # type: ignore[method-assign]
+    hml19.linha("formularios_preconsulta", FALSO)
+    o.ok(e.d["linhas"] == [[t, FALSO] for t in D.TABELAS_DA_MASSA] and hml19.d["linhas"] == [],
+         "o anotar guarda as linhas da massa (o diário E a Pré-consulta) na lista que o --limpar apaga — o Estado.linha da hml-19 ignora as da "
+         "Pré-consulta (a 1ª rodada da etapa 2 deixou 2 linhas por isso)")
+    o.ok(sem_dado({"ok": True, "total": 0, "semanas": [0, 0], "por_formulario": {}, "aluno": None, "itens": []})
+         and not sem_dado({"ok": True, "total": 1}) and not sem_dado({"ok": True, "itens": [{"id": FALSO}]}) and not sem_dado({"ok": True, "nome": "x"}),
+         "o N1 das RPCs invoker da Pré-consulta: tudo zerado/vazio = nenhum dado (um número, um item ou um texto = dado)")
     cont = D.sql_contar_marca("staging", "seco-0000")
     o.ok("'%hml20 e2e%seco-0000%'" in cont and all(f"staging.{t}" in cont for t in D.TABELAS_DA_MASSA) and cont.count(" as ") == 3,
          "a conferência final: a marca no diário, nos formulários e nas respostas (só contagem)")
@@ -614,7 +650,7 @@ def massa_preconsulta(R: Rodada) -> None:
     st, r = R.acao(R.tn, "preconsulta_formulario_criar", hostil)
     linha = r.get("linha") or {}
     if C.eh_uuid(linha.get("id")):
-        R.e.linha("formularios_preconsulta", linha["id"])
+        D.anotar(R.e, "formularios_preconsulta", linha["id"])
     banco = (B.ler_principal(sql_formulario(s, linha["id"])) or [{}])[0] if C.eh_uuid(linha.get("id")) else {}
     if not o.ok(st == 200 and linha.get("id") != FALSO and linha.get("nutricionista_id") == R.un == banco.get("dono") and linha.get("conta_id") == R.conta == banco.get("conta")
                 and bool(SLUG.match(str(linha.get("slug")))) and linha.get("slug") == banco.get("slug") != "zzzzzzzz" and linha.get("deleted_at") is None
@@ -625,7 +661,7 @@ def massa_preconsulta(R: Rodada) -> None:
     R.massa["formulario"] = {"id": linha["id"], "slug": linha["slug"], "titulo": linha["titulo"]}
     st, rid = D.responder_como_anonimo(linha["slug"], R.rodada, "api")
     if C.eh_uuid(rid):
-        R.e.linha("respostas_preconsulta", rid)
+        D.anotar(R.e, "respostas_preconsulta", rid)
     if o.ok(st == 200 and C.eh_uuid(rid), f"massa: 1 resposta ao formulário de teste pelo /f/:slug, como ANÔNIMO (a RPC de hoje, com o consentimento) ({st})"):
         R.massa["resposta"] = {"id": rid}
 
@@ -659,7 +695,7 @@ def caso_g(R: Rodada) -> None:  # noqa: PLR0915
     st, r = R.acao(to, "preconsulta_formulario_criar", D.formulario_de_teste(R.rodada, R.conta))
     intruso = (r.get("linha") or {}).get("id")
     if C.eh_uuid(intruso):
-        R.e.linha("formularios_preconsulta", intruso)
+        D.anotar(R.e, "formularios_preconsulta", intruso)
     o.ok(st == 403 and r.get("erro") == "sem_acesso" and not intruso,
          f"G outra conta cria um formulário na conta da nutri → 403 sem_acesso (o RLS da W21: só membro ativo); nada gravado ({st} {r.get('erro')})")
     if resp:
@@ -743,8 +779,10 @@ def caso_n1(R: Rodada) -> None:
                 bom = resp.get("ok") is True and v is None
             elif q == "diario_foto_url":
                 bom = resp.get("ok") is False and resp.get("erro") == "nao_encontrado"
-            elif q in ("preconsulta_numeros", "respostas_da_conta", "painel_resumo"):
+            elif q == "painel_resumo":  # definer: confere a conta e volta {ok:false, erro:'sem_acesso'}
                 bom = (resp.get("ok") is True and isinstance(v, dict) and v.get("ok") is False) or (resp.get("ok") is False and resp.get("erro") == "sem_acesso")
+            elif q in ("preconsulta_numeros", "respostas_da_conta"):  # invoker: o RLS de quem chama → tudo zerado/vazio (nenhum dado)
+                bom = resp.get("ok") is True and isinstance(v, dict) and (v.get("ok") is False or sem_dado(v))
             elif q in ("registros_do_dia", "diario_contagem", "preconsulta_novas"):
                 bom = resp.get("ok") is True and resp.get("total") == 0
             else:
@@ -752,7 +790,8 @@ def caso_n1(R: Rodada) -> None:
             ok = ok and bom and st == 200
             resumo.append(f"{q}:{'ok' if bom else 'X'}")
     o.ok(ok and not vazou and len(resumo) == sum(len(x) for x in lotes),
-         f"N1 outra conta (w13-dono): as consultas da aluna, da massa e da conta da nutri → vazio / 0 / nao_encontrado / o {{ok:false}} da RPC, nenhum "
+         f"N1 outra conta (w13-dono): as consultas da aluna, da massa e da conta da nutri → vazio / 0 / nao_encontrado / o {{ok:false}} do painel_resumo "
+         f"e as RPCs invoker da Pré-consulta zeradas (o RLS), nenhum "
          f"id da aluna ({len(vazou)} id; {', '.join(x for x in resumo if x.endswith('X')) or 'todas como esperado'})")
 
 
