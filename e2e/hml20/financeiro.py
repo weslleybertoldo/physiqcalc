@@ -63,8 +63,11 @@ FORA_RPCS = {"equipe_da_conta", "alunos_da_conta", "alunos_novos_por_mes", "alun
              "paciente_dado_livre", "mensagens_desligadas", "meu_perfil_aluno", "minha_agenda", "minha_agenda_lista"}
 FORA_TABELAS = {"pacientes", "agendamentos", "agenda_tags", "avisos", "conta_membros"}
 # as gravações que já existem ao abrir (não são desta W): as sementes do 1º acesso do Financeiro (hml-19d: só com a lista vazia) e da
-# nutricao (hml-19a/19b) e o aluno_acesso da casca do aluno (H-43)
-GRAVACOES_ACEITAS = {"fn:financeiro(padroes_garantir)", "fn:nutricao(padroes_garantir)", "rpc:aluno_acesso"}
+# nutricao (hml-19a/19b) e o aluno_acesso da casca do aluno (H-43). E a leitura dos planos da aba Planos (W-P, já pelo servidor:
+# pagamentos-aluno › prof_planos — o prof_plano_salvar/_ativo é que gravam): a regra da Guarda dos E2E (e2e/hml17/_base.py
+# LEITURAS_PAGAMENTOS, ponto de encontro com a LINUX 3) não a tem entre as leituras da pagamentos-aluno e a conta como gravação — listada à
+# parte aqui (etapa 2 da 20d, a rede do antes no staging); a Guarda não muda nesta W
+GRAVACOES_ACEITAS = {"fn:financeiro(padroes_garantir)", "fn:nutricao(padroes_garantir)", "rpc:aluno_acesso", "fn:pagamentos-aluno(prof_planos)"}
 
 B.AREAS["financeiro"] = {"tabelas": TABELAS_DA_GUARDA, "rpcs": RPCS_DA_GUARDA, "buckets": BUCKETS_DA_GUARDA, "desvio": set()}
 B.AREAS["financeiro-app"] = {"tabelas": TABELAS_DO_APP, "rpcs": RPCS_DA_AREA, "buckets": set(), "desvio": set()}

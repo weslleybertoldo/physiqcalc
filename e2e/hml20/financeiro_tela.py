@@ -48,12 +48,17 @@ CAB_REDE = ["quando", "base", "commit", "fase", "conta", "tela", "diretas", "dir
 CAB_TELAS = ["quando", "base", "commit", "fase", "conta", "medida", "n", "valores_s", "mediana_s", "referencia_s", "ok"]
 FOLGA_S = 0.3
 ABERTURAS = 3
-# o Dashboard depende das funções do Treino e da saúde (fora da área): o critério é a parte do Financeiro
-TELAS_DE_FORA = {"dashboard_personal"}
+# o Dashboard depende das funções do Treino e da saúde (fora da área): o critério é a parte do Financeiro. As 2 telas do app (decisão M:
+# "meça pelo que a tela espera"): o gate lê o resumo leve 1,5 s (Início) / 200 ms (Perfil) depois de montar, e o Início do staging nunca fica
+# "pronto" pela regra geral (o "Treino de hoje" em esqueleto: o build de staging roda sem PowerSync — a spec §1.2) → o critério é o fim da
+# leitura do gate (o `ler` com a fin_do_aluno no depois; a RPC direta no antes)
+TELAS_DE_FORA = {"dashboard_personal", "aluno_inicio", "aluno_pagamentos"}
 # o código medido é o depois quando o Financeiro lê pela função (o ed0d72e — o staging do antes — lia direto)
 MARCA_DO_DEPOIS = ("src/painel/financeiro/dados.ts", 'lerFinanceiro("fin_')
-# as gravações que a Guarda da produção pode barrar ao abrir (as que já existem e não são desta W)
-BARRADAS_ACEITAS = {"fn:financeiro(padroes_garantir)", "rpc:aluno_acesso"}
+# as "gravações" que a Guarda da produção pode barrar ao abrir (o formato dela: "<método> <tipo>:<nome>"): a semente do 1º acesso (a
+# produção só abre COM as sementes: não deve acontecer), o aluno_acesso (H-43) e a leitura dos planos (prof_planos — a regra da Guarda a
+# trata como gravação; na produção a aba Planos abre sem os planos)
+BARRADAS_ACEITAS = {"POST fn:financeiro", "POST rpc:aluno_acesso", "POST fn:pagamentos-aluno"}
 
 
 def fase_do_financeiro(base: str, commit: str) -> str:
