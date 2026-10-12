@@ -34,7 +34,7 @@ export const DATA_TEXTO_MAX = 10;
 export const COBRANCAS_POR_LEITURA = 1000;
 export const MAX_LEITURAS_COBRANCAS = 20;
 /** Os códigos que as 3 RPCs da conta devolvem de propósito ({ ok: false, erro }) — a tela tem a frase de cada um (ERROS_RPC). */
-export const ERROS_DAS_RPCS_DO_FINANCEIRO = ["sem_login", "sem_acesso", "conta_inexistente", "periodo_invalido"] as const;
+export const ERROS_DAS_RPCS_DA_CONTA = ["sem_login", "sem_acesso", "conta_inexistente", "periodo_invalido"] as const;
 /** As situações "em aberto" das cobranças do Resumo (o "a receber"). */
 export const STATUS_EM_ABERTO = ["aberta", "aguardando_confirmacao"] as const;
 
@@ -145,20 +145,20 @@ export const CONSULTAS_FINANCEIRO = {
   // os totais do período com os filtros da lista OU o { resumo: true } do Resumo/Dashboard (+ o recebido por dia)
   fin_resumo_periodo: {
     params: { conta, de: dataObrigatoria, ate: dataObrigatoria, filtros: filtrosDosLancamentos },
-    fonte: { rpc: "financeiro_resumo_periodo", args: { p_conta: "conta", p_de: "de", p_ate: "ate", p_filtros: "filtros" }, erros: ERROS_DAS_RPCS_DO_FINANCEIRO },
+    fonte: { rpc: "financeiro_resumo_periodo", args: { p_conta: "conta", p_de: "de", p_ate: "ate", p_filtros: "filtros" }, erros: ERROS_DAS_RPCS_DA_CONTA },
   },
   // a página dos Lançamentos (e as 6 recentes do Resumo)
   fin_lancamentos: {
     params: { conta, de: dataObrigatoria, ate: dataObrigatoria, filtros: filtrosDosLancamentos, offset, limite },
     fonte: {
       rpc: "financeiro_lancamentos", args: { p_conta: "conta", p_de: "de", p_ate: "ate", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" },
-      erros: ERROS_DAS_RPCS_DO_FINANCEIRO,
+      erros: ERROS_DAS_RPCS_DA_CONTA,
     },
   },
   // a página dos Recibos (com a busca) e o "Recibos no mês" do Dashboard (o período, limite 0: só o total)
   fin_recibos: {
     params: { conta, filtros: filtrosDosRecibos, offset, limite },
-    fonte: { rpc: "financeiro_recibos", args: { p_conta: "conta", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" }, erros: ERROS_DAS_RPCS_DO_FINANCEIRO },
+    fonte: { rpc: "financeiro_recibos", args: { p_conta: "conta", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" }, erros: ERROS_DAS_RPCS_DA_CONTA },
   },
   // as cobranças do Resumo/Dashboard: o recorte da conta ativa (a conta do corpo OU sem conta e minhas — o user do TOKEN) + o "em aberto
   // OU vence no mês", as vivas, com o nome do aluno, pela ordem do id — TODAS, em leituras de 1000 até 20 no servidor (1 item)

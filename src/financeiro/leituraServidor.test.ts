@@ -13,7 +13,7 @@ import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { LOTE_MAX, ehRpc, type FonteRpc, type FonteTabela, type RespostaDeItem } from "../../supabase-principal/functions/_shared/leitura-lote";
 import {
-  COBRANCAS_POR_LEITURA, COLUNAS_DO_FINANCEIRO, CONSULTAS_DO_FINANCEIRO, CONSULTAS_FINANCEIRO, DATA_TEXTO_MAX, ERROS_DAS_RPCS_DO_FINANCEIRO,
+  COBRANCAS_POR_LEITURA, COLUNAS_DO_FINANCEIRO, CONSULTAS_DO_FINANCEIRO, CONSULTAS_FINANCEIRO, DATA_TEXTO_MAX, ERROS_DAS_RPCS_DA_CONTA,
   INT4_MAX, LIMITE_RPC_MAX, MAX_LEITURAS_COBRANCAS, POR_PAGINA_LEITURA, STATUS_EM_ABERTO, TETO_LISTA, TEXTO_FILTRO_MAX, consultaDoFinanceiro,
   filtroEmAbertoOuNoPeriodo, type ConsultaFinanceiro,
 } from "../../supabase-principal/functions/_shared/financeiro-leituras";
@@ -153,13 +153,13 @@ describe("hml-20d — o catálogo do Financeiro (forma, dono, colunas = o select
     const rpcs = Object.entries(CONSULTAS_FINANCEIRO as Record<string, ConsultaFinanceiro>).filter(([, c]) => ehRpc(c.fonte))
       .map(([q, c]) => [q, (c.fonte as FonteRpc).rpc, (c.fonte as FonteRpc).args ?? {}, (c.fonte as FonteRpc).erros ?? []]);
     expect(rpcs).toEqual([
-      ["fin_resumo_periodo", "financeiro_resumo_periodo", { p_conta: "conta", p_de: "de", p_ate: "ate", p_filtros: "filtros" }, ERROS_DAS_RPCS_DO_FINANCEIRO],
-      ["fin_lancamentos", "financeiro_lancamentos", { p_conta: "conta", p_de: "de", p_ate: "ate", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" }, ERROS_DAS_RPCS_DO_FINANCEIRO],
-      ["fin_recibos", "financeiro_recibos", { p_conta: "conta", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" }, ERROS_DAS_RPCS_DO_FINANCEIRO],
+      ["fin_resumo_periodo", "financeiro_resumo_periodo", { p_conta: "conta", p_de: "de", p_ate: "ate", p_filtros: "filtros" }, ERROS_DAS_RPCS_DA_CONTA],
+      ["fin_lancamentos", "financeiro_lancamentos", { p_conta: "conta", p_de: "de", p_ate: "ate", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" }, ERROS_DAS_RPCS_DA_CONTA],
+      ["fin_recibos", "financeiro_recibos", { p_conta: "conta", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" }, ERROS_DAS_RPCS_DA_CONTA],
       ["fin_totais_do_aluno", "financeiro_totais_do_aluno", { p_aluno: "aluno" }, []],
       ["fin_do_aluno", "financeiro_do_aluno", {}, []],
     ]);
-    expect(ERROS_DAS_RPCS_DO_FINANCEIRO).toEqual(["sem_login", "sem_acesso", "conta_inexistente", "periodo_invalido"]);
+    expect(ERROS_DAS_RPCS_DA_CONTA).toEqual(["sem_login", "sem_acesso", "conta_inexistente", "periodo_invalido"]);
     expect(CONSULTAS_FINANCEIRO.fin_do_aluno.params).toEqual({});
   });
 
@@ -366,7 +366,7 @@ describe("hml-20d — as RPCs no módulo: os args de hoje (montados aqui) e os c
   });
 
   it("N1 (como hoje): as 3 da conta devolvem { ok: false, erro } de propósito → o erro do ITEM (aviso, nunca o log.excecao); o raise com o código também", async () => {
-    for (const codigo of ERROS_DAS_RPCS_DO_FINANCEIRO) {
+    for (const codigo of ERROS_DAS_RPCS_DA_CONTA) {
       const k = await ler([{ q: "fin_recibos", conta: CONTA, filtros: {}, offset: 0, limite: 20 }], { rpc: () => ({ data: { ok: false, erro: codigo }, error: null }) });
       expect(k.itens, codigo).toEqual([{ ok: false, erro: codigo }]);
       expect(k.log.excecao, codigo).not.toHaveBeenCalled();

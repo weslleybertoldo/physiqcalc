@@ -9,7 +9,7 @@
 // mesmo "quem vê o quê" de antes); o Resumo e o Dashboard recebem o recebido já somado por dia.
 // hml-19d (H-41 · jeito 2): as GRAVAÇÕES (movimentações, categorias, modelos, recibos e as sementes do 1º acesso) saem do navegador e vão
 // pela função financeiro (src/financeiro/gravar.ts), com as MESMAS assinaturas e a mesma volta (o select de hoje mora no servidor:
-// _shared/financeiro-gravar-regras.ts VOLTA_*). As leituras seguem aqui. O recibo emitido e o excluído viram 1 chamada (antes, 2 a 3
+// _shared/financeiro-gravar-regras.ts VOLTA_*). As leituras seguiram aqui até a hml-20d (abaixo). O recibo emitido e o excluído viram 1 chamada (antes, 2 a 3
 // pedidos sem transação); o erro chega com o texto fixo do código (o nome repetido da categoria segue com a frase de hoje).
 // hml-20d (H-42 · jeito 2, etapa 2, parte 4): as LEITURAS também saem do navegador e vão pela função financeiro (ação `ler`, em lote:
 // src/financeiro/ler.ts — as comuns do Financeiro e as da aba aberta numa chamada só), com as MESMAS assinaturas e os mesmos tipos de
