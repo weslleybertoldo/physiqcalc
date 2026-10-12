@@ -37,8 +37,10 @@ ESCRITA_RPC = re.compile(r"/rest/v1/rpc/(lixeira_restaurar|lixeira_apagar|aluno_
                          r"registrar|aceitar|excluir|apagar|atualizar|enviar)")
 ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 # hml-19a (risco 2 da spec hml-19 §8): a nutricao (jeito 2 — as gravações da nutrição pelo servidor) grava em TODA ação: o POST nela
-# é escrita, como o POST em tabela. hml-19d (decisão I): a financeiro também. Teste: python3 e2e/hml19/guarda_teste.py.
-ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro)(?:[/?#]|$)")
+# é escrita, como o POST em tabela. hml-19d (decisão I): a financeiro também. W2: a mp-contas-renovar também. A mp-conectar-retorno
+# NÃO entra: ela só grava no GET da volta do OAuth (o POST nela volta ?mp=invalido sem tocar no banco) e o GET é leitura aqui — um E2E
+# "só leitura" de produção NUNCA pode seguir uma volta do OAuth (o GET com o state certo grava a conexão). Teste: python3 e2e/hml19/guarda_teste.py.
+ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar)(?:[/?#]|$)")
 
 
 def leitura_da_funcao(corpo: str | None) -> bool:
@@ -53,7 +55,7 @@ def leitura_da_funcao(corpo: str | None) -> bool:
 
 def eh_escrita(metodo: str, url: str, corpo: str | None = None) -> bool:
     """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e na financeiro (hml-20a: menos o POST com o
-    corpo de leitura, { "acao": "ler" }) e no Storage (fora o link de leitura)."""
+    corpo de leitura, { "acao": "ler" }), na mp-contas-renovar (W2) e no Storage (fora o link de leitura)."""
     # hml-20a (revisão): a exceção olha só o CAMINHO (um POST em /rest/v1/<tabela>?x=/functions/v1/nutricao com { acao: "ler" } é escrita)
     if metodo == "POST" and ESCRITA_FUNCAO.search(urlparse(url).path) and leitura_da_funcao(corpo):
         return False

@@ -10,8 +10,9 @@ pedidos de mentira passam pela decisão de cada uma.
                       hml-20a (decisão I): menos as LEITURAS pelo corpo — { acao: "ler" } na nutricao/financeiro e { action:
                       "minha_evolucao" } na admin-avaliacoes passam; o corpo "disfarçado" (o campo que a função NÃO lê com a
                       leitura), ilegível ou sem a ação segue barrado.
-  e2e/w26/prod.py     eh_escrita: o POST na nutricao e na financeiro é escrita (como o POST em tabela); a leitura passa. hml-20a: o
-                      POST com o corpo { acao: "ler" } é leitura.
+                      W2 (LINUX 3): a mp-conectar-retorno e a mp-contas-renovar (Mercado Pago do personal) gravam sempre.
+  e2e/w26/prod.py     eh_escrita: o POST na nutricao, na financeiro e na mp-contas-renovar (W2) é escrita (como o POST em tabela); a
+                      leitura passa. hml-20a: o POST com o corpo { acao: "ler" } é leitura.
 Uso: python3 e2e/hml19/guarda_teste.py   (sai 1 se algum caso falhar)
 """
 from __future__ import annotations
@@ -89,6 +90,9 @@ def casos_hml17(b) -> list[tuple]:
         ("RPC financeiro_garantir_padroes (nunca do navegador)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/financeiro_garantir_padroes", {})), True),
         ("RPC financeiro_lancamentos (leitura do Financeiro)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/financeiro_lancamentos", {})), False),
         ("PATCH pacientes (as tags, do jeito antigo)", g.escrita(Pedido("PATCH", f"{P}/rest/v1/pacientes?id=eq.x", {"tags": []})), True),
+        # W2 (LINUX 3): as 2 funções novas do Mercado Pago do personal gravam sempre
+        ("mp-contas-renovar (só o pg_cron; grava)", fn("mp-contas-renovar"), True),
+        ("mp-conectar-retorno (a volta do OAuth; grava)", fn("mp-conectar-retorno"), True),
         ("função desconhecida no Treino", fn("funcao-nova", "listar", host=T), True),
         # as de antes: a regra de antes
         ("pagamentos-aluno › prof_resumo (leitura)", fn("pagamentos-aluno", "prof_resumo"), False),
@@ -156,6 +160,9 @@ def casos_hml17(b) -> list[tuple]:
     saida.append(("a nutricao fora das 'conhecidas' (grava sempre)", "nutricao" not in b.FUNCOES_CONHECIDAS, True, ("sim", "não")))
     saida.append(("hml-19d: a financeiro fora das 'conhecidas' e nas que gravam sempre", "financeiro" not in b.FUNCOES_CONHECIDAS
                   and "financeiro" in b.FUNCOES_QUE_SEMPRE_GRAVAM, True, ("sim", "não")))
+    saida.append(("W2: as 2 fora das 'conhecidas' e nas que gravam sempre", all(
+        f not in b.FUNCOES_CONHECIDAS and f in b.FUNCOES_QUE_SEMPRE_GRAVAM for f in ("mp-conectar-retorno", "mp-contas-renovar")),
+        True, ("sim", "não")))
     return saida
 
 
@@ -171,6 +178,9 @@ def casos_w26(w) -> list[tuple]:
         ("w26 · POST financeiro (com query)", e("POST", f"{P}/functions/v1/financeiro?x=1"), True),
         ("w26 · OPTIONS financeiro", e("OPTIONS", f"{P}/functions/v1/financeiro"), False),
         ("w26 · POST financeiro-relatorio (outra função)", e("POST", f"{P}/functions/v1/financeiro-relatorio"), False),
+        # W2 (LINUX 3): a mp-contas-renovar também
+        ("w26 · POST mp-contas-renovar", e("POST", f"{P}/functions/v1/mp-contas-renovar"), True),
+        ("w26 · POST mp-contas-renovar-x (outra função)", e("POST", f"{P}/functions/v1/mp-contas-renovar-x"), False),
         ("w26 · POST em tabela", e("POST", f"{P}/rest/v1/anexos"), True),
         ("w26 · GET em tabela", e("GET", f"{P}/rest/v1/anexos?select=*"), False),
         ("w26 · RPC lixeira_restaurar", e("POST", f"{P}/rest/v1/rpc/lixeira_restaurar"), True),
