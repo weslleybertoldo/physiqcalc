@@ -743,3 +743,23 @@ def test_coxa_vertical_deitado_com_a_pelve_no_chao_e_levantada():
     virado = girar(coxa(deitado, 40), 90, (0, 0, 1))                # o corpo inteiro virado no chão
     assert tc.coxa_vertical(virado) == pytest.approx([40, 40], abs=1e-6)
     assert "coxa_vertical" in tc.MEDIDAS
+
+
+def test_joelho_frente_do_pe_na_linha_de_prumo_da_bola_do_pe():
+    """Bicicleta ergométrica (lote 14): o joelho bem em cima da base dos dedos mede 0; 2 cm à frente +20 e 4 cm atrás −40, nos 2 lados;
+    subir o joelho não muda (é só a distância na horizontal) e o boneco inteiro virado no chão dá o mesmo número."""
+    def joelho_em(j, dy):
+        j = dict(j)
+        for L in ("Left", "Right"):
+            j[L + "Leg"] = j[L + "ToeBase"] + np.array((0.0, -dy, 0.40))       # −Y = frente
+        return j
+
+    j = em_pe()
+    assert tc.joelho_frente_do_pe(joelho_em(j, 0.0)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.joelho_frente_do_pe(joelho_em(j, 0.02)) == pytest.approx([20, 20], abs=1e-6)
+    assert tc.joelho_frente_do_pe(joelho_em(j, -0.04)) == pytest.approx([-40, -40], abs=1e-6)
+    alto = joelho_em(j, 0.02)
+    alto = dict(alto, LeftLeg=alto["LeftLeg"] + np.array((0, 0, 0.1)), RightLeg=alto["RightLeg"] + np.array((0, 0, 0.1)))
+    assert tc.joelho_frente_do_pe(alto) == pytest.approx([20, 20], abs=1e-6)
+    assert tc.joelho_frente_do_pe(girar(joelho_em(j, 0.02), 35, (0, 0, 1))) == pytest.approx([20, 20], abs=1e-6)
+    assert "joelho_frente_do_pe" in tc.MEDIDAS

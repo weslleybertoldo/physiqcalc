@@ -6396,3 +6396,360 @@ def landmine(nome="landmine", pivo=(0.0, 0.0), frente=(0.0, -1.0, 0.0), altura=0
                    raio_presilha=presilha[0] / 2, tubo=(l_ling + fundo, l_ling + c_tubo), raio_tubo=d_fora / 2)
     return Landmine({"base": base, "garfo": garfo, "luva": luv, "barra": bar}, P, f, medidas)
 # ===== fim: Suporte de canto (landmine) =============================================================================================
+
+
+# ===== Bicicleta ergométrica ========================================================================================================
+# ── BICICLETA ERGOMÉTRICA VERTICAL DE ACADEMIA (Bicicleta Ergométrica, lote 14, 12/10/2026) ──────────────────────────────────────────
+# A bicicleta vertical de academia ("upright bike"; a reclinada é outro aparelho): a BASE no chão (2 estabilizadores com os pés
+# reguladores, as rodinhas de transporte na frente e a viga do meio), a CARENAGEM do volante e do freio (o corpo da bicicleta, entre os
+# 2 pedivelas), o TUBO DO SELIM com o CANOTE que sobe e desce (a regulagem de altura, com o pino) e o SELIM (APOIO do glúteo), a COLUNA
+# da frente com o PAINEL, o GUIDÃO (barra de lado a lado com as pontas viradas pra frente e as 2 manoplas de borracha das mãos, preso
+# na coluna por 2 hastes) e o MOVIMENTO CENTRAL com os 2 PEDIVELAS (um a 180° do outro) e os 2 PEDAIS (APOIO dos pés) com a ALÇA
+# por cima do pé.
+# Medidas de fabricante: pedivela de 165 mm, pedal de 16,7 × 14 cm, passagem do quadro (step-over) a 536,9 mm e 105 × 62 × 138 cm no
+# total (Life Fitness Integrity+ Lifecycle Upright Bike, ficha técnica: "Crank size 165mm (6.5")", "Pedal size 6.56" x 5.5" (16.7 cm
+# x 14 cm)", "Step-over height 21.14" (536.9mm)", "Dimensions (L x W x H): 41.5" x 24.5" x 54.5" (105 x 62 x 138 cm)", "Wide,
+# self-leveling pedals with simple buckle straps"; a Vision U60 dá "104 x 65 x 138.3 cm"); distância entre os pedais (Q-factor: entre
+# as faces de fora dos 2 pedivelas, onde o eixo do pedal rosqueia) de 175 mm (Matrix Performance Upright Cycle, ficha de venda:
+# "PEDAL SPACING 17.5 cm / 6.9”"); a geometria põe o joelho em cima do eixo do pedal (Precor UBK 835: "improved knee over pedal
+# spindle geometry"). Escolha da fábrica (nenhum fabricante dá): o pedal lido como 16,7 cm ao longo do pé e 14 cm no eixo, 30 mm de
+# espessura e o corpo dele 12 mm pra fora do pedivela; a forma da carenagem, do selim, da coluna, do painel e do guidão; o tubo do
+# selim a 72° da horizontal. A cena dá a altura do eixo do pedivela, o selim e o guidão: a bicicleta é montada EM VOLTA do corpo,
+# como as outras máquinas (a altura do guidão nenhum fabricante dá: sai das mãos).
+# O que mexe POR QUADRO: os 2 pedivelas giram juntos em volta do eixo do movimento central e cada pedal gira em volta do próprio
+# eixo, seguindo o ângulo do pé — girar(graus, pe_E, pe_D).
+# Uso numa cena (a pessoa olha pra −Y; o eixo do pedivela no meio, x = 0):
+#   bk = e3.bicicleta("bicicleta", eixo=(0.0, 0.29), selim=(y_bico, y_tras, z_topo), guidao=(y, z, x_mao))
+#   bk.alca(s, perfil)                       # a alça do pedal do lado s na forma do pé (perfil da pele medido pela cena; sem ela, sem
+#                                            # alça)
+#   no pose(t): bk.girar(graus, pe_E, pe_D)  # pedivela DIREITO em `graus` (0 = em cima, 90 = na frente, 180 = embaixo), o esquerdo a
+#                                            # 180° dele; cada pedal girado em volta do eixo dele (graus, + = a ponta da frente pra baixo)
+#               bk.pedal(s)                  # centro do eixo do pedal do lado s agora (s = +1 esquerdo, −1 direito)
+#   Cena(pose, bk.equipamentos, pegadas=[(L, ck.Barra(bk.manoplas[s], bk.raio_manopla, bk.meia_manopla, eixo=(0, 0, 1)))],
+#        apoios=bk.apoios)
+# As raízes (a rigidez é por raiz): "<nome>_estrutura" (parada: base, carenagem, tubo e canote do selim, coluna, painel e guidão; não
+# encosta no corpo — as mãos fecham nas manoplas "<nome>_manopla_E/_D", filhas dela, com a origem no meio e o Z local ao longo
+# delas), "<nome>_selim" (parado, APOIO), "<nome>_pedivela" (gira em volta do eixo do movimento central: o eixo, os 2 braços do
+# pedivela e os 2 eixos dos pedais; origem no eixo, X ao longo dele) e "<nome>_pedal_E"/"_D" (cada um anda com a ponta do pedivela e
+# gira em volta do próprio eixo; APOIO do pé: corpo, borracha de cima e alça; origem no meio do eixo do pedal, com os eixos do mundo
+# quando o pedal está deitado). Os apoios têm as quinas chanfradas (corpo do pedal 3 mm, borracha 1,5 mm, alça 1,2 mm: quina viva engana
+# o sinal da medida da zona de apoio). O selim (escolha da fábrica, 20 cm atrás × 6 cm no bico × 20,5 cm, estofado de 38 mm, topo
+# abaulado 12 mm de lado a lado e o bico descendo 12 mm na ponta) é curto e fino de propósito: a coxa do boneco (grossa) cruza por
+# baixo do glúteo e por dentro do estofado quando estica embaixo, e com 38 mm nada da pele fica a mais de 19 mm dentro dele. Peças
+# compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+class Bicicleta:
+    """Bicicleta ergométrica vertical pronta na cena (bicicleta())."""
+
+    def __init__(self, raizes, eixo, pedivela, x_pedal, medidas):
+        self.raizes = raizes                  # {"estrutura", "selim", "pedivela", "pedal_E", "pedal_D"}
+        self.equipamentos = [raizes["estrutura"], raizes["pedivela"]]
+        self.apoios = [raizes["selim"], raizes["pedal_E"], raizes["pedal_D"]]
+        self.pedais = {1: raizes["pedal_E"], -1: raizes["pedal_D"]}
+        self.eixo = Vector(eixo)              # centro do movimento central (mundo)
+        self.c = pedivela                     # comprimento do pedivela (m, do eixo do movimento central ao eixo do pedal)
+        self.x_pedal = x_pedal                # |x| do meio do pedal (e do meio do eixo dele)
+        self.medidas = medidas                # espessura do pedal, topo do pedal, manoplas…: ver bicicleta()
+        self.manoplas = medidas["manoplas"]   # {1: manopla esquerda, -1: direita}
+        self.raio_manopla, self.meia_manopla = medidas["raio_manopla"], medidas["meia_manopla"]
+        self.graus = 0.0                      # pedivela direito (0 = em cima, + = pra frente)
+        self.pe = {1: 0.0, -1: 0.0}           # giro de cada pedal em volta do eixo dele (graus, + = a ponta da frente pra baixo)
+
+    def pedal(self, s, graus=None):
+        """Centro do eixo do pedal do lado s (+1 esquerdo, −1 direito), com o pedivela direito em `graus` (None = agora)."""
+        g = math.radians(self.graus if graus is None else graus)
+        k = -1.0 if s > 0 else 1.0                                # o direito está em `graus`; o esquerdo a 180° dele
+        return self.eixo + Vector((s * self.x_pedal, -k * self.c * math.sin(g), k * self.c * math.cos(g)))
+
+    def girar(self, graus, pe_E=0.0, pe_D=0.0):
+        """Pedivela direito em `graus` (0 = em cima, 90 = na frente, 180 = embaixo; o esquerdo a 180° dele, os 2 juntos em volta do
+        eixo do movimento central) e cada pedal girado em volta do próprio eixo (graus, + = a ponta da frente pra baixo)."""
+        self.graus, self.pe = graus, {1: pe_E, -1: pe_D}
+        self.raizes["pedivela"].matrix_world = Matrix.Translation(self.eixo) @ Matrix.Rotation(math.radians(graus), 4, "X")
+        for s, r in self.pedais.items():
+            r.matrix_world = Matrix.Translation(self.pedal(s)) @ Matrix.Rotation(math.radians(self.pe[s]), 4, "X")
+        bpy.context.view_layer.update()
+
+    def alca(self, s, perfil, y=0.0, largura=0.035, espessura=0.003, folga=0.0015):
+        """Alça do pedal do lado s por cima do pé, na forma da pele: `perfil` = [(x, z), …] da pele de cima do pé na fatia da alça
+        (o z mais alto da pele em cada x, de dentro pra fora do pé), no referencial do pedal (origem no meio do eixo dele, X ao longo
+        do eixo, Z pra cima com o pedal deitado). A alça passa `folga` m acima da pele, desce dos 2 lados do pé e entra 1 cm no pedal,
+        centrada em y (ao longo do pé, + = pro calcanhar), com `largura` × `espessura` (escolha da fábrica: tira de 35 × 3 mm)."""
+        import bmesh
+        topo = self.medidas["topo_pedal"]
+        meia = self.medidas["largura_pedal"] / 2 - 0.006
+        P = sorted((float(x), float(z) + folga) for x, z in perfil)
+        x0, x1 = max(P[0][0] - folga - 0.003, -meia), min(P[-1][0] + folga + 0.003, meia)
+        linha = [Vector((x0, 0.0, topo - 0.010))] + [Vector((x, 0.0, max(z, topo + 0.004))) for x, z in P if x0 < x < x1]
+        linha.append(Vector((x1, 0.0, topo - 0.010)))                 # as 2 pontas entram 1 cm no pedal (longe da sola)
+        meio = Vector(((x0 + x1) / 2, 0.0, topo))
+        fora = []                                                 # normal da linha pra fora do pé (no plano XZ)
+        for i, p in enumerate(linha):
+            a, b = linha[max(i - 1, 0)], linha[min(i + 1, len(linha) - 1)]
+            tg = (b - a).normalized()
+            n = Vector((-tg.z, 0.0, tg.x))
+            fora.append(n if n.dot(p - meio) >= 0 else -n)
+        bm = bmesh.new()
+        faces = {}
+        for lado, dy in (("tras", largura / 2), ("frente", -largura / 2)):
+            faces[lado] = ([bm.verts.new((p.x, y + dy, p.z)) for p in linha],
+                           [bm.verts.new((p.x + n.x * espessura, y + dy, p.z + n.z * espessura)) for p, n in zip(linha, fora)])
+        (dt, ft), (df, ff) = faces["tras"], faces["frente"]
+        for i in range(len(linha) - 1):
+            bm.faces.new((dt[i], dt[i + 1], df[i + 1], df[i]))   # de dentro (pro pé)
+            bm.faces.new((ft[i], ff[i], ff[i + 1], ft[i + 1]))   # de fora
+            bm.faces.new((dt[i], ft[i], ft[i + 1], dt[i + 1]))   # borda de trás
+            bm.faces.new((df[i], df[i + 1], ff[i + 1], ff[i]))   # borda da frente
+        for i in (0, len(linha) - 1):                             # as 2 pontas (no topo do pedal)
+            bm.faces.new((dt[i], df[i], ff[i], ft[i]))
+        _normais_pra_fora(bm)
+        me = bpy.data.meshes.new(self.pedais[s].name + "_alca")
+        bm.to_mesh(me)
+        bm.free()
+        o = bpy.data.objects.new(me.name, me)
+        bpy.context.scene.collection.objects.link(o)
+        me.materials.append(mat_borracha())
+        m = o.modifiers.new("chanfro", "BEVEL")                  # quina viva engana o sinal da medida de apoio (pé embaixo da beirada)
+        m.width = min(0.0012, espessura * 0.4)
+        m.segments = 2
+        m.limit_method = "ANGLE"
+        o.parent = self.pedais[s]                                 # no referencial do pedal (sem inversa: os vértices já são locais)
+        bpy.context.view_layer.update()
+        return o
+
+
+def _normais_pra_fora(bm):
+    """Normais de uma malha FECHADA (bmesh) viradas pra fora: o recalc do bmesh decide o lado por um palpite que erra em peça fina e
+    curva (a alça), e a checagem de apoio lê "dentro" pelo lado da normal; o volume com sinal (soma de centro · normal × área) tem
+    que dar positivo."""
+    import bmesh
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    if sum(f.calc_center_median().dot(f.normal) * f.calc_area() for f in bm.faces) < 0:
+        bmesh.ops.reverse_faces(bm, faces=list(bm.faces))
+
+
+def _convexo(nome, pontos, mat, pai=None, liso=False, chanfro=0.0):
+    """Malha convexa: a casca convexa dos `pontos` (coordenadas da raiz parada; carenagem, braços do pedivela). liso = sombreamento
+    suave; chanfro = bisel nas quinas vivas (as faces planas da casca ficam planas)."""
+    import bmesh
+    bm = bmesh.new()
+    for p in pontos:
+        bm.verts.new(p)
+    bmesh.ops.convex_hull(bm, input=list(bm.verts))
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    _normais_pra_fora(bm)
+    me = bpy.data.meshes.new(nome)
+    bm.to_mesh(me)
+    bm.free()
+    for pl in me.polygons:
+        pl.use_smooth = liso
+    o = bpy.data.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    me.materials.append(mat)
+    if chanfro:
+        m = o.modifiers.new("chanfro", "BEVEL")
+        m.width = chanfro
+        m.segments = 3
+        m.limit_method = "ANGLE"
+    if pai is not None:
+        o.parent = pai
+    return o
+
+
+def _selim_largura(f, larg_tras, larg_bico):
+    """Largura do selim a uma fração f do comprimento (0 = ponta do bico, 1 = traseira)."""
+    return larg_bico + (larg_tras - larg_bico) * min(1.0, max(0.0, (f - 0.15) / 0.50)) ** 0.7
+
+
+def _selim_topo(x, f, z_topo, queda_bico, abaulado, larg_tras):
+    """z do topo do selim em x, a uma fração f do comprimento: plano e nivelado no meio, abaulado
+    de lado a lado e o bico descendo um pouco na ponta."""
+    return z_topo - queda_bico * max(0.0, (0.40 - f) / 0.40) ** 2 - abaulado * (2 * x / larg_tras) ** 2
+
+
+def _arredondado(cx, cz, meia_x, meia_z, raio, n=6, n_reto=0):
+    """Pontos (x, z) de um retângulo de cantos arredondados (seção do selim), no sentido anti-horário; n_reto = pontos a mais no meio
+    do lado de cima e do de baixo (pro topo abaulado do selim ter onde curvar)."""
+    raio = min(raio, meia_x, meia_z)
+    pts = []
+    for qx, qz, a0 in ((1, 1, 0.0), (-1, 1, 90.0), (-1, -1, 180.0), (1, -1, 270.0)):
+        ox, oz = cx + qx * (meia_x - raio), cz + qz * (meia_z - raio)
+        for k in range(n + 1):
+            a = math.radians(a0 + 90.0 * k / n)
+            pts.append((ox + raio * math.cos(a), oz + raio * math.sin(a)))
+        if qz * qx > 0 and n_reto:                            # depois do canto de cima à direita e do de baixo à esquerda
+            x0 = ox
+            for k in range(1, n_reto + 1):
+                pts.append((x0 - qx * 2 * (meia_x - raio) * k / (n_reto + 1), cz + qz * meia_z))
+    return pts
+
+
+def bicicleta(nome="bicicleta", eixo=(0.0, 0.29), pedivela=0.165, q=0.175, pedal=(0.167, 0.140, 0.030), folga_pedal=0.012,
+              selim=(0.03, 0.235, 0.95), selim_forma=(0.20, 0.06, 0.038, 0.012, 0.012), angulo_selim=72.0,
+              guidao=(-0.40, 1.10, 0.215),
+              raio_manopla=0.016, compr_manopla=0.12, meia_guidao=0.27, raio_guidao=0.0135, passagem=0.537,
+              base=(-0.50, 0.42, 0.62), alto_painel=1.38, largura_corpo=0.13):
+    """Bicicleta ergométrica vertical (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y:
+      eixo          = (y, z) do eixo do movimento central (x = 0);
+      pedivela, q   = comprimento do pedivela e distância entre as faces de fora dos 2 pedivelas (Q-factor);
+      pedal         = (comprimento ao longo do pé, largura ao longo do eixo, espessura) do pedal; folga_pedal = do pedivela ao pedal;
+      selim         = (y do bico, y de trás, z do topo) do selim (topo plano e nivelado); selim_forma = (largura atrás, largura do
+                      bico, espessura, quanto o bico desce na ponta, quanto as beiradas de trás descem: o topo é abaulado de lado a
+                      lado, mais alto no meio, embaixo dos ísquios); angulo_selim = tubo do selim × horizontal (graus);
+      guidao        = (y, z, |x| das mãos) do eixo das manoplas; raio_manopla, compr_manopla = as manoplas de borracha; meia_guidao,
+                      raio_guidao = a barra de lado a lado (meio comprimento) e o tubo dela;
+      passagem      = altura do quadro entre o selim e a coluna (step-over); base = (y do estabilizador da frente, y do de trás,
+                      comprimento deles); alto_painel = z do alto do painel; largura_corpo = largura da carenagem (cabe entre os
+                      pedivelas).
+    Devolve uma Bicicleta (raizes, equipamentos, apoios, girar(), pedal(), alca(), manoplas)."""
+    y0, z0 = eixo
+    E = Vector((0.0, y0, z0))
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, sel, ped = raiz_nova("estrutura"), raiz_nova("selim"), raiz_nova("pedivela")
+    pedais = {1: raiz_nova("pedal_E"), -1: raiz_nova("pedal_D")}
+    bpy.context.view_layer.update()
+    rot_x90 = (0, math.radians(90), 0)
+    # ── base: 2 estabilizadores de lado a lado, pés reguladores, rodinhas na frente e a viga do meio ──────────────────────────────────
+    y_f, y_t, larg_base = y0 + base[0], y0 + base[1], base[2]
+    for yb, nm in ((y_f, "frente"), (y_t, "tras")):
+        _viga(nome + "_estabilizador_" + nm, (-larg_base / 2 + 0.012, yb, 0.047), (larg_base / 2 - 0.012, yb, 0.047), 0.085, 0.06,
+              mat_estrutura(), pai=estr)
+        for s in (1, -1):
+            _cilindro(nome + "_pe_%s%+d" % (nm, s), 0.022, 0.016, (s * (larg_base / 2 - 0.035), yb, 0.008), (0, 0, 0), mat_borracha(),
+                      vertices=20, pai=estr)
+            caixa(nome + "_ponteira_%s%+d" % (nm, s), (s * (larg_base / 2 - 0.006), yb, 0.047), (0.012, 0.09, 0.065), mat_borracha(),
+                  pai=estr, chanfro=0.004)
+    for s in (1, -1):
+        _cilindro(nome + "_rodinha%+d" % s, 0.034, 0.024, (s * (larg_base / 2 - 0.035), y_f - 0.06, 0.036), rot_x90, mat_borracha(),
+                  vertices=24, pai=estr)
+    _viga(nome + "_viga", (0.0, y_f, 0.06), (0.0, y_t, 0.06), 0.08, 0.05, mat_estrutura(), pai=estr)
+    # ── carenagem do volante e do freio (entre os pedivelas; a passagem do quadro é o alto dela) ────────────────────────────────────────
+    meia_c, meia_alto = largura_corpo / 2, largura_corpo / 2 - 0.02   # mais fina em cima (a batata da perna passa do lado dela)
+    perfil_c = [(y0 + 0.16, 0.085, meia_c), (y0 + 0.15, 0.30, meia_c), (y0 + 0.07, 0.43, meia_alto), (y0 - 0.02, passagem - 0.035,
+                meia_alto), (y0 - 0.30, passagem, meia_alto), (y0 - 0.42, passagem - 0.05, meia_alto), (y0 - 0.50, 0.36, meia_c),
+                (y0 - 0.50, 0.085, meia_c)]
+    _convexo(nome + "_carenagem", [(sx * mx, yy, zz) for yy, zz, mx in perfil_c for sx in (1, -1)], mat_carenagem(), pai=estr,
+             chanfro=0.018)
+    for s in (1, -1):                                         # tampa redonda do eixo, dos 2 lados (por dentro dos pedivelas)
+        _cilindro(nome + "_tampa_eixo%+d" % s, 0.055, 0.003, (s * (meia_c + 0.0015), y0, z0), rot_x90, mat_estrutura(), vertices=40,
+                  pai=estr)
+    # ── tubo do selim (sai do alto de trás da carenagem), canote com o pino de regulagem e a presilha do selim ───────────────────────────
+    y_bico, y_tras, z_topo = selim
+    larg_tras, larg_bico, esp_sel, queda_bico, abaulado = selim_forma
+    a_s = math.radians(angulo_selim)
+    u_s = Vector((0.0, -math.cos(a_s), -math.sin(a_s)))      # ao longo do tubo, descendo pra frente
+    C = Vector((0.0, y_tras - 0.075, z_topo - esp_sel - 0.022))   # presilha: embaixo da parte larga do selim (atrás das coxas)
+    z_tubo = C.z - 0.13                                       # topo do tubo de fora (o canote aparece acima dele)
+
+    def no_tubo(z):
+        return C + u_s * ((C.z - z) / math.sin(a_s))
+
+    _viga(nome + "_tubo_selim", no_tubo(passagem - 0.06), no_tubo(z_tubo), 0.058, 0.05, mat_estrutura(), pai=estr)
+    _viga(nome + "_canote", no_tubo(z_tubo - 0.06), C, 0.044, 0.036, mat_aco(), pai=estr)
+    tras = Vector((0.0, math.sin(a_s), -math.cos(a_s)))      # ⟂ ao tubo, pra trás
+    pino = no_tubo(z_tubo - 0.03) + tras * 0.025
+    tubo(nome + "_pino", pino, pino + tras * 0.035, 0.007, mat_aco(), pai=estr, vertices=16)
+    tubo(nome + "_pino_bola", pino + tras * 0.033, pino + tras * 0.055, 0.014, mat_borracha(), pai=estr, vertices=20)
+    caixa(nome + "_presilha", (0.0, C.y, (C.z + z_topo - esp_sel + 0.006) / 2), (0.028, 0.06, z_topo - esp_sel + 0.006 - C.z + 0.01),
+          mat_aco(), pai=estr, chanfro=0.004)
+    # ── selim (APOIO): topo plano e nivelado ("Adjust the saddle so that it is level with the floor", ACSM), largo atrás e fino no bico
+    import bmesh
+    L_s = y_tras - y_bico
+    z_fundo = z_topo - esp_sel
+    bm = bmesh.new()
+    secoes = []                                               # seções de lado a lado, do bico (com a ponta arredondada) até atrás
+    fs = [-0.06, -0.025] + [k / 27 for k in range(28)] + [1.025, 1.06]
+    for f in fs:
+        fc = min(1.0, max(0.0, f))
+        encolhe = 1.0 - (0.45 if f in (-0.06, 1.06) else 0.15 if f in (-0.025, 1.025) else 0.0)   # pontas arredondadas
+        w = _selim_largura(fc, larg_tras, larg_bico) * encolhe
+        alto = esp_sel * (0.55 + 0.45 * encolhe)
+        yy = y_bico + f * L_s
+        anel = []
+        c = z_fundo + alto / 2
+        for xx, zz in _arredondado(0.0, c, w / 2, alto / 2, min(0.022, w / 2 - 0.002, alto / 2 - 0.002), n=8, n_reto=11):
+            if zz > c:                                        # metade de cima achatada até o topo desenhado (abaulado, o bico descendo),
+                topo_x = _selim_topo(xx, fc, z_topo, queda_bico, abaulado, larg_tras) - (esp_sel - alto)   # sem cruzar a de baixo
+                zz = c + (zz - c) * max(0.15, (topo_x - c) / (alto / 2))
+            anel.append(bm.verts.new((xx, yy, zz)))
+        secoes.append(anel)
+    for a, b_ in zip(secoes, secoes[1:]):
+        for i in range(len(a)):
+            j = (i + 1) % len(a)
+            bm.faces.new((a[i], a[j], b_[j], b_[i]))
+    for anel in (secoes[0], secoes[-1]):                      # tampas das 2 pontas
+        cv = bm.verts.new(tuple(sum((v.co for v in anel), Vector()) / len(anel)))
+        for i in range(len(anel)):
+            bm.faces.new((anel[i], anel[(i + 1) % len(anel)], cv))
+    _normais_pra_fora(bm)
+    me = bpy.data.meshes.new(nome + "_selim_estofado")
+    bm.to_mesh(me)
+    bm.free()
+    for pl in me.polygons:
+        pl.use_smooth = True
+    o = bpy.data.objects.new(me.name, me)
+    bpy.context.scene.collection.objects.link(o)
+    me.materials.append(mat_estofado())
+    o.parent = sel
+    # ── coluna da frente, painel e guidão ───────────────────────────────────────────────────────────────────────────────────────────
+    y_g, z_g, x_mao = guidao
+    a_p = math.radians(28)                                    # painel virado pra quem pedala (topo pra frente)
+    u_p = Vector((0.0, -math.sin(a_p), math.cos(a_p)))        # ao longo do painel, pra cima
+    n_p = Vector((0.0, math.cos(a_p), math.sin(a_p)))         # normal da tela (pra quem pedala)
+    alto_p, larg_p, esp_p = 0.26, 0.42, 0.075
+    centro_p = Vector((0.0, y_g - 0.17, alto_painel - u_p.z * alto_p / 2 - n_p.z * esp_p / 2 - 0.004))
+    caixa(nome + "_painel", centro_p, (larg_p, esp_p, alto_p), mat_carenagem(), rot=(a_p, 0, 0), pai=estr, chanfro=0.02)
+    caixa(nome + "_painel_tela", centro_p + n_p * (esp_p / 2 + 0.001) + u_p * 0.02, (0.30, 0.004, 0.15), mat_borracha(), rot=(a_p, 0, 0),
+          pai=estr, chanfro=0.003)
+    topo_coluna = centro_p - u_p * (alto_p / 2 - 0.03) - n_p * 0.01
+    pe_coluna = Vector((0.0, y0 - 0.38, passagem - 0.04))
+    _viga(nome + "_coluna", pe_coluna, topo_coluna, 0.09, 0.07, mat_estrutura(), pai=estr)
+    # guidão: barra de lado a lado com as pontas viradas pra frente e pra cima ("race"), presa no painel por 2 hastes
+    pontos = [(meia_guidao - 0.02, y_g - 0.13, z_g + 0.06), (meia_guidao, y_g, z_g), (-meia_guidao, y_g, z_g),
+              (-meia_guidao + 0.02, y_g - 0.13, z_g + 0.06)]
+    _em_aneis(_tubo_caminho(nome + "_guidao", _dobrar(pontos, 0.06, n=6), raio_guidao, mat_estrutura(), pai=estr, lados=16),
+              passo=0.03)
+    for s in (1, -1):
+        a = Vector((s * 0.09, y_g, z_g))
+        b = Vector((s * 0.07, centro_p.y + 0.02, centro_p.z - u_p.z * alto_p / 2 + 0.03))
+        _em_aneis(tubo(nome + "_haste%+d" % s, a, b, 0.012, mat_estrutura(), pai=estr, vertices=16), passo=0.03)
+    manoplas = {}
+    for s, lado in ((1, "E"), (-1, "D")):
+        manoplas[s] = _em_aneis(tubo(nome + "_manopla_" + lado, (s * x_mao - compr_manopla / 2, y_g, z_g),
+                                     (s * x_mao + compr_manopla / 2, y_g, z_g), raio_manopla, mat_borracha(), pai=estr, vertices=32),
+                                passo=0.03)
+    # ── movimento central: eixo, 2 pedivelas (o direito pra cima na montagem) e os eixos dos pedais (raiz "pedivela", origem no eixo) ──
+    face = q / 2                                              # face de fora do pedivela (onde rosqueia o pedal)
+    esp_braco = 0.018
+    x_pedal = face + folga_pedal + pedal[1] / 2
+    _cilindro(nome + "_eixo", 0.014, 2 * (face - esp_braco) + 0.004, (0, 0, 0), rot_x90, mat_aco(), vertices=24, pai=ped)
+    for s in (1, -1):
+        k = -1.0 if s > 0 else 1.0                            # direito (s = −1) pra cima, esquerdo pra baixo
+        xm = s * (face - esp_braco / 2)
+        braco = []
+        for zz, r in ((0.0, 0.024), (k * pedivela, 0.017)):
+            for a in range(0, 360, 20):
+                for dx in (-esp_braco / 2, esp_braco / 2):
+                    braco.append((xm + dx, r * math.cos(math.radians(a)), zz + r * math.sin(math.radians(a))))
+        _convexo(nome + "_pedivela%+d" % s, braco, mat_aco(), pai=ped, chanfro=0.003)
+        _cilindro(nome + "_eixo_pedal%+d" % s, 0.0075, folga_pedal + pedal[1] - 0.004, (s * (face + (folga_pedal + pedal[1] - 0.004) / 2),
+                  0, k * pedivela), rot_x90, mat_aco(), vertices=16, pai=ped)
+        _cilindro(nome + "_porca%+d" % s, 0.026, 0.004, (s * (face + 0.002), 0, 0), rot_x90, mat_aco(), vertices=32, pai=ped)
+    # ── pedais (APOIO): corpo com chanfro, borracha de cima; origem no meio do eixo do pedal ──────────────────────────────────────────
+    comp_p, larg_p_, esp_ped = pedal
+    for s, r in pedais.items():
+        caixa(nome + "_pedal_corpo%+d" % s, (0, 0, -0.002), (larg_p_, comp_p, esp_ped - 0.004), mat_estrutura(), pai=r, chanfro=0.003)
+        caixa(nome + "_pedal_borracha%+d" % s, (0, 0, esp_ped / 2 - 0.002), (larg_p_ - 0.012, comp_p - 0.012, 0.004), mat_borracha(),
+              pai=r, chanfro=0.0015)
+    medidas = dict(manoplas=manoplas, raio_manopla=raio_manopla, meia_manopla=compr_manopla / 2, topo_pedal=esp_ped / 2,
+                   largura_pedal=larg_p_, comprimento_pedal=comp_p, face=face, guidao=(y_g, z_g), painel=centro_p,
+                   selim=(y_bico, y_tras, z_topo))
+    bk = Bicicleta({"estrutura": estr, "selim": sel, "pedivela": ped, "pedal_E": pedais[1], "pedal_D": pedais[-1]}, E, pedivela,
+                   x_pedal, medidas)
+    bk.girar(0.0)
+    return bk
+# ===== fim: Bicicleta ergométrica ===================================================================================================

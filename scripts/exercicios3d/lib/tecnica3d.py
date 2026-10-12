@@ -750,3 +750,20 @@ def coxa_vertical(j):
 
 
 MEDIDAS.update({"coxa_vertical": coxa_vertical})
+
+
+# ── bicicleta ergométrica (lote 14, 12/10/2026): o recuo do selim põe o joelho em cima do eixo do pedal com o pedivela na frente — a
+# linha de prumo do joelho passa pela bola do pé (HSS, How to Set Up an Exercise Bike: "imagine there's a straight line from your front
+# knee right down to the middle of the pedal, which should be right in line with the ball of your foot"; Tang et al. 2022, Int J Environ
+# Res Public Health 19(19):12046: o "knee forward of foot" (KFOF) é "the vertical projection distance of the knee joint to the fifth
+# metatarsal head at 90° of the pedaling cycle"). O joelho_alem_dos_dedos mede contra a PONTA dos dedos, ao longo do pé.
+def joelho_frente_do_pe(j):
+    """Centro do joelho à frente (+) ou atrás (−) da base dos dedos (cabeça do ToeBase: a bola do pé), na horizontal, ao longo da frente
+    da pelve, mm [E, D]: 0 = o joelho na linha de prumo da bola do pé (o KFOF do bike fit, medido com o pedivela na frente). Subir ou
+    descer o joelho não muda o número; no referencial da pelve, no plano do chão: vale sentado ou em pé, virado pra qualquer lado."""
+    _, frente = eixos_pelve(j)
+    return [float((j[L + "Leg"] - j[L + "ToeBase"]) @ frente) * 1000 for L, _ in LADOS]
+
+
+MEDIDAS.update({"joelho_frente_do_pe": joelho_frente_do_pe})
+UNIDADE.update({"joelho_frente_do_pe": "mm"})

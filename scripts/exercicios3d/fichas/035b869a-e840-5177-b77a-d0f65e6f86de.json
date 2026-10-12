@@ -1,0 +1,346 @@
+{
+  "uuid": "035b869a-e840-5177-b77a-d0f65e6f86de",
+  "nome": "Bicicleta Ergométrica",
+  "cena": "bicicleta_ergometrica",
+  "grupo": "Cardio",
+  "subgrupo": "Cardiorrespiratório · quadríceps · glúteo",
+  "padrao_movimento": "cardio",
+  "equipamento": "cardio",
+  "variacao": "sentado",
+  "alvos": [
+    "quadriceps",
+    "gluteo"
+  ],
+  "auxiliares": [
+    "posterior",
+    "panturrilha"
+  ],
+  "camera": {
+    "az": 75,
+    "el": 8,
+    "dist": 4.0,
+    "alvo": [
+      0,
+      -0.12,
+      0.92
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.4,
+    "alvo": [
+      0,
+      -0.12,
+      0.92
+    ]
+  },
+  "ida_s": 0.857,
+  "fps": 28,
+  "ciclo": true,
+  "ciclo_motivo": "Bicicleta: o movimento é cíclico (a volta do pedivela se repete) — t = 0 → 1 é UMA volta (t = 0 pedivela direito em cima, 0,25 na frente, 0,5 embaixo, 0,75 atrás) e a pose em t = 1 é igual à de t = 0; o app repete o ciclo (LoopRepeat) em vez de ir e voltar, o que faria a bicicleta pedalar pra trás. ida_s = 0,857 s = 1 volta a 70 rpm e fps = 28 (24 quadros na volta): a bola do pé anda num círculo de 165 mm (o pedivela) e a ponta dos dedos e o calcanhar um pouco mais; o maior salto entre 2 quadros foi medido em 49 mm (com os 16 quadros/s do padrão seriam 14 quadros na volta e, pela mesma conta, ~84 mm, acima da regra de 80 mm; a regra continua a mesma, só tem mais quadros no mesmo 0,857 s).",
+  "movimento": "Pedalando sentado na bicicleta ergométrica vertical em ritmo moderado (70 rpm), com o selim regulado pra o joelho ficar só um pouco dobrado (~38°) com o pedal lá embaixo e o joelho em cima do eixo do pedal com o pedivela na frente: o tronco um pouco inclinado à frente (~17°) com a coluna neutra, as mãos fechadas na barra de cima do guidão com os cotovelos levemente dobrados e a bola do pé em cima do eixo do pedal, presa pela alça; os pedais dão a volta e as pernas sobem e descem alternadas (uma a meia volta da outra), o tornozelo acompanhando (o calcanhar mais baixo na frente e a ponta do pé mais baixa embaixo e atrás), com o quadril parado no selim.",
+  "cinesiologia": {
+    "plano": "sagital, cíclico, alternado (cadeia fechada: os pés presos nos pedais), sentado",
+    "articulacoes": "quadril (extensão na descida do pedal, flexão na subida), joelho (extensão na descida, flexão na subida), tornozelo (flexão plantar na descida, dorsiflexão no alto); tronco, braços e mãos parados no guidão",
+    "agonistas": "quadríceps (extensão do joelho na descida do pedal) e glúteo máximo (extensão do quadril)",
+    "sinergistas": "isquiotibiais (extensão do quadril e flexão do joelho na volta), gastrocnêmio e sóleo (transmitem a força pro pedal)",
+    "estabilizadores": "abdominais e eretores da espinha (tronco parado), tibial anterior (puxa a ponta do pé no alto), músculos do ombro e do antebraço (mãos no guidão)",
+    "fases": "descida do pedal (do alto até embaixo: o quadril e o joelho estendem) e subida (de baixo até o alto: o quadril e o joelho dobram), uma perna a 180° da outra"
+  },
+  "referencias": [
+    "free-exercise-db (yuhonas, domínio público), \"Bicycling, Stationary\" (o fonte_en do catálogo), lido em 11/10/2026: \"To begin, seat yourself on the bike and adjust the seat to your height.\"; \"The handles can be used to monitor your heart rate to help you stay at an appropriate intensity.\"; \"primaryMuscles\": [\"quadriceps\"], \"secondaryMuscles\": [\"calves\", \"glutes\", \"hamstrings\"]. A reclinada é outro exercício no mesmo banco (\"Recumbent Bike\"): o fonte_en é a VERTICAL, sentado.",
+    "ExRx, Cycle Ergometer (Aerobic › Upright Cycle; cópia do Internet Archive de 20/04/2021): \"Sit on upright cycle seat with feet on pedals and grasp handle bars.\"; \"Adjust seat so knees are just short of full extension.\"; \"Force (Articulation)\": \"Dynamic: Hip Extension; Knee Extension\" · \"Static: Ankle Plantar Flexion\".",
+    "ACSM Information On… Selecting and Effectively Using a Stationary Bicycle (folheto, 2011): \"Exercisers may choose the standard upright bicycle or semi-recumbent (sitting) bicycle.\"; \"Adjust the saddle so that it is level with the floor.\"; \"They provide low-impact cardiovascular exercise\".",
+    "Bini R, Hume PA, Croft JL. Effects of bicycle saddle height on knee injury risk and cycling performance. Sports Med. 2011;41(6):463-476. doi:10.2165/11588740-000000000-00000: \"we suggest the saddle height may be set using the knee flexion angle method (25-30°)\" (Holmes: \"the knee angle flexed when the pedal is at the bottom dead centre and the cyclist is seated on the saddle\", medido PARADO); \"Typical ranges of motion of these joints in the sagittal plane are 45° for hip angle (from the thigh parallel to the horizontal axis), 75° for knee angle (25-100° of knee flexion angle), and 20° for ankle angle (about ±10° from the neutral ankle position).\"; \"Increasing ankle plantar flexion results in higher knee flexion angle.\"",
+    "Bini RR, Hume P. A comparison of static and dynamic measures of lower limb joint angles in cycling: application to bicycle fitting. Hum Mov. 2016;17(1):36-42. doi:10.1515/humo-2016-0005 — 30 ciclistas, \"Freely chosen pedalling cadence was 85 ± 11 rpm\"; Tabela 2 (parado S / pedalando D): \"Knee angle\" 62/63 a 3 h e 30/38 a 6 h; \"Differences between static and dynamic angles were large at the 6 o’clock crank position with greater mean hip angle (4.9 ± 3°), smaller knee angle (8.2 ± 5°) and smaller ankle angle (8.2 ± 5.3°) for static angles.\"",
+    "Swart J, Holliday W. Cycling Biomechanics Optimization—the (R) Evolution of Bicycle Fitting. Curr Sports Med Rep. 2019;18(12):490-496 (resumo): \"Optimal KFA using dynamic measurements should range from 33° to 43° at low intensity to 30° to 40° at high intensity when measured at the bottom dead center crank position.\"",
+    "Ericson MO, Nisell R, Németh G. Joint Motions of the Lower Limb during Ergometer Cycling. J Orthop Sports Phys Ther. 1988;9(8):273-278. doi:10.2519/jospt.1988.9.8.273 (resumo; bicicleta ERGOMÉTRICA): \"The mean hip range of motion (ROM) during normal cycling was 38 degrees ranging from 32-70 degrees hip flexion. The mean knee ROM was 66 degrees ranging from 46-112 degrees knee flexion, and the ankle ROM was 24 degrees ranging from 2 degrees plantarflexion to 22 degrees dorsiflexion.\"; \"different pedaling rates did not significantly change the lower limb joint motions\".",
+    "Hospital for Special Surgery, How to Set Up an Exercise (or Spin) Bike Properly (Aaron Karp, 21/12/2020): \"imagine there's a straight line from your front knee right down to the middle of the pedal, which should be right in line with the ball of your foot\"; \"Sit up straight, extend your arms straight out in front of you so they're parallel to the ground, then hinge forward slightly with your spine neutral.\"; \"If your back starts to round, your handlebars are too low.\"; \"Your elbows should be slightly bent and your shoulders away from your ears as much as possible.\"; \"You also want your knees to be tracking over the middle of your feet\".",
+    "Tang CK et al. Effects of Different Pedaling Positions on Muscle Usage and Energy Expenditure in Amateur Cyclists. Int J Environ Res Public Health. 2022;19(19):12046 (PMC9564475): \"The parameter ‘knee forward of foot’ (KFOF) is defined as the vertical projection distance of the knee joint to the fifth metatarsal head at 90° of the pedaling cycle.\"; \"extreme pedaling positions away from the vertical line, such as KFOF at +20 mm or −40 mm, would be prone to resulting in muscle fatigue or increased muscle usage and increased energy expenditure\"; \"At 90° of the pedaling cycle, the knee flexion angle is around 63 degrees\"; \"the VM muscle is a key muscle for pedaling capability\"; músculos medidos: \"vastus lateralis (VL), vastus medialis (VM), semimembranosus (SEMI), biceps femoris (BF), gluteus maximus (GM), tensor fascia lata (TFL), medial gastrocnemius (MG), and tibialis anterior (TA)\".",
+    "Marsh AP, Martin PE. Effect of cycling experience, aerobic power, and power output on preferred and most economical cycling cadences. Med Sci Sports Exerc. 1997;29(9):1225-1232 (resumo): \"the less-trained group ... selected lower cadences at all common power outputs and reduced cadence from approximately 80 rpm at 75 W to 65 rpm at 175 W\"; \"Cyclists and runners ... maintained PC between 90 and 100 rpm at all power outputs\" — a cadência de 70 rpm (moderada, de quem não é ciclista).",
+    "Life Fitness — Integrity+ Lifecycle Upright Bike e Integrity Series Lifecycle Upright Exercise Bike (fichas técnicas): \"Crank size 165mm (6.5\\\")\", \"Pedal size 6.56\\\" x 5.5\\\" (16.7 cm x 14 cm)\", \"Step-over height 21.14\\\" (536.9mm)\", \"Dimensions (L x W x H): 41.5\\\" x 24.5\\\" x 54.5\\\" (105 x 62 x 138 cm)\", \"Wide, self-leveling pedals with simple buckle straps\", \"Riding Variety: In-saddle only\" — as medidas da bicicleta (equip3d.bicicleta). Vision Fitness U60 (folheto): \"104 x 65 x 138.3 cm\". Precor UBK 835: \"improved knee over pedal spindle geometry\", \"Dimensions (L x W x H): 48 x 21 x 62 in / 122 x 53 x 157 cm\".",
+    "Matrix Fitness — Performance Upright Cycle, ficha de venda (U-PS-TOUCH): \"PEDAL SPACING 17.5 cm / 6.9”\", \"HANDLEBAR DESIGN Custom-molded, racing design with elbow support\" — a distância entre os pedais (Q-factor) da bicicleta."
+  ],
+  "checagens": {
+    "pes_no_chao": false,
+    "pes_no_chao_fonte": "Os pés ficam nos pedais, não no chão (ExRx: \"Sit on upright cycle seat with feet on pedals and grasp handle bars.\"): a bola do pé em cima do eixo do pedal (HSS) e presa pela alça (Life Fitness: \"self-leveling pedals with simple buckle straps\"); as zonas abaixo medem a sola encostando no pedal em todo quadro e o glúteo no selim (o quadril parado nele).",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "As regras padrão são de base parada com os 2 pés no chão (pés paralelos, um não à frente do outro); na bicicleta os pés estão nos pedais, um a meia volta do outro, a ~1,55× a largura do quadril (Q-factor 175 mm + pedal de 14 cm). As regras da bicicleta estão nos ângulos abaixo (joelho na linha do pé, coluna neutra, pelve parada).",
+    "zonas": [
+      {
+        "nome": "pé esquerdo no pedal",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "equipamento": "bicicleta_pedal_E",
+        "mm": [
+          -3,
+          3
+        ],
+        "t": "todos"
+      },
+      {
+        "nome": "pé direito no pedal",
+        "partes": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "equipamento": "bicicleta_pedal_D",
+        "mm": [
+          -3,
+          3
+        ],
+        "t": "todos"
+      },
+      {
+        "nome": "glúteo no selim (sentado, o quadril parado)",
+        "partes": [
+          "Hips"
+        ],
+        "equipamento": "bicicleta_selim",
+        "mm": [
+          -12,
+          1
+        ],
+        "t": "todos"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "joelho só um pouco dobrado com o pedal embaixo (esquerdo)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          33,
+          43
+        ],
+        "fonte": "Swart & Holliday 2019 (\"Optimal KFA using dynamic measurements should range from 33° to 43° at low intensity\", pedalando, com o pedal embaixo); Bini & Hume 2016 (6 h: 38 pedalando × 30 parado, \"smaller knee angle (8.2 ± 5°)\" parado) — é a regulagem \"25-30°\" de Bini 2011, medida parado"
+      },
+      {
+        "nome": "joelho só um pouco dobrado com o pedal embaixo (direito)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": 0.5,
+        "graus": [
+          33,
+          43
+        ],
+        "fonte": "Swart & Holliday 2019 (\"Optimal KFA using dynamic measurements should range from 33° to 43° at low intensity\", pedalando, com o pedal embaixo); Bini & Hume 2016 (6 h: 38 pedalando × 30 parado, \"smaller knee angle (8.2 ± 5°)\" parado) — é a regulagem \"25-30°\" de Bini 2011, medida parado"
+      },
+      {
+        "nome": "joelho com o pedivela na frente, 3 h (direito)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": 0.25,
+        "graus": [
+          60,
+          75
+        ],
+        "fonte": "Bini & Hume 2016 (3 h: \"Knee angle\" 63 pedalando); Tang 2022 (\"At 90° of the pedaling cycle, the knee flexion angle is around 63 degrees\"). O boneco dá ~72° com o joelho a 38° embaixo e em cima do eixo do pedal na frente (a canela dele, 0,438 m, é mais comprida que a coxa, 0,425 m): faixa larga de propósito, ver o relatório"
+      },
+      {
+        "nome": "joelho com o pedivela na frente, 3 h (esquerdo)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 0.75,
+        "graus": [
+          60,
+          75
+        ],
+        "fonte": "Bini & Hume 2016 (3 h: \"Knee angle\" 63 pedalando); Tang 2022 (\"At 90° of the pedaling cycle, the knee flexion angle is around 63 degrees\"). O boneco dá ~72° com o joelho a 38° embaixo e em cima do eixo do pedal na frente (a canela dele, 0,438 m, é mais comprida que a coxa, 0,425 m): faixa larga de propósito, ver o relatório"
+      },
+      {
+        "nome": "joelho bem dobrado com o pedal em cima (direito)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          100,
+          118
+        ],
+        "fonte": "Ericson 1988, ergômetro (\"46-112 degrees knee flexion\"); Bini 2011 (\"75° for knee angle (25-100° of knee flexion angle)\", parado): o joelho vai de ~35° a ~114° na volta (amplitude ~79°)"
+      },
+      {
+        "nome": "joelho bem dobrado com o pedal em cima (esquerdo)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 0.5,
+        "graus": [
+          100,
+          118
+        ],
+        "fonte": "Ericson 1988, ergômetro (\"46-112 degrees knee flexion\"); Bini 2011 (\"75° for knee angle (25-100° of knee flexion angle)\", parado): o joelho vai de ~35° a ~114° na volta (amplitude ~79°)"
+      },
+      {
+        "nome": "joelho em cima do eixo do pedal com o pedivela na frente (direito)",
+        "medida": "joelho_frente_do_pe",
+        "lado": "D",
+        "t": 0.25,
+        "mm": [
+          -20,
+          20
+        ],
+        "fonte": "HSS (\"imagine there's a straight line from your front knee right down to the middle of the pedal, which should be right in line with the ball of your foot\"); Precor UBK 835 (\"knee over pedal spindle geometry\"); Tang 2022 (KFOF = \"the vertical projection distance of the knee joint to the fifth metatarsal head at 90° of the pedaling cycle\"; \"KFOF at +20 mm or −40 mm\" extremos)"
+      },
+      {
+        "nome": "joelho em cima do eixo do pedal com o pedivela na frente (esquerdo)",
+        "medida": "joelho_frente_do_pe",
+        "lado": "E",
+        "t": 0.75,
+        "mm": [
+          -20,
+          20
+        ],
+        "fonte": "HSS (\"imagine there's a straight line from your front knee right down to the middle of the pedal, which should be right in line with the ball of your foot\"); Precor UBK 835 (\"knee over pedal spindle geometry\"); Tang 2022 (KFOF = \"the vertical projection distance of the knee joint to the fifth metatarsal head at 90° of the pedaling cycle\"; \"KFOF at +20 mm or −40 mm\" extremos)"
+      },
+      {
+        "nome": "coxa pouco abaixo da horizontal com o pedal em cima (direito)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          15,
+          30
+        ],
+        "fonte": "Bini 2011 (\"45° for hip angle (from the thigh parallel to the horizontal axis)\"): a coxa vai de ~21° a ~66° abaixo da horizontal na volta"
+      },
+      {
+        "nome": "coxa pouco abaixo da horizontal com o pedal em cima (esquerdo)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "E",
+        "t": 0.5,
+        "graus": [
+          15,
+          30
+        ],
+        "fonte": "Bini 2011 (\"45° for hip angle (from the thigh parallel to the horizontal axis)\"): a coxa vai de ~21° a ~66° abaixo da horizontal na volta"
+      },
+      {
+        "nome": "coxa descendo com o pedal embaixo (esquerdo)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          58,
+          72
+        ],
+        "fonte": "Bini 2011 (\"45° for hip angle (from the thigh parallel to the horizontal axis)\"): a coxa vai de ~21° a ~66° abaixo da horizontal na volta"
+      },
+      {
+        "nome": "coxa descendo com o pedal embaixo (direito)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "D",
+        "t": 0.5,
+        "graus": [
+          58,
+          72
+        ],
+        "fonte": "Bini 2011 (\"45° for hip angle (from the thigh parallel to the horizontal axis)\"): a coxa vai de ~21° a ~66° abaixo da horizontal na volta"
+      },
+      {
+        "nome": "tornozelo de 2° de flexão plantar a 22° de dorsiflexão na volta",
+        "medida": "tornozelo",
+        "t": "todos",
+        "graus": [
+          72,
+          100
+        ],
+        "fonte": "Ericson 1988, ergômetro (\"the ankle ROM was 24 degrees ranging from 2 degrees plantarflexion to 22 degrees dorsiflexion\"); Bini 2011 (\"20° for ankle angle (about ±10° from the neutral ankle position)\"). O boneco em pé (tornozelo neutro) mede 76°: −2° a +22° = 74° a 98°"
+      },
+      {
+        "nome": "joelho na linha do pé (sem entrar nem abrir)",
+        "medida": "joelho_valgo",
+        "t": "todos",
+        "mm": [
+          -15,
+          15
+        ],
+        "fonte": "HSS (\"You also want your knees to be tracking over the middle of your feet\"): o joelho anda no plano quadril–tornozelo"
+      },
+      {
+        "nome": "tronco um pouco inclinado à frente",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          12,
+          25
+        ],
+        "fonte": "HSS (\"Sit up straight ... then hinge forward slightly with your spine neutral\"); free-exercise-db, foto 0 (tronco quase em pé, um pouco à frente — observação, não frase)"
+      },
+      {
+        "nome": "coluna neutra",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "HSS (\"hinge forward slightly with your spine neutral\"; \"If your back starts to round, your handlebars are too low.\")"
+      },
+      {
+        "nome": "cotovelos levemente dobrados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          15,
+          35
+        ],
+        "fonte": "HSS (\"Your elbows should be slightly bent\")"
+      },
+      {
+        "nome": "quadril parado no selim: pelve nivelada",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -1,
+          1
+        ],
+        "fonte": "Pedido (\"sem o quadril balançar no selim\"); HSS (\"your spine is relatively straight, your core is engaged\"). Nenhuma fonte lida fala em graus: a pelve fica parada"
+      },
+      {
+        "nome": "quadril parado no selim: pelve sem girar",
+        "medida": "pelve_giro",
+        "t": "todos",
+        "graus": [
+          -1,
+          1
+        ],
+        "fonte": "Pedido (\"sem o quadril balançar no selim\"); HSS (\"your core is engaged\")"
+      },
+      {
+        "nome": "tronco sem torcer",
+        "medida": "tronco_giro",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "HSS (\"your spine is relatively straight, your core is engaged\")"
+      }
+    ]
+  }
+}
