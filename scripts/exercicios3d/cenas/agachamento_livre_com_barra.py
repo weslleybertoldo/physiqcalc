@@ -51,6 +51,13 @@ def montar(bon):
         """Põe as mãos na barra: IK → congela em FK → gira o antebraço (palma pra barra) → corrige o punho."""
         eixo = (R @ Vector((1, 0, 0))).normalized()
         for lado, s in (("Left", 1), ("Right", -1)):
+            # 12/10/2026 (o zerar do maos3d.Maos.segurar): braço, antebraço e mão voltam pro repouso antes da pegada, e a mão de novo
+            # antes do passo 1 de cada volta. Sem isso o IK partia da pose do quadro anterior e o passo 1 media a palma da mão ainda
+            # virada por ela: o antebraço direito girava −4,2° por quadro no próprio eixo (101° na descida) com a mão parada na barra
+            # e o punho torcia junto
+            for nm in ("Arm", "ForeArm", "Hand"):
+                PB[p3.P + lado + nm].matrix_basis = Matrix()
+            p3.atualizar()
             g = centro + eixo * (s * GRIP_X)
             alvo = g + R @ Vector((0, 0.012, -PALMA * 0.92))
             for _ in range(4):
@@ -63,6 +70,8 @@ def montar(bon):
                 for n, M in zip(nomes, mats):
                     PB[p3.P + n].matrix = M
                     p3.atualizar()
+                PB[p3.P + lado + "Hand"].matrix_basis = Matrix()   # (12/10) a mão solta de novo: o passo 1 mede a palma do antebraço
+                p3.atualizar()
                 # mão no agachamento: atrás da barra, dedos pra cima, palma de frente e linha dos nós ao longo da barra
                 # (03/10 00:55: a versão anterior deixava o punho dobrado 150° — mão virada pra baixo)
                 dedos_q = R @ Vector((0, 0.12, 1)).normalized()

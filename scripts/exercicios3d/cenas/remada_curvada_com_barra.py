@@ -59,7 +59,10 @@ def montar(bon):
         p3.atualizar()
         for lado, s in (("Left", 1), ("Right", -1)):
             g = centro + Vector((s * GRIP_X, 0, 0))
-            maos.segurar(lado, g, DEDOS_Q, PALMA_Q, polo=S[lado] + Vector((s * POLO_FORA, 0.45, 0.55)), alinhar=0.5)
+            # zerar (12/10/2026): o braço parte do repouso em todo quadro; sem isso o antebraço girava ~50° no próprio eixo na
+            # puxada (até 3° por quadro no fim, com o punho dobrado) com a mão parada na barra e o punho torcia ~47° de volta
+            maos.segurar(lado, g, DEDOS_Q, PALMA_Q, polo=S[lado] + Vector((s * POLO_FORA, 0.45, 0.55)), alinhar=0.5,
+                         zerar=True)
         for lado in ("Left", "Right"):               # dedos e polegar fecham até a pele encostar na barra
             antes = pose.dedos.get(lado, {}).get("Thumb") if t > 0 else None
             pose.dedos[lado] = pg.fechar_em_volta(bon, lado, centro, Vector((1, 0, 0)), RAIO_BARRA,

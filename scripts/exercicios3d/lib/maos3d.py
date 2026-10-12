@@ -28,11 +28,21 @@ class Maos:
             self.furo[lado] = p3.mundo_osso(rig, lado + "Hand").inverted() @ g
         self.erro, self.punho = {}, {}
 
-    def segurar(self, lado, g, dedos_q, palma_q, polo=None, voltas=5, alinhar=0.0):
+    def segurar(self, lado, g, dedos_q, palma_q, polo=None, voltas=5, alinhar=0.0, zerar=False):
         """Mão `lado` com o vão em g (ponto do eixo da barra), dedos pra `dedos_q` e palma pra `palma_q` (mundo).
         alinhar (0–1): quanto os dedos seguem o antebraço em vez de `dedos_q` — menos punho dobrado quando o
         antebraço inclina (ex.: remada em cima)."""
         rig, PB = self.rig, self.rig.pose.bones
+        # zerar (12/10/2026, conserto do giro do antebraço): braço, antebraço e mão voltam pro repouso ANTES de tudo, como o
+        # Agachamento Frontal faz antes de chamar o segurar() (e o Encolhimento com Barra, com a mão), e a mão volta de novo antes
+        # do passo 1 de cada volta (o trecho no laço). Sem isso o passo 1 mede a palma da mão que a chamada (ou a volta) anterior
+        # já virou: o giro que sobra passa adiante e o antebraço anda no próprio eixo com a mão parada na barra (Agachamento no
+        # Smith −5° por quadro, Elevação Pélvica dando a volta inteira; zerando só aqui, a Elevação ainda pulava ~10° quando o
+        # laço mudava de 5 pra 4 voltas). Padrão False: nada muda nas cenas que não pedem.
+        if zerar:
+            for n in ("Arm", "ForeArm", "Hand"):
+                PB[p3.P + lado + n].matrix_basis = Matrix.Identity(4)
+            p3.atualizar()
         dedos_q = Vector(dedos_q).normalized()
         palma_q = Vector(palma_q)
         palma_q = (palma_q - dedos_q * palma_q.dot(dedos_q)).normalized()
@@ -50,6 +60,9 @@ class Maos:
             self.iks[lado].mute = True
             for n, M in zip(nomes, mats):
                 PB[p3.P + n].matrix = M
+                p3.atualizar()
+            if zerar:                                   # zerar: a mão solta de novo, pro passo 1 medir a palma do antebraço
+                PB[p3.P + lado + "Hand"].matrix_basis = Matrix.Identity(4)
                 p3.atualizar()
             f0, f1 = p3.cabeca(rig, lado + "ForeArm"), p3.cabeca(rig, lado + "Hand")
             ax = (f1 - f0).normalized()                 # 1) antebraço gira (pronação/supinação) pra palma

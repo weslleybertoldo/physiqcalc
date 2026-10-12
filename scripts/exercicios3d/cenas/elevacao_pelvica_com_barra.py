@@ -147,8 +147,10 @@ def montar(bon):
             S = p3.cabeca(rig, lado + "Arm")
             polo = S + Vector((s * 0.4, 0, 0)) + frente * 0.1 - cima * 0.3     # cotovelo pra fora, longe do banco
             # vão da mão 4 mm pra cima do eixo: com a palma em cima da barra ela atravessava a mão 5–7 mm
+            # zerar (12/10/2026): o braço parte do repouso em todo quadro; sem isso o antebraço girava no próprio eixo de quadro em
+            # quadro (a volta inteira na subida) com a mão parada na barra e o punho torcia junto
             maos.segurar(lado, centro + Vector((s * GRIP_X, 0, 0)) + frente * 0.004, -cima, -frente, polo=polo,
-                         alinhar=0.6)
+                         alinhar=0.6, zerar=True)
         for lado, _ in dt.LADOS:                  # dedos e polegar fecham até a pele encostar na barra
             antes = pose.dedos.get(lado, {}).get("Thumb") if t > 0 else None
             pose.dedos[lado] = pg.fechar_em_volta(bon, lado, centro, Vector((1, 0, 0)), RAIO_BARRA,
