@@ -277,3 +277,75 @@ describe("os 61 exercícios novos sem GIF (scripts/conteudo/novos_61.json) na tr
     expect(migracao).not.toMatch(/\b(UPDATE|DELETE|TRUNCATE)\b/i); // só INSERT, e a lista de colunas acima não tem imagem_url nem professor_id
   });
 });
+
+describe("Alongamento e mobilidade (12/10/2026): os 6 movimentos e os 9 globais na troca", () => {
+  const ALONG = PADROES.filter((p) => p.bloco === "alongamento");
+  /** Os 9 do DESENHO (nome, grupo, movimento e equipamento; o subgrupo sugerido) — como o app os lê do SQLite. */
+  const NOVE: ExercicioEquivalencia[] = [
+    ["a1", "Alongamento Abraçando os Joelhos", "Alongamento", "along_coluna", "Eretores da espinha (lombar) · glúteo máximo", "deitado, joelhos ao peito"],
+    ["a2", "Alongamento de Extensão da Coluna", "Alongamento", "along_coluna", "Lombar (extensão) · reto abdominal · flexores do quadril", "deitado de bruços"],
+    ["a3", "Alongamento de Posterior em Pé", "Alongamento", "along_posterior", "Isquiotibiais · gastrocnêmio", "em pé"],
+    ["a4", "Alongamento de Punho (flexores)", "Alongamento", "along_punho", "Flexores do antebraço", "palma para cima"],
+    ["a5", "Alongamento de Punho (extensores)", "Alongamento", "along_punho", "Extensores do antebraço", "palma para baixo"],
+    ["a6", "Mobilidade Cervical", "Mobilidade", "along_pescoco", "Trapézio superior · elevador da escápula · esternocleidomastóideo", "sentado"],
+    ["a7", "Mobilidade de Coluna Deitado", "Mobilidade", "along_coluna", "Lombar · eretores da espinha · oblíquos", "deitado, rotação"],
+    ["a8", "Mobilidade de Ombro com Bastão", "Mobilidade", "along_ombro", "Deltoide · rotadores do ombro", "com bastão"],
+    ["a9", "Alongamento Borboleta", "Alongamento", "along_quadril", "Adutores (longo · curto · magno)", "sentado, solas juntas"],
+  ].map(([id, nome, grupo_muscular, padrao_movimento, subgrupo, variacao]) => ({
+    id, nome, grupo_muscular, padrao_movimento, subgrupo, variacao, equipamento: "peso_corporal",
+  }));
+  const CATALOGO_90 = [...CATALOGO, ...NOVE];
+  const de = (nome: string) => NOVE.find((e) => e.nome === nome)!;
+
+  it("6 movimentos novos no bloco 'alongamento', no fim da lista, com rótulos curtos que não repetem nenhum outro", () => {
+    expect(ALONG.map((p) => [p.chave, p.rotulo])).toEqual([
+      ["along_coluna", "Coluna"],
+      ["along_pescoco", "Pescoço"],
+      ["along_ombro", "Ombro"],
+      ["along_punho", "Punho e antebraço"],
+      ["along_posterior", "Posterior de coxa"],
+      ["along_quadril", "Quadril"],
+    ]);
+    expect(PADROES.slice(-6)).toEqual(ALONG);
+    const rotulos = [...PADROES.map((p) => p.rotulo), ...EQUIPAMENTOS.map((e) => e.rotulo)].map((r) => r.toLowerCase());
+    expect(new Set(rotulos).size).toBe(rotulos.length);
+    for (const e of NOVE) expect(PADROES.some((p) => p.chave === e.padrao_movimento), e.nome).toBe(true);
+  });
+
+  it("os 9 ficam no grupo novo (nada cai em Costas, Pernas ou 'Outros')", () => {
+    for (const e of NOVE) expect(grupoDe(e), e.nome).toBe("alongamento");
+  });
+
+  it("equivalentes: os 3 de coluna entre si e os 2 de punho entre si; os outros 4 não têm par", () => {
+    expect(nomes(montarGruposTroca(de("Alongamento Abraçando os Joelhos"), CATALOGO_90).equivalentes)).toEqual([
+      "Alongamento de Extensão da Coluna", "Mobilidade de Coluna Deitado",
+    ]);
+    expect(nomes(montarGruposTroca(de("Mobilidade de Coluna Deitado"), CATALOGO_90).equivalentes)).toEqual([
+      "Alongamento Abraçando os Joelhos", "Alongamento de Extensão da Coluna",
+    ]);
+    expect(nomes(montarGruposTroca(de("Alongamento de Punho (flexores)"), CATALOGO_90).equivalentes)).toEqual(["Alongamento de Punho (extensores)"]);
+    expect(nomes(montarGruposTroca(de("Alongamento de Punho (extensores)"), CATALOGO_90).equivalentes)).toEqual(["Alongamento de Punho (flexores)"]);
+    for (const n of ["Alongamento de Posterior em Pé", "Mobilidade Cervical", "Mobilidade de Ombro com Bastão", "Alongamento Borboleta"]) {
+      expect(montarGruposTroca(de(n), CATALOGO_90).equivalentes, n).toHaveLength(0);
+    }
+  });
+
+  it("a troca nunca mistura: alongamento só sugere alongamento, e nenhum dos 81 de força sugere um dos 9", () => {
+    const ids = new Set(NOVE.map((e) => e.id));
+    for (const e of NOVE) {
+      const g = montarGruposTroca(e, CATALOGO_90);
+      for (const o of [...g.equivalentes, ...g.mesmoMusculo]) expect(ids.has(o.exercicio.id), `${e.nome} → ${o.exercicio.nome}`).toBe(true);
+    }
+    for (const e of CATALOGO) {
+      const g = montarGruposTroca(e, CATALOGO_90);
+      for (const o of [...g.equivalentes, ...g.mesmoMusculo]) expect(ids.has(o.exercicio.id), `${e.nome} → ${o.exercicio.nome}`).toBe(false);
+    }
+    // o "Todos" continua a lista inteira
+    expect(montarGruposTroca(de("Alongamento Borboleta"), CATALOGO_90).todos).toHaveLength(90);
+  });
+
+  it("a linha curta da troca com o movimento novo", () => {
+    expect(descricaoCurta(de("Mobilidade de Coluna Deitado"), true)).toBe("Coluna · Peso corporal · deitado, rotação");
+    expect(descricaoCurta(de("Alongamento Borboleta"))).toBe("Peso corporal · sentado, solas juntas");
+  });
+});

@@ -27,6 +27,9 @@ export const BLOCOS_MUSCULARES: BlocoMuscular[] = [
   { key: "panturrilha", nome: "Panturrilha", emoji: "🦵", grupoPadrao: "Panturrilha" },
   { key: "abdomen", nome: "Abdômen", emoji: "🧘", grupoPadrao: "Abdômen" },
   { key: "cardio", nome: "Cardio", emoji: "🏃", grupoPadrao: "Corrida" },
+  // 12/10/2026: os grupos "Alongamento" e "Mobilidade" (antes caíam em "Outros")
+  { key: "alongamento", nome: "Alongamento e mobilidade", emoji: "🤸", grupoPadrao: "Alongamento" },
+  // "Outros" fica SEMPRE por último: é a reserva do getBloco
   { key: "outros", nome: "Outros", emoji: "🎽", grupoPadrao: "Peitoral" },
 ];
 
@@ -95,6 +98,11 @@ const MAPA_PRIMARIO: Record<string, string> = {
   ciclismo: "cardio",
   natacao: "cardio",
   caminhada: "cardio",
+
+  alongamento: "alongamento",
+  alongamentos: "alongamento",
+  mobilidade: "alongamento",
+  "alongamento e mobilidade": "alongamento",
 };
 
 /**

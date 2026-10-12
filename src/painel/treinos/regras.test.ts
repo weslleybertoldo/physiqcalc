@@ -203,6 +203,9 @@ describe("W23 — biblioteca (global só leitura + a própria)", () => {
     expect(pernas).toEqual(expect.arrayContaining(["quadriceps", "isquiotibiais", "gluteo", "panturrilha", "adutores"]));
     expect(filtrosDaBiblioteca("", "outros")).toEqual({ fora: [...MUSCULOS_PRIMARIOS_CONHECIDOS] });
     expect(filtrosDaBiblioteca("", "xyz")).toEqual({});
+    // 12/10/2026: o chip "Alongamento e mobilidade" manda os 2 grupos ao banco, e eles saem de "Outros"
+    expect(filtrosDaBiblioteca("", "alongamento").musculos).toEqual(expect.arrayContaining(["alongamento", "mobilidade"]));
+    expect(filtrosDaBiblioteca("", "outros").fora).toEqual(expect.arrayContaining(["alongamento", "mobilidade"]));
   });
   it("hml-14d: os músculos de cada grupo que vão ao banco = o grupoDaTela de cada um (o mapa do navegador e o do banco batem)", () => {
     // o filtro de grupo que o navegador fazia até a hml-14c (o grupoDaTela saiu do código na integração da 14d — só este teste usava)
@@ -218,7 +221,9 @@ describe("W23 — biblioteca (global só leitura + a própria)", () => {
     }
     // todo músculo conhecido cai em algum grupo; o que não é conhecido cai em "outros"
     for (const m of MUSCULOS_PRIMARIOS_CONHECIDOS) expect(grupoDaTela(m)).not.toBe("outros");
-    expect(grupoDaTela("Mobilidade")).toBe("outros");
+    expect(grupoDaTela("Mobilidade")).toBe("alongamento"); // 12/10/2026: era "outros" — agora o grupo "Alongamento e mobilidade"
+    expect(grupoDaTela("Alongamento")).toBe("alongamento");
+    expect(grupoDaTela("Xablau")).toBe("outros");
     expect(grupoDaTela("Bíceps / Braquial")).toBe("bracos");
   });
   it("hml-14d: o termo vai sem espaços sobrando e com até 80 letras", () => {
