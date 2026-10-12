@@ -19,6 +19,9 @@ No fim, o logout (scope=local) da sessão do TREINO que a troca do app abriu nes
 Antes de CADA execução: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "rede.py …" (e o /health, aqui dentro).
 Uso: python3 e2e/hml20/rede.py --area aluno --base local|staging|prod --canal msedge [--seco]
   --seco  sem rede e sem navegador: os seletores existem no código das telas e a guarda acerta pedidos de exemplo (antes e depois)
+hml-20b: --area painel-aluno = a rede do Painel › Aluno (a nutri: a casca/Resumo, o Prontuário ×10 e a Avaliação; a personal: o Resumo e
+a Avaliação) — 0 leitura direta da área, o `ler` por tela, as de fora da área (20c e H-43) à parte, 0 gravação nova; em painel_tela.py
+(o docstring de lá), planilha hml20/medicao/rede_hml20b.tsv.
 """
 from __future__ import annotations
 
@@ -185,20 +188,23 @@ def rodar(o, base: str, canal: str | None) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20a — a rede das telas do app do aluno (antes × depois)")
-    ap.add_argument("--area", default="aluno", choices=("aluno",))
+    ap = argparse.ArgumentParser(description="hml-20 — a rede das telas (antes × depois): o app do aluno (20a) e o Painel › Aluno (20b)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno"))
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--seco", action="store_true")
     a = ap.parse_args()
     B.corte_vira_saida()
+    painel = None
+    if a.area == "painel-aluno":  # hml-20b: o Painel › Aluno (painel_tela.py)
+        import painel_tela as painel  # noqa: PLC0415
     if a.seco:
         o = C.Saida(f"rede20_{a.area}_seco")
-        seco(o)
+        painel.seco(o, "rede") if painel else seco(o)
         return o.fim()
     o = C.Saida(f"rede20_{a.area}_{a.base}")
     try:
-        rodar(o, a.base, a.canal)
+        painel.rodar_rede(o, a.base, a.canal) if painel else rodar(o, a.base, a.canal)
     except (Exception, SystemExit) as e:  # noqa: BLE001
         o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
     C.C2.registrar_rodada(o.oks, o.oks + o.falhas)

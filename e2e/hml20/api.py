@@ -29,6 +29,8 @@ Produção (--base prod --so-leitura) e o smoke logo depois de publicar (--base 
 401, x-schema inválido → 400 e a q desconhecida → consulta_invalida (o `ler` sem banco) — nada grava; 1 login (o da conta de teste).
 Antes de CADA execução que toca o staging: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "<o que ia rodar>".
 Uso: python3 e2e/hml20/api.py --area aluno [--base local|staging|prod] [--casos P,N1,…,N10] [--seco | --limpar | --so-leitura | --sair]
+hml-20b: --area painel-aluno = os casos de servidor do Painel › Aluno (as 27 consultas da 20b: P e N1–N9, o --limpar, o --seco e o
+--so-leitura do smoke depois de publicar) — em painel_api.py (o docstring de lá); os casos da 20a seguem aqui, iguais.
 Da saída só saem status, códigos, contagens e tempos.
 """
 from __future__ import annotations
@@ -115,8 +117,9 @@ def seco(o) -> None:
     pedidos = pedidos_ler("2026-10-11", ids)
     r = B.regras_leitura(pedidos, ["minha_evolucao", "list", "create", "foto_salvar", "MINHA_EVOLUCAO"],
                          [{"code": "42501"}, {"message": "TimeoutError: x"}, {"code": "22P02"}, {"code": "PGRST116"}])
-    consultas = r["consultas"]
-    o.ok(sorted(consultas) == sorted(CONSULTAS_DA_20A), f"o catálogo do servidor (lido do TS): as 3 consultas da 20a ({sorted(consultas)})")
+    # hml-20b: o catálogo cresceu (a 20b só acrescentou — painel_api.py confere as dela); aqui, as 3 da 20a, iguais
+    consultas = {q: c for q, c in r["consultas"].items() if q in CONSULTAS_DA_20A}
+    o.ok(sorted(consultas) == sorted(CONSULTAS_DA_20A), f"o catálogo do servidor (lido do TS) tem as 3 consultas da 20a ({sorted(consultas)})")
     o.ok(consultas["aluno_dieta"]["rpc"] == "minha_dieta" and consultas["aluno_dieta"]["args"] == {"p_dia": "dia"}
          and consultas["aluno_evolucao"]["rpc"] == "minha_evolucao" and consultas["aluno_evolucao"]["assinar"]["lista"] == "fotos"
          and consultas["aluno_diario_urls"]["tabela"] == "diario_alimentar" and consultas["aluno_diario_urls"]["colunas"] == ["id", "path"],
@@ -185,7 +188,8 @@ def seco(o) -> None:
     jpg, png = B.jpeg_sintetico(), B.png_sintetico()
     o.ok(jpg[:3] == b"\xff\xd8\xff" and png[:4] == b"\x89PNG" and len(jpg) < 2000 and len(png) < 2000,
          f"as imagens de teste são sintéticas e pequenas (JPEG {len(jpg)} B, PNG {len(png)} B)")
-    o.ok(B.REG_LOGINS.name == "logins_etapa2_20a.txt" and B.B19.MAX_LOGINS == 10, f"o registro de logins da 20a (decisão G + os 4 do F7): {B.REG_LOGINS} (até {B.B19.MAX_LOGINS})")
+    o.ok(B.REG_LOGINS.name in ("logins_etapa2_20a.txt", "logins_etapa2_20b.txt") and B.B19.MAX_LOGINS == 10,
+         f"o registro de logins da W (decisão G; hml-20b: o da 20b): {B.REG_LOGINS.name} (até {B.B19.MAX_LOGINS})")
     # o teto conta só o staging: o login do smoke da produção (o motivo termina em "prod)") não come os 6 da etapa 2 (num registro de mentira)
     real = B.B19.REG_LOGINS
     falso = B.SCRATCH / "tmp" / "logins_seco_20a.txt"
@@ -606,8 +610,8 @@ def rodar(o, L, estado, rodada: str, casos: list[str]) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20a — E2E de servidor das leituras do app do aluno (a `ler` da nutricao e a minha_evolucao do Treino)")
-    ap.add_argument("--area", default="aluno", choices=("aluno",))
+    ap = argparse.ArgumentParser(description="hml-20 — E2E de servidor das leituras: o app do aluno (20a) e o Painel › Aluno (20b, --area painel-aluno)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno"))
     ap.add_argument("--base", default="staging", choices=("local", "staging", "prod"))
     ap.add_argument("--casos", default=None, help="padrão: todos (" + ",".join(CASOS) + ")")
     modo = ap.add_mutually_exclusive_group()
@@ -617,6 +621,12 @@ def main() -> int:
     modo.add_argument("--sair", action="store_true")
     a = ap.parse_args()
     B.corte_vira_saida()  # o SIGTERM/SIGINT vira SystemExit: o finally da limpeza roda mesmo com o processo cortado
+    if a.area == "painel-aluno":  # hml-20b: os casos do Painel › Aluno (painel_api.py)
+        import painel_api  # noqa: PLC0415
+        casos_p = [c.strip() for c in (a.casos or ",".join(painel_api.CASOS)).split(",") if c.strip()]
+        if any(c not in painel_api.CASOS for c in casos_p):
+            raise SystemExit(f"caso desconhecido (os casos do painel-aluno: {', '.join(painel_api.CASOS)})")
+        return painel_api.main(a, casos_p)
     casos = [c.strip() for c in (a.casos or ",".join(CASOS)).split(",") if c.strip()]
     if any(c not in CASOS for c in casos):
         raise SystemExit(f"caso desconhecido (os casos: {', '.join(CASOS)})")

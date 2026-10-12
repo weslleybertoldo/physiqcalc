@@ -21,6 +21,8 @@ de 1,3 s, a Evolução também ≤ o antes + 0,3 s (o antes medido pela MESMA re
 Planilha: hml20/medicao/telas_hml20a.tsv (antes × depois). No fim, o logout da sessão do TREINO que a troca do app abriu (decisão 23).
 Antes de CADA execução: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "telas.py …" (e o /health, aqui dentro).
 Uso: python3 e2e/hml20/telas.py --area aluno --base local|staging --canal msedge [--casos prints,tempo,gate] [--prefixo staging2] [--seco]
+hml-20b: --area painel-aluno = as telas do Painel › Aluno: os prints b_* (prints/hml20/b) e o tempo antes × depois (decisão J; o Resumo e a
+Avaliação pela parte do principal) — em painel_tela.py (o docstring de lá); os casos: prints,tempo; o antes com --prefixo antes_staging.
 """
 from __future__ import annotations
 
@@ -253,26 +255,31 @@ def rodar(o, base: str, canal: str | None, casos: list[str], prefixo: str | None
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20a — as telas do app do aluno: os prints a_* e o tempo antes × depois (com o gate J)")
-    ap.add_argument("--area", default="aluno", choices=("aluno",))
+    ap = argparse.ArgumentParser(description="hml-20 — as telas: o app do aluno (20a: prints a_*, tempo, gate J) e o Painel › Aluno (20b: prints b_*, tempo)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno"))
     ap.add_argument("--base", default="local", choices=("local", "staging"))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
-    ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--casos", default=None, help="aluno: prints,tempo,gate · painel-aluno: prints,tempo")
     # o nome dos prints (<prefixo>_a_*.png; padrão = a base): o F7 no staging usa staging2 e não grava por cima dos staging_a_* do antes
     ap.add_argument("--prefixo", default=None)
     ap.add_argument("--seco", action="store_true")
     a = ap.parse_args()
     B.corte_vira_saida()
-    casos = [c.strip() for c in a.casos.split(",") if c.strip()]
-    if any(c not in CASOS for c in casos):
-        raise SystemExit(f"caso desconhecido (os casos: {', '.join(CASOS)})")
+    painel = None
+    validos = CASOS
+    if a.area == "painel-aluno":  # hml-20b: o Painel › Aluno (painel_tela.py)
+        import painel_tela as painel  # noqa: PLC0415
+        validos = ("prints", "tempo")
+    casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
+    if any(c not in validos for c in casos):
+        raise SystemExit(f"caso desconhecido (os casos: {', '.join(validos)})")
     if a.seco:
         o = C.Saida(f"telas20_{a.area}_seco")
-        seco(o)
+        painel.seco(o, "telas") if painel else seco(o)
         return o.fim()
     o = C.Saida(f"telas20_{a.area}_{a.base}")
     try:
-        rodar(o, a.base, a.canal, casos, a.prefixo)
+        painel.rodar_telas(o, a.base, a.canal, casos, a.prefixo) if painel else rodar(o, a.base, a.canal, casos, a.prefixo)
     except (Exception, SystemExit) as e:  # noqa: BLE001
         o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
     C.C2.registrar_rodada(o.oks, o.oks + o.falhas)

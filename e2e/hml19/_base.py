@@ -134,8 +134,10 @@ ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # a troca do Treino (trocar-token) também entra nele — abre uma sessão nova no Auth do Treino. hml-19d (decisão G): o registro passa a
 # ser o logins_etapa2_19d.txt (o da 19c fica). hml-20a (decisão G do contrato da 20a): o registro passa a ser o da hml-20a
 # (hml20/agente/logins_etapa2_20a.txt — o da 19d fica) e o teto, 6 logins na etapa 2 (a sessão principal guarda 4 para o staging); os
-# E2E da hml-20 (e2e/hml20/_base.py) e a regressão da hml-19 contam no MESMO registro
-REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20a.txt"
+# E2E da hml-20 (e2e/hml20/_base.py) e a regressão da hml-19 contam no MESMO registro. hml-20b (decisão G do contrato da 20b): o registro
+# passa a ser o da hml-20b (hml20/agente/logins_etapa2_20b.txt — o da 20a fica); o teto da W segue 10 (no máximo 6 na etapa 2: a sessão
+# principal guarda 4 para o smoke e o F6)
+REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20b.txt"
 # hml-20a F7 (sessão principal, 12/10/2026): +4 logins para o F7 no staging — o teto da W inteira passa a 10 (os 6 da etapa 2 já usados)
 MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
