@@ -8,6 +8,8 @@
 // hml-20b (Painel › Aluno): + a frase do muitas_linhas (o laço dos resultados de exame) e o urlAssinadaDoServidor — a URL assinada que o
 // servidor devolve RELATIVA (/storage/v1/object/sign/…) montada com o domínio do cliente do principal (a MESMA URL de hoje: o host das
 // funções fica fora do CSP do site), para as fotos da casca/Avaliação e o Ver/Baixar dos anexos.
+// hml-20c (⚪ H-106): o urlAssinadaDoServidor é a ÚNICA montagem da URL relativa (eram 3 cópias: esta, a urlDoServidor da Evolução e a
+// privada do app do aluno) — as outras 2 importam esta, com a mesma saída e a base que cada uma passava; as URLs do diário do painel também.
 import { criarLeitor, type OpcoesLeitura, type ResultadoDeLeitura } from "@/integrations/leituraEmLote";
 import { PRINCIPAL_URL } from "@/integrations/principal/client";
 import { supabase } from "@/nutricao/editor/lib/banco";

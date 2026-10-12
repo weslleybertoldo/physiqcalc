@@ -1,9 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // hml-14b (B21): a aba Respostas lê UMA página do banco (respostas_da_conta) — os filtros, a página e o tamanho vão no pedido.
+// hml-20c (H-42): as leituras vão pela nutricao (o `ler`) — o módulo de verdade do servidor roda sobre o MESMO h.rpc (src/test/
+// nutricaoFalsa.ts): a RPC chega com os MESMOS args de quando a tela chamava direto; o erro chega com a frase fixa do código.
 const h = vi.hoisted(() => ({ rpc: vi.fn() }));
-vi.mock("@/integrations/principal/client", () => ({ principal: { rpc: h.rpc }, PRINCIPAL_SCHEMA: "staging" }));
+vi.mock("@/integrations/principal/client", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const invoke = (_f: string, o: { body?: unknown }) => (ehLer(o?.body) ? lerPeloModulo({ rpc: h.rpc })(o.body) : Promise.reject(new Error("só leitura aqui")));
+  return { principal: { rpc: h.rpc, functions: { invoke } }, PRINCIPAL_SCHEMA: "staging" };
+});
 
+import { MENSAGEM_ERRO_LEITURA } from "@/nutricao/leitura";
 import { buscarNumerosPreConsulta, listarRespostasPagina } from "./dados";
 import { FILTROS_VAZIOS } from "./respostasUtil";
 
@@ -23,7 +30,7 @@ describe("listarRespostasPagina (hml-14b)", () => {
 
   it("erro do banco lança (a tela mostra o erro, nunca uma lista vazia)", async () => {
     h.rpc.mockResolvedValue({ data: null, error: { message: "permission denied for function respostas_da_conta" } });
-    await expect(listarRespostasPagina("c1", FILTROS_VAZIOS, 1)).rejects.toThrow(/permission denied/);
+    await expect(listarRespostasPagina("c1", FILTROS_VAZIOS, 1)).rejects.toThrow(MENSAGEM_ERRO_LEITURA.erro_interno);
   });
 
   it("resposta fora do formato lança", async () => {
@@ -46,7 +53,7 @@ describe("buscarNumerosPreConsulta (hml-14d)", () => {
 
   it("erro do banco e formato inesperado lançam (a tela mostra o erro, nunca zeros)", async () => {
     h.rpc.mockResolvedValue({ data: null, error: { message: "permission denied for function preconsulta_numeros" } });
-    await expect(buscarNumerosPreConsulta("c1", new Date())).rejects.toThrow(/permission denied/);
+    await expect(buscarNumerosPreConsulta("c1", new Date())).rejects.toThrow(MENSAGEM_ERRO_LEITURA.erro_interno);
     h.rpc.mockResolvedValue({ data: { ok: true, total: 3 }, error: null });
     await expect(buscarNumerosPreConsulta("c1", new Date())).rejects.toThrow(/formato inesperado/);
   });

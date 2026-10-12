@@ -1,6 +1,6 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/planos.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao } from "@/nutricao/servidor";
 import { listarAlimentos, type Alimento, type MedidaCaseira } from "@/nutricao/editor/lib/alimentos";
 import { ordenarMedidas } from "@/nutricao/editor/lib/alimentosUtil";
@@ -20,6 +20,10 @@ import { REFEICOES_PADRAO, TITULO_MAX, ordenarItens, ordenarRefeicoes, type Regi
 // usarPlanoModelo fica só por compatibilidade (o servidor não lê — corrige o duplicar do editor com o id da autora). O item salvo
 // volta com o embed do RLS de quem grava e, se ele vier sem o alimento, fica o alimento que o editor já tinha
 // (atualizarItem/salvarSubstitutos).
+// hml-20c (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa — as
+// MESMAS 3 RPCs (planos_do_aluno · plano_alimentar · planos_favoritos), o MESMO JSON, as mesmas assinaturas e os mesmos textos de erro.
+// H-108: listarPlanosFavoritos({ conta }) traz só os ★ de quem está logado e daquela conta (o servidor filtra pelo dono do token); sem a
+// conta, o de hoje (o "Usar um modelo ★" do Planejamento), num lote só dele.
 
 export type PlanoRow = Database["public"]["Tables"]["planos_alimentares"]["Row"];
 export type RefeicaoRow = Database["public"]["Tables"]["refeicoes"]["Row"];
@@ -36,10 +40,9 @@ export const ERRO_LER_PLANOS = "Não deu para carregar os planos alimentares ago
 export const ERRO_LER_PLANO = "Não deu para abrir o plano alimentar agora. Tente de novo.";
 export const ERRO_LER_MODELOS = "Não deu para carregar os planos ★ agora. Tente de novo.";
 
-/** Erro de leitura: o texto fixo para a tela e o código (com a mensagem do banco) só no console. */
-const falhouLeitura = (error: { message: string; code?: string } | null, texto: string): void => {
-  if (!error) return;
-  console.warn("[planos] leitura:", error.code ?? "", error.message);
+/** Erro de leitura: o texto fixo para a tela e o código só no console (hml-20c: o código da leitura pelo servidor — a frase dela não vai). */
+const falhouLeitura = (e: unknown, texto: string): never => {
+  console.warn("[planos] leitura:", e instanceof ErroLeitura ? e.codigo : "erro_interno");
   throw new Error(texto);
 };
 
@@ -59,8 +62,7 @@ const montarPlano = (p: PlanoBruto): Plano => ({ ...p, refeicoes: ordenarRefeico
 /** Planos do paciente (mais recente primeiro), já com refeições, itens e alimentos — a lista mostra kcal/macros. Quem não vê o
  *  aluno recebe [] (como o RLS). */
 export async function listarPlanos(pacienteId: string): Promise<Plano[]> {
-  const { data, error } = await supabase.rpc("planos_do_aluno" as never, { p_aluno: pacienteId } as never);
-  falhouLeitura(error, ERRO_LER_PLANOS);
+  const data = (await lerNutricao("planos_do_aluno", { aluno: pacienteId }).catch((e) => falhouLeitura(e, ERRO_LER_PLANOS))).valor;
   return (Array.isArray(data) ? (data as unknown as PlanoBruto[]) : []).map(montarPlano);
 }
 
@@ -68,17 +70,19 @@ export type PlanoFavorito = Plano & { paciente: { id: string; nome: string; cont
 type PlanoFavoritoBruto = PlanoBruto & { paciente?: { id: string; nome: string; conta_id?: string | null } | null };
 
 /** Planos FAVORITOS (★) que a pessoa vê, de todos os pacientes (o "Usar um modelo ★" e a Ferramentas › Modelos), do mais recente
- *  para o mais antigo — com o paciente {id, nome, conta_id} pro resumo/deep link. */
-export async function listarPlanosFavoritos(): Promise<PlanoFavorito[]> {
-  const { data, error } = await supabase.rpc("planos_favoritos" as never);
-  falhouLeitura(error, ERRO_LER_MODELOS);
+ *  para o mais antigo — com o paciente {id, nome, conta_id} pro resumo/deep link. hml-20c (H-108): com a `conta`, só os de quem está
+ *  logado e daquela conta (o filtro é do servidor, pelo dono do token); sem ela, o de hoje. Num lote só dele (a lista pode ser grande). */
+export async function listarPlanosFavoritos(filtro?: { conta: string } | object): Promise<PlanoFavorito[]> {
+  // o Planejamento passa esta função direto no queryFn: o React Query manda o contexto dele (sem `conta`) — o de hoje, sem filtro
+  const conta = filtro && "conta" in filtro && typeof filtro.conta === "string" && filtro.conta ? filtro.conta : null;
+  const params = conta ? { conta } : {};
+  const data = (await lerNutricao("planos_favoritos", params, { sozinha: true }).catch((e) => falhouLeitura(e, ERRO_LER_MODELOS))).valor;
   return (Array.isArray(data) ? (data as unknown as PlanoFavoritoBruto[]) : []).map((p) => ({ ...montarPlano(p), paciente: p.paciente ?? null }));
 }
 
 /** Um plano vivo; não existe, na lixeira ou a pessoa não vê → null. */
 export async function buscarPlano(id: string): Promise<Plano | null> {
-  const { data, error } = await supabase.rpc("plano_alimentar" as never, { p_plano: id } as never);
-  falhouLeitura(error, ERRO_LER_PLANO);
+  const data = (await lerNutricao("plano_alimentar", { plano: id }).catch((e) => falhouLeitura(e, ERRO_LER_PLANO))).valor;
   return data && typeof data === "object" && !Array.isArray(data) ? montarPlano(data as unknown as PlanoBruto) : null;
 }
 

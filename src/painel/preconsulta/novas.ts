@@ -1,7 +1,9 @@
 // Physiq W21 — o número do item "Pré-consulta" do menu (respostas NOVAS: vivas e sem aluno ligado — o critério do Nutri, o
 // "respostas de pré-consulta sem paciente" do Dashboard de lá) e o recorte da conta ativa. Módulo leve de propósito: o contador do
 // menu (src/painel/contadores/PreConsulta.ts) é carregado junto da casca do painel.
-import { principal } from "@/integrations/principal/client";
+// hml-20c (H-42 · jeito 2, etapa 2): a contagem vai pela nutricao (preconsulta_novas: o HEAD, com o recorte montado no servidor — o
+// recorteDaConta abaixo é a mesma regra, com o id do token lá), no lote da tela.
+import { lerNutricao } from "@/nutricao/leitura";
 
 /** O recorte da conta ativa (o mesmo da W19): o que é da conta + o que é meu sem conta (site antigo). A RLS decide o resto (P1). */
 export const recorteDaConta = (contaId: string, uid: string): string => `conta_id.eq.${contaId},and(conta_id.is.null,nutricionista_id.eq.${uid})`;
@@ -20,12 +22,6 @@ export const CHAVES_PRECONSULTA = {
 
 /** Respostas vivas sem aluno ligado no recorte da conta ativa (só a contagem — HEAD; a RLS tira o que você não pode ler). */
 export async function contarRespostasNovas(contaId: string, uid: string): Promise<number> {
-  const { count, error } = await principal
-    .from("respostas_preconsulta")
-    .select("id", { count: "exact", head: true })
-    .is("deleted_at", null)
-    .is("paciente_id", null)
-    .or(recorteDaConta(contaId, uid));
-  if (error) throw new Error(error.message);
-  return count ?? 0;
+  const { total } = await lerNutricao("preconsulta_novas", { conta: contaId });
+  return total ?? 0;
 }

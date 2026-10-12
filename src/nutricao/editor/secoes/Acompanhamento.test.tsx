@@ -43,7 +43,14 @@ function consulta(tabela: string): unknown {
   });
   return p;
 }
-vi.mock("@/nutricao/editor/lib/banco", () => ({ supabase: { from: (t: string) => consulta(t), rpc: () => consulta("rpc") } }));
+// hml-20c (H-42): as leituras vão pela nutricao (o `ler`) — o módulo de verdade do servidor roda sobre o MESMO banco falso daqui
+// (src/test/nutricaoFalsa.ts): o pedido que chega ao banco é o mesmo (o período, a ordem estável, o HEAD do dia)
+vi.mock("@/nutricao/editor/lib/banco", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const banco = { from: (t: string) => consulta(t), rpc: () => consulta("rpc") };
+  const invoke = (_f: string, o: { body?: unknown }) => (ehLer(o?.body) ? lerPeloModulo(banco)(o.body) : Promise.reject(new Error("sem gravação aqui")));
+  return { supabase: { ...banco, functions: { invoke } } };
+});
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u2", email: "camila@teste.com" } }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 

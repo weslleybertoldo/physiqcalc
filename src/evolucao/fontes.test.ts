@@ -78,7 +78,10 @@ vi.mock("@/integrations/principal/client", () => ({
   },
 }));
 
-import { carregarPrincipal, carregarTreino, ErroFonte, MAX_AVALIACOES, MAX_FOTOS, urlDoServidor } from "./fontes";
+import { carregarPrincipal, carregarTreino, ErroFonte, MAX_AVALIACOES, MAX_FOTOS } from "./fontes";
+// hml-20c (H-106): a montagem da URL relativa é UMA só (src/nutricao/leitura.ts) — o fontes.ts a importa; os mesmos casos de antes
+import { urlAssinadaDoServidor } from "@/nutricao/leitura";
+const urlDoServidor = (base: string, relativa: unknown) => urlAssinadaDoServidor(relativa, base);
 
 const semAssinar = async () => ({});
 const recusa = (status: number, corpo: unknown) => ({

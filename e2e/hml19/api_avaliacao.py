@@ -164,8 +164,8 @@ def seco(o, area: str) -> None:
     jpg = B.jpeg_sintetico()
     o.ok(jpg[:3] == b"\xff\xd8\xff" and len(jpg) < 2000, f"a imagem de teste é sintética e pequena (JPEG, {len(jpg)} bytes)")
     # hml-19d: o registro passou a ser o da W seguinte (logins_etapa2_19d.txt) — aqui, que é o de uma W da hml-19 a partir da 19c;
-    # hml-20a: o da hml-20a (hml20/agente/logins_etapa2_20a.txt); hml-20b: o da hml-20b (logins_etapa2_20b.txt)
-    o.ok(B.REG_LOGINS.name in ("logins_etapa2_19c.txt", "logins_etapa2_19d.txt", "logins_etapa2_20a.txt", "logins_etapa2_20b.txt"),
+    # hml-20a: o da hml-20a (hml20/agente/logins_etapa2_20a.txt); hml-20b: o da hml-20b (logins_etapa2_20b.txt); hml-20c: logins_etapa2_20c.txt
+    o.ok(B.REG_LOGINS.name in ("logins_etapa2_19c.txt", "logins_etapa2_19d.txt", "logins_etapa2_20a.txt", "logins_etapa2_20b.txt", "logins_etapa2_20c.txt"),
          f"o registro de logins da W (decisão G): {B.REG_LOGINS.parent.parent.name}/agente/{B.REG_LOGINS.name}")
 
 

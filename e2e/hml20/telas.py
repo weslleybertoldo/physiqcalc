@@ -23,6 +23,9 @@ Antes de CADA execução: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pa
 Uso: python3 e2e/hml20/telas.py --area aluno --base local|staging --canal msedge [--casos prints,tempo,gate] [--prefixo staging2] [--seco]
 hml-20b: --area painel-aluno = as telas do Painel › Aluno: os prints b_* (prints/hml20/b) e o tempo antes × depois (decisão J; o Resumo e a
 Avaliação pela parte do principal) — em painel_tela.py (o docstring de lá); os casos: prints,tempo; o antes com --prefixo antes_staging.
+hml-20c: --area dieta = as telas da Dieta ×8, das Dietas ×3, da Pré-consulta ×2 e do Dashboard: os prints c_* (prints/hml20/c), a foto do
+diário, o fluxo da Pré-consulta pela tela, o c_dieta_erro e o tempo antes × depois (decisão M; o Dashboard pela parte da 20c) — em
+dieta_tela.py; os casos: prints,tempo; o antes com --prefixo antes_staging.
 """
 from __future__ import annotations
 
@@ -255,11 +258,11 @@ def rodar(o, base: str, canal: str | None, casos: list[str], prefixo: str | None
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20 — as telas: o app do aluno (20a: prints a_*, tempo, gate J) e o Painel › Aluno (20b: prints b_*, tempo)")
-    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno"))
+    ap = argparse.ArgumentParser(description="hml-20 — as telas: o app do aluno (20a: prints a_*, tempo, gate J), o Painel › Aluno (20b: prints b_*, tempo) e a Dieta/Dietas/Pré-consulta/Dashboard (20c: prints c_*, tempo)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta"))
     ap.add_argument("--base", default="local", choices=("local", "staging"))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
-    ap.add_argument("--casos", default=None, help="aluno: prints,tempo,gate · painel-aluno: prints,tempo")
+    ap.add_argument("--casos", default=None, help="aluno: prints,tempo,gate · painel-aluno e dieta: prints,tempo")
     # o nome dos prints (<prefixo>_a_*.png; padrão = a base): o F7 no staging usa staging2 e não grava por cima dos staging_a_* do antes
     ap.add_argument("--prefixo", default=None)
     ap.add_argument("--seco", action="store_true")
@@ -269,6 +272,9 @@ def main() -> int:
     validos = CASOS
     if a.area == "painel-aluno":  # hml-20b: o Painel › Aluno (painel_tela.py)
         import painel_tela as painel  # noqa: PLC0415
+        validos = ("prints", "tempo")
+    if a.area == "dieta":  # hml-20c: a Dieta, as Dietas, a Pré-consulta e o Dashboard (dieta_tela.py)
+        import dieta_tela as painel  # noqa: PLC0415
         validos = ("prints", "tempo")
     casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
     if any(c not in validos for c in casos):

@@ -7,13 +7,15 @@
 //   · o cliente é o do principal pela porta das libs (@/nutricao/editor/lib/banco): a sessão de quem está logado vai no Bearer e o
 //     schema do ambiente no x-schema (os testes que já falsificam o banco falsificam a função junto).
 // hml-19b: a mesma porta serve a Dieta, as Dietas e o app do aluno (as 3 listas fechadas da função: AcaoDaFuncao). hml-19c: e a
-// Avaliação (a antropometria, as fotos de evolução e o aviso "avaliação nova") — a 4ª lista.
+// Avaliação (a antropometria, as fotos de evolução e o aviso "avaliação nova") — a 4ª lista. hml-20c (H-102): e as 5 da Pré-consulta (o
+// formulário e a resposta) — a 5ª lista.
 import { supabase } from "@/nutricao/editor/lib/banco";
-import type { AcaoAluno, AcaoAvaliacao, AcaoDieta, AcaoNutricao } from "../../supabase-principal/functions/_shared/nutricao-regras";
+import type { AcaoAluno, AcaoAvaliacao, AcaoDieta, AcaoNutricao, AcaoPreconsulta } from "../../supabase-principal/functions/_shared/nutricao-regras";
 
-export type { AcaoAluno, AcaoAvaliacao, AcaoDieta, AcaoNutricao };
-/** Toda ação da função nutricao: o Prontuário (hml-19a), a Dieta e as Dietas, o app do aluno (hml-19b) e a Avaliação (hml-19c). */
-export type AcaoDaFuncao = AcaoNutricao | AcaoDieta | AcaoAluno | AcaoAvaliacao;
+export type { AcaoAluno, AcaoAvaliacao, AcaoDieta, AcaoNutricao, AcaoPreconsulta };
+/** Toda ação da função nutricao: o Prontuário (hml-19a), a Dieta e as Dietas, o app do aluno (hml-19b), a Avaliação (hml-19c) e a
+ *  Pré-consulta (hml-20c). */
+export type AcaoDaFuncao = AcaoNutricao | AcaoDieta | AcaoAluno | AcaoAvaliacao | AcaoPreconsulta;
 
 /** A frase de cada código de erro da nutricao (STATUS_DO_ERRO de _shared/nutricao-regras.ts) e dos que nascem aqui. */
 export const MENSAGEM_ERRO_NUTRICAO: Record<string, string> = {
@@ -52,6 +54,10 @@ export const MENSAGEM_ERRO_NUTRICAO: Record<string, string> = {
   muitos_envios: "Muitos envios em pouco tempo — tente de novo em alguns minutos.",
   // hml-19c — o aviso "avaliação nova" (a tela não mostra: o aviso que falha não desfaz nada)
   aluno_inexistente: "Aluno não encontrado.",
+  // hml-20c — os gatilhos da W21 na Pré-consulta (a lib da tela troca pela frase dela, a mesma de antes)
+  aluno_invisivel: "Este aluno não está na sua lista.",
+  resposta_imutavel: "Esta resposta não pode mudar de conta nem de autor.",
+  formulario_imutavel: "O formulário continua de quem o criou.",
 };
 
 export function mensagemErroNutricao(codigo: string | null | undefined, padrao = "Não deu certo agora. Tente de novo."): string {

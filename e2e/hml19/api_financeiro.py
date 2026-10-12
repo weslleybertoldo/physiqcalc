@@ -148,8 +148,9 @@ def seco(o, area: str) -> None:
     o.ok(recusas == 2, "a limpeza e a volta recusam outro schema que não o staging")
     o.ok(B.sql_contar_marca_fin("staging", rodada).count(" as ") == 4 and "deleted_at is null" in B.sql_vivos_fin("staging", eu),
          "a conferência final: a marca nas 4 tabelas e os vivos da semente (só leitura)")
-    # hml-20a: o registro passou a ser o da hml-20a (hml20/agente/logins_etapa2_20a.txt) — o da 19d fica; hml-20b: o logins_etapa2_20b.txt
-    o.ok(B.REG_LOGINS.name in ("logins_etapa2_19d.txt", "logins_etapa2_20a.txt", "logins_etapa2_20b.txt"),
+    # hml-20a: o registro passou a ser o da hml-20a (hml20/agente/logins_etapa2_20a.txt) — o da 19d fica; hml-20b: o logins_etapa2_20b.txt;
+    # hml-20c: o logins_etapa2_20c.txt
+    o.ok(B.REG_LOGINS.name in ("logins_etapa2_19d.txt", "logins_etapa2_20a.txt", "logins_etapa2_20b.txt", "logins_etapa2_20c.txt"),
          f"o registro de logins da W (decisão G): {B.REG_LOGINS.parent.parent.name}/agente/{B.REG_LOGINS.name}")
     o.ok(texto_com_marca(m).count(B.MARCA_NUMERO_RECIBO) == 2 and B.MARCA_NUMERO_RECIBO not in texto_com_marca(m).replace(B.MARCA_NUMERO_RECIBO, "0001"),
          "o texto de teste leva a marca 2 vezes (a troca é de todas)")

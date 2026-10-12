@@ -5,8 +5,11 @@
 //   · painel-resumo-treino (Banco do Treino, com a SESSÃO DO TREINO): o resumo do treino da conta (o painel não lê as tabelas do
 //     Treino direto);
 //   · as respostas de pré-consulta dos últimos 7 dias (só as colunas da "Atividade recente"; o recorte e a RLS da W21).
-import { principal } from "@/integrations/principal/client";
-import { recorteDaConta } from "@/painel/preconsulta/novas";
+// hml-20c (H-42 · jeito 2, etapa 2): as 2 leituras de saúde do principal (o painel_resumo e as respostas recentes) vão pela nutricao, no
+// lote da tela (src/nutricao/leitura.ts), como a pessoa — o recorte da conta ativa montado no servidor. O erro segue ErroDashboard
+// ("erro_interno"), como antes. A painel-resumo-treino (Treino) e as leituras do Dashboard de outras W (alunos, agenda, financeiro — nas
+// libs delas) ficam como estão.
+import { lerNutricao } from "@/nutricao/leitura";
 import { invocar } from "@/treino/editor/api";
 import type { AlunoPrincipal, DietaResumo, PlanoResumo, ResumoPrincipal, ResumoTreino } from "./regras";
 
@@ -48,8 +51,9 @@ export function normalizarResumoPrincipal(bruto: unknown): ResumoPrincipal | nul
 }
 
 export async function buscarResumoPrincipal(contaId: string): Promise<ResumoPrincipal> {
-  const { data, error } = await principal.rpc("painel_resumo" as never, { p_conta: contaId } as never);
-  if (error) throw new ErroDashboard("erro_interno");
+  const data = (await lerNutricao("painel_resumo", { conta: contaId }).catch(() => {
+    throw new ErroDashboard("erro_interno");
+  })).valor;
   const r = normalizarResumoPrincipal(data);
   if (!r) throw new ErroDashboard(String((data as { erro?: string } | null)?.erro ?? "erro_interno"));
   return r;
@@ -91,14 +95,8 @@ export interface RespostaRecente {
 
 /** As respostas de pré-consulta desde `desdeIso` (só o que a "Atividade recente" mostra), mais recente primeiro. */
 export async function listarRespostasRecentes(contaId: string, uid: string, desdeIso: string): Promise<RespostaRecente[]> {
-  const { data, error } = await principal
-    .from("respostas_preconsulta")
-    .select("id, nome, respondido_em, paciente_id")
-    .is("deleted_at", null)
-    .or(recorteDaConta(contaId, uid))
-    .gte("respondido_em", desdeIso)
-    .order("respondido_em", { ascending: false })
-    .limit(10);
-  if (error) throw new ErroDashboard("erro_interno");
-  return (data ?? []) as RespostaRecente[];
+  const r = await lerNutricao("respostas_recentes", { conta: contaId, desde: new Date(desdeIso).toISOString() }).catch(() => {
+    throw new ErroDashboard("erro_interno");
+  });
+  return (r.linhas ?? []) as RespostaRecente[];
 }

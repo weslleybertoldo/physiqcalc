@@ -17,10 +17,16 @@
 // com o total (pagina + contar: .range + count exato), em laço até a última (laco: leituras de 1000 com a ordem estável, dentro do
 // prazo do pedido), de 1 linha (uma: 0 → nao_encontrado) e a URL de 1 arquivo com o "baixar com o nome" (assinar.download:
 // createSignedUrl como a pessoa, o nome = a coluna que a consulta leu). Sem esses campos (as 3 consultas da 20a), o caminho de antes.
+// hml-20c (Dieta, Dietas, Pré-consulta e Dashboard): os campos opcionais novos — o período (gte/lte/lt), a busca por palavras (ilike), o
+// recorte (.or() da conta ativa ou "TACO ou meus", com o user do token), os embutidos (select + as vivas e o limite deles), a faixa
+// (offset + limite), o HEAD (soContar: só o total), o total de cada dia cortado pela página na MESMA ida (porDia), os ★ só do dono e da
+// conta (filtrarLista) e a série RPC → linhas pelos ids na MESMA ida (linhasDosIds). Sem eles (as 30 da 20a/20b), o caminho de antes.
 import {
   ERRO_MUITAS_LINHAS, argsDaRpc, assinaturaRelativa, caminhosParaAssinar, comUrls, comUrlsNaLista, ehRpc, erroDaLeitura, extrasDaTabela,
   intervaloDaPagina, itensDaLista, lerPedidoDeLeitura, nomeDoDownload, planoDaTabela, rodarLote, urlsAssinadas, validadeDaAssinatura,
   type AssinarLeitura, type ConsultaLeitura, type FonteRpc, type FonteTabela, type ItemValido, type RespostaDeItem,
+  // hml-20c
+  TETO_MAX, filtrarValorDaLista, idsDoValor, janelasDosDiasCortados, limitesDosEmbutidos, selectDoEmbutido, type FiltroLeitura,
 } from "../_shared/leitura-lote.ts";
 import type { Log } from "../_shared/log.ts";
 import { CONSULTAS_NUTRICAO, bucketDaLeitura, consultaDaNutricao } from "../_shared/nutricao-leituras.ts";
@@ -32,15 +38,22 @@ interface BuscaLeitura extends PromiseLike<Resultado> {
   eq(coluna: string, valor: unknown): BuscaLeitura;
   is(coluna: string, valor: null): BuscaLeitura;
   order(coluna: string, opcoes: { ascending: boolean }): BuscaLeitura;
-  limit(n: number): BuscaLeitura;
+  /** hml-20c: o limite de um embutido (referencedTable) */
+  limit(n: number, opcoes?: { referencedTable: string }): BuscaLeitura;
   /** hml-20b: a página (pagina e laco) */
   range(de: number, ate: number): BuscaLeitura;
+  /** hml-20c: o período, a busca por palavras e o recorte (.or(), também no embutido) */
+  gte(coluna: string, valor: unknown): BuscaLeitura;
+  lte(coluna: string, valor: unknown): BuscaLeitura;
+  lt(coluna: string, valor: unknown): BuscaLeitura;
+  ilike(coluna: string, padrao: string): BuscaLeitura;
+  or(filtros: string, opcoes?: { referencedTable: string }): BuscaLeitura;
 }
 /** O pedaço do cliente "como a pessoa" que o módulo usa (o SupabaseClient da porta encaixa). */
 export interface ClienteLeitura {
   rpc(nome: string, args: Record<string, unknown>): PromiseLike<Resultado>;
-  /** hml-20b: o count exato (contar) */
-  from(tabela: string): { select(colunas: string, opcoes?: { count: "exact" }): BuscaLeitura };
+  /** hml-20b: o count exato (contar); hml-20c: o HEAD (head: só o total) */
+  from(tabela: string): { select(colunas: string, opcoes?: { count: "exact"; head?: boolean }): BuscaLeitura };
   storage: {
     from(bucket: string): {
       createSignedUrls(caminhos: string[], validade: number): PromiseLike<Resultado>;
@@ -93,28 +106,74 @@ async function lerRpc(c: ContextoLeitura, item: ItemValido, consulta: ConsultaLe
   const { data, error } = await c.comoPessoa.rpc(fonte.rpc, argsDaRpc(fonte, item.params));
   // hml-20b: o código que a RPC levanta de propósito (fonte.erros) volta como ele (sem o log.excecao); sem a lista, a tabela de sempre
   if (error) return falhou(c, item.q, error, fonte.erros);
-  const valor: unknown = data ?? null;
+  // hml-20c (H-108): com o param do filtrarLista, só os itens do dono (quem chama) e da conta do param; sem ele, o valor de hoje
+  const valor: unknown = fonte.filtrarLista ? filtrarValorDaLista(data ?? null, fonte.filtrarLista, item.params, c.userId) : data ?? null;
+  // hml-20c: a série RPC → linhas pelos ids do valor, na MESMA ida
+  if (fonte.linhasDosIds) return await lerLinhasDosIds(c, item.q, fonte.linhasDosIds, valor);
   const a = consulta.assinar;
   if (!a || !a.lista) return { ok: true, valor };
   const urls = await assinar(c, item.q, a, caminhosParaAssinar(itensDaLista(valor, a.lista), a.coluna));
   return { ok: true, valor: comUrlsNaLista(valor, a.lista, a.coluna, urls) };
 }
 
+/**
+ * hml-20c (FonteRpc.linhasDosIds): os ids que a RPC devolveu relidos na tabela COMO A PESSOA (as colunas e os embutidos fechados, as
+ * vivas) — a página de receitas (a RPC → .in(ids)) numa ida só. Nenhum id → linhas vazias, sem ida ao banco; o erro → o código do item.
+ */
+async function lerLinhasDosIds(
+  c: ContextoLeitura,
+  q: string,
+  l: NonNullable<FonteRpc["linhasDosIds"]>,
+  valor: unknown,
+): Promise<RespostaDeItem> {
+  const ids = idsDoValor(valor, l.lista, l.max);
+  if (!ids.length) return { ok: true, valor, linhas: [] };
+  const colunas = [...l.colunas, ...(l.embutidos ?? []).map(selectDoEmbutido)].join(", ");
+  let busca = c.comoPessoa.from(l.tabela).select(colunas).in("id", ids);
+  if (l.vivas) busca = busca.is("deleted_at", null);
+  const { data, error } = await busca.limit(Math.min(ids.length, TETO_MAX));
+  if (error) return falhou(c, q, error);
+  return { ok: true, valor, linhas: Array.isArray(data) ? data : [] };
+}
+
+/** Um filtro do plano no encadeamento do supabase-js (hml-20c: + o período, o ilike e o .or() — também no recurso embutido). */
+function aplicarFiltro(busca: BuscaLeitura, f: FiltroLeitura): BuscaLeitura {
+  switch (f.op) {
+    case "in":
+      return busca.in(f.coluna, [...f.valor]);
+    case "eq":
+      return busca.eq(f.coluna, f.valor);
+    case "is_null":
+      return busca.is(f.coluna, null);
+    case "gte":
+      return busca.gte(f.coluna, f.valor);
+    case "lte":
+      return busca.lte(f.coluna, f.valor);
+    case "lt":
+      return busca.lt(f.coluna, f.valor);
+    case "ilike":
+      return busca.ilike(f.coluna, f.valor);
+    case "ou":
+      return f.tabela ? busca.or(f.filtro, { referencedTable: f.tabela }) : busca.or(f.filtro);
+  }
+}
+
 /** O select da tabela montado no servidor (colunas fechadas, filtros declarados, dono = quem chama), como a pessoa. */
 async function lerTabela(c: ContextoLeitura, item: ItemValido, consulta: ConsultaLeitura & { fonte: FonteTabela }): Promise<RespostaDeItem> {
   const plano = planoDaTabela(consulta, item.params, c.userId);
   const extras = extrasDaTabela(consulta.fonte, item.params);
+  // hml-20c: o limite de cada embutido (vazio nas consultas sem embutido com limite — as da 20a/20b)
+  const limites = limitesDosEmbutidos(consulta.fonte);
   /** a busca de 1 ida (o builder do supabase-js é de 1 uso só: o laço monta uma por leitura) */
   const montar = () => {
     let busca = extras.contar ? c.comoPessoa.from(plano.tabela).select(plano.colunas, { count: "exact" }) : c.comoPessoa.from(plano.tabela).select(plano.colunas);
-    for (const f of plano.filtros) {
-      if (f.op === "in") busca = busca.in(f.coluna, [...f.valor]);
-      else if (f.op === "eq") busca = busca.eq(f.coluna, f.valor);
-      else busca = busca.is(f.coluna, null);
-    }
+    for (const f of plano.filtros) busca = aplicarFiltro(busca, f);
+    for (const l of limites) busca = busca.limit(l.n, { referencedTable: l.tabela });
     for (const o of plano.ordem) busca = busca.order(o.coluna, { ascending: o.asc });
     return busca;
   };
+  // hml-20c (soContar): o HEAD — só o total, com os mesmos filtros (sem ordem nem limite, como o select head de hoje)
+  if (consulta.fonte.soContar === true) return await contarLinhas(c, item.q, plano.tabela, plano.colunas, plano.filtros);
   if (extras.laco) return await lerEmLaco(c, item.q, montar, extras.laco);
   const { data, error, count } = await (extras.intervalo ? montar().range(extras.intervalo[0], extras.intervalo[1]) : montar().limit(plano.teto));
   // hml-20b (revisão): na consulta COM página, a página além do fim (PGRST103) = dados_invalidos, sem log.excecao; nas outras, como sempre
@@ -125,11 +184,58 @@ async function lerTabela(c: ContextoLeitura, item: ItemValido, consulta: Consult
   // hml-20b: o total da lista (com os mesmos filtros) — sem a contagem, o pedido falhou (a lib de hoje também recusava: paginar)
   if (extras.contar && typeof count !== "number") return falhou(c, item.q, { code: "", message: "sem a contagem" });
   const total = extras.contar ? { total: count as number } : {};
+  // hml-20c (porDia): o total de cada dia que a página partiu ao meio, na MESMA ida (a série página → HEAD do dia de hoje)
+  const pd = consulta.fonte.porDia;
+  if (pd && consulta.fonte.pagina && extras.contar) {
+    const dias = item.params[pd.dias];
+    const janelas = janelasDosDiasCortados(
+      linhas, pd.coluna, Number(item.params[consulta.fonte.pagina.param] ?? 1), consulta.fonte.pagina.tamanho, count as number,
+      Array.isArray(dias) ? (dias as string[]) : [], String(item.params[pd.de] ?? ""),
+    );
+    const porDia: Array<{ dia: string; total: number }> = [];
+    for (const j of janelas) {
+      // o prazo do pedido esgotou antes de contar o dia → tempo_esgotado, sem contar mais (como o laço das páginas — o lerEmLaco)
+      if (c.prazo?.esgotado() === true) return falhou(c, item.q, { name: "TimeoutError", message: "TimeoutError: o prazo do pedido acabou no total por dia" });
+      // os mesmos filtros, com o início do período trocado pelo início do dia e o fim do dia (lt) — a contagem que a tela fazia
+      const filtros: FiltroLeitura[] = [
+        ...plano.filtros.map((f) => (f.op === "gte" && f.coluna === pd.coluna ? { ...f, valor: j.de } : f)),
+        { op: "lt", coluna: pd.coluna, valor: j.ate },
+      ];
+      const r = await contarLinhas(c, item.q, plano.tabela, plano.colunas, filtros);
+      if (r.ok === false) return r;
+      porDia.push({ dia: j.dia, total: r.total as number });
+    }
+    // hml-20c (com_urls): a página com as miniaturas na MESMA ida, quando pedidas
+    return { ok: true, linhas: await assinarSePedido(c, item, consulta.assinar, linhas), ...total, valor: { por_dia: porDia } };
+  }
   const a = consulta.assinar;
   if (!a || a.lista) return { ok: true, linhas, ...total };
   if (a.download) return { ok: true, linhas: await assinarCadaUma(c, item, a, linhas), ...total };
+  return { ok: true, linhas: await assinarSePedido(c, item, a, linhas), ...total };
+}
+
+/**
+ * hml-20c: as URLs das linhas que a PRÓPRIA consulta leu (createSignedUrls como a pessoa, no bucket do ambiente) — a assinatura de sempre
+ * (sem `se`) e a opcional (com `se`: só com o param booleano dele = true no item — o com_urls da lista do Diário e do "Diário de hoje";
+ * sem ele, as linhas voltam como vieram, sem URL e sem ir ao Storage).
+ */
+async function assinarSePedido(c: ContextoLeitura, item: ItemValido, a: AssinarLeitura | undefined, linhas: unknown[]): Promise<unknown[]> {
+  if (!a || a.lista || a.download || (a.se !== undefined && item.params[a.se] !== true)) return linhas;
   const urls = await assinar(c, item.q, a, caminhosParaAssinar(linhas, a.coluna));
-  return { ok: true, linhas: comUrls(linhas, a.coluna, urls), ...total };
+  return comUrls(linhas, a.coluna, urls);
+}
+
+/**
+ * hml-20c (soContar e porDia): o HEAD — select(colunas, { count: "exact", head: true }) com os filtros do plano, como a pessoa: só o
+ * total (o "Só não reagidas (N)", o contador do menu, o registro do dia, o total de um dia cortado). Sem a contagem → erro_interno.
+ */
+async function contarLinhas(c: ContextoLeitura, q: string, tabela: string, colunas: string, filtros: readonly FiltroLeitura[]): Promise<RespostaDeItem> {
+  let busca = c.comoPessoa.from(tabela).select(colunas, { count: "exact", head: true });
+  for (const f of filtros) busca = aplicarFiltro(busca, f);
+  const { error, count } = await busca;
+  if (error) return falhou(c, q, error);
+  if (typeof count !== "number") return falhou(c, q, { code: "", message: "sem a contagem" });
+  return { ok: true, total: count };
 }
 
 /**

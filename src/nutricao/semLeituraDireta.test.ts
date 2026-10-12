@@ -17,6 +17,12 @@
 // antropometrias.ts): 0 leitura direta do principal, fora 1 de OUTRA W listada (a mensagens_desligadas do aviso da P15 — Mensagens, H-43,
 // no mesmo arquivo do perfil). O detector passa a ver também o invólucro local de RPC (`rpc("x"` / `rpc<T>("x"`, como o do
 // painel/aluno/dados/api.ts — o aluno_perfil saía por ele). E no src/ inteiro ninguém lê direto as 4 RPCs que a 20b levou para o servidor.
+// hml-20c: a Dieta do aluno no Painel, as Dietas, a Pré-consulta e o Dashboard de saúde — as libs do editor (src/nutricao/editor/lib), as
+// Dietas (src/painel/dietas), a Pré-consulta (src/painel/preconsulta) e o dados.ts do Dashboard: 0 leitura direta (no 2436d0b o detector
+// achava 38 nesses 73 arquivos). Os links públicos sem login (/d/:codigo e /f/:slug — decisão 13) ficam `fora` (falam com o banco como
+// anônimo, pelas RPCs deles); as leituras do Dashboard de OUTRAS W (alunos, agenda, financeiro) moram nas libs de lá, fora destas pastas.
+// E no src/ inteiro ninguém lê direto as 8 RPCs que a 20c levou para o servidor (as 3 do plano — a planos_favoritos inclusive: a Ferramentas ›
+// Modelos lê pela lib —, a grupos_alimentos, a receitas_da_nutricionista, a respostas_da_conta, a preconsulta_numeros e a painel_resumo).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -25,6 +31,13 @@ import { RPC_SO_LEITURA } from "@/integrations/repeticao";
 import { semComentarios } from "../../scripts/ci/checar-funcoes.mjs";
 
 const RAIZ = resolve(__dirname, "../..");
+
+/**
+ * hml-20c: os links públicos sem login (decisão 13 da hml-19; spec hml-20 §2.8): falam com o banco como ANÔNIMO, pelas RPCs deles (o
+ * diario_link/diario_listar do /d/:codigo e o preconsulta_formulario do /f/:slug — "gravam" pelo limite público, por isso o detector de
+ * leitura não as conta); sem sessão não há como ir pela função. Ficam `fora` da área e a guarda confere que seguem assim (e só elas).
+ */
+const LINKS_PUBLICOS = ["src/painel/dietas/publico.ts", "src/painel/preconsulta/publico.ts"] as const;
 
 /**
  * As áreas migradas para a leitura pela função e o que ainda pode ler direto em cada uma (a base só diminui); `fora` = arquivos de outra
@@ -60,6 +73,15 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; m
     desvio: { "src/painel/aluno/dados/api.ts": ["rpc.mensagens_desligadas"] },
     minimo: 100,
   },
+  // hml-20c: a Dieta do aluno no Painel (as libs do editor), as Dietas (Alimentos, Receitas, Diário), a Pré-consulta (Formulários, Respostas,
+  // o contador do menu) e o Dashboard de saúde (o dados.ts dele) — 73 arquivos hoje (75 menos os 2 links públicos). No 2436d0b o detector
+  // achava 38 leituras diretas aqui; agora 0. Os links públicos sem login ficam fora (decisão 13: sem sessão, não há como ir pela função).
+  dieta: {
+    pastas: ["src/nutricao/editor/lib", "src/painel/dietas", "src/painel/preconsulta", "src/painel/dashboard/dados.ts"],
+    base: 0,
+    fora: [...LINKS_PUBLICOS],
+    minimo: 73,
+  },
 };
 /**
  * revisão da 20b: as RPCs que a área do Painel › Aluno AINDA chama direto — todas de OUTRA W, nomeadas (o H-43: o acesso do aluno — a
@@ -75,9 +97,15 @@ const RPCS_DE_OUTRA_W_NO_PAINEL: Record<string, string[]> = {
 /**
  * O que saiu do navegador para o servidor — no src/ inteiro, ninguém lê direto (o nome escrito na chamada). hml-20a: as 2 do app do
  * aluno; hml-20b: as 4 do Painel › Aluno (aluno_perfil, aluno_evolucao, aluno_anotacoes, exames_do_aluno — nenhuma tem leitor em área de
- * outra W).
+ * outra W). hml-20c: as 8 da Dieta, das Dietas, da Pré-consulta e do Dashboard (nenhuma tem leitor em área de outra W: a planos_favoritos
+ * da Ferramentas › Modelos — H-43 — passa pela lib dos planos, que agora lê pelo servidor).
  */
-const RPCS_DO_SERVIDOR = ["minha_dieta", "minha_evolucao", "aluno_perfil", "aluno_evolucao", "aluno_anotacoes", "exames_do_aluno"] as const;
+const RPCS_DO_SERVIDOR = [
+  "minha_dieta", "minha_evolucao", "aluno_perfil", "aluno_evolucao", "aluno_anotacoes", "exames_do_aluno",
+  // hml-20c
+  "planos_do_aluno", "plano_alimentar", "planos_favoritos", "grupos_alimentos", "receitas_da_nutricionista", "respostas_da_conta", "preconsulta_numeros",
+  "painel_resumo",
+] as const;
 /** hml-20a (desvio do gate J): as 2 tabelas do Treino da Evolução do aluno — só o src/evolucao/fontes.ts lê direto (1 vez cada). */
 const TABELAS_DO_DESVIO = ["physiq_avaliacoes", "physiq_registros_fotos"] as const;
 const SO_O_DESVIO = "src/evolucao/fontes.ts";
@@ -224,6 +252,26 @@ describe("hml-20b — o detector também acha as leituras de antes do Painel ›
   });
 });
 
+describe("hml-20c — o detector também acha as leituras de antes da Dieta, das Dietas, da Pré-consulta e do Dashboard (controle positivo)", () => {
+  it("o select com o embutido e o .or() do recorte, o HEAD, a busca em 2 passos (a consulta montada e o range), as RPCs da 20c e as 2 assinaturas do diário", () => {
+    const antes = [
+      'const { data, error } = await supabase\n    .from("calculos_energeticos")\n    .select("*")\n    .eq("paciente_id", pacienteId)',
+      'let q = principal\n      .from("diario_alimentar")\n      .select(SELECT_NUTRI, { count: "exact" })\n      .is("deleted_at", null)',
+      'const { count, error } = await principal.from("respostas_preconsulta").select("id", { count: "exact", head: true }).is("deleted_at", null);',
+      'let q = supabase.from("alimentos").select(SELECT, { count: "exact" }).is("deleted_at", null);',
+      'const { data, error } = await supabase.rpc("planos_do_aluno" as never, { p_aluno: pacienteId } as never);',
+      'const { data, error } = await supabase.rpc("receitas_da_nutricionista" as never, { p_filtros: filtros } as never);',
+      'const { data, error } = await principal.rpc("painel_resumo" as never, { p_conta: contaId } as never);',
+      "const { data, error } = await principal.storage.from(BUCKET_DIARIO).createSignedUrl(r.path, segundos);",
+      "const { data, error } = await principal.storage.from(BUCKET_DIARIO).createSignedUrls(comPath.map((r) => r.path), segundos);",
+    ].join("\n");
+    expect(leiturasDiretas(antes)).toHaveLength(9);
+    expect(leiturasDoQueSaiu(antes)).toHaveLength(3); // planos_do_aluno, receitas_da_nutricionista, painel_resumo (as 8 da 20c saíram do src/)
+    // o que a 20c põe no lugar não é leitura direta: o lerNutricao e a gravação pela função
+    expect(leiturasDiretas('const r = await lerNutricao("diario_pagina", { conta: contaId, dias });\nawait acaoNutricao("preconsulta_formulario_excluir", { id });')).toEqual([]);
+  });
+});
+
 describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)", () => {
   it.each(Object.entries(AREAS))("%s: nenhuma leitura direta nas pastas da área além do desvio listado", (_area, { pastas, base, fora = [], minimo, desvio = {} }) => {
     const fontes = pastas.flatMap(fontesDa).filter((arq) => !fora.includes(relative(RAIZ, arq)));
@@ -263,7 +311,7 @@ describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)
     expect(texto).not.toMatch(/\bprincipal\s*\.\s*(from|rpc|storage|functions)\b/);
   });
 
-  it("no src/ inteiro, ninguém lê direto as RPCs que foram para o servidor (20a: minha_dieta, minha_evolucao; 20b: aluno_perfil, aluno_evolucao, aluno_anotacoes, exames_do_aluno); physiq_avaliacoes e physiq_registros_fotos só no desvio", () => {
+  it("no src/ inteiro, ninguém lê direto as RPCs que foram para o servidor (20a: minha_dieta, minha_evolucao; 20b: aluno_perfil, aluno_evolucao, aluno_anotacoes, exames_do_aluno; 20c: as 3 do plano, grupos_alimentos, receitas_da_nutricionista, respostas_da_conta, preconsulta_numeros, painel_resumo); physiq_avaliacoes e physiq_registros_fotos só no desvio", () => {
     const fontes = fontesDa("src");
     const achados = fontes.flatMap((arq) => leiturasDoQueSaiu(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
     const fora = achados.filter((a) => !a.startsWith(`${SO_O_DESVIO}:`));
@@ -274,7 +322,17 @@ describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)
 
   it("os arquivos de fora existem e ainda leem direto (a guarda não esconde nada além deles)", () => {
     for (const [area, { fora = [] }] of Object.entries(AREAS)) {
-      for (const rel of fora) expect(leiturasDiretas(readFileSync(resolve(RAIZ, rel), "utf-8")).length, `${area}: ${rel}`).toBeGreaterThan(0);
+      for (const rel of fora) {
+        const fonte = readFileSync(resolve(RAIZ, rel), "utf-8");
+        // hml-20c: os links públicos (anônimos) falam com o banco pelas RPCs deles, que o detector de leitura não conta (estão em
+        // RPC_QUE_GRAVAM): seguem chamando-as direto — e o resto do arquivo não lê nada direto (0 pelo detector)
+        if ((LINKS_PUBLICOS as readonly string[]).includes(rel)) {
+          expect(fonte, `${area}: ${rel}`).toMatch(/\.rpc\(\s*"(diario_link|diario_listar|preconsulta_formulario)"/);
+          expect(leiturasDiretas(fonte), `${area}: ${rel}`).toEqual([]);
+          continue;
+        }
+        expect(leiturasDiretas(fonte).length, `${area}: ${rel}`).toBeGreaterThan(0);
+      }
     }
   });
 

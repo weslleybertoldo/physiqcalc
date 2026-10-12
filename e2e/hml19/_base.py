@@ -136,12 +136,16 @@ ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # (hml20/agente/logins_etapa2_20a.txt — o da 19d fica) e o teto, 6 logins na etapa 2 (a sessão principal guarda 4 para o staging); os
 # E2E da hml-20 (e2e/hml20/_base.py) e a regressão da hml-19 contam no MESMO registro. hml-20b (decisão G do contrato da 20b): o registro
 # passa a ser o da hml-20b (hml20/agente/logins_etapa2_20b.txt — o da 20a fica); o teto da W segue 10 (no máximo 6 na etapa 2: a sessão
-# principal guarda 4 para o smoke e o F6)
-REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20b.txt"
+# principal guarda 4 para o smoke e o F6). hml-20c (decisão J do contrato da 20c): o registro passa a ser o da hml-20c
+# (hml20/agente/logins_etapa2_20c.txt — o da 20b fica)
+REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20c.txt"
 # hml-20a F7 (sessão principal, 12/10/2026): +4 logins para o F7 no staging — o teto da W inteira passa a 10 (os 6 da etapa 2 já usados).
 # hml-20b (revisão, 🟡2): o registro novo (logins_etapa2_20b.txt) começa com o teto de 6 — os da etapa 2 desta W; a sessão principal sobe
 # para 10 no F6 (o staging), como fez na 20a
 # hml-20b F6 (sessão principal, 12/10/2026): o teto da W inteira passa a 10 (5 da etapa 2 + o smoke já usados)
+# hml-20c (decisão J): o registro novo (logins_etapa2_20c.txt) começa com o teto de 6 — os da etapa 2 desta W (o teto da W no staging é 10:
+# a sessão principal guarda 4 para o smoke e o F6 e sobe para 10 no F6, como na 20a e na 20b)
+# hml-20c F6 (sessão principal, 12/10/2026): o teto da W inteira passa a 10 (5 da etapa 2 + o smoke já usados)
 MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 

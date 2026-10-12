@@ -21,6 +21,9 @@ Uso: python3 e2e/hml20/rede.py --area aluno --base local|staging|prod --canal ms
   --seco  sem rede e sem navegador: os seletores existem no código das telas e a guarda acerta pedidos de exemplo (antes e depois)
 hml-20b: --area painel-aluno = a rede do Painel › Aluno (a nutri: a casca/Resumo, o Prontuário ×10 e a Avaliação; a personal: o Resumo e
 a Avaliação) — 0 leitura direta da área, o `ler` por tela, as de fora da área (20c e H-43) à parte, 0 gravação nova; em painel_tela.py
+hml-20c: --area dieta = a rede do Dashboard, da Dieta ×8, das Dietas ×3 e da Pré-consulta ×2 (a nutri) e do Dashboard (a personal) — 0
+leitura direta da área, o `ler` por tela, as de fora da área (H-43, 20d) à parte, 0 gravação nova ao abrir e a Pré-consulta PELA TELA (as 5
+gravações pela função, 0 direta); em dieta_tela.py
 (o docstring de lá), planilha hml20/medicao/rede_hml20b.tsv.
 """
 from __future__ import annotations
@@ -188,8 +191,8 @@ def rodar(o, base: str, canal: str | None) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20 — a rede das telas (antes × depois): o app do aluno (20a) e o Painel › Aluno (20b)")
-    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno"))
+    ap = argparse.ArgumentParser(description="hml-20 — a rede das telas (antes × depois): o app do aluno (20a), o Painel › Aluno (20b) e a Dieta/Dietas/Pré-consulta/Dashboard (20c)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta"))
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--seco", action="store_true")
@@ -198,6 +201,8 @@ def main() -> int:
     painel = None
     if a.area == "painel-aluno":  # hml-20b: o Painel › Aluno (painel_tela.py)
         import painel_tela as painel  # noqa: PLC0415
+    if a.area == "dieta":  # hml-20c: a Dieta, as Dietas, a Pré-consulta e o Dashboard (dieta_tela.py)
+        import dieta_tela as painel  # noqa: PLC0415
     if a.seco:
         o = C.Saida(f"rede20_{a.area}_seco")
         painel.seco(o, "rede") if painel else seco(o)

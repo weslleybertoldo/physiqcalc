@@ -1,11 +1,11 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/receitas.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { POR_PAGINA, deslocamento, type Pagina } from "@/lib/paginacao";
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
-import { VOLTA_RECEITA } from "../../../../supabase-principal/functions/_shared/nutricao-regras";
 import type { Alimento, MedidaCaseira } from "@/nutricao/editor/lib/alimentos";
 import { ordenarMedidas, palavrasBusca } from "@/nutricao/editor/lib/alimentosUtil";
+import { TEXTO_FILTRO_MAX } from "../../../../supabase-principal/functions/_shared/nutricao-leituras";
 import { criarItensEmLote, type Item } from "@/nutricao/editor/lib/planos";
 import { escalarIngredientes, medidaInteira, ordenarGrupos, ordenarIngredientes, ordenarReceitas, type RegistroIngrediente, type RegistroReceita } from "@/nutricao/editor/lib/receitasUtil";
 
@@ -17,6 +17,11 @@ import { escalarIngredientes, medidaInteira, ordenarGrupos, ordenarIngredientes,
 // mesmas assinaturas. A receita e os ingredientes vão juntos (1 chamada, tudo ou nada — antes 2 a 4 pedidos, e o desfazer à mão no
 // erro); excluir o grupo também (as receitas dele ficam sem grupo no mesmo passo). O dono é sempre quem chama (o duplicar não leva mais
 // o id da autora). As frases de antes ficam ("Já existe um grupo com esse nome", "Grupo não encontrado", "Receita não encontrada").
+// hml-20c (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa — os
+// grupos (grupos_receita: com o uid, só os de quem está logado — o dono é o do token), a página (receitas_pagina: a RPC hml-14b E as
+// receitas da página pelos ids NA MESMA IDA — eram 2 em série), os nomes para a cópia (receita_nome: as suas) e todas (receitas_todas,
+// num lote só dela). A receita com os ingredientes e o alimento de cada um, colunas do tipo (nenhum "*"). Saiu o buscarReceita (0
+// chamador — código morto de leitura, decisão 21).
 
 export { nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
 export { dadosProfissionais } from "@/nutricao/editor/lib/profissional";
@@ -30,12 +35,6 @@ export type AlimentoDoIngrediente = Pick<Alimento, "id" | "nome" | "fonte" | "gr
 export type Ingrediente = IngredienteRow & { alimento: AlimentoDoIngrediente | null };
 export type Receita = ReceitaRow & { ingredientes: Ingrediente[] };
 
-/** A receita com os ingredientes e o alimento de cada um — o MESMO select que o servidor devolve depois de gravar (uma fonte só). */
-const SELECT_RECEITA = VOLTA_RECEITA;
-
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
 /** O índice único parcial (nutricionista, lower(nome)) devolve conflito — vira a mensagem da tela; 0 linha = o grupo não está mais aí. */
 const FRASES_GRUPO = { conflito: "Já existe um grupo com esse nome", nao_encontrado: "Grupo não encontrado" };
 const FRASES_RECEITA = { nao_encontrado: "Receita não encontrada" };
@@ -51,13 +50,11 @@ const montarIngrediente = (i: IngredienteBruto): Ingrediente => ({
 const montarReceita = (r: ReceitaBruta): Receita => ({ ...r, ingredientes: ordenarIngredientes((r.ingredientes ?? []).map(montarIngrediente)) });
 
 // ---- Grupos ----
-/** Os grupos vivos; com `nutricionistaId`, só os dela (hml-14b: o painel separa no banco — a RLS do master lê os de todos). */
+/** Os grupos vivos; com `nutricionistaId`, só os dela (hml-14b: o painel separa no banco — a RLS do master lê os de todos). hml-20c: o
+ *  "só os dela" é do servidor, pelo dono do token (quem chama sempre manda o próprio uid). */
 export async function listarGrupos(nutricionistaId?: string): Promise<GrupoReceita[]> {
-  let q = supabase.from("grupos_receita").select("*").is("deleted_at", null);
-  if (nutricionistaId) q = q.eq("nutricionista_id", nutricionistaId);
-  const { data, error } = await q.order("ordem").order("nome");
-  falhou(error);
-  return ordenarGrupos((data ?? []) as GrupoReceita[]);
+  const r = await lerNutricao("grupos_receita", nutricionistaId ? { meus: true } : {});
+  return ordenarGrupos((r.linhas ?? []) as GrupoReceita[]);
 }
 
 export async function criarGrupo(nutricionistaId: string, nome: string): Promise<GrupoReceita> {
@@ -114,19 +111,18 @@ export function lerPaginaReceitas(bruto: unknown): { ids: string[]; total: numbe
  */
 export async function listarReceitasPagina(f: FiltrosReceitas, pagina: number): Promise<PaginaReceitas> {
   const filtros: Record<string, string> = {};
-  const q = palavrasBusca(f.q).join(" ");
+  // hml-20c (revisão ⚪4): o termo e o grupo no teto do servidor (TEXTO_FILTRO_MAX) — a busca longa dá "nenhum resultado", como antes
+  const q = palavrasBusca(f.q.slice(0, TEXTO_FILTRO_MAX)).join(" ").slice(0, TEXTO_FILTRO_MAX);
   if (q) filtros.q = q;
-  if (f.grupo) filtros.grupo = f.grupo;
+  if (f.grupo) filtros.grupo = f.grupo.slice(0, TEXTO_FILTRO_MAX);
   if (f.favoritas) filtros.favoritas = "true";
-  const { data, error } = await supabase.rpc("receitas_da_nutricionista" as never, { p_filtros: filtros, p_offset: deslocamento(pagina), p_limite: POR_PAGINA } as never);
-  falhou(error);
-  const r = lerPaginaReceitas(data);
+  // hml-20c: a RPC e as receitas da página pelos ids NA MESMA IDA (o servidor relê os ids que a RPC devolveu, como a pessoa)
+  const lido = await lerNutricao("receitas_pagina", { filtros, offset: deslocamento(pagina), limite: POR_PAGINA });
+  const r = lerPaginaReceitas(lido.valor);
   if (!r) throw new Error("A lista de receitas voltou num formato inesperado.");
   const numeros = { total: r.total, totalGeral: r.totalGeral, favoritas: r.favoritas, porGrupo: r.porGrupo };
   if (!r.ids.length) return { itens: [], ...numeros };
-  const { data: linhas, error: erroLinhas } = await supabase.from("receitas").select(SELECT_RECEITA).in("id", r.ids).is("deleted_at", null);
-  falhou(erroLinhas);
-  const porId = new Map(((linhas ?? []) as unknown as ReceitaBruta[]).map((x) => [x.id, montarReceita(x)]));
+  const porId = new Map(((lido.linhas ?? []) as unknown as ReceitaBruta[]).map((x) => [x.id, montarReceita(x)]));
   // a que saiu entre as 2 leituras (excluída agora) fica de fora
   return { itens: r.ids.flatMap((id) => porId.get(id) ?? []), ...numeros };
 }
@@ -136,28 +132,18 @@ export async function listarReceitasPagina(f: FiltrosReceitas, pagina: number): 
  * a lista inteira (a mesma base do nomeCopia).
  */
 export async function nomesParaCopia(nutricionistaId: string, nome: string): Promise<string[]> {
-  const base = nome.replace(/\s*\(cópia(?: \d+)?\)\s*$/i, "").trim() || nome.trim();
-  const { data, error } = await supabase
-    .from("receitas")
-    .select("nome")
-    .eq("nutricionista_id", nutricionistaId)
-    .is("deleted_at", null)
-    .ilike("nome", `${base.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
-  falhou(error);
-  return ((data ?? []) as { nome: string }[]).map((x) => x.nome);
+  // hml-20c (revisão ⚪4): o nome-base no teto do servidor (TEXTO_FILTRO_MAX), como a busca
+  const base = (nome.replace(/\s*\(cópia(?: \d+)?\)\s*$/i, "").trim() || nome.trim()).slice(0, TEXTO_FILTRO_MAX);
+  // hml-20c: o servidor escapa o \ % _ e põe o % do "começa com" (o mesmo de antes) e filtra pelo dono do TOKEN (o nutricionistaId que
+  // quem chama manda é o próprio uid — fica na assinatura, como nas outras libs)
+  const r = await lerNutricao("receita_nome", { base });
+  return ((r.linhas ?? []) as { nome: string }[]).map((x) => x.nome);
 }
 
-/** Todas as receitas vivas da nutricionista, com ingredientes e alimentos (a lista mostra kcal/porção e macros). */
+/** Todas as receitas vivas da nutricionista, com ingredientes e alimentos (a lista mostra kcal/porção e macros) — num lote só dela. */
 export async function listarReceitas(): Promise<Receita[]> {
-  const { data, error } = await supabase.from("receitas").select(SELECT_RECEITA).is("deleted_at", null).order("nome");
-  falhou(error);
-  return ordenarReceitas(((data ?? []) as unknown as ReceitaBruta[]).map(montarReceita));
-}
-
-export async function buscarReceita(id: string): Promise<Receita | null> {
-  const { data, error } = await supabase.from("receitas").select(SELECT_RECEITA).eq("id", id).is("deleted_at", null).maybeSingle();
-  falhou(error);
-  return data ? montarReceita(data as unknown as ReceitaBruta) : null;
+  const r = await lerNutricao("receitas_todas", {}, { sozinha: true });
+  return ordenarReceitas(((r.linhas ?? []) as unknown as ReceitaBruta[]).map(montarReceita));
 }
 
 const colunasReceita = (r: RegistroReceita) => ({
@@ -181,7 +167,7 @@ const colunasIngredientes = (ingredientes: RegistroIngrediente[]) =>
     observacao: i.observacao,
   }));
 
-/** A receita nova com os ingredientes: 1 chamada, tudo ou nada; volta a receita montada (a mesma do buscarReceita). */
+/** A receita nova com os ingredientes: 1 chamada, tudo ou nada; volta a receita montada (com os ingredientes e o alimento de cada um). */
 export async function criarReceita(nutricionistaId: string, r: RegistroReceita, ingredientes: RegistroIngrediente[]): Promise<Receita> {
   const { linha } = await acaoNutricao<{ linha: ReceitaBruta }>("receita_salvar", { receita: colunasReceita(r), ingredientes: colunasIngredientes(ingredientes) });
   return montarReceita(linha);

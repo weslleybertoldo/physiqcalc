@@ -26,6 +26,23 @@
 //   · FonteTabela.uma: a consulta de 1 linha (pelo id): 0 linha → nao_encontrado;
 //   · AssinarLeitura.download: 1 URL por linha, com o "baixar com o nome" (a coluna do nome que a consulta leu) quando o param vem true
 //     e o prazo do baixar (o `validade` fica para o ver) — o Ver/Baixar dos anexos de hoje.
+// hml-20c (Dieta, Dietas, Pré-consulta e Dashboard, 12/10/2026): mais capacidades OPCIONAIS — de novo, só quem as declara usa; as
+// consultas da 20a e da 20b não declaram nenhuma, então o caminho delas não muda (planoDaTabela/extrasDaTabela devolvem o mesmo para
+// elas — o leituraServidor.test.ts confere):
+//   · params: instante (o ISO com fuso: o início do período do diário, o "desde" da Atividade recente, o 1º instante do mês), instantes
+//     (os inícios de dia LOCAIS do período do diário, crescentes — o servidor não sabe o fuso do navegador), textos (as palavras da busca,
+//     sem espaço nem os caracteres de controle do PostgREST/LIKE — as que o palavrasBusca da tela já tira) e objeto (os filtros das RPCs
+//     paginadas: só as chaves declaradas, cada uma com o tipo dela; o resto cai);
+//   · FonteTabela: os filtros gte/lte/lt (o período), ilike_cada (cada palavra = 1 ilike '%p%', E lógico), ilike_prefixo (o texto que
+//     começa assim, com \ % _ escapados) e nulo (o param true → coluna is null); `nulos` (colunas sempre nulas); `recorte` (o .or() de
+//     hoje montado AQUI com o user do token: "conta" = conta_id da conta do corpo OU sem conta e meu — o recorte da conta ativa, inclusive
+//     no recurso embutido —, "taco_ou_meus" = a TACO ou os meus; a conta é uuid, então o corpo não injeta filtro); `embutidos` (os
+//     recursos embutidos com as colunas em lista fechada, o !inner, as vivas e o limite de cada um); `faixa` (offset + limite → .range);
+//     `ordem[].se` (essa ordem só com o param booleano true); `soContar` (o HEAD: só o total, sem linhas); `porDia` (o total de cada dia
+//     que a página partiu ao meio, com os inícios de dia do corpo — a série página → HEAD do dia na MESMA ida);
+//   · ConsultaLeitura.donoSe: o dono só quando o param booleano vem true (o listarGrupos(uid) de hoje — sem o uid, o RLS decide);
+//   · FonteRpc: `filtrarLista` (o valor-lista filtrado pelo dono = quem chama e pela conta do param — os ★ da Ferramentas › Modelos,
+//     H-108; sem o param, o valor de hoje) e `linhasDosIds` (a série RPC → .in(ids) na MESMA ida — a página de receitas).
 
 /** Itens por pedido (acima → 400 lote_grande). */
 export const LOTE_MAX = 16;
@@ -43,8 +60,23 @@ export const VALIDADE_MAX_S = 3600;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
+/** hml-20c: o instante ISO com o fuso (o toISOString() da tela: 2026-10-12T03:00:00.000Z), até 40. */
+const INSTANTE = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:?\d{2})$/;
+/** hml-20c: uma palavra da busca — sem espaço e sem os caracteres que o normalizarBusca da tela tira (o controle do PostgREST e do LIKE). */
+const PALAVRA = /^[^\s,()"'\\%_*;]+$/;
+/** hml-20c: o teto de uma lista de instantes num param (os inícios de dia do período do diário: até 90 dias + os 2 de depois). */
+export const INSTANTES_MAX = 100;
+/** hml-20c: o teto de uma lista de textos num param (as palavras da busca: a tela manda até 6). */
+export const TEXTOS_MAX = 20;
 
 // ───────────────────────── os params ─────────────────────────
+/** hml-20c: o que cabe numa chave de um param objeto (os filtros das RPCs paginadas) — sem listas nem objetos dentro. */
+export type ParamSimples =
+  | { tipo: "uuid"; obrigatorio?: boolean }
+  | { tipo: "inteiro"; min: number; max: number; obrigatorio?: boolean }
+  | { tipo: "texto"; max: number; obrigatorio?: boolean }
+  | { tipo: "booleano"; obrigatorio?: boolean }
+  | { tipo: "enum"; valores: readonly string[]; obrigatorio?: boolean };
 export type ParamLeitura =
   | { tipo: "uuid"; obrigatorio?: boolean }
   | { tipo: "uuids"; max: number; obrigatorio?: boolean }
@@ -52,7 +84,12 @@ export type ParamLeitura =
   | { tipo: "inteiro"; min: number; max: number; obrigatorio?: boolean }
   | { tipo: "texto"; max: number; obrigatorio?: boolean }
   | { tipo: "booleano"; obrigatorio?: boolean }
-  | { tipo: "enum"; valores: readonly string[]; obrigatorio?: boolean };
+  | { tipo: "enum"; valores: readonly string[]; obrigatorio?: boolean }
+  // hml-20c
+  | { tipo: "instante"; obrigatorio?: boolean }
+  | { tipo: "instantes"; max: number; obrigatorio?: boolean }
+  | { tipo: "textos"; max: number; maxItem: number; obrigatorio?: boolean }
+  | { tipo: "objeto"; campos: Readonly<Record<string, ParamSimples>>; obrigatorio?: boolean };
 export type ParamsLeitura = Readonly<Record<string, ParamLeitura>>;
 
 const ehObjeto = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
@@ -65,11 +102,52 @@ function dataValida(v: unknown): v is string {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
 }
 
+/** hml-20c: o instante ISO com o fuso, de um dia que existe no calendário (2026-02-31T… não passa). */
+function instanteValido(v: unknown): v is string {
+  if (typeof v !== "string" || v.length > 40) return false;
+  const m = INSTANTE.exec(v);
+  return !!m && dataValida(m[1]) && !Number.isNaN(Date.parse(v));
+}
+
 /** O valor do param, se está na forma (uuid em minúsculas; a lista de ids sem repetição, na ordem); senão, fora. */
 export function valorDoParam(p: ParamLeitura, v: unknown): { ok: true; valor: unknown } | { ok: false } {
   const ok = (valor: unknown) => ({ ok: true as const, valor });
   const fora = { ok: false as const };
   switch (p.tipo) {
+    // ───── hml-20c ─────
+    case "instante":
+      return instanteValido(v) ? ok(v) : fora;
+    case "instantes": {
+      // a lista de instantes (1 a max, no teto INSTANTES_MAX), cada um válido e ESTRITAMENTE crescente (os inícios de dia, em ordem)
+      const max = Math.min(p.max, INSTANTES_MAX);
+      if (!Array.isArray(v) || v.length === 0 || v.length > max || !v.every(instanteValido)) return fora;
+      const tempos = (v as string[]).map((x) => Date.parse(x));
+      for (let i = 1; i < tempos.length; i++) if (!(tempos[i] > tempos[i - 1])) return fora;
+      return ok([...(v as string[])]);
+    }
+    case "textos": {
+      // as palavras (1 a max, no teto TEXTOS_MAX): cada uma de 1 a maxItem caracteres, sem espaço e sem o controle do PostgREST/LIKE
+      const max = Math.min(p.max, TEXTOS_MAX);
+      if (!Array.isArray(v) || v.length === 0 || v.length > max) return fora;
+      if (!v.every((x) => typeof x === "string" && x.length > 0 && x.length <= p.maxItem && PALAVRA.test(x))) return fora;
+      return ok([...(v as string[])]);
+    }
+    case "objeto": {
+      // só as chaves declaradas (o resto cai), cada uma com o tipo dela; ausente/null = não veio; a declarada fora da forma → fora
+      if (!ehObjeto(v)) return fora;
+      const saida: Record<string, unknown> = {};
+      for (const [nome, campo] of Object.entries(p.campos)) {
+        const x = tem(v, nome) ? v[nome] : undefined;
+        if (x === undefined || x === null) {
+          if (campo.obrigatorio) return fora;
+          continue;
+        }
+        const r = valorDoParam(campo, x);
+        if (r.ok === false) return fora;
+        saida[nome] = r.valor;
+      }
+      return ok(saida);
+    }
     case "uuid":
       return typeof v === "string" && UUID.test(v) ? ok(v.toLowerCase()) : fora;
     case "uuids": {
@@ -117,16 +195,65 @@ export interface FonteRpc {
   args?: Readonly<Record<string, string>>;
   /** hml-20b: os códigos que a RPC levanta de propósito (raise exception '<código>'): voltam como o erro do item (não inesperado) */
   erros?: readonly string[];
+  /**
+   * hml-20c (H-108): com o param `param` no item, o valor-lista da RPC volta SÓ com os itens cujo `dono` = quem chama (o user do token,
+   * nunca o corpo) e cujo `conta` (o caminho [objeto, coluna] dentro do item) = o param; sem o param, o valor de hoje, inteiro.
+   */
+  filtrarLista?: { param: string; dono: string; conta: readonly [string, string] };
+  /**
+   * hml-20c: a série RPC → linhas na MESMA ida — os ids da lista `lista` do valor (só uuids, sem repetição, até `max`) relidos na
+   * tabela COMO A PESSOA (as colunas e os embutidos em lista fechada, as vivas): o item volta com o valor E as linhas.
+   */
+  linhasDosIds?: { lista: string; tabela: string; colunas: readonly string[]; embutidos?: readonly EmbutidoLeitura[]; vivas?: boolean; max: number };
 }
+/**
+ * hml-20c: um recurso embutido no select (o embed do PostgREST: `apelido:tabela!inner(colunas, embutidos)`), com as colunas em lista
+ * fechada (nunca "*"); `vivas` = só os embutidos fora da Lixeira; `limite` = quantos por linha (.limit(n, { referencedTable })).
+ */
+export interface EmbutidoLeitura {
+  /** o apelido na resposta (paciente:pacientes) — sem ele, o nome da tabela */
+  nome?: string;
+  tabela: string;
+  colunas: readonly string[];
+  /** !inner: a linha de cima só vem se tiver o embutido (e o filtro no embutido corta a linha de cima) */
+  interno?: boolean;
+  embutidos?: readonly EmbutidoLeitura[];
+  vivas?: boolean;
+  limite?: number;
+}
+/** hml-20c: os operadores novos dos filtros declarados (o período, a busca por palavras, o prefixo e o "só os nulos"). */
+export type OperadorDoFiltro = "eq" | "in" | "gte" | "lte" | "lt" | "ilike_cada" | "ilike_prefixo" | "nulo";
+/**
+ * hml-20c: o .or() de hoje, montado AQUI com o user do token. "conta" = `conta_id.eq.<conta do param>,and(conta_id.is.null,
+ * nutricionista_id.eq.<user>)` (o recorte da conta ativa — no recurso `tabela`, quando é o do embutido); "taco_ou_meus" = só com o param
+ * booleano true, `fonte.eq.taco,nutricionista_id.eq.<user>` (a lista "Meus alimentos" do painel).
+ */
+export type RecorteLeitura = { modelo: "conta"; param: string; tabela?: string } | { modelo: "taco_ou_meus"; param: string };
 /** select numa tabela com as colunas em lista fechada (nunca "*"), os filtros declarados (param → coluna), o teto e a ordem. */
 export interface FonteTabela {
   tabela: string;
   colunas: readonly string[];
   teto: number;
-  filtros?: readonly { param: string; coluna: string; op: "eq" | "in" }[];
+  filtros?: readonly { param: string; coluna: string; op: OperadorDoFiltro }[];
   /** só as linhas fora da Lixeira (deleted_at is null) */
   vivas?: boolean;
-  ordem?: readonly { coluna: string; asc: boolean }[];
+  /** hml-20c: `se` = essa ordem só quando o param booleano vem true (o desempate da lista do painel) */
+  ordem?: readonly { coluna: string; asc: boolean; se?: string }[];
+  /** hml-20c: as colunas que têm de ser nulas (is null), sempre */
+  nulos?: readonly string[];
+  /** hml-20c: o .or() de hoje (a conta ativa ou "TACO ou meus"), montado no servidor */
+  recorte?: RecorteLeitura;
+  /** hml-20c: os recursos embutidos (com as colunas em lista fechada) */
+  embutidos?: readonly EmbutidoLeitura[];
+  /** hml-20c: offset + limite (os 2 params inteiros) → .range(offset, offset + limite − 1) — a busca da tela com o tamanho dela */
+  faixa?: { offset: string; limite: string };
+  /** hml-20c: o HEAD — só o total (count exato, com os mesmos filtros), sem linhas */
+  soContar?: boolean;
+  /**
+   * hml-20c: o total de cada dia que a página partiu ao meio (a regra do diasQuePodemContinuar da tela), contado com os mesmos filtros
+   * e a janela do dia na `coluna` — os dias são os inícios de dia LOCAIS do param `dias` (instantes) e o período começa no param `de`.
+   */
+  porDia?: { coluna: string; de: string; dias: string };
   /** hml-20b: UMA página da lista — o param (inteiro ≥ 1) e o tamanho (≤ TETO_MAX); o servidor monta o .range(de, ate) */
   pagina?: { param: string; tamanho: number };
   /** hml-20b: devolve também o `total` (o count exato, com os mesmos filtros) */
@@ -150,12 +277,19 @@ export interface AssinarLeitura {
    * leu) e a validade `validade` (a do baixar); sem ele, abre no navegador com a validade da consulta (a do ver).
    */
   download?: { param: string; nome: string; validade: number };
+  /**
+   * hml-20c (decisão da sessão principal na etapa 2): a assinatura OPCIONAL — só com o param booleano `se` = true no item (a lista do
+   * Diário e o "Diário de hoje" com as miniaturas na MESMA ida); sem ele, a consulta volta como sempre, sem URL e sem ir ao Storage.
+   */
+  se?: string;
 }
 export interface ConsultaLeitura {
   params: ParamsLeitura;
   fonte: FonteRpc | FonteTabela;
   /** consulta "minha": a coluna que recebe QUEM CHAMA (o user do token) — nunca vem do corpo */
   dono?: string;
+  /** hml-20c: o dono só quando o param booleano `donoSe` vem true (sem ele, o RLS decide — o listarGrupos() de hoje sem o uid) */
+  donoSe?: string;
   assinar?: AssinarLeitura;
   /** a tela manda num lote só dela (as pesadas não seguram a tela) — dica para o front; o servidor não muda nada */
   sozinha?: boolean;
@@ -174,7 +308,37 @@ export function argsDaRpc(fonte: FonteRpc, params: Record<string, unknown>): Rec
 export type FiltroLeitura =
   | { op: "eq"; coluna: string; valor: unknown }
   | { op: "in"; coluna: string; valor: readonly unknown[] }
-  | { op: "is_null"; coluna: string };
+  | { op: "is_null"; coluna: string }
+  // hml-20c
+  | { op: "gte" | "lte" | "lt"; coluna: string; valor: unknown }
+  | { op: "ilike"; coluna: string; valor: string }
+  | { op: "ou"; filtro: string; tabela?: string };
+
+/** hml-20c: o texto do LIKE com o \ % _ escapados (o mesmo do nomesParaCopia da tela). */
+export const escaparLike = (v: string): string => v.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+/** hml-20c: o pedaço do select de um recurso embutido: `apelido:tabela!inner(colunas, embutidos)` (as colunas na lista fechada). */
+export function selectDoEmbutido(e: EmbutidoLeitura): string {
+  const dentro = [...e.colunas, ...(e.embutidos ?? []).map(selectDoEmbutido)].join(", ");
+  return `${e.nome ? `${e.nome}:` : ""}${e.tabela}${e.interno ? "!inner" : ""}(${dentro})`;
+}
+
+/** hml-20c: o caminho de cada embutido na resposta (o apelido ou a tabela; os de dentro com o ponto), para os filtros e o limite dele. */
+function caminhosDosEmbutidos(lista: readonly EmbutidoLeitura[] | undefined, antes = ""): Array<{ caminho: string; e: EmbutidoLeitura }> {
+  const saida: Array<{ caminho: string; e: EmbutidoLeitura }> = [];
+  for (const e of lista ?? []) {
+    const caminho = `${antes}${e.nome ?? e.tabela}`;
+    saida.push({ caminho, e }, ...caminhosDosEmbutidos(e.embutidos, `${caminho}.`));
+  }
+  return saida;
+}
+
+/** hml-20c: os limites dos embutidos (.limit(n, { referencedTable: caminho })) — vazio nas consultas sem embutido com limite. */
+export function limitesDosEmbutidos(fonte: FonteTabela): Array<{ tabela: string; n: number }> {
+  return caminhosDosEmbutidos(fonte.embutidos)
+    .filter(({ e }) => typeof e.limite === "number")
+    .map(({ caminho, e }) => ({ tabela: caminho, n: Math.max(1, Math.min(Math.floor(e.limite as number), TETO_MAX)) }));
+}
 
 /** O select da tabela, montado AQUI: as colunas fechadas, os filtros dos params declarados, o DONO = quem chama, as vivas, ordem e teto. */
 export function planoDaTabela(
@@ -187,11 +351,45 @@ export function planoDaTabela(
   for (const x of f.filtros ?? []) {
     const v = params[x.param];
     if (v === undefined) continue;
-    filtros.push(x.op === "in" ? { op: "in", coluna: x.coluna, valor: Array.isArray(v) ? v : [v] } : { op: "eq", coluna: x.coluna, valor: v });
+    switch (x.op) {
+      case "in":
+        filtros.push({ op: "in", coluna: x.coluna, valor: Array.isArray(v) ? v : [v] });
+        break;
+      // ───── hml-20c ─────
+      case "gte":
+      case "lte":
+      case "lt":
+        filtros.push({ op: x.op, coluna: x.coluna, valor: v });
+        break;
+      case "ilike_cada":
+        for (const p of Array.isArray(v) ? v : [v]) if (typeof p === "string" && p) filtros.push({ op: "ilike", coluna: x.coluna, valor: `%${p}%` });
+        break;
+      case "ilike_prefixo":
+        if (typeof v === "string") filtros.push({ op: "ilike", coluna: x.coluna, valor: `${escaparLike(v)}%` });
+        break;
+      case "nulo":
+        if (v === true) filtros.push({ op: "is_null", coluna: x.coluna });
+        break;
+      default:
+        filtros.push({ op: "eq", coluna: x.coluna, valor: v });
+    }
   }
-  if (consulta.dono) filtros.push({ op: "eq", coluna: consulta.dono, valor: userId });
+  // hml-20c: com o donoSe, o dono só quando o param booleano vem true (sem o donoSe, como sempre)
+  if (consulta.dono && (consulta.donoSe === undefined || params[consulta.donoSe] === true)) filtros.push({ op: "eq", coluna: consulta.dono, valor: userId });
   if (f.vivas) filtros.push({ op: "is_null", coluna: "deleted_at" });
-  return { tabela: f.tabela, colunas: f.colunas.join(", "), filtros, ordem: f.ordem ?? [], teto: Math.min(f.teto, TETO_MAX) };
+  // ───── hml-20c: as colunas sempre nulas, o recorte (o .or() de hoje, com o user do token) e as vivas dos embutidos ─────
+  for (const coluna of f.nulos ?? []) filtros.push({ op: "is_null", coluna });
+  const r = f.recorte;
+  if (r && r.modelo === "conta" && typeof params[r.param] === "string") {
+    const ou: FiltroLeitura = { op: "ou", filtro: `conta_id.eq.${params[r.param] as string},and(conta_id.is.null,nutricionista_id.eq.${userId})` };
+    filtros.push(r.tabela ? { ...ou, tabela: r.tabela } : ou);
+  }
+  if (r && r.modelo === "taco_ou_meus" && params[r.param] === true) filtros.push({ op: "ou", filtro: `fonte.eq.taco,nutricionista_id.eq.${userId}` });
+  for (const { caminho, e } of caminhosDosEmbutidos(f.embutidos)) if (e.vivas) filtros.push({ op: "is_null", coluna: `${caminho}.deleted_at` });
+  const colunas = [...f.colunas, ...(f.embutidos ?? []).map(selectDoEmbutido)].join(", ");
+  // a ordem: a de sempre; a com `se` (hml-20c) só com o param booleano true
+  const ordem = (f.ordem ?? []).filter((o) => o.se === undefined || params[o.se] === true).map((o) => ({ coluna: o.coluna, asc: o.asc }));
+  return { tabela: f.tabela, colunas, filtros, ordem, teto: Math.min(f.teto, TETO_MAX) };
 }
 
 // ───────────────────────── hml-20b: página, contagem, laço, 1 linha (os campos opcionais da FonteTabela) ─────────────────────────
@@ -220,7 +418,8 @@ export function extrasDaTabela(
 ): { intervalo: [number, number] | null; contar: boolean; laco: { tamanho: number; leituras: number } | null; uma: boolean } {
   const p = fonte.pagina ? params[fonte.pagina.param] : undefined;
   return {
-    intervalo: fonte.pagina ? intervaloDaPagina(typeof p === "number" ? p : 1, fonte.pagina.tamanho) : null,
+    // hml-20c: a faixa (offset + limite) também é um intervalo — sem a página nem a faixa, null como antes
+    intervalo: fonte.pagina ? intervaloDaPagina(typeof p === "number" ? p : 1, fonte.pagina.tamanho) : fonte.faixa ? intervaloDaFaixa(fonte.faixa, params) : null,
     contar: fonte.contar === true,
     laco: fonte.laco
       ? {
@@ -230,6 +429,79 @@ export function extrasDaTabela(
       : null,
     uma: fonte.uma === true,
   };
+}
+
+/**
+ * hml-20c (FonteTabela.faixa): `[offset, offset + limite − 1]` — o .range(offset, offset + limit − 1) da busca de hoje (o editor pede 12,
+ * o painel 20 por página); o limite no teto de TETO_MAX e o offset ≥ 0 (o catálogo declara os 2 params inteiros, obrigatórios).
+ */
+export function intervaloDaFaixa(faixa: { offset: string; limite: string }, params: Record<string, unknown>): [number, number] {
+  const o = params[faixa.offset];
+  const l = params[faixa.limite];
+  const offset = typeof o === "number" && Number.isFinite(o) ? Math.max(0, Math.floor(o)) : 0;
+  const limite = typeof l === "number" && Number.isFinite(l) ? Math.max(1, Math.min(Math.floor(l), TETO_MAX)) : TETO_MAX;
+  return [offset, offset + limite - 1];
+}
+
+/**
+ * hml-20c (FonteTabela.porDia): as janelas dos dias que a página pode ter partido ao meio — a MESMA regra do diasQuePodemContinuar da
+ * tela: o dia da 1ª linha, se a página não é a 1ª; o da última, se há linhas depois da página (sem repetir o dia). O dia de cada linha
+ * é o maior início de dia LOCAL (`dias`, crescentes, mandados pela tela) ≤ o instante dela; a janela vai de max(início do dia, `de`)
+ * até o próximo início de dia (sem ele — a linha depois do último dia mandado —, sem janela: a tela fica com o que coube na página).
+ */
+export function janelasDosDiasCortados(
+  linhas: readonly unknown[],
+  coluna: string,
+  pagina: number,
+  porPagina: number,
+  total: number,
+  dias: readonly string[],
+  de: string,
+): Array<{ dia: string; de: string; ate: string }> {
+  if (!linhas.length || !dias.length) return [];
+  const tempos = dias.map((d) => Date.parse(d));
+  const inicio = Date.parse(de);
+  const janela = (linha: unknown): { dia: string; de: string; ate: string } | null => {
+    const t = ehObjeto(linha) && typeof linha[coluna] === "string" ? Date.parse(linha[coluna] as string) : Number.NaN;
+    if (Number.isNaN(t)) return null;
+    let k = -1;
+    for (let i = 0; i < tempos.length; i++) if (tempos[i] <= t) k = i;
+    if (k < 0 || k + 1 >= tempos.length) return null;
+    return { dia: dias[k], de: tempos[k] >= inicio || Number.isNaN(inicio) ? dias[k] : de, ate: dias[k + 1] };
+  };
+  const saida: Array<{ dia: string; de: string; ate: string }> = [];
+  const n = Math.max(1, Math.floor(porPagina));
+  const p = Math.max(1, Math.floor(pagina));
+  if (p > 1) {
+    const j = janela(linhas[0]);
+    if (j) saida.push(j);
+  }
+  if ((p - 1) * n + linhas.length < total) {
+    const j = janela(linhas[linhas.length - 1]);
+    if (j && !saida.some((x) => x.dia === j.dia)) saida.push(j);
+  }
+  return saida;
+}
+
+/**
+ * hml-20c (FonteRpc.filtrarLista, H-108): com o param no item, só os itens do valor-lista cujo `dono` = quem chama e cuja conta (o
+ * caminho [objeto, coluna]) = o param; sem o param (ou o valor que não é lista), o valor como veio — o de hoje.
+ */
+export function filtrarValorDaLista(valor: unknown, f: { param: string; dono: string; conta: readonly [string, string] }, params: Record<string, unknown>, userId: string): unknown {
+  const conta = params[f.param];
+  if (conta === undefined || !Array.isArray(valor)) return valor;
+  return valor.filter((i) => {
+    if (!ehObjeto(i) || i[f.dono] !== userId) return false;
+    const dentro = i[f.conta[0]];
+    return ehObjeto(dentro) && dentro[f.conta[1]] === conta;
+  });
+}
+
+/** hml-20c (FonteRpc.linhasDosIds): os ids da lista do valor — só uuids, em minúsculas, sem repetição, na ordem, até `max`. */
+export function idsDoValor(valor: unknown, lista: string, max: number): string[] {
+  const brutos = ehObjeto(valor) && Array.isArray(valor[lista]) ? (valor[lista] as unknown[]) : [];
+  const ids = [...new Set(brutos.filter((x): x is string => typeof x === "string" && UUID.test(x)).map((x) => x.toLowerCase()))];
+  return ids.slice(0, Math.max(0, Math.min(Math.floor(max), TETO_MAX)));
 }
 
 /**

@@ -18,7 +18,7 @@
 import { PRINCIPAL_URL, principalConfigurado } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { BUCKET_REGISTROS } from "@/lib/registrosFotos";
-import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
+import { ErroLeitura, lerNutricao, urlAssinadaDoServidor } from "@/nutricao/leitura";
 import type { AntropometriaPrincipal, FotoPrincipal, LinhaFotoTreino, LinhaTreino, ParteTreino, PartePrincipal } from "./tipos";
 
 /**
@@ -94,14 +94,6 @@ export async function carregarTreino(treinoId: string, assinador: Assinador = as
   };
 }
 
-const PREFIXO_ASSINADA = "/storage/v1/object/sign/";
-
-/** A URL assinada que o servidor devolve (relativa ao projeto) montada com o domínio do cliente; fora do formato → null. */
-export function urlDoServidor(base: string, relativa: unknown): string | null {
-  if (typeof relativa !== "string" || !relativa.startsWith(PREFIXO_ASSINADA) || !base) return null;
-  return `${base.replace(/\/+$/, "")}${relativa}`;
-}
-
 /** A parte do banco principal: `minha_evolucao()` (só o que é do próprio aluno) + as URLs das fotos, na mesma ida (consulta aluno_evolucao). */
 export async function carregarPrincipal(): Promise<PartePrincipal> {
   if (!principalConfigurado) throw new ErroFonte("principal", "principal_nao_configurado");
@@ -116,6 +108,7 @@ export async function carregarPrincipal(): Promise<PartePrincipal> {
   return {
     objetivo: d.objetivo ?? null,
     antropometrias: Array.isArray(d.antropometrias) ? d.antropometrias : [],
-    fotos: fotos.map((f) => ({ ...f, url: urlDoServidor(PRINCIPAL_URL, f.url) })),
+    // hml-20c (H-106): a montagem única da URL relativa (src/nutricao/leitura.ts), com a mesma base de antes
+    fotos: fotos.map((f) => ({ ...f, url: urlAssinadaDoServidor(f.url, PRINCIPAL_URL) })),
   };
 }

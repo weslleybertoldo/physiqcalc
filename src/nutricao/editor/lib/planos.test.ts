@@ -6,29 +6,36 @@ import fixture from "./__fixtures__/planoStagingHml17.json";
 // da nutri de quem não é a autora e o mesmo plano somava 1.540 kcal em vez de 1.894. A fixture é o plano de TESTE do staging
 // (w5p-aluna, 5 refeições, 22 itens, 3 alimentos próprios da nutri), anonimizado (uuids falsos, nomes próprios trocados).
 // hml-19b: as gravações passam pela função nutricao (functions.invoke) — o teste delas falsifica a invoke.
+// hml-20c: as LEITURAS também vão pela nutricao (o `ler`): roda o módulo de verdade do servidor sobre o MESMO banco falso (src/test/
+// nutricaoFalsa.ts) — as RPCs chegam ao h.rpc com os args de hoje; o código do erro vai ao console (a frase crua nunca chega ao navegador).
 const h = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn(), consultas: [] as { tabela: string; chamadas: unknown[][] }[], respostas: [] as unknown[] }));
-vi.mock("@/integrations/principal/client", () => ({
-  PRINCIPAL_SCHEMA: "staging",
-  principal: {
-    rpc: h.rpc,
-    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
-    from: (tabela: string) => {
-      const registro = { tabela, chamadas: [] as unknown[][] };
-      h.consultas.push(registro);
-      const resposta = h.respostas.shift();
-      const cadeia: unknown = new Proxy({}, {
-        get: (_alvo, nome) =>
-          nome === "then"
-            ? (ok: (v: unknown) => unknown, falha?: (e: unknown) => unknown) => Promise.resolve(resposta).then(ok, falha)
-            : (...args: unknown[]) => {
-                registro.chamadas.push([String(nome), ...args]);
-                return cadeia;
-              },
-      });
-      return cadeia;
+vi.mock("@/integrations/principal/client", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  return {
+    PRINCIPAL_SCHEMA: "staging",
+    principal: {
+      rpc: h.rpc,
+      functions: {
+        invoke: (nome: string, o: { body?: unknown }) => (ehLer(o?.body) ? lerPeloModulo({ rpc: (n: string, a: unknown) => h.rpc(n, a) })(o.body) : h.invoke(nome, o)),
+      },
+      from: (tabela: string) => {
+        const registro = { tabela, chamadas: [] as unknown[][] };
+        h.consultas.push(registro);
+        const resposta = h.respostas.shift();
+        const cadeia: unknown = new Proxy({}, {
+          get: (_alvo, nome) =>
+            nome === "then"
+              ? (ok: (v: unknown) => unknown, falha?: (e: unknown) => unknown) => Promise.resolve(resposta).then(ok, falha)
+              : (...args: unknown[]) => {
+                  registro.chamadas.push([String(nome), ...args]);
+                  return cadeia;
+                },
+        });
+        return cadeia;
+      },
     },
-  },
-}));
+  };
+});
 
 import { totaisDoPlano } from "./dietaUtil";
 import {
@@ -101,7 +108,7 @@ describe("planos.ts › leitura pelas RPCs (hml-17, H-38)", () => {
     const bruto = copia().map((p) => ({ ...p, paciente: { id: "aluno-1", nome: "Aluna de teste", conta_id: "conta-1" } }));
     h.rpc.mockResolvedValueOnce({ data: bruto, error: null });
     const lista = await listarPlanosFavoritos();
-    expect(h.rpc).toHaveBeenCalledWith("planos_favoritos");
+    expect(h.rpc).toHaveBeenCalledWith("planos_favoritos", {}); // hml-20c: o servidor chama com os args montados lá (nenhum)
     expect(lista[0].paciente).toEqual({ id: "aluno-1", nome: "Aluna de teste", conta_id: "conta-1" });
     expect(Math.round(totaisDoPlano(lista[0].refeicoes).energia_kcal)).toBe(1894);
   });
@@ -116,7 +123,8 @@ describe("planos.ts › leitura pelas RPCs (hml-17, H-38)", () => {
     expect(erro).toBeInstanceOf(Error);
     expect((erro as Error).message).toBe(texto);
     expect((erro as Error).message).not.toMatch(/permission|denied|42501|cru/);
-    expect(avisos).toHaveBeenCalledWith("[planos] leitura:", "42501", ERRO_DO_BANCO.message);
+    // hml-20c: o código da leitura pelo servidor (o 42501 do banco → sem_acesso) — a mensagem do banco não sai do servidor
+    expect(avisos).toHaveBeenCalledWith("[planos] leitura:", "sem_acesso");
   });
 });
 

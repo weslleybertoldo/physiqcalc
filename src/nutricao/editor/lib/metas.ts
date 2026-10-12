@@ -1,7 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/metas.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import { normalizarDias, type RegistroMeta } from "@/nutricao/editor/lib/metasUtil";
+import { lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao } from "@/nutricao/servidor";
 
 // Acesso às tabelas `modelos_meta` e `metas` (RLS: a nutricionista só vê os dela; master vê tudo; criar meta exige enxergar
@@ -11,26 +11,18 @@ import { acaoNutricao } from "@/nutricao/servidor";
 // hml-19b (H-41 · H-81 · jeito 2): as GRAVAÇÕES passam pela função nutricao (src/nutricao/servidor.ts), com a sessão de quem chama e
 // as mesmas assinaturas (o dono é quem chama: o servidor põe). Os 5 modelos padrão do 1º acesso nascem no servidor
 // (padroes_garantir { secao: "meta" }: 1 vez só, com trava), não mais aqui a cada abertura.
+// hml-20c (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa — os
+// modelos (modelos_meta: o RLS decide, como hoje) e as metas do aluno (metas_do_aluno); o nome da nutricionista vem do profissional.ts.
 
 export type ModeloMeta = Database["public"]["Tables"]["modelos_meta"]["Row"];
 export type ModeloMetaUpdate = Database["public"]["Tables"]["modelos_meta"]["Update"];
 export type Meta = Database["public"]["Tables"]["metas"]["Row"];
 export type MetaUpdate = Database["public"]["Tables"]["metas"]["Update"];
 
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
 // ---- Modelos ----
 export async function listarModelosMeta(): Promise<ModeloMeta[]> {
-  const { data, error } = await supabase
-    .from("modelos_meta")
-    .select("*")
-    .is("deleted_at", null)
-    .order("favorito", { ascending: false })
-    .order("titulo", { ascending: true });
-  falhou(error);
-  return (data ?? []) as ModeloMeta[];
+  const r = await lerNutricao("modelos_meta");
+  return (r.linhas ?? []) as ModeloMeta[];
 }
 
 /**
@@ -74,14 +66,8 @@ export async function salvarComoModelo(nutricionistaId: string, r: RegistroMeta)
 // ---- Metas do paciente ----
 /** Metas vivas do paciente (ativas e pausadas), mais recente primeiro — a tela reordena (ativas primeiro). */
 export async function listarMetasDoPaciente(pacienteId: string): Promise<Meta[]> {
-  const { data, error } = await supabase
-    .from("metas")
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as Meta[];
+  const r = await lerNutricao("metas_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as Meta[];
 }
 
 export async function criarMeta(nutricionistaId: string, pacienteId: string, r: RegistroMeta): Promise<Meta> {
@@ -110,5 +96,5 @@ export async function excluirMeta(id: string): Promise<void> {
   await acaoNutricao("meta_excluir", { id });
 }
 
-/** Nome da nutricionista (assinatura do PDF) — mesma consulta das orientações (W10). */
-export { nomeDaNutricionista } from "@/nutricao/editor/lib/orientacoes";
+/** Nome da nutricionista (assinatura do PDF) — hml-20c: a fonte única (profissional.ts, a consulta `profissional` no lote da tela). */
+export { nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
