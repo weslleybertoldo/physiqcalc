@@ -29,6 +29,9 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 12/10 04:33 | hml-20a | `0933e35` | `e2e/w11/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging20a --canal msedge --casos dieta,sem_internet` | staging | 45/45 | F7 (o staging com o e948962): a Dieta do app pela `ler` e o sem_internet com o helper novo; rodado por um invólucro de fora do repo (1 login por conta e o logout no fim); a limpeza final da W11 |
+| 12/10 04:31 | hml-20a | `0933e35` | `e2e/hml20/telas.py --area aluno --base staging --canal msedge --prefixo staging2` | staging | 14/14 | F7, o depois no staging: tempo Início 0,12 · Evolução 0,55 · Dieta 0,11 s; gate (a função ociosa 30 s) Evolução 0,91 s, card do peso 0,96 s; prints staging2_a_* iguais aos antes_staging_a_* e aos local_a_* |
+| 12/10 04:22 | hml-20a | `0933e35` | `e2e/hml20/rede.py --area aluno --base staging --canal msedge` | staging | 22/22 | F7, o depois no staging (e948962): 0 leitura direta do principal; o desvio 23 (as 3 GET do Treino) só no Início e na Evolução |
 | 12/10 03:58 | hml-20a | `07cd2e1` | `e2e/w11/telas.py --base http://localhost:8080 --prefixo local20a --canal msedge --casos dieta,sem_internet,virada,dia_sem_refeicao,pratos,rotas` | local | 69/69 | regressão: a Dieta do app pela `ler` (plano, ✓, foto pro diário, outro dia); o sem_internet com o helper novo (a dieta barrada nos 2 caminhos) volta sozinha; fora so_nutricao (expectativa velha desde a W12) e nutri_antigo (o site antigo) |
 | 12/10 03:52 | hml-20a | `07cd2e1` | `e2e/w25/api.py` | staging | 23/30 | a mesma base das hml-19a–19d (as 7 da massa do dia); o `massa.py` parou na trava dela ("o Carlos tem login no principal") |
 | 12/10 03:50 | hml-20a | `07cd2e1` | `e2e/w10/api.py` | staging | 22/22 | regressão |
