@@ -149,7 +149,8 @@ REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20d.txt"
 # hml-20c F6 (sessão principal, 12/10/2026): o teto da W inteira passa a 10 (5 da etapa 2 + o smoke já usados)
 # hml-20d (contrato da 20d): o registro novo (logins_etapa2_20d.txt) começa com o teto de 6 — os da etapa 2 desta W (o teto da W no
 # staging é 10: a sessão principal guarda 4 para o smoke e o F6 e sobe para 10 no F6, como na 20a, na 20b e na 20c)
-MAX_LOGINS = 6
+# hml-20d F6 (sessão principal, 12/10/2026): o teto da W inteira passa a 10 (os 4 da etapa 2 + o smoke já usados)
+MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 
 
