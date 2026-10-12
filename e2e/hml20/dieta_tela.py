@@ -49,9 +49,11 @@ CAB_REDE = ["quando", "base", "commit", "fase", "conta", "tela", "diretas", "dir
 CAB_TELAS = ["quando", "base", "commit", "fase", "conta", "medida", "n", "valores_s", "mediana_s", "referencia_s", "ok"]
 FOLGA_S = 0.3
 ABERTURAS = 3
-# dependem das funções do Treino/financeiro (fora da área): o critério é a parte da 20c — o Dashboard e o "Editar treino e dieta" (decisão
-# da sessão principal na etapa 2: o editor do TREINO — o treino-leitura, 2–3,5 s — domina a tela; como o Resumo/Avaliação na 20b)
-TELAS_DE_FORA = {"dashboard", "dieta_editar"}
+# dependem das funções do Treino/financeiro (fora da área): o critério é a parte da 20c — o Dashboard, o "Editar treino e dieta" (decisão
+# da sessão principal na etapa 2: o editor do TREINO — o treino-leitura, 2–3,5 s — domina a tela; como o Resumo/Avaliação na 20b) e o
+# Planejamento (PADRÃO da sessão principal, 15:1x: a 1ª tela da Dieta paga a casca do aluno, com o treino-leitura e o pagamentos-aluno
+# — o total oscila entre rodadas; a parte da 20c medida em +0,10 s)
+TELAS_DE_FORA = {"dashboard", "dieta_editar", "dieta_planejamento"}
 ACOES_PRECONSULTA = ("preconsulta_formulario_criar", "preconsulta_formulario_editar", "preconsulta_formulario_excluir", "preconsulta_resposta_ligar",
                      "preconsulta_resposta_excluir")
 TABELAS_PRECONSULTA = ("formularios_preconsulta", "respostas_preconsulta")
@@ -215,8 +217,9 @@ def seco(o, qual: str) -> None:  # noqa: PLR0915
              and sum(1 for x in PRINTS_C if x.startswith("c_dieta_") and x != "c_dieta_erro") == 8,
              f"os {len(PRINTS_C)} prints c_* da spec §5 (a Dieta ×8, as Dietas ×3, a Pré-consulta ×2, o Dashboard da nutri e da personal, a foto do "
              f"diário, o fluxo da Pré-consulta e o erro) em {PRINTS}")
-        o.ok((FOLGA_S, ABERTURAS) == (0.3, 3) and TELAS_DE_FORA == {"dashboard", "dieta_editar"},
-             "os números do contrato (decisão M): ≤ antes + 0,3 s, 3 aberturas; o Dashboard e o Editar (o editor do Treino junto) pela parte da 20c")
+        o.ok((FOLGA_S, ABERTURAS) == (0.3, 3) and TELAS_DE_FORA == {"dashboard", "dieta_editar", "dieta_planejamento"},
+             "os números do contrato (decisão M): ≤ antes + 0,3 s, 3 aberturas; o Dashboard, o Editar (o editor do Treino junto) e o Planejamento "
+             "(a casca do aluno com o Treino) pela parte da 20c")
         o.ok(ERRO[2] in D.CONSULTAS_20C and ERRO[3] in D.TABELAS_DA_AREA and ERRO[0] in nomes,
              "o c_dieta_erro barra a leitura da seção Cálculo energético nos 2 caminhos (o `ler` com calculos_do_aluno e o REST da tabela)")
 
