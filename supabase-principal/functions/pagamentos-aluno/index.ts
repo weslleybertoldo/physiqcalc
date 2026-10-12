@@ -61,15 +61,37 @@
 //   prof_recebimento_salvar { conta_id, modo?, bloquear?, handle?, cancelar_automaticas? }   W1: grava COMO A PESSOA (o RLS e a
 //                                                            contas_guard valem); InfiniteTag nova → um link de R$ 1,00 (a InfinitePay diz
 //                                                            se ela existe); sair do MP com automática viva → 409 automaticas_ativas
+//                                                            W2: 'mercadopago_conta' só com a conexão ativa (409 mp_nao_conectado) e a flag
+//                                                            (403 mp_conta_em_teste); sair de QUALQUER MP pede o OK e desliga cada automática
+//                                                            pela credencial dela (sem acesso → 409 mp_sem_acesso; o MP recusou/caiu → 502
+//                                                            automaticas_nao_canceladas — nada muda); a guarda do modo → 409, nunca 500
 //   prof_ip_testar          { conta_id, handle? }           W1: o "Testar" — link de R$ 1,00 sem webhook (não salva)
 //   prof_chave_salvar       { conta_id, id?, tipo, chave, favorecido?, banco? }   W1: a chave Pix pela função (antes, direto do navegador)
 //   prof_chave_ligar        { conta_id, id, ligar }         W1: 1 ligada por conta, numa transação (recebimento_chave_ligar)
 //   prof_chave_excluir      { conta_id, id }
+//   prof_mp_conectar        { conta_id, origem?: "site"|"apk", redirect_teste?: true }   W2: SÓ o dono de verdade (MENOR 19 — o master
+//                                                            só na conta em que é dono) → { url } da autorização do MP: o state de uso único
+//                                                            (10 min; só o sha256 em mp_conexoes) + o PKCE S256 (o verifier cifrado). Sem o
+//                                                            id da conexão (I8). "apk" → { url do SITE, no_site } e nada criado (decisão 6:
+//                                                            o fluxo inteiro no navegador). redirect_teste: só no staging (decisão 3)
+//   prof_mp_confirmar       { conexao_id, confirmar? }      W2 (I8): sem confirmar → { apelido, teste } só para QUEM COMEÇOU (a pergunta
+//                                                            da tela); com confirmar → recebimento_mp_confirmar COMO A PESSOA → { resultado:
+//                                                            ok | conectado_sem_trocar, apelido, recebimento } (recusa: mp_<erro> 403/409)
+//   prof_mp_desconectar     { conta_id, cancelar_automaticas? }   W2: as automáticas vivas (sem o OK → 409 automaticas_ativas) são
+//                                                            desligadas ANTES (a recusa → 409/502 e nada muda) → o modo vira Pix (com chave
+//                                                            ligada) ou "não cobrar" → a integração fica desconectada (o acesso fica 7 dias
+//                                                            só para LER); fora do modo do MP da conta (MENOR 10) só marca desconectada
+//   prof_mp_simular_conexao { conta_id, chave_publica? }    W2 — SÓ STAGING, só master (decisão 12): conecta com a credencial de TESTE da
+//                                                            aplicação (teste_sem_oauth): prova a GRAVAÇÃO e os caminhos da conta — não o
+//                                                            token de cada chamada (MENOR 16: quem prova é o --local)
 // Referência externa: physiq:<schema>:aluno:<paciente_id>:<mensalidade|avulsa|recorrente>[:<cobranca_id>]; notification_url por
 // cobrança → mp-webhook-aluno?schema=<schema> (a configuração global do app do MP, dos apps antigos, não muda).
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions pagamentos-aluno true
 // Segredos: MP_ACCESS_TOKEN_PROD (produção), MP_ACCESS_TOKEN_TEST (staging), MP_TEST_PAYER_EMAIL (+ os automáticos)
 // + SUPABASE_ANON_KEY (automático: o cliente com a sessão de quem chama — W1); INFINITEPAY_API só no Deno local (o simulador).
+// W2: MP_TOKENS_CHAVE (a cifra dos tokens do MP da conta — fora do banco), MP_CLIENT_ID + MP_CLIENT_SECRET (o OAuth; no staging, o par
+// MP_CLIENT_ID_STAGING/MP_CLIENT_SECRET_STAGING quando existe — plano B do I6), MP_OAUTH_PKCE (opcional: "0" desliga o PKCE);
+// MP_AUTH_BASE e MP_API_BASE só no Deno local (o simulador do MP em http://127.0.0.1:<porta>; publicado, qualquer outro valor é ignorado).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts — do Mercado Pago, só o status e os códigos (error, cause, status_detail),
 // nunca o corpo; o título do aviso do sino (nome, valor) não vai para o log; o catch final avisa (log.excecao) e devolve o
 // mesmo 500.
@@ -86,6 +108,11 @@
 // automática da matrícula). O de outra coisa: prof_reembolsar, prof_cobranca_cancelar, detalhe_mp e simular_aprovacao → 409
 // cobranca_de_outro_pagamento, sem ir ao MP; a conferência e o Pix antigo do aluno_mp_pix só vão ao log (o aluno_status não cai). A 1ª
 // camada é a guarda do banco (20261011220000: o app não grava mais o MP da cobrança). Só lê o que já existe: vale com e sem a migration.
+// W2 Task 7 (Mercado Pago do personal — plano 2026-10-11-w2-mp-personal.md): Configurações › Recebimento ganha o modo 'mercadopago_conta'
+// e as 4 ações prof_mp_* acima. Cada caminho novo só liga com a migration 20261011210000 no schema (schemaTemW2 — a função é uma só para
+// public e staging): sem ela, 409 w2_indisponivel e a vista com mercadopago_conta.disponivel false. A conexão grava COMO A PESSOA (a RPC
+// recebimento_mp_confirmar — I8); o service_role só no que é do servidor (o state em mp_conexoes, a integração simulada, a marca da
+// desconectada fora do modo). O token da conta em TODAS as chamadas do MP é a Task 9.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog, emSegundoPlano } from "../_shared/log.ts";
@@ -138,12 +165,22 @@ import {
 } from "../_shared/planos-regras.ts";
 import { textoDoAvisoDaFila, type ResultadoValor } from "../_shared/planos-automatica.ts";
 import { trocarValorDaAutomatica } from "../_shared/planos-automatica-mp.ts";
-import { cancelarAssinaturasDasMatriculas, cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
+import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 import { POR_PAGINA, PaginaInvalida, lerPagina, paginaDasMensalidades, type AlunoDoResumo } from "./mensalidades.ts";
 import { COLUNAS_CHAVE, chaveDoPedido } from "../_shared/pix-chave-regras.ts";
-import { lerPedidoDoRecebimento } from "../_shared/recebimento-regras.ts";
+import {
+  ehModoMp, erroDaConfirmacao, erroDaGuardaDoModo, lerPedidoDoRecebimento, modoDepoisDeDesconectar, recusaDoCancelamento,
+} from "../_shared/recebimento-regras.ts";
+import { chaveDoAmbiente, cifrar, dadoAssociado } from "../_shared/cifra-mp.ts";
+import {
+  ESTADO_MS, REDIRECT_TESTE_MP, desafioPkce, ehUuidMp, novoSegredoUrl, redirectDoSchema, sha256Hex, urlDeAutorizacao,
+} from "../_shared/mp-conta-regras.ts";
+import {
+  MpContaSemAcesso, cancelarAssinaturasPorCredencial, integracaoMp, oauthDoAmbiente, pacientesComAutomaticaViva, pkceLigado, schemaTemW2,
+  type ContextoMpConta,
+} from "../_shared/mp-conta.ts";
 import { centavos, descricaoDoLink, expiraEm, lerVolta, normalizarHandle, podeReaproveitar, urlDeVolta, urlDoWebhook } from "../_shared/infinitepay-regras.ts";
 import { criarLink, pedidoDeTeste } from "../_shared/infinitepay.ts";
 import {
@@ -156,6 +193,9 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 /** W1: só no Deno local (e2e/w1/servir_local.ts) — o simulador; publicado, a API de verdade (_shared/infinitepay.ts › baseDaApi). */
 const IP_BASE = Deno.env.get("INFINITEPAY_API") ?? null;
+/** W2: só no Deno local (o simulador do MP — e2e/w2/simulador_mp.py); publicado, a autorização da doc (mp-conta-regras › urlDeAutorizacao
+ *  ignora qualquer valor que não seja http://127.0.0.1:<porta>). */
+const MP_AUTH_BASE = Deno.env.get("MP_AUTH_BASE") ?? null;
 const SCHEMAS: Schema[] = ["public", "staging"];
 const SITE: Record<Schema, string> = { public: "https://physiqcalc.com.br", staging: "https://physiqcalc-staging.vercel.app" };
 const PIX_HORAS = 72;
@@ -294,6 +334,28 @@ Deno.serve(async (req) => {
     db: { schema: schema as "public" }, global: { headers: { Authorization: auth } }, auth: { persistSession: false },
   });
   const ctxIp = (): ContextoIp => ({ schema, log, prazo: prazoDoPedido, ip: { base: IP_BASE } });
+  // W2: o contexto do MP DA CONTA — a chave da cifra (MP_TOKENS_CHAVE) e o client do OAuth vêm do ambiente. É um GETTER: só o caminho da
+  // conta o chama (o MP do Physiq não precisa da chave). Sem a chave → MpContaSemAcesso("nao_configurado"), e não um falhar(503): dentro
+  // do cancelarAssinaturasPorCredencial o 503 subiria DEPOIS de o grupo do MP do Physiq já cancelado; assim a conta conta como semAcesso
+  // (409 mp_sem_acesso) e a leitura da Task 9 não derruba a tela (lerSemDerrubar). A ação que PRECISA da chave (conectar, simular)
+  // responde 503 antes, pelo nome. O log.erro avisa o Weslley (1× por pedido): é configuração faltando.
+  const chaveMp = await chaveDoAmbiente();
+  let avisouSemChave = false;
+  const ctxMp = (): ContextoMpConta => {
+    if (!chaveMp) {
+      if (!avisouSemChave) log.erro({ codigo: "mp_tokens_chave_ausente", schema, acao });
+      avisouSemChave = true;
+      throw new MpContaSemAcesso("-", "nao_configurado");
+    }
+    return { schema, log, prazo: prazoDoPedido, chave: chaveMp, oauth: oauthDoAmbiente(schema) };   // no staging, o client de teste se houver (I6)
+  };
+  /** W2: a flag do MP da conta (app_config 'mercadopago_conta' {liberada}): o personal só vê a opção com ela ligada; o master sempre. */
+  const mpContaLiberada = async (): Promise<boolean> => {
+    if (ehMaster) return true;
+    const { data, error } = await db.from("app_config").select("valor").eq("chave", "mercadopago_conta").maybeSingle();
+    if (error) throw error;
+    return (data as { valor: { liberada?: unknown } | null } | null)?.valor?.liberada === true;
+  };
   const storage = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
   const bucket = bucketComprovantes(schema);
   const hoje = hojeSP();
@@ -530,11 +592,15 @@ Deno.serve(async (req) => {
     return (data as { infinitepay_handle: string; status: string; testado_em: string | null } | null) ?? null;
   };
 
-  /** O que a tela mostra, numa chamada: a conta, as chaves Pix (COMO A PESSOA) e a InfinitePay. */
+  /** O que a tela mostra, numa chamada: a conta, as chaves Pix (COMO A PESSOA), a InfinitePay e o MP da conta (W2). */
   const recebimentoVista = async (c: ContaDoRecebimento) => {
     const { data: chaves, error } = await dbPessoa.from("recebimento_chaves").select(COLUNAS_CHAVE).eq("conta_id", c.id).order("criado_em");
     if (error) throw error;
     const ip = await integracaoIp(c.id);
+    // W2: a integração SEM token (integracaoMp) e só os campos da tela; sem a migration no schema, indisponível. A conta do app é o MP do
+    // Physiq: o MP da conta nunca é oferecido nela (o prof_mp_conectar recusa conta_do_app)
+    const w2 = await schemaTemW2(db, schema);
+    const mp = w2 ? await integracaoMp(db, c.id) : null;
     return {
       ok: true, master: ehMaster, pode_editar: ehMaster || c.origem !== "app",
       conta: { id: c.id, nome: c.nome, origem: c.origem, modo: c.modo, bloquear: c.bloquear },
@@ -543,6 +609,11 @@ Deno.serve(async (req) => {
       infinitepay: {
         disponivel: (await schemaTemW1(db, schema)) && (await infinitepayLiberada()),
         handle: ip?.infinitepay_handle ?? null, status: ip?.status ?? null, testado_em: ip?.testado_em ?? null,
+      },
+      mercadopago_conta: {
+        disponivel: w2 && c.origem !== "app" && (await mpContaLiberada()),
+        status: mp?.status ?? null, apelido: mp?.mp_apelido ?? null, expira_em: mp?.mp_expira_em ?? null, erro: mp?.mp_erro ?? null,
+        conectado_em: mp?.conectado_em ?? null, chave_publica: !!mp?.mp_public_key, teste: mp?.mp_teste ?? null,
       },
     };
   };
@@ -554,13 +625,54 @@ Deno.serve(async (req) => {
     return (data as { id: string } | null)?.id ?? null;
   };
 
-  /** As matrículas com cobrança automática viva na conta (sair do MP cancela — a regra cruzada do spec-review). Busca pelos PACIENTES da
-   *  conta: a aluno_assinaturas antiga pode ter conta_id nulo (MENOR 6 da revisão). */
-  const automaticasVivasDaConta = async (contaId: string): Promise<string[]> => {
+  // W2: as matrículas com cobrança automática viva na conta vêm do pacientesComAutomaticaViva (_shared/mp-conta.ts — o ajudante da W1,
+  // movido para lá na Task 4: pelos PACIENTES da conta, MENOR 6 da revisão da W1).
+
+  /** W2 (MENOR 10): as automáticas vivas NESTA conta do MP (o collector da integração), dos alunos da conta — o desconectar fora do modo do
+   *  MP da conta só desliga estas (as do MP do Physiq seguem com o modo). Só depois do schemaTemW2 (a regra da coluna nova — C2). */
+  const automaticasNaContaDoMp = async (contaId: string, collector: number): Promise<string[]> => {
     const linhas = await todasAsPaginas<{ paciente_id: string }>((de, ate) =>
       db.from("aluno_assinaturas").select("paciente_id, pacientes!inner(conta_id)").eq("pacientes.conta_id", contaId)
+        .eq("mp_collector_id", collector) // W2: depois do schemaTemW2
         .in("status", ["authorized", "pending", "paused"]).order("paciente_id").range(de, ate));
     return [...new Set(linhas.map((l) => l.paciente_id))];
+  };
+
+  /** W2: desliga as automáticas vivas, cada uma com a credencial DELA (cancelarAssinaturasPorCredencial — nunca lança por causa do MP:
+   *  { canceladas, falhas, semAcesso }) e avisa SÓ quem de fato ficou sem a automática: com recusa, um 2º olhar no banco tira do aviso quem
+   *  segue com ela viva (o que o MP recusou ou não alcançou). Quem chama decide pela recusaDoCancelamento (409/502 — nada mais muda). */
+  const desligarAutomaticas = async (contaId: string, ids: string[], motivo: string) => {
+    const r = await cancelarAssinaturasPorCredencial(db, { schema, log, prazo: prazoDoPedido }, ctxMp, credencial, ids, motivo);
+    const vivas = new Set(r.falhas || r.semAcesso ? await pacientesComAutomaticaViva(db, contaId) : []);
+    if (r.falhas) log.erro({ codigo: "automaticas_nao_canceladas", schema, acao, ref: contaId, n: r.falhas });
+    if (r.semAcesso) log.aviso({ codigo: "automaticas_sem_acesso", schema, acao, ref: contaId, n: r.semAcesso });
+    const alunos = await emLotes(ids.filter((id) => !vivas.has(id)), 150, async (lote) => {
+      const { data, error } = await db.from("pacientes").select("user_id").in("id", lote);
+      if (error) throw error;
+      return (data ?? []) as Array<{ user_id: string | null }>;
+    });
+    for (const a of alunos) {
+      await avisar(db, a.user_id, "geral", "Seu profissional mudou a forma de receber: a cobrança automática no cartão foi desligada. Veja em Pagamentos.",
+        "/perfil/pagamentos", log, schema);
+    }
+    return r;
+  };
+
+  /** MENOR 19: o dono DE VERDADE (o sou_dono do banco: membro ativo com o papel dono) — SEM o atalho do master do papelNaConta. O MP da conta
+   *  só o dono liga: o master só na conta em que é dono (senão ligaria o MP DELE na conta de um personal). */
+  const donoDeVerdade = async (contaId: string): Promise<boolean> => {
+    const { data, error } = await db.from("conta_membros").select("papeis").eq("conta_id", contaId).eq("user_id", user.id).eq("status", "ativo").maybeSingle();
+    if (error) throw error;
+    return (((data as { papeis: string[] } | null)?.papeis ?? []) as string[]).includes("dono");
+  };
+
+  /** W2: a conta de uma conexão do OAuth (mp_conexoes — só o servidor lê), para a vista depois da confirmação. */
+  const contaDaConexao = async (conexaoId: string): Promise<string> => {
+    const { data, error } = await db.from("mp_conexoes").select("conta_id").eq("id", conexaoId).maybeSingle();
+    if (error) throw error;
+    const contaId = (data as { conta_id: string } | null)?.conta_id;
+    if (!contaId) return falhar("mp_invalido", 409);
+    return contaId;
   };
 
   const statusDoErroDaRpc = (codigo: string) =>
@@ -1426,7 +1538,6 @@ Deno.serve(async (req) => {
         if (!r.ok) falhar(r.erro || "erro_interno", statusDoErroDaRpc(r.erro || ""));
       }
       let canceladas = 0;
-      let falhasAutomaticas = 0;
       if (pedido.modo !== undefined && pedido.modo !== conta.modo) {
         if (pedido.modo === "mercadopago" && !ehMaster) falhar("mp_so_master", 403);
         if (pedido.modo === "infinitepay") {
@@ -1435,36 +1546,37 @@ Deno.serve(async (req) => {
           const ip = await integracaoIp(conta.id);
           if (!ip || ip.status !== "ativa") falhar("sem_infinitetag", 409);
         }
-        if (conta.modo === "mercadopago") {
-          // a regra cruzada (spec-review): sair do Mercado Pago com cobrança automática viva cancela — com o OK de quem troca
-          const ids = await automaticasVivasDaConta(conta.id);
+        if (pedido.modo === "mercadopago_conta") {
+          // W2: o MP da conta só com a conexão ATIVA (a guarda contas_guard_mp é a 2ª camada) e a flag — o "Salvar a forma" depois do
+          // conectado_sem_trocar (a confirmação conectou, mas havia automática viva no MP de antes)
+          if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+          if (!(await mpContaLiberada())) falhar("mp_conta_em_teste", 403);
+          if ((await integracaoMp(db, conta.id))?.status !== "ativa") falhar("mp_nao_conectado", 409);
+        }
+        if (ehModoMp(conta.modo)) {
+          // a regra cruzada (spec-review), W2: para os 2 MPs — sair de um Mercado Pago com cobrança automática viva cancela, com o OK de
+          // quem troca, cada uma pela credencial DELA. MENOR 11 (troca o MENOR 6 da W1): a recusa (sem acesso → 409 mp_sem_acesso; o MP
+          // recusou ou caiu → 502 automaticas_nao_canceladas) não muda o modo — a guarda do banco nem deixaria com a automática viva
+          const ids = await pacientesComAutomaticaViva(db, conta.id);
           if (ids.length && !pedido.cancelarAutomaticas) falhar("automaticas_ativas", 409, { alunos: ids.length });
           if (ids.length) {
-            const r = await cancelarAssinaturasDasMatriculas(db, credencial, ids, "trocou_a_forma", log, { prazo: prazoDoPedido });
+            const r = await desligarAutomaticas(conta.id, ids, "trocou_a_forma");
+            const recusa = recusaDoCancelamento(r);
+            if (recusa) return falhar(recusa.codigo, recusa.http, recusa.extra);
             canceladas = r.canceladas;
-            falhasAutomaticas = r.falhas;
-            if (r.falhas) {
-              // MENOR 6: o MP respondeu e recusou cancelar alguma — a resposta conta, o dono é avisado e o suporte termina no MP
-              log.erro({ codigo: "automaticas_nao_canceladas", schema, acao, ref: conta.id, n: r.falhas });
-              await avisar(db, user.id, "geral", `${r.falhas} cobrança(s) automática(s) no cartão não desligaram no Mercado Pago. Fale com o suporte.`,
-                "/painel/configuracoes/recebimento", log, schema);
-            }
-            const alunos = await emLotes(ids, 150, async (lote) => {
-              const { data, error } = await db.from("pacientes").select("user_id").in("id", lote);
-              if (error) throw error;
-              return (data ?? []) as Array<{ user_id: string | null }>;
-            });
-            for (const a of alunos) {
-              await avisar(db, a.user_id, "geral", "Seu profissional mudou a forma de receber: a cobrança automática no cartão foi desligada. Veja em Pagamentos.",
-                "/perfil/pagamentos", log, schema);
-            }
           }
         }
         const { data, error } = await dbPessoa.from("contas").update({ recebimento_modo: pedido.modo }).eq("id", conta.id).select("recebimento_modo");
-        if (error) throw error;
+        if (error) {
+          // W2: a guarda do modo (contas_guard_mp — para todo mundo) recusou: entrar no MP da conta sem a conexão ativa, ou uma automática
+          // nova entre o cancelamento e a troca → 409 com o código, nunca 500
+          const guarda = erroDaGuardaDoModo(error);
+          if (guarda) return falhar(guarda.codigo, guarda.http, guarda.extra);
+          throw error;
+        }
         // a contas_guard desfaz em silêncio o que não pode (o APK antigo conta com isso): a resposta diz a verdade
         if (((data ?? []) as Array<{ recebimento_modo: string }>)[0]?.recebimento_modo !== pedido.modo) {
-          falhar(pedido.modo === "infinitepay" ? "sem_infinitetag" : "sem_permissao", 409);
+          falhar(pedido.modo === "infinitepay" ? "sem_infinitetag" : pedido.modo === "mercadopago_conta" ? "mp_nao_conectado" : "sem_permissao", 409);
         }
       }
       if (pedido.bloquear !== undefined && pedido.bloquear !== conta.bloquear) {
@@ -1473,8 +1585,9 @@ Deno.serve(async (req) => {
         if (error) throw error;
         if (((data ?? []) as Array<{ bloquear_app_inadimplente: boolean }>)[0]?.bloquear_app_inadimplente !== pedido.bloquear) falhar("sem_permissao", 403);
       }
+      // automaticas_falhas: o campo da W1 fica (o APK antigo lê) — sempre 0 numa resposta 200: a falha agora é o 502 (MENOR 11)
       return json({ ...(await recebimentoVista(await contaDoRecebimento(conta.id))), link_teste: linkTeste, automaticas_canceladas: canceladas,
-        automaticas_falhas: falhasAutomaticas }, 200, origin);
+        automaticas_falhas: 0 }, 200, origin);
     }
 
     if (acao === "prof_ip_testar") {
@@ -1542,6 +1655,136 @@ Deno.serve(async (req) => {
       if (error) throw error;
       if (!data?.length) falhar("chave_inexistente", 404);
       return json({ ok: true }, 200, origin);
+    }
+
+    // ════════════════════════════ W2 — O MERCADO PAGO DA CONTA (conectar, confirmar, desconectar, simular) ════════════════════════════
+    if (acao === "prof_mp_conectar") {
+      const conta = await contaDoRecebimento(body.conta_id);           // dono e master leem — COMO A PESSOA
+      // MENOR 19: SÓ o dono DE VERDADE liga (o desenho D4) — o master só na conta em que é dono (o admin.teste da Task 23 continua
+      // funcionando); sem isso o master ligaria o MP DELE na conta de um personal (às vezes com o consentimento automático do MP)
+      if (!(await donoDeVerdade(conta.id))) falhar("so_o_dono", 403);
+      if (conta.origem === "app") falhar("conta_do_app", 403);         // a conta do app é o MP do Physiq: nunca OAuth
+      if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+      if (!(await mpContaLiberada())) falhar("mp_conta_em_teste", 403);
+      // decisão 6 (I8): no APK o fluxo inteiro acontece no SITE, no navegador por cima do app (a sessão do app não chega ao navegador — e a
+      // confirmação tem de vir da sessão de quem começou). Nada é criado aqui: o site, logado, chama esta ação de novo com origem "site".
+      if (body.origem === "apk") return json({ ok: true, url: `${SITE[schema]}/painel/configuracoes/recebimento?mp=conectar`, no_site: true }, 200, origin);
+      const oauth = oauthDoAmbiente(schema);
+      if (!oauth || !chaveMp) return falhar("mp_oauth_nao_configurado", 503);
+      if (!permitido(`mp-conectar:${user.id}`, 10, 3_600_000)) falhar("rate_limited", 429);
+      // SÓ staging: o redirect que a aplicação já tem (decisão 3) — a prova e o E2E do OAuth real antes da W2-a
+      const redirect = body.redirect_teste === true && schema === "staging" ? REDIRECT_TESTE_MP : redirectDoSchema(schema);
+      const estado = novoSegredoUrl(32);
+      const verificador = novoSegredoUrl(48);
+      // o state de uso único (10 min): só o sha256 vai ao banco; o verifier do PKCE, cifrado (a volta — mp-conectar-retorno — decifra)
+      const { error } = await db.from("mp_conexoes").insert({
+        estado_hash: await sha256Hex(estado), conta_id: conta.id, user_id: user.id, redirect_uri: redirect,
+        verificador: await cifrar(verificador, dadoAssociado(schema, conta.id, "pkce"), chaveMp),
+      });
+      if (error) throw error;
+      const url = urlDeAutorizacao({ base: MP_AUTH_BASE, clientId: oauth.clientId, redirect, estado,
+        desafio: pkceLigado() ? await desafioPkce(verificador) : null });
+      log.info({ codigo: "mp_conectar_inicio", schema, acao, ref: conta.id });
+      // I8: só a URL do MP — o id da conexão NÃO sai daqui (ele só chega ao site pela volta, para a sessão de quem começou confirmar)
+      return json({ ok: true, url, expira_em: new Date(Date.now() + ESTADO_MS).toISOString() }, 200, origin);
+    }
+
+    if (acao === "prof_mp_confirmar") {
+      if (!ehUuidMp(body.conexao_id)) falhar("mp_conexao_invalida", 400);
+      const conexaoId = String(body.conexao_id);
+      if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+      if (body.confirmar !== true) {
+        // a pergunta da tela ("Conectar a conta X do Mercado Pago?"): só o apelido, só para QUEM COMEÇOU — a mesma regra da RPC
+        const { data, error } = await db.from("mp_conexoes").select("user_id, resultado, usado_em, mp_apelido, live").eq("id", conexaoId).maybeSingle();
+        if (error) throw error;
+        const c = data as { user_id: string; resultado: string | null; usado_em: string | null; mp_apelido: string | null; live: boolean | null } | null;
+        if (!c || c.resultado !== "confirmar") return falhar("mp_invalido", 409);
+        if (c.user_id !== user.id) falhar("mp_outra_pessoa", 403);
+        if (!c.usado_em || Date.parse(c.usado_em) < Date.now() - 15 * 60_000) falhar("mp_vencido", 409);
+        return json({ ok: true, apelido: c.mp_apelido, teste: c.live === false }, 200, origin);
+      }
+      // a gravação é COMO A PESSOA (jeito 2): a RPC confere auth.uid() = quem começou, sou_dono, 15 min, a flag e o I5 (outra conta com algo aberto)
+      const { data, error } = await dbPessoa.rpc("recebimento_mp_confirmar", { p_conexao: conexaoId });
+      if (error) throw error;
+      const r = (data ?? {}) as { ok?: boolean; resultado?: "ok" | "conectado_sem_trocar"; erro?: string; abertos?: number; apelido?: string | null };
+      if (!r.ok) {
+        const recusa = erroDaConfirmacao(r);
+        log.aviso({ codigo: "mp_confirmar_recusado", schema, acao, ref: conexaoId, resultado: recusa.codigo });
+        return falhar(recusa.codigo, recusa.http, recusa.extra);
+      }
+      log.info({ codigo: "mp_conectado", schema, acao, ref: conexaoId, resultado: r.resultado });
+      const contaId = await contaDaConexao(conexaoId);                // service_role: o conta_id da conexão (para a vista)
+      return json({ ok: true, resultado: r.resultado ?? "ok", apelido: r.apelido ?? null,
+        recebimento: await recebimentoVista(await contaDoRecebimento(contaId)) }, 200, origin);
+    }
+
+    if (acao === "prof_mp_desconectar") {
+      const conta = await contaDoRecebimento(body.conta_id);           // dono e master (o master desliga o de um personal, com o OK)
+      if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+      const integ = await integracaoMp(db, conta.id);
+      if (!integ || integ.status === "desconectada") return falhar("mp_nao_conectado", 409);
+      // no modo do MP da conta, a troca de modo exige TODAS as automáticas vivas desligadas (a guarda contas_guard_mp); fora dele (MENOR 10:
+      // conectou e não salvou a forma — o modo segue o de antes), só as DESTA conta do MP: as do MP do Physiq seguem com o modo
+      const noModo = conta.modo === "mercadopago_conta";
+      const ids = noModo ? await pacientesComAutomaticaViva(db, conta.id) : await automaticasNaContaDoMp(conta.id, integ.mp_user_id);
+      if (ids.length && body.cancelar_automaticas !== true) falhar("automaticas_ativas", 409, { alunos: ids.length });
+      let canceladas = 0;
+      if (ids.length) {
+        const r = await desligarAutomaticas(conta.id, ids, "personal_desconectou_o_mp");
+        const recusa = recusaDoCancelamento(r);
+        if (recusa) return falhar(recusa.codigo, recusa.http, recusa.extra);   // nada mais muda: o modo e a conexão ficam
+        canceladas = r.canceladas;
+      }
+      let novoModo = conta.modo;
+      if (noModo) {
+        // o modo COMO A PESSOA (o RLS e as guardas valem): o gatilho contas_saiu_do_mp_conta marca a integração desconectada — o acesso
+        // fica 7 dias só para LER o que já estava em andamento (decisão 10)
+        novoModo = modoDepoisDeDesconectar(!!(await chaveAtiva(conta.id)));
+        const { data, error } = await dbPessoa.from("contas").update({ recebimento_modo: novoModo }).eq("id", conta.id).select("recebimento_modo");
+        if (error) {
+          const guarda = erroDaGuardaDoModo(error);                    // corrida: uma automática nova entre o cancelamento e a troca
+          if (guarda) return falhar(guarda.codigo, guarda.http, guarda.extra);
+          throw error;
+        }
+        if (((data ?? []) as Array<{ recebimento_modo: string }>)[0]?.recebimento_modo !== novoModo) falhar("sem_permissao", 409);
+      } else {
+        // MENOR 10: o modo já não é o MP da conta — a troca não acontece e o gatilho não roda: marca direto (a tabela é só do servidor)
+        const { error } = await db.from("recebimento_integracoes").update({ status: "desconectada", desconectada_em: new Date().toISOString(),
+          mp_renovando_ate: null }).eq("conta_id", conta.id).eq("provedor", "mercadopago").neq("status", "desconectada");
+        if (error) throw error;
+      }
+      const { error: erroEvento } = await db.from("conta_eventos").insert({
+        conta_id: conta.id, tipo: "outro", antes: { recebimento_modo: conta.modo, mp: integ.status },
+        depois: { w2: "mp_desconectado", recebimento_modo: novoModo, automaticas_canceladas: canceladas }, por: user.id,
+      });
+      if (erroEvento) throw erroEvento;
+      log.info({ codigo: "mp_desconectado", schema, acao, ref: conta.id, n: canceladas });
+      return json({ ...(await recebimentoVista(await contaDoRecebimento(conta.id))), automaticas_canceladas: canceladas }, 200, origin);
+    }
+
+    if (acao === "prof_mp_simular_conexao") {
+      // decisão 12 — SÓ staging, SÓ master: conecta com a credencial de TESTE da aplicação (lida do ambiente; nada vem do navegador além da
+      // chave pública de teste). MENOR 16: prova a GRAVAÇÃO e os caminhos da conta — collector e token são os do Physiq; o token de cada
+      // chamada quem prova é o --local (e2e/w2/api.py)
+      if (schema !== "staging") falhar("so_staging", 403);
+      if (!ehMaster) falhar("so_master", 403);
+      if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+      const conta = await contaDoRecebimento(body.conta_id);
+      if (conta.origem === "app") falhar("conta_do_app", 403);         // a conta do app é o MP do Physiq
+      const token = tokenMp("test");                                     // do ambiente — nada vem do navegador
+      if (!token || !chaveMp) return falhar("mp_conta_nao_configurado", 503);
+      const { status: st, body: eu } = await mpFetch<{ id?: number; nickname?: string }>("test", "/users/me", {}, { prazo: prazoDoPedido });
+      if (st !== 200 || !eu?.id) return falhar("mp_error", 502, { status_mp: st });
+      const chavePublica = typeof body.chave_publica === "string" && /^TEST-[A-Za-z0-9-]{8,72}$/.test(body.chave_publica) ? body.chave_publica : null;
+      const { error } = await db.from("recebimento_integracoes").upsert({
+        conta_id: conta.id, provedor: "mercadopago", status: "ativa", mp_user_id: eu.id, mp_apelido: "TESTE (simulada)", mp_public_key: chavePublica,
+        mp_access_token: await cifrar(token, dadoAssociado(schema, conta.id, "access"), chaveMp), mp_refresh_token: null,
+        mp_expira_em: new Date(Date.now() + 180 * 86_400_000).toISOString(), mp_teste: true, mp_origem: "teste_sem_oauth", mp_erro: null,
+        mp_renovar_tentativas: 0, conectado_em: new Date().toISOString(), desconectada_em: null, atualizado_por: user.id,
+      }, { onConflict: "conta_id,provedor" });
+      if (error) throw error;
+      log.info({ codigo: "mp_conexao_simulada", schema, acao, ref: conta.id });
+      return json(await recebimentoVista(await contaDoRecebimento(conta.id)), 200, origin);
     }
 
     if (acao === "prof_planos") {

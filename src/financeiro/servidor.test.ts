@@ -439,3 +439,157 @@ describe("W1b (C1) — estornar, cancelar, detalhar e aplicar SÓ o pagamento de
     expect(sim).not.toContain("mpFetch(");
   });
 });
+
+describe("W2 (Task 7) — o Recebimento com o Mercado Pago da conta: conectar, confirmar, desconectar, salvar e simular (guarda de fonte)", () => {
+  const f = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/pagamentos-aluno/index.ts"), "utf8");
+  /** O corpo de uma ação: de `if (acao === "<x>"` (no nível das ações, 4 espaços) até a próxima do mesmo nível. */
+  const bloco = (acao: string) => {
+    const i = f.indexOf(`\n    if (acao === "${acao}"`);
+    expect(i, acao).toBeGreaterThan(-1);
+    const j = f.indexOf("\n    if (acao === ", i + 1);
+    return f.slice(i, j > -1 ? j : undefined);
+  };
+  /** Um ajudante do pedido: de `const <nome> = ` (2 espaços) até o próximo comando do mesmo nível. */
+  const ajudante = (nome: string) => {
+    const i = f.indexOf(`\n  const ${nome} = `);
+    expect(i, nome).toBeGreaterThan(-1);
+    const fim = f.slice(i + 1).search(/\n {2}(?:const |let |type |\/\*\*|\/\/ )/);
+    return f.slice(i, fim > -1 ? i + 1 + fim : undefined);
+  };
+  /** Os trechos existem e aparecem nesta ordem. */
+  const ordem = (texto: string, ...trechos: string[]) => {
+    const pos = trechos.map((t) => texto.indexOf(t));
+    pos.forEach((p, k) => expect(p, trechos[k]).toBeGreaterThan(-1));
+    for (let k = 1; k < pos.length; k++) expect(pos[k - 1], `${trechos[k - 1]} → antes de → ${trechos[k]}`).toBeLessThan(pos[k]);
+  };
+
+  it("o contexto do MP da conta: a chave e o client do ambiente; sem a chave, o getter lança MpContaSemAcesso (nunca um 503 no meio de um cancelamento) e avisa 1× por pedido", () => {
+    expect(f).toContain("const chaveMp = await chaveDoAmbiente();");
+    const ctx = ajudante("ctxMp");
+    expect(ctx).toContain('throw new MpContaSemAcesso("-", "nao_configurado")');
+    expect(ctx).toContain("oauth: oauthDoAmbiente(schema)");
+    expect(ctx).toMatch(/log\.erro\(\{ codigo: "mp_tokens_chave_ausente"/);
+    expect(ctx).not.toContain("falhar(");
+    const flag = ajudante("mpContaLiberada");
+    expect(flag).toContain("if (ehMaster) return true;");
+    expect(flag).toContain('.eq("chave", "mercadopago_conta")');
+    expect(flag).toContain("if (error) throw error;");
+  });
+
+  it("as automáticas vivas pelo mp-conta.ts (o automaticasVivasDaConta local saiu) e o cancelamento SÓ pelo cancelarAssinaturasPorCredencial; o aviso só a quem ficou sem a automática", () => {
+    expect(f).not.toContain("automaticasVivasDaConta");
+    expect(f).not.toContain("cancelarAssinaturasDasMatriculas(");
+    const desligar = ajudante("desligarAutomaticas");
+    expect(desligar).toContain("cancelarAssinaturasPorCredencial(db, { schema, log, prazo: prazoDoPedido }, ctxMp, credencial, ids, motivo)");
+    // com recusa, o 2º olhar no banco tira do aviso quem segue com a automática viva
+    ordem(desligar, "cancelarAssinaturasPorCredencial(", "pacientesComAutomaticaViva(db, contaId)", "ids.filter((id) => !vivas.has(id))", "await avisar(");
+    expect(desligar).toContain("Seu profissional mudou a forma de receber: a cobrança automática no cartão foi desligada.");
+    const naConta = ajudante("automaticasNaContaDoMp");
+    expect(naConta).toContain('.eq("mp_collector_id", collector) // W2: depois do schemaTemW2');
+    expect(naConta).toContain('.in("status", ["authorized", "pending", "paused"])');
+  });
+
+  it("prof_mp_conectar (MENOR 19 e I8): só o dono DE VERDADE, nunca a conta do app, só com a W2 e a flag; no APK, o SITE e nada criado; o state só em hash, o verifier cifrado; o redirect de teste só no staging; sem o id da conexão na resposta", () => {
+    const b = bloco("prof_mp_conectar");
+    ordem(b, "contaDoRecebimento(body.conta_id)", "donoDeVerdade(conta.id)", 'falhar("so_o_dono", 403)', 'falhar("conta_do_app", 403)',
+      'falhar("w2_indisponivel", 409)', 'falhar("mp_conta_em_teste", 403)', 'body.origem === "apk"', 'falhar("mp_oauth_nao_configurado", 503)',
+      'falhar("rate_limited", 429)', '.from("mp_conexoes").insert(', "urlDeAutorizacao(");
+    expect(b).not.toContain("papelNaConta(");   // o papelNaConta dá dono: true ao master — aqui o master só na conta em que é dono
+    const dono = ajudante("donoDeVerdade");
+    expect(dono).toContain('.from("conta_membros").select("papeis")');
+    expect(dono).toContain('.includes("dono")');
+    expect(dono).not.toContain("ehMaster");
+    const apk = b.slice(b.indexOf('body.origem === "apk"'), b.indexOf("\n", b.indexOf('body.origem === "apk"')));
+    expect(apk).toContain("${SITE[schema]}/painel/configuracoes/recebimento?mp=conectar");
+    expect(apk).toContain("no_site: true");
+    const insert = b.slice(b.indexOf('.from("mp_conexoes").insert('), b.indexOf("});", b.indexOf('.from("mp_conexoes").insert(')));
+    expect(insert).toContain("estado_hash: await sha256Hex(estado)");
+    expect(insert.match(/\bestado\b/g)).toHaveLength(1);   // o state em si nunca vai ao banco
+    expect(insert).toContain('verificador: await cifrar(verificador, dadoAssociado(schema, conta.id, "pkce"), chaveMp)');
+    expect(insert).toContain("user_id: user.id");
+    expect(b).not.toMatch(/\.insert\([\s\S]*?\)\s*\.select\(/);   // o id da conexão nem é lido (I8)
+    expect(b).toContain('body.redirect_teste === true && schema === "staging" ? REDIRECT_TESTE_MP : redirectDoSchema(schema)');
+    expect(b).toContain("desafio: pkceLigado() ? await desafioPkce(verificador) : null");
+    expect(b).toContain("permitido(`mp-conectar:${user.id}`, 10, 3_600_000)");
+    expect(b).toContain("return json({ ok: true, url, expira_em: new Date(Date.now() + ESTADO_MS).toISOString() }, 200, origin);");
+  });
+
+  it("prof_mp_confirmar (I8): a pergunta só para quem começou e só o apelido; a gravação COMO A PESSOA (dbPessoa.rpc), nunca o service_role; a recusa pelo erroDaConfirmacao", () => {
+    const b = bloco("prof_mp_confirmar");
+    ordem(b, "ehUuidMp(body.conexao_id)", 'falhar("w2_indisponivel", 409)', "body.confirmar !== true", 'dbPessoa.rpc("recebimento_mp_confirmar"',
+      "erroDaConfirmacao(r)", "recebimentoVista(");
+    const pergunta = b.slice(b.indexOf("body.confirmar !== true"), b.indexOf('dbPessoa.rpc("recebimento_mp_confirmar"'));
+    expect(pergunta).toContain('.select("user_id, resultado, usado_em, mp_apelido, live")');
+    ordem(pergunta, 'falhar("mp_invalido", 409)', 'falhar("mp_outra_pessoa", 403)', 'falhar("mp_vencido", 409)');
+    expect(pergunta).toContain("c.user_id !== user.id");
+    expect(pergunta).toContain("15 * 60_000");
+    expect(pergunta).toContain("return json({ ok: true, apelido: c.mp_apelido, teste: c.live === false }, 200, origin);");
+    expect(b).not.toMatch(/from\("recebimento_integracoes"\)/);
+    expect(f).not.toMatch(/\bdb\.rpc\("recebimento_mp_confirmar"/);
+    expect(ajudante("contaDaConexao")).toContain("if (error) throw error;");
+  });
+
+  it("prof_mp_desconectar: sem o OK, 409 antes de cancelar; cancela ANTES de trocar o modo e a recusa não muda nada; o modo COMO A PESSOA (o gatilho marca desconectada); fora do modo do MP da conta só marca (MENOR 10) e só olha as automáticas DESTA conta do MP", () => {
+    const b = bloco("prof_mp_desconectar");
+    ordem(b, "contaDoRecebimento(body.conta_id)", 'falhar("w2_indisponivel", 409)', 'falhar("mp_nao_conectado", 409)', 'falhar("automaticas_ativas", 409',
+      'desligarAutomaticas(conta.id, ids, "personal_desconectou_o_mp")', "recusaDoCancelamento(r)", 'dbPessoa.from("contas").update(',
+      'db.from("conta_eventos").insert(', "recebimentoVista(");
+    expect(b).toContain("noModo ? await pacientesComAutomaticaViva(db, conta.id) : await automaticasNaContaDoMp(conta.id, integ.mp_user_id)");
+    expect(b).toContain("modoDepoisDeDesconectar(!!(await chaveAtiva(conta.id)))");
+    expect(b).toContain("erroDaGuardaDoModo(error)");
+    const menor10 = b.slice(b.indexOf("} else {", b.indexOf('dbPessoa.from("contas").update(')));
+    expect(menor10).toMatch(/db\.from\("recebimento_integracoes"\)\.update\(\{ status: "desconectada", desconectada_em: /);
+    expect(menor10).toContain('.neq("status", "desconectada")');
+    expect(b).toContain('w2: "mp_desconectado"');
+  });
+
+  it("prof_recebimento_salvar: o MP da conta só com a W2, a flag e a conexão ativa; sair de QUALQUER MP com automática viva pede o OK e desliga cada uma pela credencial dela (a recusa: 409/502 e nada muda); a guarda do modo vira 409, nunca 500", () => {
+    const b = bloco("prof_recebimento_salvar");
+    ordem(b.slice(b.indexOf('if (pedido.modo === "mercadopago_conta") {')), 'falhar("w2_indisponivel", 409)', 'falhar("mp_conta_em_teste", 403)',
+      'falhar("mp_nao_conectado", 409)');
+    expect(b).toContain("if (ehModoMp(conta.modo)) {");
+    expect(b).not.toContain('if (conta.modo === "mercadopago") {');
+    ordem(b, "pacientesComAutomaticaViva(db, conta.id)", 'falhar("automaticas_ativas", 409', 'desligarAutomaticas(conta.id, ids, "trocou_a_forma")',
+      "recusaDoCancelamento(r)", 'dbPessoa.from("contas").update({ recebimento_modo: pedido.modo })', "erroDaGuardaDoModo(error)");
+    expect(b).toContain("automaticas_falhas: 0");   // o campo da W1 fica para o APK antigo (a falha agora é 502 — MENOR 11)
+  });
+
+  it("prof_mp_simular_conexao (decisão 12): SÓ staging e SÓ master antes de qualquer leitura; o token do ambiente, nada do navegador além da chave pública TEST-; nunca a conta do app", () => {
+    const b = bloco("prof_mp_simular_conexao");
+    ordem(b, 'schema !== "staging"', "!ehMaster", 'falhar("w2_indisponivel", 409)', "contaDoRecebimento(body.conta_id)", 'falhar("conta_do_app", 403)',
+      'tokenMp("test")', 'falhar("mp_conta_nao_configurado", 503)', '"/users/me"', '.from("recebimento_integracoes").upsert(');
+    expect(b).toContain('mp_access_token: await cifrar(token, dadoAssociado(schema, conta.id, "access"), chaveMp)');
+    expect(b).toContain('mp_origem: "teste_sem_oauth"');
+    expect(b).toContain("/^TEST-[A-Za-z0-9-]{8,72}$/.test(body.chave_publica)");
+    expect(b).not.toMatch(/body\.(token|access_token|refresh_token|mp_access_token|mp_refresh_token|collector|mp_user_id)\b/);
+  });
+
+  it("a vista do Recebimento: o MP da conta pela integracaoMp (sem token), indisponível sem a W2 e na conta do app; nenhum token sai numa resposta", () => {
+    const v = ajudante("recebimentoVista");
+    expect(v).toContain("const w2 = await schemaTemW2(db, schema);");
+    expect(v).toContain("w2 ? await integracaoMp(db, c.id) : null");
+    expect(v).toMatch(/disponivel: w2 && c\.origem !== "app" && \(await mpContaLiberada\(\)\)/);
+    expect(v).toContain("chave_publica: !!mp?.mp_public_key");
+    expect(v).not.toMatch(/mp_access_token|mp_refresh_token|tem_acesso/);
+    for (const m of f.matchAll(/\bjson\(([\s\S]*?)\);/g)) {
+      expect(m[1], m[1].slice(0, 80)).not.toMatch(/mp_access_token|mp_refresh_token|token_access|token_refresh|verificador|\bestado\b/);
+    }
+  });
+
+  it("o log das ações novas não leva url, state, verifier, token, code, a chave pública nem o apelido do MP", () => {
+    for (const nome of ["prof_mp_conectar", "prof_mp_confirmar", "prof_mp_desconectar", "prof_mp_simular_conexao"]) {
+      const b = bloco(nome);
+      const chamadas = [...b.matchAll(/\blog\.(?:info|aviso|erro|excecao)\s*\(([\s\S]*?)\);/g)];
+      expect(chamadas.length, nome).toBeGreaterThan(0);
+      for (const m of chamadas) {
+        expect(m[1], `${nome}: ${m[1]}`).not.toMatch(/\b(url|estado|verificador|token|code|chavePublica|chave_publica|public_key|apelido|mp_apelido)\b/);
+      }
+    }
+  });
+
+  it("o cabeçalho da função documenta as 4 ações novas e os segredos da W2", () => {
+    const cabecalho = f.slice(0, f.indexOf("\nimport "));
+    for (const a of ["prof_mp_conectar", "prof_mp_confirmar", "prof_mp_desconectar", "prof_mp_simular_conexao"]) expect(cabecalho, a).toContain(a);
+    for (const s of ["MP_TOKENS_CHAVE", "MP_CLIENT_ID", "MP_CLIENT_SECRET", "MP_AUTH_BASE"]) expect(cabecalho, s).toContain(s);
+  });
+});
