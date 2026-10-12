@@ -1,7 +1,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RPC_QUE_GRAVAM, RPC_SO_LEITURA, TEMPO_FUNCAO_MS, TENTATIVAS_LEITURA, criarFetchResiliente, podeRepetir } from "./repeticao";
+import {
+  ACOES_DE_LEITURA, RPC_QUE_GRAVAM, RPC_SO_LEITURA, TEMPO_FUNCAO_MS, TENTATIVAS_LEITURA, corpoDeLeitura, criarFetchResiliente, podeRepetir,
+} from "./repeticao";
 
 // Homologação hml-06 (H-20) — o fetch dos 2 clientes só repete leitura (a pagamentos-aluno cobrava o cartão de novo quando o
 // cliente repetia o POST de uma resposta perdida).
@@ -383,5 +385,95 @@ describe("guarda: toda rpc(\"…\") do front está decidida", () => {
 
   it("cada RPC está em RPC_SO_LEITURA ou em RPC_QUE_GRAVAM (RPC nova obriga a decidir)", () => {
     expect([...chamadas].filter((n) => !RPC_SO_LEITURA.has(n) && !RPC_QUE_GRAVAM.has(n)).sort()).toEqual([]);
+  });
+});
+
+describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repete 1 vez, como o GET de hoje; as gravações delas não", () => {
+  const corpo = (o: unknown) => JSON.stringify(o);
+  const post = (body: unknown): RequestInit => ({ method: "POST", body: body as BodyInit });
+
+  it("ACOES_DE_LEITURA: a `ler` da nutricao e da financeiro (campo acao) e a minha_evolucao da admin-avaliacoes (campo action)", () => {
+    expect(ACOES_DE_LEITURA).toEqual({
+      nutricao: { campo: "acao", acoes: ["ler"] },
+      financeiro: { campo: "acao", acoes: ["ler"] },
+      "admin-avaliacoes": { campo: "action", acoes: ["minha_evolucao"] },
+    });
+  });
+
+  // [endereço, corpo, pode?]
+  const TABELA: Array<[string, unknown, boolean]> = [
+    [`${P}/functions/v1/nutricao`, corpo({ acao: "ler", itens: [{ q: "aluno_dieta", dia: "2026-10-11" }] }), true],
+    [`${P}/functions/v1/financeiro`, corpo({ acao: "ler", itens: [] }), true],
+    [`${T}/functions/v1/admin-avaliacoes`, corpo({ action: "minha_evolucao" }), true],
+    [`${P}/functions/v1/nutricao?x=1`, corpo({ acao: "ler" }), true], // a query não muda a função
+    // as gravações das mesmas funções vão 1 vez
+    [`${P}/functions/v1/nutricao`, corpo({ acao: "anamnese_criar" }), false],
+    [`${P}/functions/v1/nutricao`, corpo({ acao: "aluno_marcar_refeicao" }), false],
+    [`${P}/functions/v1/financeiro`, corpo({ acao: "transacao_criar" }), false],
+    [`${T}/functions/v1/admin-avaliacoes`, corpo({ action: "create" }), false],
+    [`${T}/functions/v1/admin-avaliacoes`, corpo({ action: "list" }), false], // a list segue como antes (1 vez)
+    [`${T}/functions/v1/admin-avaliacoes`, corpo({ action: "foto_salvar" }), false],
+    // o campo é o que a FUNÇÃO lê: o corpo "disfarçado" não engana
+    [`${P}/functions/v1/nutricao`, corpo({ action: "ler", acao: "anotacao_criar" }), false],
+    [`${P}/functions/v1/nutricao`, corpo({ action: "ler" }), false],
+    [`${T}/functions/v1/admin-avaliacoes`, corpo({ acao: "minha_evolucao", action: "delete" }), false],
+    [`${T}/functions/v1/admin-avaliacoes`, corpo({ acao: "minha_evolucao" }), false],
+    [`${P}/functions/v1/nutricao`, corpo({ acao: ["ler"] }), false],
+    [`${P}/functions/v1/nutricao`, corpo({ acao: "LER" }), false],
+    // outra função com o mesmo corpo, subcaminho, corpo ilegível, sem corpo, corpo que não é texto
+    [`${P}/functions/v1/pagamentos-aluno`, corpo({ acao: "ler" }), false],
+    [`${P}/functions/v1/nutricao-leitura`, corpo({ acao: "ler" }), false],
+    [`${P}/functions/v1/nutricao/extra`, corpo({ acao: "ler" }), false],
+    [`${P}/functions/v1/nutricao`, "{acao: ler", false],
+    [`${P}/functions/v1/nutricao`, undefined, false],
+    [`${P}/functions/v1/nutricao`, corpo([{ acao: "ler" }]), false],
+  ];
+  it.each(TABELA)("POST %s %s → %s", (url, body, pode) => {
+    expect(podeRepetir(url, post(body))).toBe(pode);
+  });
+
+  it("o corpo de um Request não dá para ler aqui (na dúvida, não repete); o método segue mandando (PATCH/PUT não)", () => {
+    expect(podeRepetir(new Request(`${P}/functions/v1/nutricao`, { method: "POST", body: corpo({ acao: "ler" }) }))).toBe(false);
+    expect(podeRepetir(`${P}/functions/v1/nutricao`, { method: "PATCH", body: corpo({ acao: "ler" }) })).toBe(false);
+    expect(corpoDeLeitura("constructor", corpo({ acao: "ler" }))).toBe(false);
+    // corpo que não é texto (Blob/FormData): não dá para ler → não repete
+    expect(podeRepetir(`${P}/functions/v1/nutricao`, { method: "POST", body: new Blob([corpo({ acao: "ler" })]) })).toBe(false);
+    expect(corpoDeLeitura("__proto__", corpo({ acao: "ler" }))).toBe(false);
+  });
+
+  describe("com o fetch falso (TENTATIVAS_LEITURA = 1)", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    async function chamar(respostas: Array<number | "rede">, url: string, init: RequestInit) {
+      const fila = [...respostas];
+      const base = vi.fn(async () => {
+        const r = fila.length > 1 ? fila.shift()! : fila[0];
+        if (r === "rede") throw new TypeError("Failed to fetch");
+        return new Response("{}", { status: r });
+      });
+      const avisar = vi.fn();
+      const resultado = criarFetchResiliente(TENTATIVAS_LEITURA, 15000, base as unknown as typeof fetch, { avisar })(url, init).then(
+        (r) => ({ status: r.status, erro: null as unknown }),
+        (e) => ({ status: 0, erro: e as unknown }),
+      );
+      await vi.runAllTimersAsync();
+      return { ...(await resultado), chamadas: base.mock.calls.length, avisos: avisar.mock.calls.length };
+    }
+
+    it("leitura: 503 → 200 = 2 chamadas; rede caída = 2 e rejeita; 401 não repete; o 5xx final ainda avisa (1 vez)", async () => {
+      const ler = post(corpo({ acao: "ler", itens: [] }));
+      expect(await chamar([503, 200], `${P}/functions/v1/nutricao`, ler)).toMatchObject({ status: 200, chamadas: 2, avisos: 0 });
+      expect(await chamar([503, 200], `${T}/functions/v1/admin-avaliacoes`, post(corpo({ action: "minha_evolucao" })))).toMatchObject({ status: 200, chamadas: 2 });
+      const rede = await chamar(["rede"], `${P}/functions/v1/nutricao`, ler);
+      expect([rede.chamadas, rede.erro instanceof TypeError]).toEqual([2, true]);
+      expect(await chamar([401, 200], `${P}/functions/v1/nutricao`, ler)).toMatchObject({ status: 401, chamadas: 1 });
+      expect(await chamar([502], `${P}/functions/v1/nutricao`, ler)).toMatchObject({ status: 502, chamadas: 2, avisos: 1 });
+    });
+
+    it("gravação da mesma função: 503 → vai 1 vez e o 503 volta para quem chamou", async () => {
+      expect(await chamar([503, 200], `${P}/functions/v1/nutricao`, post(corpo({ acao: "anamnese_criar" })))).toMatchObject({ status: 503, chamadas: 1 });
+      expect(await chamar([503, 200], `${T}/functions/v1/admin-avaliacoes`, post(corpo({ action: "update" })))).toMatchObject({ status: 503, chamadas: 1 });
+    });
   });
 });
