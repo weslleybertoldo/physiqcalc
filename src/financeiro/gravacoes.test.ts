@@ -6,6 +6,9 @@
 // servidor grava (a marca trocada pelo número real) = o texto de hoje com o número certo (1, 4 e 5 dígitos). Meta-teste: toda outra função
 // exportada das 3 libs é leitura ou regra pura. Os negativos: a frase fixa (o nome repetido segue com a de hoje), sem internet, rede, a
 // semente que falha.
+// hml-20d (H-42): as LEITURAS dessas libs vão pela função financeiro (o `ler`): aqui o `ler` roda o MÓDULO DE VERDADE do servidor sobre o
+// MESMO banco falso (src/test/financeiroFalso.ts) e vai por fora do h.invoke — o h.invoke segue vendo só o que GRAVA, então o "quem só lê:
+// nenhuma gravação" segue provado igual (e as tabelas lidas seguem no h.lidas).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Chamada = { funcao: string; acao: string; corpo: Record<string, unknown> };
@@ -17,7 +20,8 @@ const h = vi.hoisted(() => ({
   listas: {} as Record<string, unknown[]>,
   lidas: [] as string[],
 }));
-vi.mock("@/integrations/principal/client", () => {
+vi.mock("@/integrations/principal/client", async () => {
+  const { ehLerFinanceiro, lerFinanceiroPeloModulo } = await import("@/test/financeiroFalso");
   const leitura = (tabela: string) => {
     const cadeia: Record<string, unknown> = {};
     for (const m of ["select", "eq", "is", "order", "limit", "range", "or", "in", "not", "gte", "lte"]) cadeia[m] = () => cadeia;
@@ -33,12 +37,26 @@ vi.mock("@/integrations/principal/client", () => {
     };
     return cadeia;
   };
+  // o banco falso que o `ler` (o módulo do servidor) lê como a pessoa — o mesmo das leituras diretas de antes
+  const banco = {
+    from: (t: string) => leitura(t),
+    rpc: (f: string) => {
+      throw new Error(`RPC no banco falso ${f}`);
+    },
+  };
   return {
     PRINCIPAL_SCHEMA: "staging",
     principalConfigurado: true,
     principal: {
-      functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
-      from: (t: string) => leitura(t),
+      functions: {
+        invoke: (...a: unknown[]) => {
+          const o = a[1] as { body?: Record<string, unknown> } | undefined;
+          return ehLerFinanceiro(o?.body) ? lerFinanceiroPeloModulo(banco, { userId: "33333333-3333-4333-8333-333333333333" })(o.body) : h.invoke(...a);
+        },
+      },
+      from: (t: string) => {
+        throw new Error(`leitura direta na tabela ${t}`);
+      },
       rpc: (f: string) => {
         throw new Error(`RPC direta ${f}`);
       },
@@ -215,7 +233,8 @@ describe("hml-19d — as sementes do 1º acesso: só com a lista vazia, 1 chamad
     h.listas.modelos_recibo = [{ id: MODELO, nutricionista_id: EU, titulo: "Meu", conteudo: "x", favorito: true }];
     expect(await dados.garantirCategorias(EU, CONTA)).toEqual(h.listas.categorias_financeiras);
     expect(await dados.garantirModelosRecibo(EU, CONTA, "x")).toEqual(h.listas.modelos_recibo);
-    expect(await lancamentos.garantirCategorias(EU, CONTA)).toEqual(h.listas.categorias_financeiras);
+    // hml-20d: o Financeiro do aluno lia select("id, nome") — a mesma consulta do painel (fin_categorias) e a lib fica com o id e o nome
+    expect(await lancamentos.garantirCategorias(EU, CONTA)).toEqual([{ id: CAT, nome: "Consulta" }]);
     expect(h.invoke).not.toHaveBeenCalled();
     expect(h.lidas).toEqual(["categorias_financeiras", "modelos_recibo", "categorias_financeiras"]);
   });
@@ -300,7 +319,7 @@ describe("hml-19d — o recibo: o texto que o servidor grava é o de hoje com o 
     expect(chamadas()[0].corpo.texto).toBe("Recibo escrito à mão nº 0008");
   });
 
-  it("a prévia do número continua lendo o banco (ultimoNumeroRecibo) — sem chamar a função", async () => {
+  it("a prévia do número continua lendo o banco (ultimoNumeroRecibo) — sem gravação nenhuma (hml-20d: pelo `ler`, por fora do h.invoke)", async () => {
     h.listas.recibos = [{ numero: 41 }];
     expect(await dados.ultimoNumeroRecibo(EU)).toBe(41);
     expect(h.invoke).not.toHaveBeenCalled();

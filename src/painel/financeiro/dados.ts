@@ -9,25 +9,24 @@
 // mesmo "quem vê o quê" de antes); o Resumo e o Dashboard recebem o recebido já somado por dia.
 // hml-19d (H-41 · jeito 2): as GRAVAÇÕES (movimentações, categorias, modelos, recibos e as sementes do 1º acesso) saem do navegador e vão
 // pela função financeiro (src/financeiro/gravar.ts), com as MESMAS assinaturas e a mesma volta (o select de hoje mora no servidor:
-// _shared/financeiro-gravar-regras.ts VOLTA_*). As leituras seguem aqui. O recibo emitido e o excluído viram 1 chamada (antes, 2 a 3
+// _shared/financeiro-gravar-regras.ts VOLTA_*). As leituras seguiram aqui até a hml-20d (abaixo). O recibo emitido e o excluído viram 1 chamada (antes, 2 a 3
 // pedidos sem transação); o erro chega com o texto fixo do código (o nome repetido da categoria segue com a frase de hoje).
-import { principal } from "@/integrations/principal/client";
-import { POR_PAGINA, deslocamento, intervalo, type Pagina } from "@/lib/paginacao";
+// hml-20d (H-42 · jeito 2, etapa 2, parte 4): as LEITURAS também saem do navegador e vão pela função financeiro (ação `ler`, em lote:
+// src/financeiro/ler.ts — as comuns do Financeiro e as da aba aberta numa chamada só), com as MESMAS assinaturas e os mesmos tipos de
+// volta: as 3 RPCs da conta (fin_resumo_periodo, fin_lancamentos, fin_recibos — os 4 códigos de propósito com as frases de hoje e o resto
+// "Não deu para carregar o financeiro."), as categorias, os modelos, o último nº, o nome e as cobranças do Resumo (o laço de 1000 até 20
+// agora no servidor, num item só; passou de 20 → a frase de hoje). O erro das leituras de tabela chega com o texto fixo do código.
+import { POR_PAGINA, deslocamento, type Pagina } from "@/lib/paginacao";
 import { normalizarConteudo } from "@/nutricao/editor/lib/orientacoesUtil";
 import { garantirPadroesFinanceiro, gravarFinanceiro } from "@/financeiro/gravar";
+import { ErroLeitura, lerFinanceiro, type ConsultaDoFinanceiro } from "@/financeiro/ler";
+import { TEXTO_FILTRO_MAX } from "../../../supabase-principal/functions/_shared/financeiro-leituras";
 import { ordenarCategorias, type RegistroMovimentacao, type Totais } from "./financeiroUtil";
 import { aplicarTags, ordenarModelosRecibo, type DadosTags } from "@/financeiro/recibos";
 import type { CobrancaDoDia, EntradaDoDia, RecebidoDoPeriodo } from "./resumo";
 import type { RegistroRecibo } from "./recibosUtil";
 
-const falhou = (error: { message: string; code?: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
-/** O recorte da conta ativa (PostgREST `or`): as linhas da conta + as minhas sem conta. */
-export const recorteDaConta = (contaId: string, uid: string): string => `conta_id.eq.${contaId},and(conta_id.is.null,nutricionista_id.eq.${uid})`;
-
-// ───────────────────────── as RPCs do Financeiro (hml-14b) ─────────────────────────
+// ───────────────────────── as RPCs do Financeiro (hml-14b) — pela função financeiro (hml-20d) ─────────────────────────
 
 const ERROS_RPC: Record<string, string> = {
   sem_login: "Sua sessão expirou. Entre de novo.",
@@ -35,15 +34,26 @@ const ERROS_RPC: Record<string, string> = {
   conta_inexistente: "Conta não encontrada.",
   periodo_invalido: "Período inválido.",
 };
+const ERRO_DO_FINANCEIRO = "Não deu para carregar o financeiro.";
 
-/** Erro do banco ou `{ ok: false }` → lança (a tela mostra o erro — nunca uma lista vazia no lugar dele). */
-async function rpcFinanceiro<T>(nome: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await principal.rpc(nome as never, args as never);
-  falhou(error as { message: string; code?: string } | null);
-  const r = data as ({ ok?: boolean; erro?: string } & T) | null;
-  if (!r || r.ok !== true) throw new Error(ERROS_RPC[r?.erro ?? ""] ?? "Não deu para carregar o financeiro.");
+/** O erro de uma RPC do Financeiro com a frase de hoje: os 4 códigos de propósito → ERROS_RPC; o resto → "Não deu para carregar o financeiro." */
+const erroDaRpc = (codigo: string, extra: Record<string, unknown> = {}): ErroLeitura => new ErroLeitura(codigo, extra, ERROS_RPC[codigo] ?? ERRO_DO_FINANCEIRO);
+
+/** Erro (do servidor ou da RPC) ou `{ ok: false }` → lança (a tela mostra o erro — nunca uma lista vazia no lugar dele). */
+async function rpcFinanceiro<T>(q: ConsultaDoFinanceiro, params: Record<string, unknown>): Promise<T> {
+  let valor: unknown;
+  try {
+    valor = (await lerFinanceiro(q, params)).valor;
+  } catch (e) {
+    throw e instanceof ErroLeitura ? erroDaRpc(e.codigo, e.extra) : erroDaRpc("erro_interno");
+  }
+  const r = valor as ({ ok?: boolean; erro?: string } & T) | null;
+  if (!r || r.ok !== true) throw erroDaRpc(typeof r?.erro === "string" ? r.erro : "erro_interno");
   return r;
 }
+
+/** Os textos dos filtros no teto do servidor (TEXTO_FILTRO_MAX: a tela corta antes de mandar — nunca vira "fora do formato"). */
+const noTeto = (v: string): string => v.slice(0, TEXTO_FILTRO_MAX);
 
 const numero = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
@@ -80,10 +90,10 @@ export const SEM_FILTROS: FiltrosLancamentos = { tipo: "", categoria: "", metodo
 
 const filtrosParaBanco = (f: FiltrosLancamentos): Record<string, string> => {
   const saida: Record<string, string> = {};
-  if (f.tipo) saida.tipo = f.tipo;
-  if (f.categoria) saida.categoria = f.categoria;
-  if (f.metodo) saida.metodo = f.metodo;
-  if (f.q.trim()) saida.q = f.q.trim();
+  if (f.tipo) saida.tipo = noTeto(f.tipo);
+  if (f.categoria) saida.categoria = noTeto(f.categoria);
+  if (f.metodo) saida.metodo = noTeto(f.metodo);
+  if (f.q.trim()) saida.q = noTeto(f.q.trim());
   return saida;
 };
 
@@ -93,8 +103,8 @@ const filtrosParaBanco = (f: FiltrosLancamentos): Record<string, string> => {
  */
 export async function listarLancamentos(contaId: string, de: string, ate: string, filtros: FiltrosLancamentos, pagina: number,
   porPagina = POR_PAGINA): Promise<Pagina<Transacao>> {
-  const r = await rpcFinanceiro<{ total: number; itens: Transacao[] | null }>("financeiro_lancamentos", {
-    p_conta: contaId, p_de: de, p_ate: ate, p_filtros: filtrosParaBanco(filtros), p_offset: deslocamento(pagina, porPagina), p_limite: porPagina,
+  const r = await rpcFinanceiro<{ total: number; itens: Transacao[] | null }>("fin_lancamentos", {
+    conta: contaId, de, ate, filtros: filtrosParaBanco(filtros), offset: deslocamento(pagina, porPagina), limite: porPagina,
   });
   return { itens: r.itens ?? [], total: numero(r.total) };
 }
@@ -126,14 +136,14 @@ const paraTotais = (r: RespostaResumo): TotaisDoPeriodo => ({
 
 /** financeiro_resumo_periodo: entradas, saídas, saldo e contagens com os mesmos filtros da lista (D14). */
 export async function totaisDoPeriodo(contaId: string, de: string, ate: string, filtros: FiltrosLancamentos): Promise<TotaisDoPeriodo> {
-  return paraTotais(await rpcFinanceiro<RespostaResumo>("financeiro_resumo_periodo", { p_conta: contaId, p_de: de, p_ate: ate, p_filtros: filtrosParaBanco(filtros) }));
+  return paraTotais(await rpcFinanceiro<RespostaResumo>("fin_resumo_periodo", { conta: contaId, de, ate, filtros: filtrosParaBanco(filtros) }));
 }
 
 export type ResumoDoPeriodo = TotaisDoPeriodo & RecebidoDoPeriodo;
 
 /** O Resumo e o Dashboard: os totais do período + o recebido por dia (entradas por dia e categoria, cobranças pagas sem lançamento). */
 export async function resumoDoPeriodo(contaId: string, de: string, ate: string): Promise<ResumoDoPeriodo> {
-  const r = await rpcFinanceiro<RespostaResumo>("financeiro_resumo_periodo", { p_conta: contaId, p_de: de, p_ate: ate, p_filtros: { resumo: true } });
+  const r = await rpcFinanceiro<RespostaResumo>("fin_resumo_periodo", { conta: contaId, de, ate, filtros: { resumo: true } });
   return { ...paraTotais(r), entradasPorDia: r.entradas_por_dia ?? [], cobrancasPorDia: r.cobrancas_por_dia ?? [] };
 }
 
@@ -172,11 +182,10 @@ export interface CategoriaFinanceira {
   nutricionista_id: string;
 }
 
+/** As minhas categorias vivas (fin_categorias: o dono é quem chama, no servidor — o `uid` fica só por compatibilidade). */
 export async function listarCategorias(uid: string): Promise<CategoriaFinanceira[]> {
-  const { data, error } = await principal.from("categorias_financeiras").select("id, nome, nutricionista_id").eq("nutricionista_id", uid)
-    .is("deleted_at", null).order("nome", { ascending: true });
-  falhou(error);
-  return ordenarCategorias((data ?? []) as CategoriaFinanceira[]);
+  const { linhas } = await lerFinanceiro("fin_categorias");
+  return ordenarCategorias((linhas ?? []) as CategoriaFinanceira[]);
 }
 
 /**
@@ -246,30 +255,31 @@ export interface PaginaRecibos extends Pagina<Recibo> {
  * número com 4 dígitos, descrição da entrada de origem; sem acento, todas as palavras), o total e a soma saem do banco.
  */
 export async function listarRecibos(contaId: string, busca: string, pagina: number, porPagina = POR_PAGINA): Promise<PaginaRecibos> {
-  const r = await rpcFinanceiro<{ total: number; soma: number | string; itens: Recibo[] | null }>("financeiro_recibos", {
-    p_conta: contaId, p_filtros: busca.trim() ? { q: busca.trim() } : {}, p_offset: deslocamento(pagina, porPagina), p_limite: porPagina,
+  const r = await rpcFinanceiro<{ total: number; soma: number | string; itens: Recibo[] | null }>("fin_recibos", {
+    conta: contaId, filtros: busca.trim() ? { q: noTeto(busca.trim()) } : {}, offset: deslocamento(pagina, porPagina), limite: porPagina,
   });
   return { itens: r.itens ?? [], total: numero(r.total), soma: numero(r.soma) };
 }
 
 /** Quantos recibos com a data no período (o "Recibos no mês" do Dashboard): a mesma função da lista, só o total. */
 export async function contarRecibos(contaId: string, de: string, ate: string): Promise<number> {
-  const r = await rpcFinanceiro<{ total: number }>("financeiro_recibos", { p_conta: contaId, p_filtros: { de, ate }, p_offset: 0, p_limite: 0 });
+  const r = await rpcFinanceiro<{ total: number }>("fin_recibos", { conta: contaId, filtros: { de, ate }, offset: 0, limite: 0 });
   return numero(r.total);
 }
 
-/** Maior número já emitido pelo profissional (inclusive os da lixeira — número não volta); 0 sem recibo. A prévia mostra o próximo. */
+/**
+ * Maior número já emitido pelo profissional (inclusive os da lixeira — número não volta); 0 sem recibo. A prévia mostra o próximo.
+ * hml-20d: fin_ultimo_recibo (o dono é quem chama, no servidor; sem o filtro das vivas, como hoje).
+ */
 export async function ultimoNumeroRecibo(uid: string): Promise<number> {
-  const { data, error } = await principal.from("recibos").select("numero").eq("nutricionista_id", uid).order("numero", { ascending: false }).limit(1);
-  falhou(error);
-  return ((data ?? []) as { numero: number }[])[0]?.numero ?? 0;
+  const { linhas } = await lerFinanceiro("fin_ultimo_recibo");
+  return ((linhas ?? []) as { numero: number }[])[0]?.numero ?? 0;
 }
 
+/** Os meus modelos vivos (fin_modelos_recibo: o dono é quem chama, no servidor), o favorito primeiro. */
 export async function listarModelosRecibo(uid: string): Promise<ModeloRecibo[]> {
-  const { data, error } = await principal.from("modelos_recibo").select("id, nutricionista_id, titulo, conteudo, favorito").eq("nutricionista_id", uid)
-    .is("deleted_at", null);
-  falhou(error);
-  return ordenarModelosRecibo((data ?? []) as ModeloRecibo[]);
+  const { linhas } = await lerFinanceiro("fin_modelos_recibo");
+  return ordenarModelosRecibo((linhas ?? []) as ModeloRecibo[]);
 }
 
 /**
@@ -347,11 +357,14 @@ export interface AlunoResumido {
   cpf: string | null;
 }
 
-/** Nome do profissional como o site antigo assina (profiles.nome). */
+/** Nome do profissional como o site antigo assina (profiles.nome) — fin_profissional (quem chama, no servidor); o erro → null, como hoje. */
 export async function nomeDoProfissional(uid: string): Promise<string | null> {
-  const { data, error } = await principal.from("profiles").select("nome").eq("id", uid).maybeSingle();
-  if (error) return null;
-  return ((data as { nome: string | null } | null)?.nome ?? null) || null;
+  try {
+    const { linhas } = await lerFinanceiro("fin_profissional");
+    return ((linhas ?? []) as { nome: string | null }[])[0]?.nome || null;
+  } catch {
+    return null;
+  }
 }
 
 export interface CobrancaResumo {
@@ -372,26 +385,22 @@ export interface CobrancaResumo {
   paciente: { nome: string } | null;
 }
 
-const COBRANCAS_POR_LEITURA = 1000; // o max_rows do PostgREST
-const MAX_LEITURAS_COBRANCAS = 20;
+/** A frase de hoje quando as cobranças passam do teto de leituras (o laço agora é no servidor: muitas_linhas). */
+const ERRO_COBRANCAS_DEMAIS = "Cobranças em aberto demais para o resumo.";
 
 /**
  * Cobranças da conta para o Resumo (o "a receber" e a rosca do mês): as em aberto/aguardando (qualquer data) + as que vencem no
  * mês (`mesDe`–`mesAte`, qualquer situação). As PAGAS de antes não vêm mais: o recebido chega somado do banco (resumoDoPeriodo).
  * hml-14b (D18): em leituras de 1000 com ordem estável até a última — o `.limit(5000)` de antes virava 1000 calados.
+ * hml-20d: fin_cobrancas_resumo — o recorte da conta ativa (com quem chama, no servidor: o `uid` fica só por compatibilidade), o "em
+ * aberto OU no mês" e as leituras de 1000 até 20 NO SERVIDOR, num item só; passou de 20 → a frase de hoje.
  */
 export async function listarCobrancasDoResumo(contaId: string, uid: string, mesDe: string, mesAte: string): Promise<CobrancaResumo[]> {
-  const saida: CobrancaResumo[] = [];
-  for (let leitura = 1; leitura <= MAX_LEITURAS_COBRANCAS; leitura += 1) {
-    const [de, ate] = intervalo(leitura, COBRANCAS_POR_LEITURA);
-    const { data, error } = await principal.from("cobrancas")
-      .select("id, paciente_id, nutricionista_id, tipo, descricao, valor, vencimento, status, forma, pago_em, transacao_id, reembolsado_em, enviado_em, created_at, paciente:pacientes(nome)")
-      .or(recorteDaConta(contaId, uid)).or(`status.in.(aberta,aguardando_confirmacao),and(vencimento.gte.${mesDe},vencimento.lte.${mesAte})`)
-      .is("deleted_at", null).order("id").range(de, ate);
-    falhou(error);
-    const linhas = (data ?? []) as unknown as CobrancaResumo[];
-    saida.push(...linhas);
-    if (linhas.length < COBRANCAS_POR_LEITURA) return saida;
+  try {
+    const { linhas } = await lerFinanceiro("fin_cobrancas_resumo", { conta: contaId, de: mesDe, ate: mesAte });
+    return (linhas ?? []) as CobrancaResumo[];
+  } catch (e) {
+    if (e instanceof ErroLeitura && e.codigo === "muitas_linhas") throw new ErroLeitura(e.codigo, e.extra, ERRO_COBRANCAS_DEMAIS);
+    throw e;
   }
-  throw new Error("Cobranças em aberto demais para o resumo.");
 }

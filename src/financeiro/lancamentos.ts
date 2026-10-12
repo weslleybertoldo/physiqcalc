@@ -5,10 +5,12 @@
 // chama; a semente leva a CONTA do aluno (antes nascia sem conta) e a lista das 6 mora em
 // supabase-principal/functions/_shared/financeiro-gravar-regras.ts (reexportada daqui, idêntica). O estornarLancamento (sem quem
 // chamasse) saiu.
-import { principal } from "@/integrations/principal/client";
-import { paginar, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
+// hml-20d (H-42 · jeito 2, etapa 2, parte 4): as leituras (a página dos lançamentos do aluno e as categorias) vão pela função financeiro
+// (src/financeiro/ler.ts — no lote da tela), com as mesmas assinaturas e os mesmos tipos; o erro chega com o texto fixo do código.
+import type { Pagina } from "@/lib/paginacao";
 import { CATEGORIAS_PADRAO } from "../../supabase-principal/functions/_shared/financeiro-gravar-regras";
 import { garantirPadroesFinanceiro, gravarFinanceiro } from "./gravar";
+import { ErroLeitura, lerFinanceiro, paginaDoServidor } from "./ler";
 
 export type TipoLancamento = "entrada" | "saida";
 export type MetodoLancamento = "pix" | "dinheiro" | "cartao_credito" | "cartao_debito" | "transferencia" | "boleto" | "outro";
@@ -58,30 +60,21 @@ export function valorComSinal(tipo: string, valor: number): string {
   return `${tipo === "saida" ? "−" : "+"}${v}`;
 }
 
-const falhou = (error: { message: string } | null) => {
-  if (error) throw new Error(error.message);
-};
-
 /**
  * hml-14d (B21 · D31): uma página (20) dos lançamentos do aluno, a data mais recente primeiro (desempate: criado por último, id), e o
- * total — o cartão mostra os 12 primeiros e o "Ver todos (N)" abre as páginas (antes: até 500 de uma vez). Erro do banco lança.
+ * total — o cartão mostra os 12 primeiros e o "Ver todos (N)" abre as páginas (antes: até 500 de uma vez). Erro lança.
+ * hml-20d: fin_transacoes_do_aluno (a página com o total exato, a mesma ordem, com a categoria), pela função.
  */
-export function paginaLancamentosDoAluno(pacienteId: string, pagina: number): Promise<Pagina<Lancamento>> {
-  return paginar<Lancamento>(
-    (de, ate) =>
-      principal.from("transacoes")
-        .select("id, nutricionista_id, paciente_id, tipo, descricao, valor, data, metodo, observacao, estornada, recibo_id, categoria_id, created_at, categoria:categorias_financeiras(nome)", { count: "exact" })
-        .eq("paciente_id", pacienteId).is("deleted_at", null)
-        .order("data", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false })
-        .range(de, ate) as unknown as PromiseLike<RespostaComContagem<Lancamento>>,
-    pagina,
-  );
+export async function paginaLancamentosDoAluno(pacienteId: string, pagina: number): Promise<Pagina<Lancamento>> {
+  const r = await lerFinanceiro("fin_transacoes_do_aluno", { aluno: pacienteId, pagina: paginaDoServidor(pagina) });
+  if (typeof r.total !== "number") throw new ErroLeitura("erro_interno");
+  return { itens: (r.linhas ?? []) as Lancamento[], total: r.total };
 }
 
+/** As minhas categorias vivas pelo nome (fin_categorias — a mesma do Painel; aqui só o id e o nome, como a tela lia). */
 const lerCategorias = async (uid: string): Promise<Categoria[]> => {
-  const { data, error } = await principal.from("categorias_financeiras").select("id, nome").eq("nutricionista_id", uid).is("deleted_at", null).order("nome");
-  falhou(error);
-  return (data ?? []) as Categoria[];
+  const { linhas } = await lerFinanceiro("fin_categorias");
+  return ((linhas ?? []) as Categoria[]).map(({ id, nome }) => ({ id, nome }));
 };
 
 /**

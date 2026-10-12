@@ -1570,6 +1570,13 @@ CASOS_14D: dict[str, Caso14d] = {**TT.CASOS, **TM.CASOS, **TA.CASOS}
 
 # ───────────────────────── principal ─────────────────────────
 def main() -> int:
+    # hml-20d: --seco = o filtro do P1 totais sem rede nem navegador (o item fin_totais_do_aluno do `ler` da financeiro)
+    if "--seco" in sys.argv:
+        import telas_aluno  # noqa: PLC0415
+        Cs, _B5 = carregar("staging")
+        o = Cs.Saida("telas14_seco", parar=False)
+        telas_aluno.seco_p1_totais(o)
+        return o.fim()
     ap = argparse.ArgumentParser(description="hml-14b + hml-14d — E2E das listas paginadas (painel, Treino, master, por aluno e app) e dos campos "
                                              "que escolhem aluno (casos e uso no topo)")
     ap.add_argument("--base", required=True, help="local (http://localhost:8080) | staging | prod | <url> (ex.: http://localhost:5173)")

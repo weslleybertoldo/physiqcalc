@@ -23,6 +23,11 @@
 // anônimo, pelas RPCs deles); as leituras do Dashboard de OUTRAS W (alunos, agenda, financeiro) moram nas libs de lá, fora destas pastas.
 // E no src/ inteiro ninguém lê direto as 8 RPCs que a 20c levou para o servidor (as 3 do plano — a planos_favoritos inclusive: a Ferramentas ›
 // Modelos lê pela lib —, a grupos_alimentos, a receitas_da_nutricionista, a respostas_da_conta, a preconsulta_numeros e a painel_resumo).
+// hml-20d: o Financeiro — as 6 abas (src/painel/financeiro), o Financeiro do aluno, o gate do app do aluno e o resto da área
+// (src/financeiro): 0 leitura direta (no ed0d72e o detector achava 10 nessas pastas — as 8 de tabela das libs do Painel e do aluno e as 2
+// RPCs do src/financeiro/api.ts; o rpcFinanceiro, com o nome numa variável, ele não via — daí o QUALQUER_RPC). A parte do Financeiro do
+// Dashboard lê pelas MESMAS libs (src/painel/financeiro/dados.ts). E no src/
+// inteiro ninguém lê direto as 5 RPCs que a 20d levou para o servidor (as 3 da conta, a dos totais do aluno e a do gate).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -31,6 +36,8 @@ import { RPC_SO_LEITURA } from "@/integrations/repeticao";
 import { semComentarios } from "../../scripts/ci/checar-funcoes.mjs";
 
 const RAIZ = resolve(__dirname, "../..");
+/** hml-20d: quantos arquivos (fora os testes) a área do Financeiro tem hoje — a guarda não passa por não achar arquivo. */
+const MINIMO_FINANCEIRO = 43;
 
 /**
  * hml-20c: os links públicos sem login (decisão 13 da hml-19; spec hml-20 §2.8): falam com o banco como ANÔNIMO, pelas RPCs deles (o
@@ -82,6 +89,15 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; m
     fora: [...LINKS_PUBLICOS],
     minimo: 73,
   },
+  // hml-20d: o Financeiro — as 6 abas e o que elas leem (src/painel/financeiro), o Financeiro do aluno, o gate do app do aluno e as libs do
+  // resto da área (src/financeiro: cobrança, recebimento, Mercado Pago — já pelas funções) — MINIMO_FINANCEIRO arquivos hoje. No ed0d72e o
+  // detector achava 10 leituras diretas aqui (e não via o rpcFinanceiro); agora 0. O comprovante (uploadToSignedUrl, src/financeiro/api.ts) é GRAVAÇÃO com o token que
+  // o servidor assinou: o detector não o conta (e não é leitura). O equipe_da_conta das telas (H-43) mora fora destas pastas.
+  financeiro: {
+    pastas: ["src/painel/financeiro", "src/financeiro"],
+    base: 0,
+    minimo: MINIMO_FINANCEIRO,
+  },
 };
 /**
  * revisão da 20b: as RPCs que a área do Painel › Aluno AINDA chama direto — todas de OUTRA W, nomeadas (o H-43: o acesso do aluno — a
@@ -105,6 +121,8 @@ const RPCS_DO_SERVIDOR = [
   // hml-20c
   "planos_do_aluno", "plano_alimentar", "planos_favoritos", "grupos_alimentos", "receitas_da_nutricionista", "respostas_da_conta", "preconsulta_numeros",
   "painel_resumo",
+  // hml-20d (nenhuma tem leitor em área de outra W: o Dashboard lê pelas libs do Financeiro)
+  "financeiro_resumo_periodo", "financeiro_lancamentos", "financeiro_recibos", "financeiro_totais_do_aluno", "financeiro_do_aluno",
 ] as const;
 /** hml-20a (desvio do gate J): as 2 tabelas do Treino da Evolução do aluno — só o src/evolucao/fontes.ts lê direto (1 vez cada). */
 const TABELAS_DO_DESVIO = ["physiq_avaliacoes", "physiq_registros_fotos"] as const;
@@ -116,6 +134,11 @@ const ASSINA_GUARDADO = /\.(createSignedUrls?)\(/g;
 // hml-20b: também o invólucro local (`rpc("x"` / `rpc<T>("x"`, sem o ponto) e o genérico no `.rpc<T>("x"`
 const RPC = /(?<![\w$])rpc\s*(?:<[^()]*?>)?\s*\(\s*["'`]([a-z0-9_]+)["'`]/g;
 const TABELA_ESCRITA = /^\s*["'`]([a-z0-9_]+)["'`]/;
+/**
+ * hml-20d: QUALQUER .rpc( — inclusive o invólucro com o nome numa VARIÁVEL (o rpcFinanceiro do ed0d72e: principal.rpc(nome as never, …)),
+ * que o detector por nome (RPC) não vê. Na área do Financeiro não sobra nenhum.
+ */
+const QUALQUER_RPC = /\.rpc\s*(?:<[^()]*?>)?\s*\(/g;
 
 const linhaDe = (texto: string, pos: number) => texto.slice(0, pos).split("\n").length;
 
@@ -272,6 +295,15 @@ describe("hml-20c — o detector também acha as leituras de antes da Dieta, das
   });
 });
 
+describe("hml-20d — o detector do Financeiro: o invólucro de RPC com o nome numa variável também é pego (controle positivo)", () => {
+  it("o rpcFinanceiro de antes passava pelo detector por nome; o QUALQUER_RPC o pega; o que a 20d pôs no lugar (o lerFinanceiro) não", () => {
+    const antes = "async function rpcFinanceiro<T>(nome: string, args: Record<string, unknown>): Promise<T> {\n  const { data, error } = await principal.rpc(nome as never, args as never);";
+    expect(leiturasDiretas(antes)).toEqual([]);
+    expect(semComentarios(antes).match(QUALQUER_RPC)).toHaveLength(1);
+    expect(semComentarios('const r = await lerFinanceiro("fin_recibos", { conta: contaId, filtros: {}, offset: 0, limite: 20 });').match(QUALQUER_RPC)).toBeNull();
+  });
+});
+
 describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)", () => {
   it.each(Object.entries(AREAS))("%s: nenhuma leitura direta nas pastas da área além do desvio listado", (_area, { pastas, base, fora = [], minimo, desvio = {} }) => {
     const fontes = pastas.flatMap(fontesDa).filter((arq) => !fora.includes(relative(RAIZ, arq)));
@@ -303,6 +335,20 @@ describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)
     expect(todas.filter((r) => RPC_SO_LEITURA.has(r))).toEqual(["mensagens_desligadas"]);
   });
 
+  it("hml-20d — financeiro: nenhum .rpc( (nem o invólucro com o nome numa variável) e nenhum .from( de tabela; do principal sobram só a função e o PUT do comprovante", () => {
+    const fontes = AREAS.financeiro.pastas.flatMap(fontesDa);
+    const achados: string[] = [];
+    for (const arq of fontes) {
+      const texto: string = semComentarios(readFileSync(arq, "utf-8"));
+      for (const m of texto.matchAll(QUALQUER_RPC)) achados.push(`${relative(RAIZ, arq)}:${linhaDe(texto, m.index!)}: rpc`);
+      for (const m of texto.matchAll(FROM_DE_TABELA)) achados.push(`${relative(RAIZ, arq)}:${linhaDe(texto, m.index!)}: from`);
+    }
+    expect(achados, achados.join("\n")).toEqual([]);
+    // o único uso do Storage na área: o PUT do comprovante no link que o servidor assinou (gravação — decisão E)
+    const storage = fontes.flatMap((arq) => [...semComentarios(readFileSync(arq, "utf-8")).matchAll(/\.storage\s*\.from\([^)]*\)\s*\.([A-Za-z]+)\(/g)].map((m) => `${relative(RAIZ, arq)}: ${m[1]}`));
+    expect(storage).toEqual(["src/financeiro/api.ts: uploadToSignedUrl"]);
+  });
+
   it("o desvio do gate J é SÓ o Treino: as 3 tabelas physiq_* pelo cliente do Treino e o bucket registros; nada do principal direto na área", () => {
     const texto: string = semComentarios(readFileSync(resolve(RAIZ, SO_O_DESVIO), "utf-8"));
     expect(texto.match(/\bsupabase\.from\("physiq_(profiles|avaliacoes|registros_fotos)"\)\.select\(/g)).toHaveLength(3);
@@ -311,7 +357,7 @@ describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)
     expect(texto).not.toMatch(/\bprincipal\s*\.\s*(from|rpc|storage|functions)\b/);
   });
 
-  it("no src/ inteiro, ninguém lê direto as RPCs que foram para o servidor (20a: minha_dieta, minha_evolucao; 20b: aluno_perfil, aluno_evolucao, aluno_anotacoes, exames_do_aluno; 20c: as 3 do plano, grupos_alimentos, receitas_da_nutricionista, respostas_da_conta, preconsulta_numeros, painel_resumo); physiq_avaliacoes e physiq_registros_fotos só no desvio", () => {
+  it("no src/ inteiro, ninguém lê direto as RPCs que foram para o servidor (20a: minha_dieta, minha_evolucao; 20b: aluno_perfil, aluno_evolucao, aluno_anotacoes, exames_do_aluno; 20c: as 3 do plano, grupos_alimentos, receitas_da_nutricionista, respostas_da_conta, preconsulta_numeros, painel_resumo; 20d: as 3 da conta, financeiro_totais_do_aluno, financeiro_do_aluno); physiq_avaliacoes e physiq_registros_fotos só no desvio", () => {
     const fontes = fontesDa("src");
     const achados = fontes.flatMap((arq) => leiturasDoQueSaiu(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
     const fora = achados.filter((a) => !a.startsWith(`${SO_O_DESVIO}:`));

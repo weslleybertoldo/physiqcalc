@@ -133,6 +133,30 @@ def largura_ok(o, caso, t: str) -> None:
 
 
 # ───────────────────────── P1 Financeiro do aluno ─────────────────────────
+def leu_os_totais(e: dict) -> bool:
+    """hml-20d (H-42): os totais "Recebido/Gasto" do aluno saem pela RPC financeiro_totais_do_aluno NO SERVIDOR — o item fin_totais_do_aluno
+    do `ler` da função financeiro (o POST com { acao: "ler", itens: [...] }); o front de antes chamava a RPC direto do navegador."""
+    if e.get("tipo") == "rpc" and e.get("nome") == "financeiro_totais_do_aluno":
+        return True
+    corpo = e.get("corpo") or {}
+    if e.get("tipo") != "funcao" or e.get("nome") != "financeiro" or e.get("metodo") != "POST" or corpo.get("acao") != "ler":
+        return False
+    return any(isinstance(i, dict) and i.get("q") == "fin_totais_do_aluno" for i in corpo.get("itens") or [])
+
+
+def seco_p1_totais(o) -> None:
+    """hml-20d: o filtro do P1 totais sem rede e sem navegador — o `ler` com o item conta; o `ler` sem ele, a gravação e outra função não."""
+    ler = {"tipo": "funcao", "nome": "financeiro", "metodo": "POST", "corpo": {"acao": "ler", "itens": [{"q": "fin_categorias"},
+                                                                                                      {"aluno": "x", "q": "fin_totais_do_aluno"}]}}
+    o.ok(leu_os_totais(ler) and leu_os_totais({"tipo": "rpc", "nome": "financeiro_totais_do_aluno", "metodo": "POST", "corpo": {}}),
+         "P1 seco: o item fin_totais_do_aluno do `ler` da financeiro conta (e a RPC direta do front de antes também)")
+    o.ok(not leu_os_totais({**ler, "corpo": {"acao": "ler", "itens": [{"q": "fin_categorias"}]}})
+         and not leu_os_totais({**ler, "corpo": {"acao": "transacao_criar", "itens": [{"q": "fin_totais_do_aluno"}]}})
+         and not leu_os_totais({**ler, "corpo": {"action": "ler", "itens": [{"q": "fin_totais_do_aluno"}]}})
+         and not leu_os_totais({**ler, "nome": "nutricao"}) and not leu_os_totais({**ler, "metodo": "OPTIONS"}),
+         "P1 seco: o `ler` sem o item, a gravação, o `action` disfarçado, outra função e o OPTIONS não contam")
+
+
 def p1(o, nav, R, desktop: bool) -> None:
     a = al(R)
     for L0, botao, esperados in ((COBRANCAS, '[data-ver-todos="cobrancas"]', a.get("cobrancas") or {}),
@@ -161,10 +185,10 @@ def p1(o, nav, R, desktop: bool) -> None:
             caso.fim()
     if not desktop:
         return
-    # os totais "Recebido/Gasto" do banco (financeiro_totais_do_aluno)
+    # os totais "Recebido/Gasto" do banco (financeiro_totais_do_aluno — hml-20d: pelo `ler` da financeiro, o item fin_totais_do_aluno)
     t = "[P1 totais]"
     cont = a.get("contagens") or {}
-    caso, rede = R.novo_caso(nav, "p1_totais", fontes=(("rpc", "financeiro_totais_do_aluno"),))
+    caso, rede = R.novo_caso(nav, "p1_totais", fontes=(("rpc", "financeiro_totais_do_aluno"), ("funcao", "financeiro")))
     try:
         R.entrar(caso, rota(R, "financeiro"), chave_prof(R))
         el = caso.pg.locator("[data-totais-aluno]").first
@@ -177,8 +201,9 @@ def p1(o, nav, R, desktop: bool) -> None:
         todos = abs(rec - float(cont.get("recebido_todos") or 0)) < 0.01 and abs(gas - float(cont.get("gasto_todos") or 0)) < 0.01
         o.ok(seus or todos, f"{t} Recebido {rec:.2f} e Gasto {gas:.2f} = o banco ({'os lançamentos dela' if seus else 'todos os do aluno' if todos else 'NÃO bate'}: "
                             f"dela {cont.get('recebido')}/{cont.get('gasto')}; todos {cont.get('recebido_todos')}/{cont.get('gasto_todos')}; sem os estornados)")
-        rpc = [e for e in rede.eventos if e["nome"] == "financeiro_totais_do_aluno" and e["status"] < 300]
-        o.ok(bool(rpc), f"{t} os totais vêm da RPC financeiro_totais_do_aluno ({len(rpc)} pedido(s); nenhum lançamento é somado no navegador)")
+        rpc = [e for e in rede.eventos if leu_os_totais(e) and e["status"] < 300]
+        o.ok(bool(rpc), f"{t} os totais vêm da RPC financeiro_totais_do_aluno — pelo item fin_totais_do_aluno do `ler` da financeiro (hml-20d; o "
+                        f"front de antes a chamava direto) ({len(rpc)} pedido(s); nenhum lançamento é somado no navegador)")
         o.linha(f"   print: {caso.print('financeiro_aluno_totais')}")
     finally:
         caso.fim()
