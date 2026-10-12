@@ -109,8 +109,7 @@ def contar_painel(pedidos: list[dict]) -> dict:
 # ───────────────────────── as telas (a rota do painel é a da matrícula: /painel/alunos/<pacientes.id>) ─────────────────────────
 # (nome, rota relativa ao /painel/alunos/<id>, a marca de que a tela abriu, o teto de chamadas `ler` ao abrir — HIPÓTESE do etapa 1: a
 # casca/Resumo em até 3 voltas (o perfil, depois a série do principal, que espera o perfil; os cards), a seção do Prontuário 1 (a Avaliação
-# 360, 2: os resultados de exame vão num lote só deles — `sozinha`), a Avaliação 1 (hml-20b etapa 2, a decisão da sessão principal sobre o
-# TEMPO, ec101ce: a 1ª tela — a casca fria — pede o perfil e a série do principal NUM lote só; antes do ec101ce eram 2, em série)
+# 360, 2: os resultados de exame vão num lote só deles — `sozinha`), a Avaliação 2 (abaixo, no CONSULTAS_DA_AVALIACAO)
 SECOES = (
     ("anotacoes", "[data-secao-anotacoes]", 1), ("consultas", "[data-secao-consultas]", 1), ("anamnese", "[data-secao-anamnese]", 1),
     ("questionarios", "[data-secao-questionarios]", 1), ("exames", "[data-secao-exames]", 1),
@@ -118,15 +117,19 @@ SECOES = (
     ("farmaco-nutrientes", "[data-secao-farmaco]", 1), ("documentos", "[data-secao-documentos]", 1), ("anexos", "[data-secao-anexos]", 1),
 )
 RESUMO = ("resumo", "", "[data-resumo-aluno]", 3)
-AVALIACAO = ("avaliacao", "/avaliacao", '[data-aba-avaliacao="dados"], [data-aba-avaliacao="vazia"]', 1)
-# as 2 consultas que a casca fria da Avaliação pede JUNTAS (1 `ler`): o perfil e a série do principal (a parte do Treino espera o perfil e
-# vai pela treino-leitura, fora da nutricao)
+AVALIACAO = ("avaliacao", "/avaliacao", '[data-aba-avaliacao="dados"], [data-aba-avaliacao="vazia"]', 2)
+# as 2 consultas da casca fria da Avaliação (a 1ª tela): o perfil e a série do principal (a parte do Treino espera o perfil e vai pela
+# treino-leitura, fora da nutricao). O teto é 2 `ler` (decisão da sessão principal no F6, 12/10): o NORMAL é 1 — desde o ec101ce a série
+# sai no mesmo lote do perfil (local 60/60; o diagnóstico do staging, 6 aberturas: sempre 1 lote) —; 2 = o código da aba chegou DEPOIS do
+# pedido do perfil da casca (a 1ª abertura logo depois do deploy: o rede.py do F6, 09:49) e a série foi num lote dela. Que a série NÃO
+# ESPERA o perfil (o que fazia 2 voltas em série antes do ec101ce) o rede.py não vê (não mede a hora de cada pedido): quem prova é o
+# src/painel/aluno/avaliacao/useAvaliacaoDoAluno.test.tsx.
 CONSULTAS_DA_AVALIACAO = frozenset({"aluno_perfil", "aluno_evolucao_painel"})
 
 
-def avaliacao_num_lote(ler: int, consultas: dict | None) -> bool:
-    """A Avaliação (a 1ª tela, a casca fria) no depois: 1 `ler` só, com o perfil e a série juntos."""
-    return ler == 1 and CONSULTAS_DA_AVALIACAO <= set(consultas or {})
+def avaliacao_pelo_ler(ler: int, consultas: dict | None) -> bool:
+    """A Avaliação (a 1ª tela, a casca fria) no depois: o perfil e a série pelo `ler`, em até AVALIACAO[3] chamadas (o normal é 1)."""
+    return 1 <= ler <= AVALIACAO[3] and CONSULTAS_DA_AVALIACAO <= set(consultas or {})
 
 
 def telas_da_conta(conta: str) -> list[tuple[str, str, str, int]]:
