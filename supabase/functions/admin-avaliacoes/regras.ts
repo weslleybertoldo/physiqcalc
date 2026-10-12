@@ -137,3 +137,123 @@ export function foiTempo(e: unknown): boolean {
   const o = objeto(e);
   return /^(TimeoutError|AbortError)\b/.test(String(o.name ?? "")) || /^(TimeoutError|AbortError)\b/.test(String(o.message ?? ""));
 }
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// hml-20a (H-42 · jeito 2, etapa 2 · decisão 14 da spec hml-20, 11/10/2026) — a Evolução do PRÓPRIO aluno pela função (a ação
+// minha_evolucao, antes do requireAdmin): o que a tela lia direto no REST do Treino (src/evolucao/fontes.ts, carregarTreino) passa a
+// ser lido aqui, COMO A PESSOA (a chave anon do Treino + o token dela; o RLS de hoje — o aluno lê as próprias linhas e a própria pasta
+// do bucket). Qualquer papel lê SÓ O PRÓPRIO: o dono de todas as consultas é o `sub` do token; nada do corpo vira filtro.
+//   · as colunas em LISTA FECHADA (sai o select("*")): o perfil = as 37 de hoje (a composição atual); as avaliações = as que a série
+//     usa (src/evolucao/serie.ts), com a observação como hoje; as fotos mensais = as 5 de hoje;
+//   · as 200 avaliações e as 200 fotos MAIS NOVAS (hml-14d, D30), as avaliações devolvidas em ordem CRESCENTE (como a tela fazia);
+//   · a URL assinada das fotos (bucket do ambiente, 1 h) sai daqui, só dos caminhos que a própria consulta leu, RELATIVA ao projeto
+//     (/storage/v1/object/sign/…?token=…): a tela monta com o domínio dela — a mesma URL de hoje;
+//   · o freio por pessoa (em memória, 60/min): a leitura não passa pelo check_rate_limit da service role.
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+/** As ações de LEITURA da pessoa sobre ela mesma (antes do requireAdmin; nunca gravam — fora de ACOES_QUE_GRAVAM). */
+export const ACOES_DE_LEITURA = ["minha_evolucao"] as const;
+export type AcaoDeLeitura = (typeof ACOES_DE_LEITURA)[number];
+export function ehAcaoDeLeitura(v: unknown): v is AcaoDeLeitura {
+  return typeof v === "string" && (ACOES_DE_LEITURA as readonly string[]).includes(v);
+}
+
+/** O perfil que a Evolução mostra (a composição atual que o personal gravou) — as 37 colunas de hoje. */
+export const COLUNAS_PERFIL_EVOLUCAO = [
+  "id", "sexo", "idade", "peso", "altura", "metodo_avaliacao", "percentual_gordura", "massa_gorda", "massa_magra",
+  "massa_muscular", "agua_corporal", "gordura_visceral", "tmb_mifflin", "tmb_katch", "tmb_balanca", "tmb_metodo",
+  "dobra_1", "dobra_2", "dobra_3", "dobra_4", "dobra_5", "dobra_6", "dobra_7",
+  "medida_pescoco", "medida_ombro", "medida_peitoral", "medida_cintura", "medida_abdomen", "medida_quadril",
+  "medida_braco_d", "medida_braco_e", "medida_antebraco_d", "medida_antebraco_e", "medida_coxa_d", "medida_coxa_e",
+  "medida_panturrilha_d", "medida_panturrilha_e",
+] as const;
+
+/** As colunas das avaliações que a série usa (serie.ts: avaliacaoDoTreino, tmbEscolhida, as dobras e as medidas), com a observação. */
+export const COLUNAS_AVALIACOES_EVOLUCAO = [
+  "id", "data_avaliacao", "created_at", "metodo_avaliacao", "peso", "altura", "percentual_gordura", "massa_gorda", "massa_magra",
+  "massa_muscular", "agua_corporal", "gordura_visceral", "tmb_mifflin", "tmb_katch", "tmb_balanca", "tmb_metodo",
+  "dobra_1", "dobra_2", "dobra_3", "dobra_4", "dobra_5", "dobra_6", "dobra_7",
+  "medida_pescoco", "medida_ombro", "medida_peitoral", "medida_cintura", "medida_abdomen", "medida_quadril",
+  "medida_braco_d", "medida_braco_e", "medida_antebraco_d", "medida_antebraco_e", "medida_coxa_d", "medida_coxa_e",
+  "medida_panturrilha_d", "medida_panturrilha_e", "observacao",
+] as const;
+
+/** As fotos mensais (as 5 colunas de hoje). */
+export const COLUNAS_FOTOS_EVOLUCAO = ["id", "mes_ref", "tipo", "storage_path", "created_at"] as const;
+
+/** hml-14d (D30): quantas avaliações e fotos mensais a Evolução lê (as MAIS NOVAS). */
+export const MAX_AVALIACOES_EVOLUCAO = 200;
+export const MAX_FOTOS_EVOLUCAO = 200;
+/** A validade da URL assinada das fotos (a de hoje: 1 h). */
+export const VALIDADE_URL_EVOLUCAO_S = 3600;
+/** Pedidos por minuto por pessoa, nesta instância (em memória). */
+export const FREIO_EVOLUCAO_POR_MINUTO = 60;
+
+/** O freio por pessoa em memória: até `max` pedidos por `janelaMs` em cada chave (a mesma regra da porta do principal). */
+export function criarFreio(max: number, janelaMs: number, limiteDeChaves = 5000): (chave: string, agora?: number) => boolean {
+  const janelas = new Map<string, number[]>();
+  return (chave: string, agora: number = Date.now()) => {
+    const validos = (janelas.get(chave) ?? []).filter((t) => t > agora - janelaMs);
+    if (validos.length >= max) {
+      janelas.set(chave, validos);
+      return false;
+    }
+    validos.push(agora);
+    janelas.set(chave, validos);
+    if (janelas.size > limiteDeChaves) janelas.clear();
+    return true;
+  };
+}
+
+const PREFIXO_ASSINADA = "/storage/v1/object/sign/";
+
+/** Os caminhos que a PRÓPRIA consulta leu (storage_path de cada foto): texto, sem repetição. */
+export function caminhosDasFotos(fotos: unknown): string[] {
+  const saida = new Set<string>();
+  for (const f of Array.isArray(fotos) ? fotos : []) {
+    const c = objeto(f).storage_path;
+    if (typeof c === "string" && c.length > 0 && c.length <= 1024) saida.add(c);
+  }
+  return [...saida];
+}
+
+/** A parte relativa (/storage/v1/object/sign/<bucket>/…?token=…) da URL que o Storage assinou; outra coisa → null. */
+export function assinaturaRelativa(url: unknown, bucket: string): string | null {
+  if (typeof url !== "string") return null;
+  const i = url.indexOf(`${PREFIXO_ASSINADA}${bucket}/`);
+  return i >= 0 ? url.slice(i) : null;
+}
+
+/** caminho → URL relativa, SÓ para os caminhos pedidos (o que o Storage devolver a mais é ignorado); o que falhou fica de fora. */
+export function urlsAssinadas(pedidos: readonly string[], resposta: unknown, bucket: string): Map<string, string> {
+  const quero = new Set(pedidos);
+  const mapa = new Map<string, string>();
+  for (const r of Array.isArray(resposta) ? resposta : []) {
+    const o = objeto(r);
+    if (typeof o.path !== "string" || !quero.has(o.path) || o.error) continue;
+    const rel = assinaturaRelativa(o.signedUrl, bucket);
+    if (rel) mapa.set(o.path, rel);
+  }
+  return mapa;
+}
+
+/**
+ * A resposta da minha_evolucao = a ParteTreino da tela (src/evolucao/tipos.ts): o perfil (ou null), as avaliações em ordem CRESCENTE (a
+ * consulta traz as mais novas primeiro) e as fotos com a `url` relativa (null quando não deu para assinar — a tela mostra "Foto
+ * indisponível", como hoje).
+ */
+export function parteDaEvolucao(perfil: unknown, avaliacoes: unknown, fotos: unknown, urls: ReadonlyMap<string, string>): {
+  perfil: Record<string, unknown> | null;
+  avaliacoes: unknown[];
+  fotos: unknown[];
+} {
+  const p = perfil && typeof perfil === "object" && !Array.isArray(perfil) ? (perfil as Record<string, unknown>) : null;
+  return {
+    perfil: p,
+    avaliacoes: Array.isArray(avaliacoes) ? [...avaliacoes].reverse() : [],
+    fotos: (Array.isArray(fotos) ? fotos : []).map((f) => {
+      const o = objeto(f);
+      return { ...o, url: typeof o.storage_path === "string" ? urls.get(o.storage_path) ?? null : null };
+    }),
+  };
+}
