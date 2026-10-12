@@ -1,0 +1,344 @@
+{
+  "uuid": "30282c7f-ddc2-51ff-b80e-b7b5d5a24906",
+  "nome": "Rosca Direta com Barra W",
+  "cena": "rosca_direta_com_barra_w",
+  "grupo": "Bíceps",
+  "subgrupo": "Bíceps braquial (cabeças curta e longa) · braquial",
+  "padrao_movimento": "rosca_direta",
+  "equipamento": "barra",
+  "variacao": "em pé",
+  "alvos": [
+    "biceps"
+  ],
+  "auxiliares": [
+    "antebraco"
+  ],
+  "camera": {
+    "az": 40,
+    "el": 20,
+    "dist": 4.4,
+    "alvo": [
+      0,
+      -0.1,
+      0.95
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés na largura dos ombros e os joelhos soltos, segura a barra W por baixo nas pegadas de fora (os pedaços inclinados mais abertos, mais ou menos na largura dos ombros): por causa da curva da barra, as palmas ficam viradas para a frente e um pouco para dentro (pegada semi-supinada). Começa com os braços quase esticados e a barra na frente das coxas, sem encostar nelas. Com os cotovelos junto do tronco e parados, o tronco parado e o punho reto (a mão na linha do antebraço), dobra só os cotovelos e sobe a barra até a altura dos ombros, na frente deles — só no fim os cotovelos vão um pouco à frente, sem o antebraço passar da vertical. Desce devagar, controlando, até quase esticar os braços de novo.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética aberta, os 2 braços juntos",
+    "articulacoes": "cotovelos (flexão na subida, de ~10° a ~133° — amplitude de ~123°, a da barra W no Marcolin 2018: 119,9 ± 13,7°; extensão na descida) com o antebraço semi-supinado o tempo todo (a palma ~29° virada pro meio, a que a curva de 30° da barra dá) e o punho reto (a mão na linha do antebraço); ombros quase parados — o braço fica junto do tronco até o antebraço passar da horizontal e só no fim vai ~8° à frente (leve flexão do ombro); escápulas um pouco pra trás e paradas; tronco, quadril, joelhos (soltos, ~7°) e pés parados",
+    "agonistas": "bíceps braquial (cabeças curta e longa) e braquial na flexão do cotovelo (ExRx: \"Target: Biceps Brachii\", \"Synergists: Brachialis, Brachioradialis\"; NSCA: \"Major muscles involved: Biceps brachii, brachialis, brachioradialis\"; free-exercise-db: \"primaryMuscles\": [\"biceps\"]). No mapa do app o braquial faz parte do grupo \"biceps\" (catálogo: \"Bíceps braquial (cabeças curta e longa) · braquial\"). Concêntrica na subida e excêntrica na descida",
+    "sinergistas": "braquiorradial (ExRx: sinergista; NSCA: músculo principal) — com a barra W ele trabalhou um pouco MAIS que com os halteres (Marcolin 2018: \"We detected higher activation profile of both BB (P < 0.05) and BR (P < 0.01) during the EZ compared to the DC.\") e quase igual à barra reta (\"The small difference between BC and EZ variants of the BB and BR EMG activity makes the choice between these two exercises a matter of subjective comfort.\"); no mapa do app ele é do grupo \"antebraco\" (auxiliar)",
+    "estabilizadores": "deltoide anterior, coracobraquial, trapézio (fibras de cima e do meio), levantador da escápula e flexores do punho, que seguram a mão na linha do antebraço (ExRx: \"Stabilizers: Deltoid, Anterior; Coracobrachialis; Trapezius, Upper; Trapezius, Middle; Levator Scapulae; Wrist Flexors\"); abdominais e eretores da espinha seguram o tronco parado (NSCA: \"Keep your torso and upper arms stationary.\"; Catalyst: \"Minimizing momentum from the body\")",
+    "fases": "subida concêntrica até a barra na altura dos ombros (free-exercise-db: \"Continue to raise the weight until your biceps are fully contracted and the bar is at shoulder level.\"; NSCA: \"Flex your elbows to raise the bar toward your anterior deltoids.\") e descida excêntrica controlada até quase esticar (free-exercise-db: \"Then inhale and slowly lower the bar back to the starting position.\"; Catalyst: \"then lower under control\"; no Marcolin 2018 a descida levou mais tempo que a subida: \"the concentric movement duration was 1.44 ± 0.26 s while the eccentric movement was 1.72 ± 0.47 s\")"
+  },
+  "referencias": [
+    "Catálogo do app — scripts/conteudo/novos_61.json (o exercício é um dos 61 novos, sem dica no scripts/gifs_catalogo/catalogo.py): \"grupo_muscular\": \"Bíceps\", \"subgrupo\": \"Bíceps braquial (cabeças curta e longa) · braquial\", \"padrao_movimento\": \"rosca_direta\", \"equipamento\": \"barra\", \"variacao\": null, \"fonte_en\": \"EZ-Bar Curl\". A variação vazia virou \"em pé\" (o plano dos lotes deduziu pelo nome e pelo fonte_en; as fontes confirmam: free-exercise-db \"Stand up straight\", Catalyst \"Stand with an EZ curl bar hanging at arms’ length\", Marcolin 2018 \"A standing posture was maintained\")",
+    "free-exercise-db (lista aberta em domínio público, Unlicense — a de onde o catálogo tirou o nome: fonte_en \"EZ-Bar Curl\") — EZ-Bar Curl (https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Curl.json, lido em 11/10/2026, com as 2 fotos): \"Stand up straight while holding an EZ curl bar at the wide outer handle. The palms of your hands should be facing forward and slightly tilted inward due to the shape of the bar. Keep your elbows close to your torso. This will be your starting position.\"; \"Now, while keeping your upper arms stationary, exhale and curl the weights forward while contracting the biceps. Focus on only moving your forearms.\"; \"Continue to raise the weight until your biceps are fully contracted and the bar is at shoulder level. Hold the top contracted position for a moment and squeeze the biceps.\"; \"Then inhale and slowly lower the bar back to the starting position.\"; \"primaryMuscles\": [\"biceps\"], \"secondaryMuscles\": []. Nas fotos: as mãos nas curvas de fora, mais ou menos na largura dos ombros; em cima a barra na altura dos ombros e os cotovelos um pouco à frente",
+    "ExRx.net — Barbell Curl (https://exrx.net/WeightExercises/Biceps/BBCurl, lido na cópia do Internet Archive de 02/02/2026 — https://web.archive.org/web/20260202161754/https://exrx.net/WeightExercises/Biceps/BBCurl —; o site responde 403 direto; lido em 11/10/2026; a página é demonstrada com a barra W e o ExRx não tem página só dela): \"Utility: Basic\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Grasp bar with shoulder width underhand grip.\"; Execution: \"With elbows to side, raise bar until forearms are vertical. Lower until arms are fully extended. Repeat.\"; Comments: \"When elbows are fully flexed, they can travel forward slightly allowing forearms to be no more than vertical. This additional movement allows for relative release of tension in muscles between repetitions. Exercise can also be performed with straight barbell. Movement with cambered bar as shown above is also known as EZ Barbell Curl or EZ Bar Curl.\"; músculos: Target \"Biceps Brachii\"; Synergists \"Brachialis\", \"Brachioradialis\"; Stabilizers \"Deltoid, Anterior\", \"Coracobrachialis\", \"Trapezius, Upper\", \"Trapezius, Middle\", \"Levator Scapulae\", \"Wrist Flexors\"",
+    "ExRx.net — Arm Curl / Elbow Drift (https://web.archive.org/web/20250607120614/https://exrx.net/Questions/ArmCurl, lido em 11/10/2026): \"Generally speaking, the rationale of maintaining elbow position throughout the arm curl is to prevent the elbows from traveling forward beyond the weight's center of gravity, thereby terminating tension on the biceps before full flexion is achieved.\"; \"they move the elbows forward slightly as the weight approaches the top.\"",
+    "Catalyst Athletics (Greg Everett) — EZ Curl (https://www.catalystathletics.com/exercise/838/EZ-Curl/, lido em 11/10/2026): \"Stand with an EZ curl bar hanging at arms’ length. A narrower grip is more common, but a wider grip will usually allow a greater range of motion, and may feel better on the elbows. Minimizing momentum from the body, curl the bar up as far as possible, then lower under control.\"; \"The purpose of the EZ curl bar is to reduce the strain on the elbows common with straight bar curls.\" (diverge na pegada: a Catalyst diz que a estreita é a mais comum; a cena segue o free-exercise-db, a fonte do fonte_en, com a pegada de fora)",
+    "NSCA — Essentials of Strength Training and Conditioning, técnica dos exercícios (resumo do Achievable CSCS, cap. 15, lista 2, https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-2, lido em 11/10/2026; a NSCA não tem a rosca com a barra W: é a rosca com barra reta): \"Barbell biceps curl Major muscles involved: Biceps brachii, brachialis, brachioradialis Starting position: Grasp the bar with a closed, supinated grip (shoulder-width). Stand with your feet shoulder-width apart and your knees slightly flexed. Let the bar rest on the front of your thighs with your elbows fully extended. Upward movement phase: Flex your elbows to raise the bar toward your anterior deltoids. Keep your torso and upper arms stationary. Downward movement phase: Lower the bar until your elbows fully extend. Avoid bouncing the bar on your thighs.\"",
+    "American Council on Exercise — Bicep Curl, Exercise Library 70 (https://www.acefitness.org/resources/everyone/exercise-library/70/bicep-curl/, \"Equipment: Barbell\", lido em 11/10/2026; a ACE não tem a rosca com a barra W: é a barra reta): \"Hold the barbell with both hands facing up so the wrists, elbows, and shoulders are in a straight line about shoulder-width apart. Lift the barbell toward the shoulders while bending the elbows and keeping them next to the middle of the body. Slowly lower the weight to return to the starting position. Keep chest still, using just the arms for the movement.\"",
+    "Marcolin G, Panizzolo FA, Petrone N, Moro T, Grigoletto D, Piccolo D, Paoli A. Differences in electromyographic activity of biceps brachii and brachioradialis while performing three variants of curl. PeerJ. 2018;6:e5165 (texto completo, PMC6047503, CC BY, lido em 11/10/2026): \"Dumbbell curl (DC) and barbell curl in its two variants, straight (BC) or undulated bar (EZ) are typical exercises to train the elbow flexors.\"; \"A standing posture was maintained during the performance of the three exercises: BC, EZ, DC.\"; \"Trunk movements together with knee flexions were visually monitored by the researchers to avoid possible cheating.\"; \"In the BC, both forearms are supined throughout the performance of the exercise while in the EZ barbell curl they assume an intermediate position very close to a semiproned position.\"; amplitude do cotovelo \"BC = 117.3° ± 10.9°; EZ = 119.9° ± 13.7°; DC = 123.1° ± 12.3°\"; \"the concentric movement duration was 1.44 ± 0.26 s while the eccentric movement was 1.72 ± 0.47 s\"; \"We detected higher activation profile of both BB (P < 0.05) and BR (P < 0.01) during the EZ compared to the DC.\"; \"The small difference between BC and EZ variants of the BB and BR EMG activity makes the choice between these two exercises a matter of subjective comfort.\"; \"the present work did not assess EMG activation of the brachialis muscle\". O artigo não diz em que curva da barra ficavam as mãos",
+    "Barra W (a peça nova, equip3d.barra_w) — Dymeck LG. Bar bell. Patente US 2,508,567, 23/05/1950 (a \"curling bar\" que virou a barra W; https://patents.google.com/patent/US2508567A/en, lida em 12/10/2026, com o desenho): \"the instructions are always the same and recite that the exercise must be done with strength of arms alone, while keeping the elbows close to the user's sides, without swinging the body\"; cada pedaço da pegada \"arranged at an angle of 25 to 35 with respect to the latter section\"; \"The center lines of the sections of both hand grip portions lie in a common plane which also includes the center lines of the intermediate and end portions\"; \"the user grasps the respective hand grips [...] with the palms of the hands engaging the sections [...] of the hand grips and facing upwardly\" (a rosca normal)",
+    "Barra W — Eleiko Curl Bar 50 mm, 12 kg (ficha oficial, https://media.eleiko.com/admin/download-product-sheet.aspx?language=en-us&articlecode=3061174, lida em 11/10/2026, e a página do produto na cópia do Internet Archive de 21/04/2026): \"Length 1316 mm\", \"Sleeve diameter 50 mm\", \"Loadable sleeve length 230 mm\", \"Flange width 20 mm\", \"28 mm Bar Diameter\" (a base das medidas da barra da cena); Rogue Curl Bar (cópia do Internet Archive de 19/11/2025): \"Shaft: 28.5MM diameter\", \"Distance between sleeves: 31.50\"\", \"Bar Length 54.50\"\", \"Cambered for reducing stress on wrists during curls\", \"Lifters can also employ a narrow grip with the Rogue Curl Bar for performing tricep extensions and close grip curls.\"; Ropestore, barra W olímpica de 1,20 m: \"Diâmetro da pontas: 50 mm\", \"Espaço para anilhas: 16 cm\". A dobra de 30° (meio da faixa da patente), o fundo do V (7 cm, foto da Eleiko) e o meio da pegada de fora a 23 cm do meio da barra (fotos do free-exercise-db) são as medidas que nenhum fabricante dá",
+    "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — valores de referência da AAOS (a mesma fonte do limites.py)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "barra na frente das coxas embaixo, sem encostar",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "equipamento": "barra_w",
+        "mm": [
+          3,
+          40
+        ],
+        "t": 0.0,
+        "fonte": "NSCA (Essentials, rosca com barra reta) (\"Let the bar rest on the front of your thighs with your elbows fully extended.\"; \"Avoid bouncing the bar on your thighs.\"); Catalyst Athletics — EZ Curl (\"Stand with an EZ curl bar hanging at arms’ length\"). Com a pegada de fora o fundo dos V da barra fica do lado do corpo, mais perto das coxas que a linha da barra: a cena para a barra inteira ~2 cm na frente delas"
+      },
+      {
+        "nome": "barra longe do rosto e do pescoço",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "equipamento": "barra_w",
+        "mm": [
+          40,
+          5000
+        ],
+        "fonte": "free-exercise-db — EZ-Bar Curl (\"the bar is at shoulder level\"); NSCA (Essentials, rosca com barra reta) (\"raise the bar toward your anterior deltoids\"): em cima a barra fica na altura dos ombros, na frente deles, sem chegar no queixo"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "mãos e antebraços não entram nas coxas nem no tronco",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+      },
+      {
+        "nome": "mãos longe do peito, dos ombros e do rosto em cima",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder"
+        ],
+        "cabelo": true,
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "pedido do Weslley (a mão × ombro/queixo em cima, medida à parte); free-exercise-db — EZ-Bar Curl (\"the bar is at shoulder level\")"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "cotovelo quase esticado embaixo",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          0,
+          25
+        ],
+        "fonte": "ExRx — Barbell Curl (com a barra W) (\"Lower until arms are fully extended.\"); NSCA (Essentials, rosca com barra reta) (\"Lower the bar until your elbows fully extend.\"); Catalyst Athletics — EZ Curl (\"hanging at arms’ length\"). A cena desce até ~10°: quase esticado, sem travar, com a barra na frente das coxas"
+      },
+      {
+        "nome": "cotovelo dobrado em cima",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 1.0,
+        "graus": [
+          115,
+          145
+        ],
+        "fonte": "free-exercise-db — EZ-Bar Curl (\"Continue to raise the weight until your biceps are fully contracted and the bar is at shoulder level.\"); NSCA (Essentials, rosca com barra reta) (\"raise the bar toward your anterior deltoids\"); Marcolin et al. 2018 (amplitude do cotovelo com a barra W \"EZ = 119.9° ± 13.7°\"). A cena sobe até ~133° (amplitude ~123°): a pele do antebraço chega na do braço sem entrar além do vinco"
+      },
+      {
+        "nome": "tronco parado (sem balanço)",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "NSCA (Essentials, rosca com barra reta) (\"Keep your torso and upper arms stationary.\"); ACE — Bicep Curl (barra reta) (\"Keep chest still, using just the arms for the movement.\"); Catalyst Athletics — EZ Curl (\"Minimizing momentum from the body\"); Marcolin et al. 2018 (\"Trunk movements together with knee flexions were visually monitored by the researchers to avoid possible cheating.\")"
+      },
+      {
+        "nome": "cotovelo junto ao tronco",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -5,
+          15
+        ],
+        "fonte": "free-exercise-db — EZ-Bar Curl (\"Keep your elbows close to your torso.\"); ExRx — Barbell Curl (com a barra W) (\"With elbows to side\"); ACE — Bicep Curl (barra reta) (\"keeping them next to the middle of the body\"); Dymeck 1950 (patente da barra W) (\"while keeping the elbows close to the user's sides\")"
+      },
+      {
+        "nome": "cotovelo parado até o antebraço passar da horizontal",
+        "medida": "braco_frente",
+        "t": [
+          0.0,
+          0.5
+        ],
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "free-exercise-db — EZ-Bar Curl (\"while keeping your upper arms stationary\"; \"Focus on only moving your forearms.\"); NSCA (Essentials, rosca com barra reta) (\"Keep your torso and upper arms stationary.\")"
+      },
+      {
+        "nome": "cotovelo só um pouco à frente em cima",
+        "medida": "braco_frente",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "ExRx — Barbell Curl (com a barra W) (\"When elbows are fully flexed, they can travel forward slightly allowing forearms to be no more than vertical.\"); ExRx — Arm Curl / Elbow Drift (\"they move the elbows forward slightly as the weight approaches the top.\"). A cena leva o braço de 8° a 16° à frente só depois que o antebraço passa da horizontal"
+      },
+      {
+        "nome": "antebraço perto da vertical em cima, sem passar dela",
+        "medida": "antebraco_vertical",
+        "t": 1.0,
+        "graus": [
+          15,
+          45
+        ],
+        "fonte": "ExRx — Barbell Curl (com a barra W) (\"raise bar until forearms are vertical\"; \"allowing forearms to be no more than vertical\"). Em cima o antebraço fica ~31° da vertical"
+      },
+      {
+        "nome": "palmas pra frente e um pouco pra dentro embaixo",
+        "medida": "palma_frente",
+        "t": 0.0,
+        "graus": [
+          15,
+          60
+        ],
+        "fonte": "free-exercise-db — EZ-Bar Curl (\"The palms of your hands should be facing forward and slightly tilted inward due to the shape of the bar.\")"
+      },
+      {
+        "nome": "palmas viradas pro corpo em cima (pegada por baixo)",
+        "medida": "palma_frente",
+        "t": 1.0,
+        "graus": [
+          110,
+          170
+        ],
+        "fonte": "ExRx — Barbell Curl (com a barra W) (\"underhand grip\"); Dymeck 1950 (patente da barra W) (\"with the palms of the hands [...] facing upwardly\")"
+      },
+      {
+        "nome": "palma um pouco virada pro meio (semi-supinada, nem supinada nem martelo)",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          15,
+          45
+        ],
+        "fonte": "free-exercise-db — EZ-Bar Curl (\"facing forward and slightly tilted inward due to the shape of the bar\"); Marcolin et al. 2018 (\"in the EZ barbell curl they assume an intermediate position\"); Dymeck 1950 (patente da barra W) (pedaços a \"25 to 35\" graus da linha da barra). A cena: ~29°, o giro que a curva de 30° da barra pede"
+      },
+      {
+        "nome": "punho reto (a mão na linha do antebraço)",
+        "medida": "punho_flexao",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "Rogue — Curl Bar (\"Cambered for reducing stress on wrists during curls\"); ACE — Bicep Curl (barra reta) (\"the wrists, elbows, and shoulders are in a straight line\"); ExRx — Barbell Curl (com a barra W) (\"Wrist Flexors\" entre os estabilizadores: o punho fica parado)"
+      },
+      {
+        "nome": "punho sem dobrar de lado",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "Rogue — Curl Bar (\"the bends in the shaft help limit stress on the wrists\"): a mão segue a curva da barra girando o antebraço, sem entortar o punho"
+      },
+      {
+        "nome": "pegada de fora, mais ou menos na largura dos ombros",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          1.0,
+          1.5
+        ],
+        "fonte": "free-exercise-db — EZ-Bar Curl (\"at the wide outer handle\"); ExRx — Barbell Curl (com a barra W) (\"Grasp bar with shoulder width underhand grip.\"); ACE — Bicep Curl (barra reta) (\"about shoulder-width apart\")"
+      },
+      {
+        "nome": "pés na largura dos ombros",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.3
+        ],
+        "fonte": "NSCA (Essentials, rosca com barra reta) (\"Stand with your feet shoulder-width apart\")"
+      },
+      {
+        "nome": "joelhos soltos",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          2,
+          15
+        ],
+        "fonte": "NSCA (Essentials, rosca com barra reta) (\"your knees slightly flexed\"); diverge do free-exercise-db — EZ-Bar Curl (\"Stand up straight\", joelhos retos nas fotos): a cena segue a NSCA (~7°)"
+      }
+    ]
+  }
+}

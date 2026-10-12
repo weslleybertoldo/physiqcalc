@@ -7741,3 +7741,132 @@ def stepper(nome="stepper", pivo=(-0.566, 0.043), braco=0.45, nivelador=0.055, x
     st.pedais(z0, z0)
     return st
 # ===== fim: Simulador de escada =====================================================================================================
+
+
+# ===== Barra W ======================================================================================================================
+# ── BARRA W LIVRE, COM ANILHAS (a barra EZ, "EZ curl bar"; Rosca Direta com Barra W, lote 13, 12/10/2026) ───────────────────────────────
+# A barra W olímpica de academia, solta (com anilhas; não é a "barra W" acessório da polia citada no bloco POLIA): o EIXO de aço com o
+# zigue-zague no meio — de cada lado um "V" com 2 pedaços inclinados, a PEGADA DE FORA (do reto do colar até o fundo do V) e a PEGADA
+# DE DENTRO (do fundo do V até o reto do meio) —, o reto do meio e os 2 retos curtos até os COLARES, as LUVAS das anilhas (Ø 50 mm) por
+# fora deles, as ANILHAS encostadas nos colares (com o miolo de aço em volta da luva) e as TRAVAS por fora das anilhas. O zigue-zague
+# fica num plano só, com o reto do meio e as luvas na mesma linha, e cada dobra sai a 25–35° da linha da barra — é a "curling bar"
+# que virou a barra W (Dymeck LG, patente US 2,508,567, 1950: "The center lines of the sections of both hand grip portions lie in a
+# common plane which also includes the center lines of the intermediate and end portions"; "substantially straight, weight
+# supporting end portions in longitudinal alignment with each other and said intermediate portion"; "arranged at an angle of 25 to
+# 35 with respect to the latter section"). As 4 pegadas no zigue-zague (2 de fora e 2 de dentro, com o recartilhado) são as das barras
+# de hoje (Eleiko Curl Bar: "Variety of hand positions for tricep and bicep training"; Rogue Curl Bar: "Lifters can also employ a
+# narrow grip with the Rogue Curl Bar for performing tricep extensions and close grip curls").
+# Medidas de fabricante: Eleiko Curl Bar 50 mm, 12 kg (ficha oficial): "Length 1316 mm", "Sleeve diameter 50 mm", "Loadable sleeve
+# length 230 mm", "Flange width 20 mm" e, na página do produto, "28 mm Bar Diameter" → 1316 − 2 × (230 + 20) = 816 mm de eixo entre
+# os colares; Rogue Curl Bar: "Shaft: 28.5MM diameter", "Distance between sleeves: 31.50"" (800 mm), "Bar Length 54.50"" (1384 mm);
+# Ropestore (barra W olímpica de 1,20 m): "Diâmetro da pontas: 50 mm", "Espaço para anilhas: 16 cm". Nenhum fabricante dá a cota das
+# curvas: a dobra de 30° é o meio da faixa da patente (e o que se mede na foto de lado da Rogue Curl Bar, 26–33°); o fundo do V
+# (7 cm do eixo, pedaços de 14 cm entre as quinas) sai da foto da Eleiko (o fundo do V a ~2,5 diâmetros do eixo de 28 mm); o meio da
+# pegada de fora a 25 cm do meio da barra (a pegada de fora um pouco por fora dos ombros: ExRx, Barbell Curl, com a barra W, "Grasp
+# bar with shoulder width underhand grip"; nas fotos do free-exercise-db, EZ-Bar Curl, as mãos ficam a ~56 % do vão entre as anilhas,
+# ~23 cm; na foto da Eleiko, ~26 cm). As quinas são arredondadas (_dobrar: começam 2 cm antes da quina) e o tubo segue a linha
+# (_tubo_caminho, o do puxador D), em anéis.
+# A anilha (Ø 28 cm × 35 mm, a da barra() curta da Rosca Direta com Barra), o miolo, o colar (Ø 68 mm) e a trava (Ø 72 mm × 30 mm)
+# são escolha da fábrica.
+# Uso numa cena (barra rígida presa nas 2 mãos, como a barra() da Rosca Inversa com Barra; s = +1 é o lado +X):
+#   bw = e3.barra_w("barra_w", pegada="fora")            # ou "dentro"
+#   bw.raiz.matrix_world = M                               # a raiz: no meio do reto do meio, X local ao longo da linha reta (meio e
+#                                                          # luvas), o zigue-zague no plano XY local, o fundo dos V no −Y local
+#   p, e = bw.mundo(s)                                     # meio da pegada do lado s agora e a direção da barra ali (pra fora)
+#   Cena(pose, [bw.raiz], pegadas=[("Left", ck.Barra(bw.pegadores[1], bw.raio, bw.meia)), ("Right", ck.Barra(bw.pegadores[-1], ...))])
+# A raiz é um vazio (o equipamento da cena); filhos: "<nome>_eixo" (o eixo inteiro de colar a colar, com o zigue-zague), e de cada lado
+# "<nome>_colar±1", "<nome>_luva±1", "<nome>_anilha±1", "<nome>_miolo±1", "<nome>_trava±1" e o vazio "<nome>_pegador±1" (no meio da
+# pegada, com o X local ao longo do pedaço inclinado, pra fora — o checagem3d.Barra mede a mão nele). Não encosta no corpo.
+class BarraW:
+    """Barra W pronta na cena (barra_w())."""
+
+    def __init__(self, raiz, raio, linha, pegada, d_pegada, pegadores, meia, medidas):
+        self.raiz = raiz                              # vazio no meio do reto do meio (o equipamento da cena)
+        self.raio = raio                              # raio do eixo, onde a mão fecha
+        self.linha = linha                            # linha do eixo do lado +X, com as quinas vivas (local): meio → … → colar
+        self.pegada = pegada                          # "fora" ou "dentro": em que pedaço inclinado cada mão fecha
+        self.d_pegada = d_pegada                      # meio da pegada, a d_pegada m do meio da barra, medido AO LONGO dela
+        self.pegadores = pegadores                    # {+1, −1}: vazio no meio da pegada, X local ao longo do pedaço, pra fora
+        self.meia = meia                              # meia largura da faixa da mão (o reto do pedaço, sem as quinas arredondadas)
+        self.medidas = medidas                        # as medidas usadas (m e graus), pro relatório da cena
+
+    def local(self, s, d):
+        """Ponto do eixo da barra a `d` m do meio, medido ao longo dela (na linha com as quinas vivas), do lado s (+1 = +X), e a direção
+        da barra ali, pra fora (no referencial da raiz). Passando do colar, segue reto pela luva."""
+        resto = d
+        for k, (a, b) in enumerate(zip(self.linha, self.linha[1:])):
+            seg = b - a
+            if resto <= seg.length or k == len(self.linha) - 2:
+                e = seg.normalized()
+                p = a + e * resto
+                return Vector((s * p.x, p.y, p.z)), Vector((s * e.x, e.y, e.z))
+            resto -= seg.length
+
+    def mundo(self, s, d=None):
+        """O mesmo no mundo, com a barra onde ela está agora (padrão: no meio da pegada)."""
+        p, e = self.local(s, self.d_pegada if d is None else d)
+        M = self.raiz.matrix_world
+        return M @ p, (M.to_3x3() @ e).normalized()
+
+
+def barra_w(nome="barra_w", entre_colares=0.816, raio=0.014, dobra=30.0, pedaco=0.14, x_fora=0.25, raio_dobra=0.02,
+            colar=(0.034, 0.020), luva=(0.025, 0.230), raio_anilha=0.14, larg_anilha=0.035, trava=(0.036, 0.030), pegada="fora"):
+    """Barra W (ver o bloco acima). Medidas em m (graus na dobra): `entre_colares` = eixo de colar a colar; `raio` do eixo; cada pedaço
+    inclinado com `pedaco` m entre as quinas, a `dobra` graus da linha da barra (o fundo do V fica a pedaco × sen(dobra) do eixo); o meio
+    da pegada de fora a `x_fora` m do meio da barra (na linha dela); quinas arredondadas começando `raio_dobra` antes; colar (raio,
+    largura); luva (raio, comprimento carregável); anilha encostada no colar; trava (raio, largura) por fora da anilha. pegada = "fora"
+    ou "dentro" (onde ficam os pegadores). Devolve um BarraW (raiz, local(), mundo(), pegadores, meia, ...)."""
+    if pegada not in ("fora", "dentro"):
+        raise ValueError("barra_w: pegada %r (use 'fora' ou 'dentro')" % (pegada,))
+    b = math.radians(dobra)
+    ax, fundo = pedaco * math.cos(b), pedaco * math.sin(b)       # cada pedaço inclinado: quanto anda ao longo da barra e pro lado
+    x_fundo = x_fora - ax / 2                                       # fundo do V
+    meio = x_fundo - ax                                             # meia largura do reto do meio
+    x_quina = x_fora + ax / 2                                       # quina de fora, onde a pegada de fora volta pra linha da barra
+    x_colar = entre_colares / 2
+    if meio < raio_dobra or x_colar - x_quina < raio_dobra + 0.01:
+        raise ValueError("barra_w: o zigue-zague não cabe entre os colares (meio %.3f m, quina de fora %.3f m, colar %.3f m)"
+                         % (meio, x_quina, x_colar))
+    linha = [Vector((0.0, 0.0, 0.0)), Vector((meio, 0.0, 0.0)), Vector((x_fundo, -fundo, 0.0)), Vector((x_quina, 0.0, 0.0)),
+             Vector((x_colar, 0.0, 0.0))]
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    # eixo inteiro de colar a colar (um tubo só seguindo a linha, quinas arredondadas; as pontas entram 5 mm no colar, sem face
+    # colada na dele), em anéis: a checagem fica rápida
+    meia_linha = [Vector((-p.x, p.y, p.z)) for p in reversed(linha[1:])] + linha[1:]
+    meia_linha[0].x, meia_linha[-1].x = -(x_colar + 0.005), x_colar + 0.005
+    _em_aneis(_tubo_caminho(nome + "_eixo", _dobrar(meia_linha, raio_dobra, n=8), raio, mat_aco(), pai=raiz, lados=24), passo=0.03)
+    rot = (0, math.radians(90), 0)
+    r_colar, l_colar = colar
+    r_luva, l_luva = luva
+    r_trava, l_trava = trava
+    x_an = x_colar + l_colar + 0.001                                 # face de dentro da anilha, encostada no colar (1 mm: sem face colada)
+    for s in (-1, 1):
+        _cilindro(nome + "_colar%+d" % s, r_colar, l_colar, (s * (x_colar + l_colar / 2), 0, 0), rot, mat_aco(), pai=raiz)
+        _cilindro(nome + "_luva%+d" % s, r_luva, l_luva + l_colar - 0.005, (s * (x_colar + 0.005 + (l_luva + l_colar - 0.005) / 2), 0, 0),
+                  rot, mat_aco(), pai=raiz)                          # a luva começa dentro do colar e termina a l_luva dele
+        _cilindro(nome + "_anilha%+d" % s, raio_anilha, larg_anilha, (s * (x_an + larg_anilha / 2), 0, 0), rot, mat_borracha(), vertices=48,
+                  pai=raiz)
+        _cilindro(nome + "_miolo%+d" % s, r_luva + 0.007, larg_anilha + 0.006, (s * (x_an + (larg_anilha + 0.006) / 2), 0, 0), rot,
+                  mat_aco(), pai=raiz)                               # o miolo de aço da anilha passa 6 mm pra fora
+        _cilindro(nome + "_trava%+d" % s, r_trava, l_trava, (s * (x_an + larg_anilha + 0.007 + l_trava / 2), 0, 0), rot, mat_aco(),
+                  pai=raiz)
+    bpy.context.view_layer.update()
+    d_dentro = meio + pedaco / 2                                    # meio de cada pegada, medido ao longo da barra
+    d_pegada = d_dentro + pedaco if pegada == "fora" else d_dentro
+    medidas = dict(comprimento=entre_colares + 2 * (l_colar + l_luva), entre_colares=entre_colares, diametro=2 * raio, dobra=dobra,
+                   pedaco=pedaco, fundo=fundo, meio=meio, x_fundo=x_fundo, x_fora=x_fora, x_dentro=meio + ax / 2, x_quina=x_quina,
+                   reto_colar=x_colar - x_quina, raio_dobra=raio_dobra)
+    barra = BarraW(raiz, raio, linha, pegada, d_pegada, {}, (pedaco - 2 * raio_dobra) / 2, medidas)
+    for s in (-1, 1):                                                # vazio no meio de cada pegada, X ao longo do pedaço, pra fora
+        p, e = barra.local(s, d_pegada)
+        o = bpy.data.objects.new(nome + "_pegador%+d" % s, None)
+        bpy.context.scene.collection.objects.link(o)
+        o.empty_display_size = 0.03
+        o.parent = raiz
+        z = Vector((0.0, 0.0, 1.0))
+        o.matrix_basis = Matrix.Translation(p) @ Matrix((e, z.cross(e), z)).transposed().to_4x4()
+        barra.pegadores[s] = o
+    bpy.context.view_layer.update()
+    return barra
+# ===== fim: Barra W =================================================================================================================
