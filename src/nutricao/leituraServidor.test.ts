@@ -14,12 +14,18 @@ import {
   type CatalogoLeitura, type ConsultaLeitura, type FonteTabela, type ItemValido, type ParamLeitura, type RespostaDeItem,
   // hml-20b
   ERRO_MUITAS_LINHAS, LACO_LEITURAS_MAX, extrasDaTabela, intervaloDaPagina, nomeDoDownload,
+  // hml-20c
+  INSTANTES_MAX, TEXTOS_MAX, escaparLike, filtrarValorDaLista, idsDoValor, intervaloDaFaixa, janelasDosDiasCortados, limitesDosEmbutidos, selectDoEmbutido,
+  type EmbutidoLeitura, type FonteRpc,
 } from "../../supabase-principal/functions/_shared/leitura-lote";
 import {
   BUCKETS_DE_LEITURA, CONSULTAS_DA_NUTRICAO, CONSULTAS_NUTRICAO, DIARIO_IDS_MAX, VALIDADE_URL_LEITURA_S, bucketDaLeitura, consultaDaNutricao,
   // hml-20b
   ANOTACOES_LIMITE_MAX, COLUNAS_DO_PAINEL, ERROS_DA_ROTA, EXAMES_LIMITE_MAX, EXAME_NOME_MAX, INT4_MAX, MAX_LEITURAS_RESULTADOS, POR_PAGINA_LEITURA,
   RESULTADOS_POR_LEITURA, TETO_LISTA, VALIDADE_ANEXO_BAIXAR_S, VALIDADE_ANEXO_VER_S,
+  // hml-20c
+  COLUNAS_DA_DIETA, DIARIO_DIAS_MAX, DIARIO_POR_PAGINA, ERROS_DO_PLANO, LIMITE_RPC_MAX, PALAVRAS_MAX, PALAVRA_MAX, RECEITAS_IDS_MAX, RESPOSTAS_RECENTES_MAX,
+  TEXTO_FILTRO_MAX, VALIDADE_DIARIO_FOTO_S,
 } from "../../supabase-principal/functions/_shared/nutricao-leituras";
 import {
   ACOES_NUTRICAO, ACOES_DA_DIETA, ACOES_DO_ALUNO, ACOES_DA_AVALIACAO, erroDoBanco, moduloDoPedido,
@@ -709,9 +715,9 @@ describe("hml-20b — o motor: os campos opcionais (página, total, laço, 1 lin
 });
 
 describe("hml-20b — o catálogo do Painel › Aluno (forma, dono, colunas = as do tipo, códigos de propósito)", () => {
-  it("as consultas da 20b — o conjunto do contrato (só acrescentou: 20a + 20b = o catálogo)", () => {
-    expect(CONSULTAS_DA_NUTRICAO.slice(3)).toEqual([...CONSULTAS_20B]);
-    expect(CONSULTAS_DA_NUTRICAO).toHaveLength(3 + CONSULTAS_20B.length);
+  it("as consultas da 20b — o conjunto do contrato (só acrescentou: 20a + 20b = o catálogo; hml-20c: + o bloco da 20c depois, conferido abaixo)", () => {
+    expect(CONSULTAS_DA_NUTRICAO.slice(3, 3 + CONSULTAS_20B.length)).toEqual([...CONSULTAS_20B]);
+    expect(CONSULTAS_DA_NUTRICAO).toHaveLength(3 + CONSULTAS_20B.length + CONSULTAS_20C.length);
   });
 
   it("as colunas de cada tabela = as do Row do tipo gerado (o select('*') de hoje, escrito coluna a coluna); o PDF e o profiles, os recortes", () => {
@@ -1075,5 +1081,773 @@ describe("hml-20b — o módulo lê como a pessoa (fonte): a página, o laço e 
     // revisão: só o select com página passa a opção da página ao falhou (a página além do fim → dados_invalidos)
     expect(fonte.match(/\{ pagina: extras\.intervalo !== null \}/g)).toHaveLength(1);
     expect(fonte).not.toMatch(/SERVICE_ROLE|service_role|createClient\(/);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// hml-20c (H-42 · Dieta do aluno, Dietas, Pré-consulta e Dashboard, 12/10/2026) — as 34 consultas da §2.5.3 e os campos OPCIONAIS novos
+// do motor (params instante/instantes/textos/objeto; período, palavras, prefixo, nulos, recorte, embutidos, faixa, HEAD, porDia, donoSe,
+// ordem[].se; ★ filtrados pelo dono e pela conta; a série RPC → .in(ids) na mesma ida). As consultas da 20a/20b não declaram nenhum: o
+// caminho delas é o de antes (os testes acima seguem iguais; o bloco "as 30 de antes" abaixo confere o plano delas campo a campo).
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+const CONTA = "66666666-6666-4666-8666-666666666666";
+const PLANO = "77777777-7777-4777-8777-777777777777";
+
+/** As consultas da 20c (o conjunto do contrato; os nomes que o código pediu estão no progresso_20c). */
+const CONSULTAS_20C = [
+  "planos_do_aluno", "plano_alimentar", "planos_favoritos", "calculos_do_aluno", "registros_diarios", "registros_do_dia", "refeicoes_concluidas",
+  "metas_concluidas", "metas_do_aluno", "modelos_meta", "modelos_orientacao", "modelos_formula", "orientacoes_do_aluno", "formulas_do_aluno", "produtos",
+  "indicacoes_do_aluno", "alimentos_busca", "grupos_alimentos", "receitas_pagina", "receitas_todas", "receita_nome", "grupos_receita", "diario_pagina",
+  "diario_contagem", "diario_alunos", "diario_hoje", "diario_urls", "diario_foto_url", "formularios_preconsulta", "preconsulta_numeros",
+  "respostas_da_conta", "preconsulta_novas", "painel_resumo", "respostas_recentes",
+] as const;
+
+// ───────────────────────── o cliente falso da 20c (grava a cadeia inteira de cada select) ─────────────────────────
+type Passo = [string, ...unknown[]];
+interface Consulta20c {
+  tabela: string;
+  colunas: string;
+  opcoes: { count?: string; head?: boolean } | null;
+  passos: Passo[];
+}
+interface Banco20c {
+  rpc?: (nome: string, args: Record<string, unknown>) => { data: unknown; error: unknown };
+  tabela?: (c: Consulta20c) => { data: unknown; error: unknown; count?: number | null };
+  assinar?: (bucket: string, caminhos: string[], validade: number) => { data: unknown; error: unknown };
+}
+function clienteFalso20c(banco: Banco20c) {
+  const rpcs: Array<{ nome: string; args: Record<string, unknown> }> = [];
+  const consultas: Consulta20c[] = [];
+  const assinaturas: Array<{ bucket: string; caminhos: string[]; validade: number }> = [];
+  const cliente = {
+    rpc: async (nome: string, args: Record<string, unknown>) => {
+      rpcs.push({ nome, args });
+      return banco.rpc ? banco.rpc(nome, args) : { data: null, error: null };
+    },
+    from: (tabela: string) => ({
+      select: (colunas: string, opcoes?: { count?: string; head?: boolean }) => {
+        const c: Consulta20c = { tabela, colunas, opcoes: opcoes ?? null, passos: [] };
+        consultas.push(c);
+        const resposta = () => (banco.tabela ? banco.tabela(c) : { data: c.opcoes?.head ? null : [], error: null, count: c.opcoes?.count ? 0 : null });
+        // o encadeamento: cada passo gravado; o await (then) devolve a resposta do banco falso
+        const b: Record<string, unknown> = {};
+        for (const op of ["in", "eq", "is", "gte", "lte", "lt", "ilike", "or", "order", "limit", "range"]) {
+          b[op] = (...args: unknown[]) => (c.passos.push([op, ...args]), b);
+        }
+        b.then = (ok?: (v: unknown) => unknown, falhou?: (e: unknown) => unknown) => Promise.resolve(resposta()).then(ok, falhou);
+        return b;
+      },
+    }),
+    storage: {
+      from: (bucket: string) => ({
+        createSignedUrls: async (caminhos: string[], validade: number) => {
+          assinaturas.push({ bucket, caminhos, validade });
+          return banco.assinar ? banco.assinar(bucket, caminhos, validade) : assinadas(bucket, caminhos);
+        },
+        createSignedUrl: async () => {
+          throw new Error("a 20c assina em lote (createSignedUrls), nunca 1 por 1");
+        },
+      }),
+    },
+  };
+  return { cliente, rpcs, consultas, assinaturas };
+}
+function contexto20c(itens: unknown[], banco: Banco20c) {
+  const f = clienteFalso20c(banco);
+  const log = { info: vi.fn(), aviso: vi.fn(), erro: vi.fn(), excecao: vi.fn() };
+  const c = { schema: "staging" as const, origin: null, corpo: { acao: "ler", itens }, userId: EU, comoPessoa: f.cliente, log };
+  return { c: c as unknown as Parameters<typeof atenderLeitura>[0], ...f, log };
+}
+/** Roda os itens em pedidos de até 16 (o LOTE_MAX: o front divide assim) e junta as respostas na ordem; as consultas vão para `consultas`. */
+async function lerEmLotes(itens: unknown[], banco: Banco20c, consultas: Consulta20c[] = []): Promise<RespostaDeItem[]> {
+  const saida: RespostaDeItem[] = [];
+  for (let i = 0; i < itens.length; i += LOTE_MAX) {
+    const k = contexto20c(itens.slice(i, i + LOTE_MAX), banco);
+    saida.push(...itensDa(await atenderLeitura(k.c)));
+    consultas.push(...k.consultas);
+  }
+  return saida;
+}
+const juntas = (colunas: readonly string[]) => colunas.join(", ");
+const SELECT_ALIMENTO = `${juntas(COLUNAS_DA_DIETA.alimentos)}, medidas_caseiras(${juntas(COLUNAS_DA_DIETA.medidas_caseiras)})`;
+const SELECT_RECEITA = `${juntas(COLUNAS_DA_DIETA.receitas)}, ingredientes:ingredientes_receita(${juntas(COLUNAS_DA_DIETA.ingredientes_receita)}, alimento:alimentos(${
+  juntas(COLUNAS_DA_DIETA.alimento_embutido)}, medidas_caseiras(${juntas(COLUNAS_DA_DIETA.medidas_caseiras)})))`;
+const SELECT_DIARIO = `${juntas(COLUNAS_DA_DIETA.diario_alimentar)}, paciente:pacientes!inner(${juntas(COLUNAS_DA_DIETA.paciente_do_diario)})`;
+const RECORTE = `conta_id.eq.${CONTA},and(conta_id.is.null,nutricionista_id.eq.${EU})`;
+
+describe("hml-20c — o motor: os params novos (instante, instantes, textos, objeto)", () => {
+  it("instante: o ISO com o fuso de um dia que existe (o toISOString da tela); sem fuso, data sozinha, dia inexistente ou texto → fora", () => {
+    for (const v of ["2026-10-12T03:00:00.000Z", "2026-10-12T00:00:00-03:00", "2026-10-12T00:00Z", "2026-10-12T00:00:00.123456+0300"]) {
+      expect(valorDoParam({ tipo: "instante" }, v), v).toEqual({ ok: true, valor: v });
+    }
+    for (const v of ["2026-10-12", "2026-10-12T03:00:00", "2026-02-31T00:00:00Z", "12/10/2026 00:00Z", "ontem", "", 1760238000000, null, "2026-10-12T03:00:00.000Z".padEnd(41, "0")]) {
+      expect(valorDoParam({ tipo: "instante" }, v).ok, String(v)).toBe(false);
+    }
+  });
+
+  it("instantes: 1 a max (no teto do motor), cada um válido e ESTRITAMENTE crescente", () => {
+    const dias = ["2026-10-06T03:00:00.000Z", "2026-10-07T03:00:00.000Z", "2026-10-08T03:00:00.000Z"];
+    expect(valorDoParam({ tipo: "instantes", max: 5 }, dias)).toEqual({ ok: true, valor: dias });
+    expect(valorDoParam({ tipo: "instantes", max: 2 }, dias).ok).toBe(false); // acima do max
+    expect(valorDoParam({ tipo: "instantes", max: 500 }, Array.from({ length: INSTANTES_MAX + 1 }, (_, i) => new Date(Date.UTC(2026, 0, 1) + i * 86_400_000).toISOString())).ok).toBe(false);
+    expect(valorDoParam({ tipo: "instantes", max: 5 }, []).ok).toBe(false);
+    expect(valorDoParam({ tipo: "instantes", max: 5 }, [dias[1], dias[0]]).ok).toBe(false); // fora de ordem
+    expect(valorDoParam({ tipo: "instantes", max: 5 }, [dias[0], dias[0]]).ok).toBe(false); // repetido
+    expect(valorDoParam({ tipo: "instantes", max: 5 }, [dias[0], "2026-10-07"]).ok).toBe(false);
+    expect(valorDoParam({ tipo: "instantes", max: 5 }, dias[0]).ok).toBe(false);
+  });
+
+  it("textos: as palavras da busca — sem espaço nem o controle do PostgREST/LIKE (, ( ) \" ' \\ % _ * ;), cada uma no tamanho, até o max", () => {
+    expect(valorDoParam({ tipo: "textos", max: 6, maxItem: 100 }, ["arroz", "integral"])).toEqual({ ok: true, valor: ["arroz", "integral"] });
+    for (const ruim of [[], ["a b"], ["arroz,feijao"], ["x)"], ["(x"], ['"x'], ["x'"], ["a\\b"], ["50%"], ["a_b"], ["a*"], ["a;b"], [""], [3], "arroz"]) {
+      expect(valorDoParam({ tipo: "textos", max: 6, maxItem: 100 }, ruim).ok, JSON.stringify(ruim)).toBe(false);
+    }
+    expect(valorDoParam({ tipo: "textos", max: 2, maxItem: 100 }, ["a", "b", "c"]).ok).toBe(false);
+    expect(valorDoParam({ tipo: "textos", max: 99, maxItem: 100 }, Array.from({ length: TEXTOS_MAX + 1 }, () => "a")).ok).toBe(false);
+    expect(valorDoParam({ tipo: "textos", max: 6, maxItem: 3 }, ["abcd"]).ok).toBe(false);
+  });
+
+  it("objeto: só as chaves declaradas (o resto cai), cada uma no tipo dela; ausente/null não vem; uma declarada fora da forma → fora", () => {
+    const p: ParamLeitura = { tipo: "objeto", campos: { q: { tipo: "texto", max: 5 }, novas: { tipo: "enum", valores: ["true"] } } };
+    expect(valorDoParam(p, { q: "zé", novas: "true", conta_id: OUTRA, nutricionista_id: OUTRA })).toEqual({ ok: true, valor: { q: "zé", novas: "true" } });
+    expect(valorDoParam(p, {})).toEqual({ ok: true, valor: {} });
+    expect(valorDoParam(p, { q: null })).toEqual({ ok: true, valor: {} });
+    for (const ruim of [{ q: "texto grande" }, { novas: "false" }, { q: 3 }, [], "q", null]) expect(valorDoParam(p, ruim).ok, JSON.stringify(ruim)).toBe(false);
+    expect(valorDoParam({ tipo: "objeto", campos: { a: { tipo: "uuid", obrigatorio: true } } }, {}).ok).toBe(false);
+  });
+});
+
+describe("hml-20c — o motor: o plano com os campos novos (e as 30 consultas de antes com o MESMO plano)", () => {
+  it("as 30 da 20a/20b: só eq/in/is_null nos filtros, as colunas da lista, a ordem do catálogo, nenhum limite de embutido, a faixa ausente", () => {
+    for (const q of CONSULTAS_DA_NUTRICAO.slice(0, 3 + CONSULTAS_20B.length)) {
+      const c = CONSULTAS_NUTRICAO[q] as ConsultaLeitura;
+      if (ehRpc(c.fonte)) {
+        expect((c.fonte as FonteRpc).filtrarLista, q).toBeUndefined();
+        expect((c.fonte as FonteRpc).linhasDosIds, q).toBeUndefined();
+        continue;
+      }
+      const f = c.fonte as FonteTabela;
+      for (const campo of ["nulos", "recorte", "embutidos", "faixa", "soContar", "porDia"] as const) expect(f[campo], `${q}.${campo}`).toBeUndefined();
+      expect(c.donoSe, q).toBeUndefined();
+      expect(limitesDosEmbutidos(f), q).toEqual([]);
+      const plano = planoDaTabela(c as ConsultaLeitura & { fonte: FonteTabela }, { aluno: ALUNO, id: D1, ids: [D1], pagina: 1, paciente: ALUNO }, EU);
+      expect(plano.colunas, q).toBe(f.colunas.join(", "));
+      expect(plano.ordem, q).toEqual(f.ordem ?? []);
+      for (const fi of plano.filtros) expect(["eq", "in", "is_null"], `${q}: ${fi.op}`).toContain(fi.op);
+    }
+  });
+
+  it("o período, a busca por palavras (cada uma, %p%), o prefixo com \\ % _ escapados e o 'só os nulos' (com o param true)", () => {
+    const c: ConsultaLeitura & { fonte: FonteTabela } = {
+      params: {},
+      fonte: {
+        tabela: "t", colunas: ["id"], teto: 50,
+        filtros: [
+          { param: "de", coluna: "data", op: "gte" }, { param: "ate", coluna: "data", op: "lte" }, { param: "fim", coluna: "data", op: "lt" },
+          { param: "palavras", coluna: "busca", op: "ilike_cada" }, { param: "base", coluna: "nome", op: "ilike_prefixo" },
+          { param: "nao", coluna: "reacao", op: "nulo" },
+        ],
+      },
+    };
+    const p = planoDaTabela(c, { de: "2026-10-01", ate: "2026-10-12", fim: "2026-10-13T03:00:00.000Z", palavras: ["arroz", "cozido"], base: "Bolo 100%_x\\", nao: true }, EU);
+    expect(p.filtros).toEqual([
+      { op: "gte", coluna: "data", valor: "2026-10-01" }, { op: "lte", coluna: "data", valor: "2026-10-12" }, { op: "lt", coluna: "data", valor: "2026-10-13T03:00:00.000Z" },
+      { op: "ilike", coluna: "busca", valor: "%arroz%" }, { op: "ilike", coluna: "busca", valor: "%cozido%" },
+      { op: "ilike", coluna: "nome", valor: "Bolo 100\\%\\_x\\\\%" }, { op: "is_null", coluna: "reacao" },
+    ]);
+    expect(escaparLike("a%b_c\\d")).toBe("a\\%b\\_c\\\\d");
+    // o "só os nulos" com o param false ou ausente: nada
+    expect(planoDaTabela(c, { nao: false }, EU).filtros).toEqual([]);
+  });
+
+  it("o recorte da conta (no embutido, quando declarado) e o 'TACO ou meus' — montados com o user do TOKEN; as vivas do embutido; o limite do embutido", () => {
+    const base: FonteTabela = { tabela: "diario_alimentar", colunas: ["id"], teto: 10 };
+    const conta = planoDaTabela({ params: {}, fonte: { ...base, recorte: { modelo: "conta", param: "conta", tabela: "paciente" } } }, { conta: CONTA }, EU);
+    expect(conta.filtros).toEqual([{ op: "ou", filtro: RECORTE, tabela: "paciente" }]);
+    const semTabela = planoDaTabela({ params: {}, fonte: { ...base, recorte: { modelo: "conta", param: "conta" } } }, { conta: CONTA }, EU);
+    expect(semTabela.filtros).toEqual([{ op: "ou", filtro: RECORTE }]);
+    // sem a conta (a consulta a declara obrigatória: o item nem roda), nenhum recorte inventado
+    expect(planoDaTabela({ params: {}, fonte: { ...base, recorte: { modelo: "conta", param: "conta" } } }, {}, EU).filtros).toEqual([]);
+    const meus = { params: {}, fonte: { ...base, recorte: { modelo: "taco_ou_meus", param: "meus" } as const } };
+    expect(planoDaTabela(meus, { meus: true }, EU).filtros).toEqual([{ op: "ou", filtro: `fonte.eq.taco,nutricionista_id.eq.${EU}` }]);
+    expect(planoDaTabela(meus, { meus: false }, EU).filtros).toEqual([]);
+    expect(planoDaTabela(meus, {}, EU).filtros).toEqual([]);
+    const reg: EmbutidoLeitura = { nome: "registros", tabela: "diario_alimentar", interno: true, colunas: ["id"], vivas: true, limite: 1 };
+    const comEmbutido = planoDaTabela({ params: {}, fonte: { tabela: "pacientes", colunas: ["id", "nome"], teto: 1000, embutidos: [reg] } }, {}, EU);
+    expect(comEmbutido.colunas).toBe("id, nome, registros:diario_alimentar!inner(id)");
+    expect(comEmbutido.filtros).toEqual([{ op: "is_null", coluna: "registros.deleted_at" }]);
+    expect(limitesDosEmbutidos({ tabela: "pacientes", colunas: ["id"], teto: 1, embutidos: [reg] })).toEqual([{ tabela: "registros", n: 1 }]);
+  });
+
+  it("os embutidos: o select com as colunas FECHADAS (aninhados, com apelido e !inner) — nunca '*'", () => {
+    expect(selectDoEmbutido({ tabela: "medidas_caseiras", colunas: ["id", "gramas"] })).toBe("medidas_caseiras(id, gramas)");
+    expect(selectDoEmbutido({ nome: "paciente", tabela: "pacientes", interno: true, colunas: ["id"] })).toBe("paciente:pacientes!inner(id)");
+    expect(selectDoEmbutido({ nome: "a", tabela: "b", colunas: ["x"], embutidos: [{ tabela: "c", colunas: ["y"] }] })).toBe("a:b(x, c(y))");
+    const receita = CONSULTAS_NUTRICAO.receitas_todas.fonte;
+    expect(planoDaTabela({ ...CONSULTAS_NUTRICAO.receitas_todas }, {}, EU).colunas).toBe(SELECT_RECEITA);
+    expect(SELECT_RECEITA).not.toContain("*");
+    expect(receita.embutidos[0].embutidos?.[0].embutidos?.[0].tabela).toBe("medidas_caseiras");
+  });
+
+  it("donoSe: o dono só com o param true (sem ele, o RLS decide); a ordem com `se` só com o param true; a faixa (offset + limite) no teto", () => {
+    const g = CONSULTAS_NUTRICAO.grupos_receita;
+    expect(planoDaTabela(g, { meus: true }, EU).filtros).toEqual([{ op: "eq", coluna: "nutricionista_id", valor: EU }, { op: "is_null", coluna: "deleted_at" }]);
+    expect(planoDaTabela(g, { meus: false }, EU).filtros).toEqual([{ op: "is_null", coluna: "deleted_at" }]);
+    expect(planoDaTabela(g, {}, EU).filtros).toEqual([{ op: "is_null", coluna: "deleted_at" }]);
+    const a = CONSULTAS_NUTRICAO.alimentos_busca;
+    expect(planoDaTabela(a, { meus: true, offset: 0, limite: 20 }, EU).ordem).toEqual([{ coluna: "busca", asc: true }, { coluna: "fonte", asc: true }, { coluna: "id", asc: true }]);
+    expect(planoDaTabela(a, { offset: 0, limite: 12 }, EU).ordem).toEqual([{ coluna: "busca", asc: true }, { coluna: "fonte", asc: true }]);
+    expect(extrasDaTabela(a.fonte, { offset: 40, limite: 20 })).toEqual({ intervalo: [40, 59], contar: true, laco: null, uma: false });
+    expect(intervaloDaFaixa({ offset: "o", limite: "l" }, { o: 0, l: 12 })).toEqual([0, 11]);
+    expect(intervaloDaFaixa({ offset: "o", limite: "l" }, { o: 5, l: 999_999 })).toEqual([5, 5 + TETO_MAX - 1]);
+    expect(intervaloDaFaixa({ offset: "o", limite: "l" }, {})).toEqual([0, TETO_MAX - 1]);
+  });
+
+  it("filtrarValorDaLista (H-108): com a conta, só os do dono = quem chama E daquela conta; sem a conta, o valor de hoje (inteiro)", () => {
+    const f = { param: "conta", dono: "nutricionista_id", conta: ["paciente", "conta_id"] as const };
+    const lista = [
+      { id: "1", nutricionista_id: EU, paciente: { conta_id: CONTA } },
+      { id: "2", nutricionista_id: OUTRA, paciente: { conta_id: CONTA } }, // outro dono (mesma conta)
+      { id: "3", nutricionista_id: EU, paciente: { conta_id: OUTRA } }, // outra conta (do mesmo dono)
+      { id: "4", nutricionista_id: EU, paciente: null },
+      "lixo",
+    ];
+    expect(filtrarValorDaLista(lista, f, { conta: CONTA }, EU)).toEqual([lista[0]]);
+    expect(filtrarValorDaLista(lista, f, {}, EU)).toBe(lista);
+    expect(filtrarValorDaLista(null, f, { conta: CONTA }, EU)).toBeNull();
+    expect(filtrarValorDaLista({ ok: true }, f, { conta: CONTA }, EU)).toEqual({ ok: true });
+  });
+
+  it("idsDoValor: só uuids da lista do valor, em minúsculas, sem repetir, na ordem, até o max", () => {
+    expect(idsDoValor({ ids: [D1.toUpperCase(), "x", D2, D1, 3, null] }, "ids", 10)).toEqual([D1, D2]);
+    expect(idsDoValor({ ids: [D1, D2, D3] }, "ids", 2)).toEqual([D1, D2]);
+    for (const v of [null, {}, { ids: "x" }, []]) expect(idsDoValor(v, "ids", 10)).toEqual([]);
+  });
+});
+
+describe("hml-20c — o porDia do diário = a regra do diasQuePodemContinuar da tela (com os inícios de dia LOCAIS do corpo)", () => {
+  // os inícios de dia de São Paulo (−3 h) de 06/10 a 14/10 — o que a tela manda (new Date(y, m, d + k) no fuso dela)
+  const DIAS = Array.from({ length: 9 }, (_, k) => new Date(Date.UTC(2026, 9, 6 + k, 3)).toISOString());
+  const linha = (iso: string) => ({ data_hora: iso });
+
+  it("página 1 com mais depois: só o dia da ÚLTIMA linha; página do meio: o da 1ª e o da última; a última página: só o da 1ª", () => {
+    const linhas = [linha("2026-10-12T20:00:00.000Z"), linha("2026-10-11T15:00:00.000Z"), linha("2026-10-10T02:30:00.000Z")]; // 10/10 02:30Z = 09/10 23:30 local
+    expect(janelasDosDiasCortados(linhas, "data_hora", 1, 3, 10, DIAS, DIAS[0])).toEqual([{ dia: DIAS[3], de: DIAS[3], ate: DIAS[4] }]);
+    expect(janelasDosDiasCortados(linhas, "data_hora", 2, 3, 10, DIAS, DIAS[0])).toEqual([
+      { dia: DIAS[6], de: DIAS[6], ate: DIAS[7] }, { dia: DIAS[3], de: DIAS[3], ate: DIAS[4] },
+    ]);
+    expect(janelasDosDiasCortados(linhas, "data_hora", 4, 3, 12, DIAS, DIAS[0])).toEqual([{ dia: DIAS[6], de: DIAS[6], ate: DIAS[7] }]);
+    // a 1ª e a última no MESMO dia: 1 janela só
+    const mesmoDia = [linha("2026-10-12T20:00:00.000Z"), linha("2026-10-12T10:00:00.000Z")];
+    expect(janelasDosDiasCortados(mesmoDia, "data_hora", 2, 2, 10, DIAS, DIAS[0])).toEqual([{ dia: DIAS[6], de: DIAS[6], ate: DIAS[7] }]);
+    // nada cortado (página 1 e sem mais), sem linhas, sem dias → nenhuma janela
+    expect(janelasDosDiasCortados(linhas, "data_hora", 1, 3, 3, DIAS, DIAS[0])).toEqual([]);
+    expect(janelasDosDiasCortados([], "data_hora", 2, 3, 10, DIAS, DIAS[0])).toEqual([]);
+    expect(janelasDosDiasCortados(linhas, "data_hora", 2, 3, 10, [], DIAS[0])).toEqual([]);
+  });
+
+  it("o início do período no meio do dia: a janela do 1º dia começa no período (o max(dia, início) da tela); a linha depois do último dia: sem janela", () => {
+    const meio = "2026-10-06T15:00:00.000Z";
+    const dias = [meio, ...DIAS.slice(1)];
+    expect(janelasDosDiasCortados([linha("2026-10-06T20:00:00.000Z")], "data_hora", 2, 1, 5, dias, meio)).toEqual([{ dia: meio, de: meio, ate: DIAS[1] }]);
+    // o dia mandado começa antes do período (a meia-noite antes do início): a janela começa no início do período
+    expect(janelasDosDiasCortados([linha("2026-10-06T20:00:00.000Z")], "data_hora", 2, 1, 5, DIAS, meio)).toEqual([{ dia: DIAS[0], de: meio, ate: DIAS[1] }]);
+    expect(janelasDosDiasCortados([linha("2026-10-15T20:00:00.000Z")], "data_hora", 2, 1, 5, DIAS, DIAS[0])).toEqual([]);
+  });
+
+  it("a MESMA conta da tela: para cada página de uma lista de verdade, os dias e as janelas = o diasQuePodemContinuar + o (dia, dia+1) dela", async () => {
+    const { diasQuePodemContinuar } = await import("@/painel/dietas/diario");
+    // 23 fotos espalhadas em 5 dias (a hora local da máquina do teste é a de quem roda; os inícios de dia são os dela — como na tela)
+    const inicio = new Date(2026, 9, 6);
+    const dias = Array.from({ length: 9 }, (_, k) => new Date(2026, 9, 6 + k).toISOString());
+    const todas = Array.from({ length: 23 }, (_, i) => ({ data_hora: new Date(2026, 9, 12 - Math.floor(i / 5), 22 - (i % 5) * 3, 10).toISOString() }));
+    for (let pagina = 1; pagina <= 5; pagina++) {
+      const itens = todas.slice((pagina - 1) * 5, pagina * 5);
+      const daTela = diasQuePodemContinuar(itens, pagina, todas.length, 5).map((d) => ({
+        dia: d.toISOString(), de: new Date(Math.max(d.getTime(), inicio.getTime())).toISOString(), ate: new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString(),
+      }));
+      expect(janelasDosDiasCortados(itens, "data_hora", pagina, 5, todas.length, dias, inicio.toISOString()), `página ${pagina}`).toEqual(daTela);
+    }
+  });
+});
+
+describe("hml-20c — o catálogo da Dieta, das Dietas, da Pré-consulta e do Dashboard (forma, dono, colunas = as do tipo)", () => {
+  it("as 34 da 20c — o conjunto do contrato, no bloco da 20c, depois da 20a e da 20b (só acrescentou)", () => {
+    expect(CONSULTAS_DA_NUTRICAO.slice(3 + CONSULTAS_20B.length)).toEqual([...CONSULTAS_20C]);
+    expect(new Set(CONSULTAS_20C).size).toBe(34);
+  });
+
+  it("as colunas de cada tabela = as do Row do tipo gerado (o select('*') de hoje); os recortes = o select que a lib já fazia", () => {
+    const recortes = ["refeicoes_concluidas", "metas_concluidas", "paciente_do_diario", "alunos_do_diario", "respostas_recentes", "alimento_embutido"];
+    for (const [tabela, colunas] of Object.entries(COLUNAS_DA_DIETA)) {
+      if (recortes.includes(tabela)) continue;
+      expect([...colunas].sort(), tabela).toEqual(colunasDoTipo(tabela));
+    }
+    expect(COLUNAS_DA_DIETA.refeicoes_concluidas).toEqual(["refeicao_id", "data"]); // concluidas.ts
+    expect(COLUNAS_DA_DIETA.metas_concluidas).toEqual(["meta_id", "data"]); // metasConcluidas.ts
+    expect(COLUNAS_DA_DIETA.paciente_do_diario).toEqual(["id", "nome", "apelido", "link_codigo", "foto_url", "conta_id", "nutricionista_id"]); // SELECT_NUTRI
+    expect(COLUNAS_DA_DIETA.alunos_do_diario).toEqual(["id", "nome", "apelido", "link_codigo", "foto_url"]); // listarAlunosDoDiario
+    expect(COLUNAS_DA_DIETA.respostas_recentes).toEqual(["id", "nome", "respondido_em", "paciente_id"]); // dashboard/dados.ts
+    expect(COLUNAS_DA_DIETA.alimento_embutido).toEqual(["id", "nome", "fonte", "grupo", "energia_kcal", "proteina_g", "carboidrato_g", "lipidio_g", "fibra_g", "sodio_mg"]);
+    for (const [r, t] of [["refeicoes_concluidas", "refeicoes_concluidas"], ["metas_concluidas", "metas_concluidas"], ["paciente_do_diario", "pacientes"], ["alunos_do_diario", "pacientes"], ["respostas_recentes", "respostas_preconsulta"], ["alimento_embutido", "alimentos"]] as const) {
+      for (const col of COLUNAS_DA_DIETA[r]) expect(colunasDoTipo(t), `${r}.${col}`).toContain(col);
+    }
+  });
+
+  it("'minha' só onde a lib filtrava pelo id de quem está logado: receita_nome e grupos_receita (com o 'meus'); o resto o RLS decide", () => {
+    expect(CONSULTAS_20C.filter((q) => (CONSULTAS_NUTRICAO[q] as ConsultaLeitura).dono)).toEqual(["receita_nome", "grupos_receita"]);
+    expect(CONSULTAS_NUTRICAO.receita_nome.dono).toBe("nutricionista_id");
+    expect((CONSULTAS_NUTRICAO.receita_nome as ConsultaLeitura).donoSe).toBeUndefined();
+    expect(CONSULTAS_NUTRICAO.grupos_receita.dono).toBe("nutricionista_id");
+    expect(CONSULTAS_NUTRICAO.grupos_receita.donoSe).toBe("meus");
+    expect(CONSULTAS_NUTRICAO.grupos_receita.params).toEqual({ meus: { tipo: "booleano" } });
+    for (const q of ["modelos_meta", "modelos_orientacao", "modelos_formula", "produtos", "receitas_todas"] as const) {
+      const c = CONSULTAS_NUTRICAO[q] as ConsultaLeitura;
+      expect(c.params, q).toEqual({});
+      expect((c.fonte as FonteTabela).filtros, q).toBeUndefined();
+    }
+  });
+
+  it("as RPCs: os args montados aqui (os filtros numa lista fechada de chaves) e o 'sem_login' de propósito das 3 do plano", () => {
+    expect(CONSULTAS_NUTRICAO.planos_do_aluno.fonte).toEqual({ rpc: "planos_do_aluno", args: { p_aluno: "aluno" }, erros: ERROS_DO_PLANO });
+    expect(CONSULTAS_NUTRICAO.plano_alimentar.fonte).toEqual({ rpc: "plano_alimentar", args: { p_plano: "plano" }, erros: ERROS_DO_PLANO });
+    expect(CONSULTAS_NUTRICAO.planos_favoritos.fonte).toEqual({
+      rpc: "planos_favoritos", erros: ERROS_DO_PLANO, filtrarLista: { param: "conta", dono: "nutricionista_id", conta: ["paciente", "conta_id"] },
+    });
+    expect(CONSULTAS_NUTRICAO.planos_favoritos.params).toEqual({ conta: { tipo: "uuid" } });
+    expect(ERROS_DO_PLANO).toEqual(["sem_login"]);
+    expect(CONSULTAS_NUTRICAO.grupos_alimentos.fonte).toEqual({ rpc: "grupos_alimentos" });
+    expect(CONSULTAS_NUTRICAO.receitas_pagina.fonte).toMatchObject({ rpc: "receitas_da_nutricionista", args: { p_filtros: "filtros", p_offset: "offset", p_limite: "limite" } });
+    expect(CONSULTAS_NUTRICAO.receitas_pagina.params.filtros).toEqual({
+      tipo: "objeto", campos: { q: { tipo: "texto", max: TEXTO_FILTRO_MAX }, grupo: { tipo: "texto", max: TEXTO_FILTRO_MAX }, favoritas: { tipo: "enum", valores: ["true"] } },
+    });
+    expect(CONSULTAS_NUTRICAO.respostas_da_conta.fonte).toEqual({ rpc: "respostas_da_conta", args: { p_conta: "conta", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" } });
+    expect(Object.keys(CONSULTAS_NUTRICAO.respostas_da_conta.params.filtros.campos)).toEqual(["formulario", "q", "novas", "aluno"]);
+    expect(CONSULTAS_NUTRICAO.preconsulta_numeros.fonte).toEqual({ rpc: "preconsulta_numeros", args: { p_conta: "conta", p_inicio_mes: "inicio_mes" } });
+    expect(CONSULTAS_NUTRICAO.painel_resumo.fonte).toEqual({ rpc: "painel_resumo", args: { p_conta: "conta" } });
+    expect([LIMITE_RPC_MAX, RECEITAS_IDS_MAX, TEXTO_FILTRO_MAX]).toEqual([100, 100, 500]);
+  });
+
+  it("as pesadas vão sozinhas (os ★ e todas as receitas; a foto grande por clique); o resto, no lote da tela", () => {
+    expect(CONSULTAS_20C.filter((q) => (CONSULTAS_NUTRICAO[q] as ConsultaLeitura).sozinha === true)).toEqual(["planos_favoritos", "receitas_todas", "diario_foto_url"]);
+  });
+
+  it("os campos novos de cada consulta, na forma: embutidos fechados; o recorte com a conta obrigatória (uuid); o HEAD sem ordem; o porDia com a página", () => {
+    const embutidosFechados = (lista: readonly EmbutidoLeitura[] | undefined) => {
+      for (const e of lista ?? []) {
+        expect(e.tabela).toMatch(/^[a-z_][a-z0-9_]*$/);
+        for (const col of e.colunas) expect(col, `${e.tabela}.${col}`).toMatch(/^[a-z_][a-z0-9_]*$/);
+        if (e.nome) expect(e.nome).toMatch(/^[a-z_][a-z0-9_]*$/);
+        embutidosFechados(e.embutidos);
+      }
+    };
+    for (const q of CONSULTAS_20C) {
+      const c = CONSULTAS_NUTRICAO[q] as ConsultaLeitura;
+      if (ehRpc(c.fonte)) {
+        const l = (c.fonte as FonteRpc).linhasDosIds;
+        if (l) {
+          for (const col of l.colunas) expect(col).toMatch(/^[a-z_][a-z0-9_]*$/);
+          embutidosFechados(l.embutidos);
+          expect(l.max).toBeLessThanOrEqual(TETO_MAX);
+        }
+        const fl = (c.fonte as FonteRpc).filtrarLista;
+        if (fl) expect(c.params[fl.param], q).toEqual({ tipo: "uuid" });
+        continue;
+      }
+      const f = c.fonte as FonteTabela;
+      embutidosFechados(f.embutidos);
+      if (f.recorte) expect(c.params[f.recorte.param], q).toEqual(f.recorte.modelo === "conta" ? { tipo: "uuid", obrigatorio: true } : { tipo: "booleano" });
+      if (f.soContar) {
+        expect(f.ordem, q).toBeUndefined();
+        expect(f.pagina ?? f.faixa ?? f.laco, q).toBeUndefined();
+        expect(c.assinar, q).toBeUndefined();
+      }
+      if (f.porDia) {
+        expect(f.pagina && f.contar, q).toBeTruthy();
+        expect(c.params[f.porDia.dias], q).toMatchObject({ tipo: "instantes", obrigatorio: true });
+        expect(c.params[f.porDia.de], q).toEqual({ tipo: "instante", obrigatorio: true });
+      }
+      if (f.faixa) {
+        expect(c.params[f.faixa.offset], q).toMatchObject({ tipo: "inteiro", min: 0, obrigatorio: true });
+        expect(c.params[f.faixa.limite], q).toMatchObject({ tipo: "inteiro", min: 1, max: TETO_MAX, obrigatorio: true });
+      }
+      for (const o of f.ordem ?? []) if (o.se) expect(c.params[o.se], q).toEqual({ tipo: "booleano" });
+      if (c.donoSe) expect(c.params[c.donoSe], q).toEqual({ tipo: "booleano" });
+    }
+    expect([PALAVRAS_MAX, PALAVRA_MAX, DIARIO_POR_PAGINA, DIARIO_DIAS_MAX, VALIDADE_DIARIO_FOTO_S, RESPOSTAS_RECENTES_MAX]).toEqual([6, 100, 20, 100, 300, 10]);
+  });
+
+  it("o Storage do diário: as miniaturas em lote (1 h, até 60 ids) e a foto grande (1 pelo id, 300 s) — relidas como a pessoa, no diario do ambiente", () => {
+    expect(CONSULTAS_NUTRICAO.diario_urls.params).toEqual({ ids: { tipo: "uuids", max: DIARIO_IDS_MAX, obrigatorio: true } });
+    expect(CONSULTAS_NUTRICAO.diario_urls.fonte).toEqual({
+      tabela: "diario_alimentar", colunas: ["id", "path"], teto: DIARIO_IDS_MAX, filtros: [{ param: "ids", coluna: "id", op: "in" }], vivas: true,
+    });
+    expect(CONSULTAS_NUTRICAO.diario_urls.assinar).toEqual({ bucket: "diario", coluna: "path", validade: 3600 });
+    expect(CONSULTAS_NUTRICAO.diario_foto_url.params).toEqual({ id: { tipo: "uuid", obrigatorio: true } });
+    expect(CONSULTAS_NUTRICAO.diario_foto_url.fonte).toEqual({
+      tabela: "diario_alimentar", colunas: ["id", "path"], teto: 1, filtros: [{ param: "id", coluna: "id", op: "eq" }], vivas: true, uma: true,
+    });
+    expect(CONSULTAS_NUTRICAO.diario_foto_url.assinar).toEqual({ bucket: "diario", coluna: "path", validade: 300 });
+  });
+});
+
+/** As consultas de tabela da 20c com o pedido que chega ao banco (a cadeia do supabase-js) — o select da lib de hoje, como a pessoa. */
+const PEDIDOS_20C: Array<{ q: string; item: Record<string, unknown>; tabela: string; colunas: string; opcoes: Consulta20c["opcoes"]; passos: Passo[]; lib: string }> = [
+  {
+    q: "calculos_do_aluno", item: { aluno: ALUNO }, tabela: "calculos_energeticos", colunas: juntas(COLUNAS_DA_DIETA.calculos_energeticos), opcoes: null,
+    passos: [["eq", "paciente_id", ALUNO], ["is", "deleted_at", null], ["order", "data", { ascending: false }], ["order", "created_at", { ascending: false }], ["limit", 1000]],
+    lib: "calculosEnergeticos.ts listarCalculos",
+  },
+  {
+    q: "registros_diarios", item: { aluno: ALUNO, de: "2026-09-12", ate: "2026-10-12" }, tabela: "registros_diarios", colunas: juntas(COLUNAS_DA_DIETA.registros_diarios), opcoes: null,
+    passos: [
+      ["eq", "paciente_id", ALUNO], ["gte", "data", "2026-09-12"], ["lte", "data", "2026-10-12"], ["is", "deleted_at", null], ["order", "data", { ascending: false }],
+      ["order", "created_at", { ascending: false }], ["order", "id", { ascending: false }], ["limit", 1000],
+    ],
+    lib: "acompanhamento.ts listarRegistrosDoPaciente",
+  },
+  {
+    q: "registros_do_dia", item: { aluno: ALUNO, dia: "2026-10-12" }, tabela: "registros_diarios", colunas: "id", opcoes: { count: "exact", head: true },
+    passos: [["eq", "paciente_id", ALUNO], ["eq", "data", "2026-10-12"], ["is", "deleted_at", null]], lib: "acompanhamento.ts contarRegistrosDoDia",
+  },
+  {
+    q: "refeicoes_concluidas", item: { aluno: ALUNO, de: "2026-10-06", ate: "2026-10-12" }, tabela: "refeicoes_concluidas", colunas: "refeicao_id, data", opcoes: null,
+    passos: [["eq", "paciente_id", ALUNO], ["gte", "data", "2026-10-06"], ["lte", "data", "2026-10-12"], ["order", "data", { ascending: true }], ["limit", 1000]],
+    lib: "concluidas.ts listarConcluidas",
+  },
+  {
+    q: "metas_concluidas", item: { aluno: ALUNO, de: "2026-10-06", ate: "2026-10-12" }, tabela: "metas_concluidas", colunas: "meta_id, data", opcoes: null,
+    passos: [["eq", "paciente_id", ALUNO], ["gte", "data", "2026-10-06"], ["lte", "data", "2026-10-12"], ["order", "data", { ascending: true }], ["limit", 1000]],
+    lib: "metasConcluidas.ts listarMetasConcluidas",
+  },
+  {
+    q: "metas_do_aluno", item: { aluno: ALUNO }, tabela: "metas", colunas: juntas(COLUNAS_DA_DIETA.metas), opcoes: null,
+    passos: [["eq", "paciente_id", ALUNO], ["is", "deleted_at", null], ["order", "created_at", { ascending: false }], ["limit", 1000]], lib: "metas.ts listarMetasDoPaciente",
+  },
+  ...(["modelos_meta", "modelos_orientacao", "modelos_formula"] as const).map((t) => ({
+    q: t, item: {}, tabela: t, colunas: juntas(COLUNAS_DA_DIETA[t]), opcoes: null,
+    passos: [["is", "deleted_at", null], ["order", "favorito", { ascending: false }], ["order", "titulo", { ascending: true }], ["limit", 1000]] as Passo[], lib: `listar do ${t}`,
+  })),
+  {
+    q: "orientacoes_do_aluno", item: { aluno: ALUNO }, tabela: "orientacoes", colunas: juntas(COLUNAS_DA_DIETA.orientacoes), opcoes: null,
+    passos: [["eq", "paciente_id", ALUNO], ["is", "deleted_at", null], ["order", "created_at", { ascending: false }], ["limit", 1000]], lib: "orientacoes.ts listarOrientacoes",
+  },
+  {
+    q: "formulas_do_aluno", item: { aluno: ALUNO }, tabela: "formulas_manipuladas", colunas: juntas(COLUNAS_DA_DIETA.formulas_manipuladas), opcoes: null,
+    passos: [["eq", "paciente_id", ALUNO], ["is", "deleted_at", null], ["order", "prescrita_em", { ascending: false }], ["order", "created_at", { ascending: false }], ["limit", 1000]],
+    lib: "manipulados.ts listarFormulasDoPaciente",
+  },
+  {
+    q: "produtos", item: {}, tabela: "produtos", colunas: juntas(COLUNAS_DA_DIETA.produtos), opcoes: null,
+    passos: [["is", "deleted_at", null], ["order", "favorito", { ascending: false }], ["order", "nome", { ascending: true }], ["limit", 1000]], lib: "suplementos.ts listarProdutos",
+  },
+  {
+    q: "indicacoes_do_aluno", item: { aluno: ALUNO }, tabela: "indicacoes_produto", colunas: juntas(COLUNAS_DA_DIETA.indicacoes_produto), opcoes: null,
+    passos: [
+      ["eq", "paciente_id", ALUNO], ["is", "deleted_at", null], ["order", "ativa", { ascending: false }], ["order", "ordem", { ascending: true }],
+      ["order", "created_at", { ascending: true }], ["limit", 1000],
+    ],
+    lib: "suplementos.ts listarIndicacoesDoPaciente",
+  },
+  {
+    q: "alimentos_busca", item: { palavras: ["arroz", "integral"], grupo: "Cereais", fonte: "taco", offset: 0, limite: 12 }, tabela: "alimentos", colunas: SELECT_ALIMENTO,
+    opcoes: { count: "exact" },
+    passos: [
+      ["eq", "fonte", "taco"], ["eq", "grupo", "Cereais"], ["ilike", "busca", "%arroz%"], ["ilike", "busca", "%integral%"], ["is", "deleted_at", null],
+      ["order", "busca", { ascending: true }], ["order", "fonte", { ascending: true }], ["range", 0, 11],
+    ],
+    lib: "alimentos.ts listarAlimentos (a busca do editor: offset 0, 12)",
+  },
+  {
+    q: "alimentos_busca", item: { offset: 40, limite: 20, meus: true }, tabela: "alimentos", colunas: SELECT_ALIMENTO, opcoes: { count: "exact" },
+    passos: [
+      ["is", "deleted_at", null], ["or", `fonte.eq.taco,nutricionista_id.eq.${EU}`], ["order", "busca", { ascending: true }], ["order", "fonte", { ascending: true }],
+      ["order", "id", { ascending: true }], ["range", 40, 59],
+    ],
+    lib: "alimentosPainel.ts listarAlimentosDoPainel (TACO ou meus, desempate pelo id)",
+  },
+  {
+    q: "receitas_todas", item: {}, tabela: "receitas", colunas: SELECT_RECEITA, opcoes: null,
+    passos: [["is", "deleted_at", null], ["order", "nome", { ascending: true }], ["limit", 1000]], lib: "receitas.ts listarReceitas",
+  },
+  {
+    q: "receita_nome", item: { base: "Bolo de 50%_x" }, tabela: "receitas", colunas: "nome", opcoes: null,
+    passos: [["ilike", "nome", "Bolo de 50\\%\\_x%"], ["eq", "nutricionista_id", EU], ["is", "deleted_at", null], ["limit", 1000]], lib: "receitas.ts nomesParaCopia",
+  },
+  {
+    q: "grupos_receita", item: { meus: true }, tabela: "grupos_receita", colunas: juntas(COLUNAS_DA_DIETA.grupos_receita), opcoes: null,
+    passos: [["eq", "nutricionista_id", EU], ["is", "deleted_at", null], ["order", "ordem", { ascending: true }], ["order", "nome", { ascending: true }], ["limit", 1000]],
+    lib: "receitas.ts listarGrupos(uid)",
+  },
+  {
+    q: "diario_contagem", item: { conta: CONTA, de: "2026-10-06T03:00:00.000Z", nao_reagidas: true }, tabela: "diario_alimentar", colunas: "id, paciente:pacientes!inner(id)",
+    opcoes: { count: "exact", head: true },
+    passos: [["gte", "data_hora", "2026-10-06T03:00:00.000Z"], ["is", "reacao_nutri", null], ["is", "deleted_at", null], ["or", RECORTE, { referencedTable: "paciente" }]],
+    lib: "diario.ts contarDiario (o Só não reagidas)",
+  },
+  {
+    q: "diario_contagem", item: { conta: CONTA, de: "2026-10-06T03:00:00.000Z", ate: "2026-10-07T03:00:00.000Z", aluno: ALUNO }, tabela: "diario_alimentar",
+    colunas: "id, paciente:pacientes!inner(id)", opcoes: { count: "exact", head: true },
+    passos: [
+      ["gte", "data_hora", "2026-10-06T03:00:00.000Z"], ["lt", "data_hora", "2026-10-07T03:00:00.000Z"], ["eq", "paciente_id", ALUNO], ["is", "deleted_at", null],
+      ["or", RECORTE, { referencedTable: "paciente" }],
+    ],
+    lib: "diario.ts contarDiario (o total de um dia, um aluno)",
+  },
+  {
+    q: "diario_alunos", item: { conta: CONTA, de: "2026-10-06T03:00:00.000Z" }, tabela: "pacientes",
+    colunas: "id, nome, apelido, link_codigo, foto_url, registros:diario_alimentar!inner(id)", opcoes: null,
+    passos: [
+      ["gte", "registros.data_hora", "2026-10-06T03:00:00.000Z"], ["or", RECORTE], ["is", "registros.deleted_at", null], ["limit", 1, { referencedTable: "registros" }],
+      ["order", "nome", { ascending: true }], ["order", "id", { ascending: true }], ["limit", 1000],
+    ],
+    lib: "diario.ts listarAlunosDoDiario",
+  },
+  {
+    q: "diario_hoje", item: { conta: CONTA, de: "2026-10-12T03:00:00.000Z" }, tabela: "diario_alimentar", colunas: SELECT_DIARIO, opcoes: null,
+    passos: [
+      ["gte", "data_hora", "2026-10-12T03:00:00.000Z"], ["is", "deleted_at", null], ["or", RECORTE, { referencedTable: "paciente" }],
+      ["order", "data_hora", { ascending: false }], ["order", "created_at", { ascending: false }], ["limit", 1000],
+    ],
+    lib: "diario.ts listarDiarioDaConta",
+  },
+  {
+    q: "formularios_preconsulta", item: { conta: CONTA }, tabela: "formularios_preconsulta", colunas: juntas(COLUNAS_DA_DIETA.formularios_preconsulta), opcoes: null,
+    passos: [["is", "deleted_at", null], ["or", RECORTE], ["order", "titulo", { ascending: true }], ["limit", 1000]], lib: "preconsulta/dados.ts listarFormularios",
+  },
+  {
+    q: "preconsulta_novas", item: { conta: CONTA }, tabela: "respostas_preconsulta", colunas: "id", opcoes: { count: "exact", head: true },
+    passos: [["is", "deleted_at", null], ["is", "paciente_id", null], ["or", RECORTE]], lib: "preconsulta/novas.ts contarRespostasNovas",
+  },
+  {
+    q: "respostas_recentes", item: { conta: CONTA, desde: "2026-10-06T03:00:00.000Z" }, tabela: "respostas_preconsulta", colunas: "id, nome, respondido_em, paciente_id", opcoes: null,
+    passos: [
+      ["gte", "respondido_em", "2026-10-06T03:00:00.000Z"], ["is", "deleted_at", null], ["or", RECORTE], ["order", "respondido_em", { ascending: false }], ["limit", 10],
+    ],
+    lib: "dashboard/dados.ts listarRespostasRecentes",
+  },
+];
+
+describe("hml-20c — cada consulta de tabela no módulo (como a pessoa, o pedido = o da lib de hoje): positivo e negativo", () => {
+  it.each(PEDIDOS_20C.map((p) => [`${p.q} (${p.lib})`, p] as const))("%s", async (_nome, p) => {
+    const linhas = [{ id: D1 }];
+    // o corpo tenta mandar o dono, o recorte e colunas: nada disso vira filtro (só os params declarados)
+    const lixo = { nutricionista_id: OUTRA, user_id: OUTRA, conta_id: OUTRA, colunas: "*", or: "id.not.is.null", deleted_at: "x" };
+    const { c, consultas, rpcs } = contexto20c([{ ...lixo, ...p.item, q: p.q }], {
+      tabela: (k) => (k.opcoes?.head ? { data: null, error: null, count: 7 } : { data: linhas, error: null, count: k.opcoes?.count ? 1 : null }),
+    });
+    const r = itensDa(await atenderLeitura(c));
+    expect(r).toEqual([p.opcoes?.head ? { ok: true, total: 7 } : p.opcoes?.count ? { ok: true, linhas, total: 1 } : { ok: true, linhas }]);
+    expect(rpcs).toEqual([]);
+    expect(consultas).toEqual([{ tabela: p.tabela, colunas: p.colunas, opcoes: p.opcoes, passos: p.passos }]);
+    expect(p.colunas).not.toContain("*");
+    expect(JSON.stringify(consultas)).not.toContain(OUTRA);
+  });
+
+  it("N1 (como hoje): outra conta — o RLS devolve vazio/0 → lista vazia ou total 0, nunca uma linha do aluno", async () => {
+    const r = await lerEmLotes(PEDIDOS_20C.map((p) => ({ ...p.item, q: p.q })), {
+      tabela: (k) => ({ data: k.opcoes?.head ? null : [], error: null, count: k.opcoes ? 0 : null }),
+    });
+    expect(r).toHaveLength(PEDIDOS_20C.length);
+    expect(r.every((i) => i.ok === true && (i.linhas === undefined ? i.total === 0 : i.linhas.length === 0))).toBe(true);
+  });
+
+  it("params ruins → dados_invalidos naquele item, nada roda: aluno/conta não uuid, data/instante fora, palavra com controle, faixa fora", async () => {
+    const ruins = [
+      { q: "calculos_do_aluno", aluno: "abc" }, { q: "registros_diarios", aluno: ALUNO, de: "12/10/2026", ate: "2026-10-12" },
+      { q: "registros_do_dia", aluno: ALUNO }, { q: "refeicoes_concluidas", aluno: ALUNO, de: "2026-10-06" },
+      { q: "alimentos_busca", palavras: ["arroz,feijao"], offset: 0, limite: 12 }, { q: "alimentos_busca", offset: 0, limite: 5000 },
+      { q: "alimentos_busca", offset: -1, limite: 12 }, { q: "alimentos_busca", limite: 12 }, { q: "alimentos_busca", fonte: "outra", offset: 0, limite: 1 },
+      { q: "receita_nome" }, { q: "receita_nome", base: "x".repeat(TEXTO_FILTRO_MAX + 1) }, { q: "grupos_receita", meus: "sim" },
+      { q: "diario_contagem", conta: "x", de: "2026-10-06T03:00:00.000Z" }, { q: "diario_contagem", conta: CONTA, de: "2026-10-06" },
+      { q: "diario_alunos", conta: CONTA }, { q: "diario_hoje", de: "2026-10-12T03:00:00.000Z" }, { q: "formularios_preconsulta", conta: `${CONTA},and(x)` },
+      { q: "preconsulta_novas" }, { q: "respostas_recentes", conta: CONTA, desde: "ontem" },
+    ];
+    const consultas: Consulta20c[] = [];
+    expect(await lerEmLotes(ruins, {}, consultas)).toEqual(Array(ruins.length).fill({ ok: false, erro: "dados_invalidos" }));
+    expect(consultas).toEqual([]);
+  });
+
+  it("o HEAD sem a contagem → erro_interno (a lib de hoje também recusava); o erro do banco vira o código do item", async () => {
+    const sem = contexto20c([{ q: "preconsulta_novas", conta: CONTA }], { tabela: () => ({ data: null, error: null, count: null }) });
+    expect(itensDa(await atenderLeitura(sem.c))).toEqual([{ ok: false, erro: "erro_interno" }]);
+    expect(sem.log.excecao).toHaveBeenCalledTimes(1);
+    const rls = contexto20c([{ q: "produtos" }], { tabela: () => ({ data: null, error: { code: "42501", message: "permission denied" } }) });
+    expect(itensDa(await atenderLeitura(rls.c))).toEqual([{ ok: false, erro: "sem_acesso" }]);
+    expect(rls.log.excecao).not.toHaveBeenCalled();
+  });
+});
+
+describe("hml-20c — as consultas compostas no módulo: a página do diário com o total do dia cortado, a página de receitas e os ★ (H-108)", () => {
+  const DIAS = Array.from({ length: 9 }, (_, k) => new Date(Date.UTC(2026, 9, 6 + k, 3)).toISOString());
+
+  it("diario_pagina: a página (20, com o total) e, na MESMA ida, o HEAD de cada dia cortado — os mesmos filtros com a janela do dia", async () => {
+    const pagina = Array.from({ length: 20 }, (_, i) => ({ id: `r${i}`, data_hora: new Date(Date.UTC(2026, 9, 12, 20) - i * 3_600_000 * 5).toISOString() }));
+    const { c, consultas } = contexto20c([{ q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS, aluno: ALUNO, nao_reagidas: true, pagina: 2, nutricionista_id: OUTRA }], {
+      tabela: (k) => (k.opcoes?.head ? { data: null, error: null, count: k.passos.some((p) => p[0] === "lt" && p[2] === DIAS[7]) ? 6 : 4 } : { data: pagina, error: null, count: 63 }),
+    });
+    const [r] = itensDa(await atenderLeitura(c));
+    // a 1ª linha (12/10 17:00 local) e a última (08/10 18:00 local): os 2 dias cortados, cada um com o total dele
+    expect(r).toEqual({ ok: true, linhas: pagina, total: 63, valor: { por_dia: [{ dia: DIAS[6], total: 6 }, { dia: DIAS[2], total: 4 }] } });
+    const filtrosBase: Passo[] = [["eq", "paciente_id", ALUNO], ["is", "reacao_nutri", null], ["is", "deleted_at", null], ["or", RECORTE, { referencedTable: "paciente" }]];
+    expect(consultas[0]).toEqual({
+      tabela: "diario_alimentar", colunas: SELECT_DIARIO, opcoes: { count: "exact" },
+      passos: [
+        ["gte", "data_hora", DIAS[0]], ...filtrosBase, ["order", "data_hora", { ascending: false }], ["order", "created_at", { ascending: false }],
+        ["order", "id", { ascending: false }], ["range", 20, 39],
+      ],
+    });
+    expect(consultas.slice(1)).toEqual([
+      { tabela: "diario_alimentar", colunas: SELECT_DIARIO, opcoes: { count: "exact", head: true }, passos: [["gte", "data_hora", DIAS[6]], ...filtrosBase, ["lt", "data_hora", DIAS[7]]] },
+      { tabela: "diario_alimentar", colunas: SELECT_DIARIO, opcoes: { count: "exact", head: true }, passos: [["gte", "data_hora", DIAS[2]], ...filtrosBase, ["lt", "data_hora", DIAS[3]]] },
+    ]);
+  });
+
+  it("diario_pagina: a 1ª página que cabe inteira — nenhum HEAD; o HEAD que falha → o código do item (a página não sai pela metade)", async () => {
+    const pagina = [{ id: "r1", data_hora: "2026-10-12T20:00:00.000Z" }];
+    const so = contexto20c([{ q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS, pagina: 1 }], { tabela: () => ({ data: pagina, error: null, count: 1 }) });
+    expect(itensDa(await atenderLeitura(so.c))).toEqual([{ ok: true, linhas: pagina, total: 1, valor: { por_dia: [] } }]);
+    expect(so.consultas).toHaveLength(1);
+    const falha = contexto20c([{ q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS, pagina: 1 }], {
+      tabela: (k) => (k.opcoes?.head ? { data: null, error: { code: "57014", message: "canceling statement" } } : { data: pagina, error: null, count: 30 }),
+    });
+    expect(itensDa(await atenderLeitura(falha.c))).toEqual([{ ok: false, erro: "erro_interno" }]);
+  });
+
+  it("diario_pagina: dias fora da forma (fora de ordem, repetidos, sem fuso, mais de 100) ou sem a página → dados_invalidos, nada roda", async () => {
+    const ruins = [
+      { q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: [DIAS[1], DIAS[0]], pagina: 1 },
+      { q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: [DIAS[0], DIAS[0]], pagina: 1 },
+      { q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: ["2026-10-06"], pagina: 1 },
+      { q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: Array.from({ length: DIARIO_DIAS_MAX + 1 }, (_, k) => new Date(Date.UTC(2026, 0, 1 + k, 3)).toISOString()), pagina: 1 },
+      { q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS },
+      { q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS, pagina: 0 },
+      { q: "diario_pagina", conta: CONTA, dias: DIAS, pagina: 1 },
+    ];
+    const { c, consultas } = contexto20c(ruins, {});
+    expect(itensDa(await atenderLeitura(c))).toEqual(Array(ruins.length).fill({ ok: false, erro: "dados_invalidos" }));
+    expect(consultas).toEqual([]);
+  });
+
+  it("receitas_pagina: a RPC com os filtros fechados e, na MESMA ida, as receitas da página pelos ids (com os ingredientes, só as vivas)", async () => {
+    const valor = { ok: true, ids: [D2, D1, "x"], total: 41, total_geral: 50, favoritas: 3, por_grupo: { g1: 2 } };
+    const receitas = [{ id: D1 }, { id: D2 }];
+    const { c, rpcs, consultas } = contexto20c(
+      [{ q: "receitas_pagina", filtros: { q: "bolo", favoritas: "true", nutricionista_id: OUTRA }, offset: 20, limite: 20, p_filtros: { grupo: "x" } }],
+      { rpc: () => ({ data: valor, error: null }), tabela: () => ({ data: receitas, error: null }) },
+    );
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, valor, linhas: receitas }]);
+    expect(rpcs).toEqual([{ nome: "receitas_da_nutricionista", args: { p_filtros: { q: "bolo", favoritas: "true" }, p_offset: 20, p_limite: 20 } }]);
+    expect(consultas).toEqual([{ tabela: "receitas", colunas: SELECT_RECEITA, opcoes: null, passos: [["in", "id", [D2, D1]], ["is", "deleted_at", null], ["limit", 2]] }]);
+  });
+
+  it("receitas_pagina: nenhum id → linhas vazias sem ir à tabela; o erro da RPC ou da releitura → o código do item; filtro fora da forma → dados_invalidos", async () => {
+    const vazio = contexto20c([{ q: "receitas_pagina", offset: 0, limite: 20 }], { rpc: () => ({ data: { ok: true, ids: [], total: 0 }, error: null }) });
+    expect(itensDa(await atenderLeitura(vazio.c))).toEqual([{ ok: true, valor: { ok: true, ids: [], total: 0 }, linhas: [] }]);
+    expect(vazio.consultas).toEqual([]);
+    const rpcFalhou = contexto20c([{ q: "receitas_pagina", offset: 0, limite: 20 }], { rpc: () => ({ data: null, error: { code: "42501", message: "x" } }) });
+    expect(itensDa(await atenderLeitura(rpcFalhou.c))).toEqual([{ ok: false, erro: "sem_acesso" }]);
+    const releitura = contexto20c([{ q: "receitas_pagina", offset: 0, limite: 20 }], {
+      rpc: () => ({ data: { ok: true, ids: [D1] }, error: null }), tabela: () => ({ data: null, error: { code: "XX000", message: "boom" } }),
+    });
+    expect(itensDa(await atenderLeitura(releitura.c))).toEqual([{ ok: false, erro: "erro_interno" }]);
+    const ruins = contexto20c([
+      { q: "receitas_pagina", filtros: { favoritas: "false" }, offset: 0, limite: 20 }, { q: "receitas_pagina", offset: 0, limite: 101 },
+      { q: "receitas_pagina", filtros: "q=bolo", offset: 0, limite: 20 },
+    ], {});
+    expect(itensDa(await atenderLeitura(ruins.c))).toEqual(Array(3).fill({ ok: false, erro: "dados_invalidos" }));
+    expect(ruins.rpcs).toEqual([]);
+  });
+
+  it("planos_favoritos (H-108): sem a conta, a lista de hoje (o Planejamento); com a conta, só os do DONO = quem chama e da conta — o dono do corpo é ignorado", async () => {
+    const lista = [
+      { id: "p1", nutricionista_id: EU, paciente: { id: "a", nome: "A", conta_id: CONTA } },
+      { id: "p2", nutricionista_id: OUTRA, paciente: { id: "b", nome: "B", conta_id: CONTA } },
+      { id: "p3", nutricionista_id: EU, paciente: { id: "c", nome: "C", conta_id: OUTRA } },
+    ];
+    const sem = contexto20c([{ q: "planos_favoritos" }], { rpc: () => ({ data: lista, error: null }) });
+    expect(itensDa(await atenderLeitura(sem.c))).toEqual([{ ok: true, valor: lista }]);
+    expect(sem.rpcs).toEqual([{ nome: "planos_favoritos", args: {} }]);
+    const com = contexto20c([{ q: "planos_favoritos", conta: CONTA, nutricionista_id: OUTRA, dono: OUTRA }], { rpc: () => ({ data: lista, error: null }) });
+    expect(itensDa(await atenderLeitura(com.c))).toEqual([{ ok: true, valor: [lista[0]] }]);
+    // negativo: a conta de outro (o servidor não confia no corpo para o dono) → nenhum ★ que não seja de quem chama
+    const outra = contexto20c([{ q: "planos_favoritos", conta: OUTRA }], { rpc: () => ({ data: lista, error: null }) });
+    expect(itensDa(await atenderLeitura(outra.c))).toEqual([{ ok: true, valor: [lista[2]] }]);
+    const ruim = contexto20c([{ q: "planos_favoritos", conta: "x" }], {});
+    expect(itensDa(await atenderLeitura(ruim.c))).toEqual([{ ok: false, erro: "dados_invalidos" }]);
+  });
+
+  it("as outras RPCs da 20c: os args de hoje, montados aqui (o corpo não vira arg); o sem_login de propósito volta como ele", async () => {
+    const valor = { ok: true };
+    const { c, rpcs } = contexto20c([
+      { q: "planos_do_aluno", aluno: ALUNO, p_aluno: OUTRA }, { q: "plano_alimentar", plano: PLANO }, { q: "grupos_alimentos", p_x: 1 },
+      { q: "preconsulta_numeros", conta: CONTA, inicio_mes: "2026-10-01T03:00:00.000Z" },
+      { q: "respostas_da_conta", conta: CONTA, filtros: { q: "zé", novas: "true", formulario: "Pré", aluno: "abc", conta: OUTRA }, offset: 20, limite: 20 },
+      { q: "painel_resumo", conta: CONTA },
+    ], { rpc: () => ({ data: valor, error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual(Array(6).fill({ ok: true, valor }));
+    expect(rpcs).toEqual([
+      { nome: "planos_do_aluno", args: { p_aluno: ALUNO } }, { nome: "plano_alimentar", args: { p_plano: PLANO } }, { nome: "grupos_alimentos", args: {} },
+      { nome: "preconsulta_numeros", args: { p_conta: CONTA, p_inicio_mes: "2026-10-01T03:00:00.000Z" } },
+      { nome: "respostas_da_conta", args: { p_conta: CONTA, p_filtros: { formulario: "Pré", q: "zé", novas: "true", aluno: "abc" }, p_offset: 20, p_limite: 20 } },
+      { nome: "painel_resumo", args: { p_conta: CONTA } },
+    ]);
+    const semLogin = contexto20c([{ q: "planos_do_aluno", aluno: ALUNO }], { rpc: () => ({ data: null, error: { code: "42501", message: "sem_login" } }) });
+    expect(itensDa(await atenderLeitura(semLogin.c))).toEqual([{ ok: false, erro: "sem_login" }]);
+    expect(semLogin.log.excecao).not.toHaveBeenCalled();
+  });
+
+  it("N8: diario_urls relê id/path dos ids COMO A PESSOA e assina SÓ o que o RLS devolveu; diario_foto_url, 1 pelo id (300 s) — nunca um caminho do corpo", async () => {
+    const urls = contexto20c([{ q: "diario_urls", ids: [D1, D2], path: "outra/pasta/x.jpg" }], {
+      tabela: () => ({ data: [{ id: D1, path: "n/a/1.jpg" }], error: null }),
+    });
+    expect(itensDa(await atenderLeitura(urls.c))).toEqual([{ ok: true, linhas: [{ id: D1, path: "n/a/1.jpg", url: `${PREFIXO_ASSINADA}diario-staging/n/a/1.jpg?token=t-9` }] }]);
+    expect(urls.consultas[0].passos).toEqual([["in", "id", [D1, D2]], ["is", "deleted_at", null], ["limit", DIARIO_IDS_MAX]]);
+    expect(urls.assinaturas).toEqual([{ bucket: "diario-staging", caminhos: ["n/a/1.jpg"], validade: 3600 }]);
+    const foto = contexto20c([{ q: "diario_foto_url", id: D1, path: "outra/pasta/x.jpg" }], { tabela: () => ({ data: [{ id: D1, path: "n/a/1.jpg" }], error: null }) });
+    expect(itensDa(await atenderLeitura(foto.c))).toEqual([{ ok: true, linhas: [{ id: D1, path: "n/a/1.jpg", url: `${PREFIXO_ASSINADA}diario-staging/n/a/1.jpg?token=t-9` }] }]);
+    expect(foto.consultas[0].passos).toEqual([["eq", "id", D1], ["is", "deleted_at", null], ["limit", 1]]);
+    expect(foto.assinaturas).toEqual([{ bucket: "diario-staging", caminhos: ["n/a/1.jpg"], validade: 300 }]);
+    // outra conta / já excluída: 0 linha → nao_encontrado e nada assinado
+    const nada = contexto20c([{ q: "diario_foto_url", id: D1 }], { tabela: () => ({ data: [], error: null }) });
+    expect(itensDa(await atenderLeitura(nada.c))).toEqual([{ ok: false, erro: "nao_encontrado" }]);
+    expect(nada.assinaturas).toEqual([]);
+  });
+
+  it("o log das consultas da 20c nunca leva params, linhas, caminhos nem nomes (só os campos fixos)", async () => {
+    const { c, log } = contexto20c([
+      { q: "alimentos_busca", palavras: ["segredo"], offset: 0, limite: 12 }, { q: "receita_nome", base: "Bolo da Tia Secreta" },
+      { q: "respostas_da_conta", conta: CONTA, filtros: { q: "Maria Sigilosa" }, offset: 0, limite: 20 }, { q: "diario_urls", ids: [D1] },
+      { q: "diario_alunos", conta: "x" },
+    ], {
+      rpc: () => ({ data: null, error: { code: "42501", message: "Maria Sigilosa" } }),
+      tabela: () => ({ data: [{ id: D1, path: "n/a/segredo.jpg", nome: "Maria Sigilosa" }], error: null }),
+      assinar: () => ({ data: null, error: { status: 500 } }),
+    });
+    await atenderLeitura(c);
+    const texto = JSON.stringify([log.info.mock.calls, log.aviso.mock.calls, log.erro.mock.calls]);
+    for (const proibido of ["segredo", "Secreta", "Sigilosa", CONTA, D1, "n/a/"]) expect(texto, proibido).not.toContain(proibido);
+    const permitidos = new Set(["codigo", "schema", "acao", "n", "ms", "resultado", "status", "pg"]);
+    for (const [campos] of [...log.info.mock.calls, ...log.aviso.mock.calls]) for (const k of Object.keys(campos)) expect(permitidos.has(k), k).toBe(true);
+  });
+});
+
+describe("hml-20c — o módulo lê como a pessoa (fonte): o HEAD, o recorte, o porDia e a série RPC → ids, sem chave secreta", () => {
+  const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/leituras.ts"), "utf-8");
+  it("o HEAD pelo select head, o .or() do plano (montado com o c.userId no planoDaTabela), a releitura pelos ids como a pessoa", () => {
+    expect(fonte).toMatch(/c\.comoPessoa\.from\(tabela\)\.select\(colunas, \{ count: "exact", head: true \}\)/);
+    expect(fonte).toMatch(/busca\.or\(f\.filtro, \{ referencedTable: f\.tabela \}\)/);
+    expect(fonte).toMatch(/c\.comoPessoa\.from\(l\.tabela\)\.select\(colunas\)\.in\("id", ids\)/);
+    expect(fonte).toMatch(/filtrarValorDaLista\(data \?\? null, fonte\.filtrarLista, item\.params, c\.userId\)/);
+    expect(fonte).toMatch(/janelasDosDiasCortados\(/);
+    expect(fonte).not.toMatch(/SERVICE_ROLE|service_role|createClient\(/);
+    expect(fonte).not.toMatch(/select\(\s*["'`]\*/);
+  });
+
+  it("o despacho: as 5 da Pré-consulta vão ao preconsulta.ts (a função conhece o módulo novo; o `ler` e as de antes, o mesmo de antes)", () => {
+    const indice = readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/index.ts"), "utf-8");
+    expect(indice).toMatch(/case "preconsulta":\s*return atenderPreconsulta\(c, pedido\.acao\);/);
+    expect(indice).toMatch(/case "leitura":\s*return atenderLeitura\(c\);/);
   });
 });

@@ -461,6 +461,8 @@ export const STATUS_DO_ERRO: Record<string, number> = {
   muitos_envios: 429,
   // hml-19c — o aviso "avaliação nova" (ERROS_DO_AVISO): o aluno da rota que não existe (a w14_matricula_da_rota)
   aluno_inexistente: 404,
+  // hml-20c — os gatilhos da W21 na Pré-consulta (ERROS_DA_PRECONSULTA; o banco levanta com o 42501): sem permissão, com o código próprio
+  aluno_invisivel: 403, resposta_imutavel: 403, formulario_imutavel: 403,
 };
 
 export function statusDoErro(erro: unknown): number {
@@ -1092,13 +1094,139 @@ export function lerRegistroDeFotoEvolucao(corpo: Record<string, unknown>, userId
 /** Os códigos que a w14_matricula_da_rota (dentro da aluno_avisar_avaliacao) devolve de propósito (raise exception '<código>'). */
 export const ERROS_DO_AVISO = ["sem_login", "sem_acesso", "aluno_inexistente"] as const;
 
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// hml-20c (H-102 🟡 · jeito 2, decisão 8 da spec hml-20, 12/10/2026) — a Pré-consulta (Painel › Pré-consulta) gravava DIRETO do
+// navegador (src/painel/preconsulta/dados.ts:72, :101, :108, :147, :161). As 5 gravações passam por aqui, no MESMO desenho, numa lista à
+// parte (as do Prontuário, da Dieta, do app do aluno e da Avaliação não mudam):
+//   · preconsulta_formulario_criar: o formulário na conta do corpo (o RLS confere que é uma conta da pessoa — "W21 so membro da conta"),
+//     o dono (nutricionista_id) = quem chama e o slug NASCE AQUI (o alfabeto e o tamanho da tela: 8 de "abcdefghijkmnpqrstuvwxyz23456789",
+//     o mesmo que o /f/:slug aceita), de novo no conflito (23505, o único índice único da tabela), até 5 vezes — antes nascia no navegador;
+//   · preconsulta_formulario_editar (título, descrição, perguntas, faixas, ativo — a origem, a conta e o dono não mudam) e _excluir (a
+//     Lixeira: deleted_at);
+//   · preconsulta_resposta_ligar: o aluno ligado (ou null, desligar) e/ou a importação (o tipo e o id do que a resposta virou; o
+//     importada_em é o "agora" do SERVIDOR, como a reação do diário) — o gatilho da W21 confere que quem liga vê o aluno (aluno_invisivel)
+//     e que a resposta não muda de autor/conta/formulário (resposta_imutavel); _excluir (a Lixeira);
+//   · o que a tela recebe: a linha com as colunas que ela usa (o select("*") de hoje escrito coluna a coluna; a resposta com o formulário
+//     embutido, o SELECT_RESPOSTA de hoje); os códigos dos gatilhos da W21 voltam como eles (a tela tem a frase de cada um).
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+/** As 2 tabelas da Pré-consulta que o painel grava (o formulário público /f/:slug grava a resposta como anônimo — decisão 13 — e fica). */
+export const TABELAS_PRECONSULTA = ["formularios_preconsulta", "respostas_preconsulta"] as const;
+export type TabelaPreconsulta = (typeof TABELAS_PRECONSULTA)[number];
+
+/** As origens do formulário (o check formularios_preconsulta_origem_check e o ORIGENS da tela). */
+export const ORIGENS_PRECONSULTA = ["anamnese", "questionario", "personalizado"] as const;
+/** O destino da importação da resposta (o check respostas_preconsulta_importada_tipo_check e o TipoImportacao da tela). */
+export const IMPORTACOES_PRECONSULTA = ["anamnese", "questionario"] as const;
+/** O slug do link público: o alfabeto e o tamanho da tela (src/painel/preconsulta/preconsultaUtil.ts — o /f/:slug só aceita esses). */
+export const SLUG_PRECONSULTA_ALFABETO = "abcdefghijkmnpqrstuvwxyz23456789";
+export const SLUG_PRECONSULTA_TAMANHO = 8;
+/** Quantas vezes o criar tenta um slug novo no conflito (o SLUG_TENTATIVAS de hoje). */
+export const SLUG_PRECONSULTA_TENTATIVAS = 5;
+/** Os códigos dos gatilhos da W21 (raise exception '<código>' using errcode '42501'): voltam como eles (a tela tem a frase de cada um). */
+export const ERROS_DA_PRECONSULTA = ["aluno_invisivel", "resposta_imutavel", "formulario_imutavel"] as const;
+
+/** As colunas que a tela usa (o Row de hoje — o select("*") escrito coluna a coluna) e o formulário embutido na resposta (SELECT_RESPOSTA). */
+export const COLUNAS_FORMULARIO_PRECONSULTA = [
+  "id", "nutricionista_id", "conta_id", "titulo", "descricao", "origem", "origem_id", "perguntas", "faixas", "slug", "ativo", "created_at", "updated_at",
+  "deleted_at",
+] as const;
+export const COLUNAS_RESPOSTA_PRECONSULTA = [
+  "id", "formulario_id", "nutricionista_id", "conta_id", "paciente_id", "titulo", "perguntas", "faixas", "respostas", "pontuacao", "faixa", "nivel", "nome",
+  "email", "telefone", "respondido_em", "importada_em", "importada_tipo", "importada_id", "consentimento_em", "consentimento_versao", "created_at",
+  "updated_at", "deleted_at",
+] as const;
+export const VOLTA_FORMULARIO_PRECONSULTA = COLUNAS_FORMULARIO_PRECONSULTA.join(", ");
+export const VOLTA_RESPOSTA_PRECONSULTA =
+  `${COLUNAS_RESPOSTA_PRECONSULTA.join(", ")}, formulario:formularios_preconsulta(id, titulo, origem, origem_id, slug, ativo, deleted_at)`;
+
+/** O que o formulário aceita do corpo no editar (o patch de hoje) — no criar, + a conta, a origem e o id da origem. */
+const C_FORMULARIO_PRECONSULTA: Campos = { titulo: texto(TITULO), descricao: texto(CURTO), perguntas: lista, faixas: lista, ativo: booleano };
+const C_FORMULARIO_PRECONSULTA_NOVO: Campos = {
+  conta_id: uuid, origem: opcao(ORIGENS_PRECONSULTA), origem_id: uuidNulo, ...C_FORMULARIO_PRECONSULTA,
+};
+/** O "ligar" da resposta: o aluno (null = desligar) e/ou a importação (o tipo e o id); o importada_em é do servidor. */
+const C_RESPOSTA_LIGAR: Campos = { paciente_id: uuidNulo, importada_tipo: opcao(IMPORTACOES_PRECONSULTA), importada_id: uuid };
+
+interface PreconsultaInserir { tabela: TabelaPreconsulta; operacao: "inserir"; campos: Campos; obrigatorios: readonly string[]; volta: string }
+interface PreconsultaEditar { tabela: TabelaPreconsulta; operacao: "editar"; campos: Campos; volta: string }
+interface PreconsultaExcluir { tabela: TabelaPreconsulta; operacao: "excluir_suave" }
+export type DefinicaoAcaoPreconsulta = PreconsultaInserir | PreconsultaEditar | PreconsultaExcluir;
+
+/** As 5 ações da Pré-consulta (a lista fechada; as outras 4 listas não mudam). */
+export const ACOES_PRECONSULTA = {
+  preconsulta_formulario_criar: {
+    tabela: "formularios_preconsulta", operacao: "inserir", campos: C_FORMULARIO_PRECONSULTA_NOVO,
+    obrigatorios: ["conta_id", "titulo", "origem", "perguntas", "faixas"], volta: VOLTA_FORMULARIO_PRECONSULTA,
+  },
+  preconsulta_formulario_editar: { tabela: "formularios_preconsulta", operacao: "editar", campos: C_FORMULARIO_PRECONSULTA, volta: VOLTA_FORMULARIO_PRECONSULTA },
+  preconsulta_formulario_excluir: { tabela: "formularios_preconsulta", operacao: "excluir_suave" },
+  preconsulta_resposta_ligar: { tabela: "respostas_preconsulta", operacao: "editar", campos: C_RESPOSTA_LIGAR, volta: VOLTA_RESPOSTA_PRECONSULTA },
+  preconsulta_resposta_excluir: { tabela: "respostas_preconsulta", operacao: "excluir_suave" },
+} as const satisfies Record<string, DefinicaoAcaoPreconsulta>;
+
+export type AcaoPreconsulta = keyof typeof ACOES_PRECONSULTA;
+export const ACOES_DA_PRECONSULTA = Object.keys(ACOES_PRECONSULTA) as AcaoPreconsulta[];
+
+/** A ação da Pré-consulta, se está na lista fechada; senão null. */
+export function acaoDaPreconsulta(v: unknown): AcaoPreconsulta | null {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(ACOES_PRECONSULTA, v) ? (v as AcaoPreconsulta) : null;
+}
+
+/** Um slug do link público com o alfabeto e o tamanho da tela, a partir de bytes aleatórios (a função passa o crypto.getRandomValues). */
+export function slugDaPreconsulta(bytes: ArrayLike<number>): string {
+  let s = "";
+  for (let i = 0; i < SLUG_PRECONSULTA_TAMANHO; i += 1) s += SLUG_PRECONSULTA_ALFABETO[(bytes[i] ?? 0) % SLUG_PRECONSULTA_ALFABETO.length];
+  return s;
+}
+
+export type GravacaoPreconsulta =
+  | { ok: true; tabela: TabelaPreconsulta; operacao: "inserir"; valores: Record<string, unknown>; volta: string }
+  | { ok: true; tabela: TabelaPreconsulta; operacao: "editar"; id: string; valores: Record<string, unknown>; volta: string }
+  | { ok: true; tabela: TabelaPreconsulta; operacao: "excluir_suave"; id: string; valores: { deleted_at: string } }
+  | { ok: false; erro: "acao_invalida" | "dados_invalidos"; campo?: string };
+
+/**
+ * Monta a gravação de uma ação da Pré-consulta: confere o corpo pela lista da ação (coluna fora da lista CAI — nutricionista_id,
+ * conta_id no editar, slug, importada_em, deleted_at… nunca vêm do corpo), põe o dono (nutricionista_id = `userId`) no criar e, no
+ * "ligar" com a importação, o importada_em = o agora do servidor. O slug do criar é posto pela função (slugDaPreconsulta).
+ */
+export function montarGravacaoPreconsulta(acao: string, corpo: Record<string, unknown>, userId: string, agora: Date = new Date()): GravacaoPreconsulta {
+  const nome = acaoDaPreconsulta(acao);
+  if (!nome) return { ok: false, erro: "acao_invalida" };
+  const def: DefinicaoAcaoPreconsulta = ACOES_PRECONSULTA[nome];
+  if (!ehUuid(userId)) return { ok: false, erro: "dados_invalidos", campo: "user" };
+  switch (def.operacao) {
+    case "inserir": {
+      const r = lerCampos(corpo, def.campos, def.obrigatorios);
+      if (r.ok === false) return r;
+      return { ok: true, tabela: def.tabela, operacao: "inserir", valores: { ...r.valores, nutricionista_id: userId }, volta: def.volta };
+    }
+    case "editar": {
+      if (!ehUuid(corpo.id)) return { ok: false, erro: "dados_invalidos", campo: "id" };
+      const r = lerCampos(corpo, def.campos);
+      if (r.ok === false) return r;
+      if (Object.keys(r.valores).length === 0) return { ok: false, erro: "dados_invalidos", campo: "nada_a_mudar" };
+      // a importação vem inteira (o tipo e o id juntos) e o "quando" é do servidor
+      const temTipo = r.valores.importada_tipo !== undefined;
+      if (temTipo !== (r.valores.importada_id !== undefined)) return { ok: false, erro: "dados_invalidos", campo: "importada" };
+      const valores = temTipo ? { ...r.valores, importada_em: agora.toISOString() } : r.valores;
+      return { ok: true, tabela: def.tabela, operacao: "editar", id: corpo.id.toLowerCase(), valores, volta: def.volta };
+    }
+    case "excluir_suave":
+      if (!ehUuid(corpo.id)) return { ok: false, erro: "dados_invalidos", campo: "id" };
+      return { ok: true, tabela: def.tabela, operacao: "excluir_suave", id: corpo.id.toLowerCase(), valores: { deleted_at: agora.toISOString() } };
+  }
+}
+
 // ───────────────────────── o despacho: qual módulo da função atende o pedido ─────────────────────────
 export type PedidoNutricao =
   | { modulo: "prontuario"; acao: AcaoNutricao }
   | { modulo: "dieta"; acao: AcaoDieta | "padroes_garantir" }
   | { modulo: "aluno"; acao: AcaoAluno }
   | { modulo: "avaliacao"; acao: AcaoAvaliacao }
-  | { modulo: "leitura"; acao: "ler" };
+  | { modulo: "leitura"; acao: "ler" }
+  | { modulo: "preconsulta"; acao: AcaoPreconsulta };
 
 /**
  * O módulo e a ação do pedido (null = acao_invalida). Os padrões das 3 seções da Dieta (fórmula, meta, orientação) vão ao módulo da
@@ -1106,6 +1234,8 @@ export type PedidoNutricao =
  * hml-19c: as da Avaliação vão ao avaliacao.ts (as 4 listas não se cruzam — o nutricaoServidor.test.ts confere).
  * hml-20a (H-42): a ação `ler` (as leituras em lote, pelo catálogo _shared/nutricao-leituras.ts) vai ao leituras.ts — ela não está em
  * nenhuma das 4 listas (o leituraServidor.test.ts confere), então as ações de antes seguem para o mesmo módulo de antes.
+ * hml-20c (H-102): as 5 da Pré-consulta vão ao preconsulta.ts — conferidas por ÚLTIMO (nenhuma está nas outras listas: as de antes seguem
+ * para o mesmo módulo de antes; o leituraServidor.test.ts confere).
  */
 export function moduloDoPedido(corpo: Record<string, unknown>): PedidoNutricao | null {
   const v = corpo.acao;
@@ -1119,5 +1249,7 @@ export function moduloDoPedido(corpo: Record<string, unknown>): PedidoNutricao |
   if (aluno) return { modulo: "aluno", acao: aluno };
   const avaliacao = acaoDaAvaliacao(v);
   if (avaliacao) return { modulo: "avaliacao", acao: avaliacao };
+  const preconsulta = acaoDaPreconsulta(v);
+  if (preconsulta) return { modulo: "preconsulta", acao: preconsulta };
   return null;
 }

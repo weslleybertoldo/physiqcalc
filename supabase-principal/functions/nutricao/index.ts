@@ -11,7 +11,8 @@
 // acesso, H-81); dieta.ts (hml-19b — as 19 tabelas da Dieta e das Dietas, as RPCs atômicas e os padrões de Manipulados, Metas e
 // Orientações); aluno.ts (hml-19b — o app do aluno: marcar refeição/meta e a foto do diário pelo link assinado); avaliacao.ts (hml-19c —
 // a Avaliação do perfil do aluno: a antropometria, as fotos de evolução pelo link assinado e o aviso "avaliação nova"); leituras.ts
-// (hml-20a — a ação `ler`). O despacho (moduloDoPedido, em _shared/nutricao-regras.ts) é a lista fechada dos 5.
+// (hml-20a — a ação `ler`); preconsulta.ts (hml-20c — as 5 gravações da Pré-consulta, H-102: o formulário com o slug nascido aqui e a
+// resposta ligada/importada/excluída). O despacho (moduloDoPedido, em _shared/nutricao-regras.ts) é a lista fechada dos 6.
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { acao, ... }
 // 200 → { ok: true, ... } (linha · linhas · lista · registro/criado · bucket/caminho/token · itens, no `ler`) · 4xx/5xx → { ok: false, erro }.
@@ -28,6 +29,7 @@ import { atenderAluno } from "./aluno.ts";
 import { atenderAvaliacao } from "./avaliacao.ts";
 import { atenderDieta } from "./dieta.ts";
 import { atenderLeitura } from "./leituras.ts";
+import { atenderPreconsulta } from "./preconsulta.ts";
 import { atenderProntuario } from "./prontuario.ts";
 
 /** O módulo da área atende a ação (cada um devolve { ok: true, … } ou { ok: false, erro }). */
@@ -43,6 +45,8 @@ function atender(c: ContextoPessoa, pedido: PedidoNutricao) {
       return atenderAvaliacao(c, pedido.acao);
     case "leitura":
       return atenderLeitura(c);
+    case "preconsulta":
+      return atenderPreconsulta(c, pedido.acao);
   }
 }
 
