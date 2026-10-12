@@ -207,6 +207,9 @@ def preparar(R) -> None:
     t0 = API.um("select clock_timestamp()::text as t0")["t0"]
     fila_max = API.um(f"select coalesce(max(id), 0)::bigint as n from {S}.automaticas_fila")["n"] if API.tem_fila() else None
     f = API.foto(pac, conta)
+    motivo = API.motivo_para_nao_comecar(conta, pac, f["recebimento_modo"], f["assinaturas"])  # a guarda da W2: nada gravado
+    if motivo:
+        raise RuntimeError(motivo)
     est = {"t0": t0, "paciente": pac, "conta": conta, "treino": treino, "aluno_uid": m["aluno_uid"], "dono_uid": dono_uid,
            "fila_max": fila_max, "pacientes": f["pacientes"], "recebimento_modo": f["recebimento_modo"], "escondidas": f["vivas"],
            "assinaturas": f["assinaturas"], "espelho": espelho_do_treino(treino), "plano_conta": plano_da_conta(conta)}
@@ -595,6 +598,12 @@ def passo_aviso_automaticas(R) -> None:
 
 def passo_cartao_parcelado(R) -> None:
     R.linha("\n── 9. a conta no Mercado Pago: cartão parcelado até 3× (plano, ficha e o app do aluno)")
+    antes = CTX["est"]["assinaturas"]
+    fora = API.vivas_de_fora(CTX["conta"], CTX["pac"], antes)
+    if fora:
+        R.ok(False, f"9. a conta do {DONO} tem {fora} cobrança(s) automática(s) viva(s) de fora da rodada: não ligo o Mercado Pago (a "
+                    "guarda da W2 recusaria a volta e o E2E não mexe no que não criou) — pulei")
+        return
     API.sql(f"update {S}.contas set recebimento_modo = 'mercadopago' where id = '{CTX['conta']}'")  # liberar o MP é do master: pelo banco
     try:
         p = painel(R, "/painel/financeiro?aba=planos")
@@ -639,7 +648,8 @@ def passo_cartao_parcelado(R) -> None:
         t.foto("08-cartao-parcelado", "[data-cartao-mp='avista']")
         t.fechar_painel()
     finally:
-        API.sql(f"update {S}.contas set recebimento_modo = {API.lit(CTX['est']['recebimento_modo'])} where id = '{CTX['conta']}'")
+        # a automática da rodada que ficou viva (o passo 8 caiu no meio) não segura a volta à forma da foto (a guarda da W2)
+        API.sair_do_mp(CTX["conta"], CTX["pac"], antes, CTX["est"]["recebimento_modo"])
 
 
 def passo_um_mes(R) -> None:

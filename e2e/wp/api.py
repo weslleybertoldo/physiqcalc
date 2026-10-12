@@ -17,7 +17,10 @@ Casos (o "planos" roda sempre primeiro: os outros usam o plano que ele cria; a o
 (A decisão 3 — MP aceitou e a cópia no banco falhou → sem aviso ao dono — ficou provada no roteiro local: aqui não se força a falha.)
 Desfazer: ANTES de mexer, a foto da matrícula vai para ~/projetos/physiqcalc-scratch/wp/api-estado.json; no fim (ou na próxima
 rodada / --limpar, se esta cair no meio) sai tudo o que a rodada criou (planos "WP e2e …", cobranças, assinaturas, fila, avisos), as
-mensalidades escondidas voltam e a matrícula volta à foto — o último ✅ confere campo a campo.
+mensalidades escondidas voltam e a matrícula volta à foto — o último ✅ confere campo a campo. A guarda da W2 (sair de um Mercado
+Pago com automática viva → P0001, também para o postgres): as automáticas da RODADA saem (ou viram canceladas no banco, a do sandbox
+que o MP não cancelou) ANTES de a forma voltar; com automática viva de FORA da rodada num Mercado Pago (ou a conta no MP do personal) a
+rodada não começa e o caso mp não liga o MP — o E2E não mexe no que não criou.
 Precisa: a pagamentos-aluno e a automaticas-fila NOVAS publicadas; no staging as migrations 20261011010000, 20261011020000 (com a
 policy "dono lê") e 20261011030000; o segredo S9 (python3 scripts/segredos/servidor.py automaticas_fila gerar → aceitar → trocar) com
 a cópia em ~/.physiq-segredo-automaticas-fila; ~/.pc-pat; as senhas das contas de TESTE (~/.physiqcalc-teste-admin, ~/.physiq-teste-*:
@@ -51,6 +54,10 @@ MEMBROS = (("w7-nutri", "w7.nutri.teste.claude@physiqnutri.app"),
 PREFIXO = "WP e2e"
 CASOS = ("planos", "periodo", "mensal", "fila", "mp")
 MODALIDADES = ("avista", "cartao_parcelado", "mensal")
+# A guarda da W2 (contas_guard_mp, migration 20261011210000) vale para TODO MUNDO, inclusive o postgres destes scripts: sair de um Mercado
+# Pago com cobrança automática viva na conta → P0001 automaticas_ativas:<n>. O E2E só mexe no que criou (sair_do_mp e o limpar).
+MODOS_MP = ("mercadopago", "mercadopago_conta")
+VIVAS = "('authorized', 'pending', 'paused')"
 ARQ_SEGREDO = ".physiq-segredo-automaticas-fila"
 VAULT = "physiq_automaticas_fila_segredo"
 ESTADO_ARQ = Path.home() / "projetos" / "physiqcalc-scratch" / "wp" / "api-estado.json"
@@ -466,6 +473,52 @@ def salvar(**mudancas) -> tuple[int, dict]:
     return st, r
 
 
+# ───────────────────────── a guarda da W2: a forma de recebimento × as automáticas vivas ─────────────────────────
+
+def sql_vivas_de_fora(conta: str, pac: str, antes) -> str:
+    """Quantas automáticas vivas da conta NÃO são massa desta rodada: as dos outros alunos e as da matrícula de teste que já estavam na
+    foto. A guarda conta todas; o E2E não cancela nenhuma delas."""
+    return (f"select count(*)::int as n from {S}.aluno_assinaturas a join {S}.pacientes p on p.id = a.paciente_id "
+            f"where p.conta_id = '{conta}' and a.status in {VIVAS} "
+            f"and not (a.paciente_id = '{pac}' and not (a.id = any({arr_uuid(antes)})))")
+
+
+def sql_cancelar_vivas_da_rodada(pac: str, antes) -> str:
+    """As automáticas VIVAS que a rodada criou na matrícula de teste (fora da foto) viram canceladas no banco — a do sandbox que o MP não
+    deixou cancelar fica 'pending'. Só elas: nada de antes, nada de outro aluno."""
+    return (f"update {S}.aluno_assinaturas set status = 'cancelled' where paciente_id = '{pac}' "
+            f"and not (id = any({arr_uuid(antes)})) and status in {VIVAS} returning id::text as id")
+
+
+def vivas_de_fora(conta: str, pac: str, antes) -> int:
+    return um(sql_vivas_de_fora(conta, pac, antes))["n"]
+
+
+def motivo_para_nao_comecar(conta: str, pac: str, modo: str | None, antes) -> str | None:
+    """O ponto de partida põe a conta no Pix na chave. A guarda da W2 recusa (também para o postgres) se ela estiver num Mercado Pago com
+    automática viva — todas de fora da rodada, que ainda não criou nada —, e sair do Mercado Pago do personal desconecta a integração de
+    quem a ligou. → o motivo (a rodada não começa e nada é gravado) ou None."""
+    if modo == "mercadopago_conta":
+        return (f"a conta do {DONO} está no Mercado Pago do personal (W2): sair dele desconecta a integração — a rodada não começa (nada "
+                "foi gravado); confira à mão (o desfazer do e2e/w2 não terminou?)")
+    if modo in MODOS_MP:
+        n = vivas_de_fora(conta, pac, antes)
+        if n:
+            return (f"a conta do {DONO} está no Mercado Pago com {n} cobrança(s) automática(s) viva(s) de fora da rodada: a guarda da W2 "
+                    "recusa a troca para o Pix — a rodada não começa (nada foi gravado); confira à mão")
+    return None
+
+
+def sair_do_mp(conta: str, pac: str, antes, modo: str | None) -> None:
+    """Devolve a forma de recebimento mesmo com a automática da RODADA ainda viva (o sandbox recusou cancelar): ela vira cancelada no
+    banco ANTES — o caminho que a guarda aceita; as de fora não são tocadas (se houver, a troca é recusada e o erro sobe)."""
+    canceladas = sql(sql_cancelar_vivas_da_rodada(pac, antes))
+    if canceladas:
+        print(f"   {len(canceladas)} automática(s) da rodada ainda viva(s) (o MP não cancelou): cancelada(s) só no banco antes de sair "
+              "do Mercado Pago", flush=True)
+    sql(f"update {S}.contas set recebimento_modo = {lit(modo)} where id = '{conta}' and recebimento_modo is distinct from {lit(modo)}")
+
+
 # ───────────────────────── a foto e o desfazer ─────────────────────────
 
 def foto(pac: str, conta: str) -> dict:
@@ -510,6 +563,9 @@ def preparar() -> None:
     t0 = um("select clock_timestamp()::text as t0")["t0"]
     fila_max = um(f"select coalesce(max(id), 0)::bigint as n from {S}.automaticas_fila")["n"] if tem_fila() else None
     f = foto(pac, conta)
+    motivo = motivo_para_nao_comecar(conta, pac, f["recebimento_modo"], f["assinaturas"])
+    if motivo:
+        raise RuntimeError(motivo)
     est = {"t0": t0, "paciente": pac, "conta": conta, "aluno_uid": m["aluno_uid"], "dono_uid": dono_uid, "fila_max": fila_max,
            "pacientes": f["pacientes"], "recebimento_modo": f["recebimento_modo"], "escondidas": f["vivas"], "assinaturas": f["assinaturas"]}
     guardar_estado(est)  # se a rodada cair no meio, a próxima (ou --limpar) desfaz por este arquivo
@@ -535,6 +591,9 @@ def cancelar_automatica_do_sandbox(est: dict) -> None:
 def limpar(est: dict) -> None:
     pac, conta, t0 = est["paciente"], est["conta"], lit(est["t0"])
     cancelar_automatica_do_sandbox(est)
+    # as automáticas da rodada saem ANTES de a conta voltar à forma de antes: a guarda da W2 recusa sair de um Mercado Pago com uma viva
+    # (a do sandbox que o MP não cancelou, ou a de um caso que caiu no meio); as de antes da rodada ficam
+    sql(f"delete from {S}.aluno_assinaturas where paciente_id = '{pac}' and not (id = any({arr_uuid(est['assinaturas'])}))")
     # a matrícula como estava (o gatilho do plano zera o negociado quando a modalidade volta a nula)
     a = est["pacientes"]
     pausada = "true" if a["cobranca_pausada"] else "false"
@@ -545,7 +604,6 @@ def limpar(est: dict) -> None:
     sql(f"update {S}.contas set recebimento_modo = {lit(est['recebimento_modo'])} where id = '{conta}'")
     # o que a rodada criou
     sql(f"delete from {S}.cobrancas where paciente_id = '{pac}' and created_at >= {t0}::timestamptz")
-    sql(f"delete from {S}.aluno_assinaturas where paciente_id = '{pac}' and not (id = any({arr_uuid(est['assinaturas'])}))")
     if est.get("fila_max") is not None:
         sql(f"delete from {S}.automaticas_fila where paciente_id = '{pac}' and id > {int(est['fila_max'])}")
     sql(f"""delete from {S}.avisos where destino_user_id = any({arr_uuid([est['aluno_uid'], est['dono_uid']])})
@@ -793,6 +851,12 @@ def caso_mp() -> None:
     if faltam:
         p.check(False, f"falta a credencial de TESTE do Mercado Pago em ~ ({faltam})")
         return
+    antes = CTX["estado"]["assinaturas"]
+    fora = vivas_de_fora(conta, pac, antes)
+    if fora:
+        p.check(False, f"a conta do {DONO} tem {fora} cobrança(s) automática(s) viva(s) de fora da rodada: o caso mp não liga o Mercado Pago "
+                       "(a guarda da W2 recusaria a volta ao Pix e o E2E não mexe no que não criou) — pulei")
+        return
     sql(f"update {S}.contas set recebimento_modo = 'mercadopago' where id = '{conta}'")  # liberar o MP é do master: aqui, pelo banco
     try:
         st, r = salvar(valor=1000, modalidades=list(MODALIDADES), max_parcelas_cartao=3)
@@ -820,7 +884,7 @@ def caso_mp() -> None:
                 f"automática no mês a mês com a parcela (pendente no sandbox) ({st} {r.get('erro')} {a.get('status')} {a.get('valor')})")
     finally:
         cancelar_automatica_do_sandbox(CTX["estado"])
-        sql(f"update {S}.contas set recebimento_modo = 'pix_manual' where id = '{conta}'")
+        sair_do_mp(conta, pac, antes, "pix_manual")  # a automática que o sandbox não cancelou não segura a volta (a guarda da W2)
 
 
 FUNCOES = {"planos": caso_planos, "periodo": caso_periodo, "mensal": caso_mensal, "fila": caso_fila, "mp": caso_mp}
