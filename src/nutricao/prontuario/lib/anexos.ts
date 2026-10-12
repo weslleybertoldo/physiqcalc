@@ -1,5 +1,4 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/anexos.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import { NOME_MAX, mimeDoArquivo, normalizarDescricao } from "@/nutricao/editor/lib/anexosUtil";
@@ -20,7 +19,6 @@ import { ErroNutricao, acaoNutricao } from "@/nutricao/servidor";
 // s para ver no modal) — nenhum caminho nem nome vai daqui. A URL volta relativa e é montada com o domínio do cliente (a de hoje).
 
 export type Anexo = Database["public"]["Tables"]["anexos"]["Row"];
-export const BUCKET_ANEXOS = bucketDoAmbiente("anexos");
 
 /** Anexos vivos do paciente, mais recente primeiro. */
 export async function listarAnexosDoPaciente(pacienteId: string): Promise<Anexo[]> {

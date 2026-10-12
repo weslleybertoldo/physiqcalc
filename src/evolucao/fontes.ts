@@ -15,16 +15,16 @@
  * pequeno, H-80). A ação minha_evolucao fica publicada (só lê o próprio), sem uso aqui; a volta dela é a condição do desvio.
  * As formas (`ParteTreino`, `PartePrincipal`), o useEvolucaoDoAluno e o Cache Storage não mudam.
  */
-import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { PRINCIPAL_URL, principalConfigurado } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { BUCKET_REGISTROS } from "@/lib/registrosFotos";
 import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import type { AntropometriaPrincipal, FotoPrincipal, LinhaFotoTreino, LinhaTreino, ParteTreino, PartePrincipal } from "./tipos";
 
-/** O bucket das fotos de evolução no ambiente (o painel ainda assina com ele: src/painel/aluno/avaliacao/fontes.ts — 20b). */
-export const BUCKET_EVOLUCAO = bucketDoAmbiente("evolucao");
-/** Validade da URL assinada das fotos (a mesma da tela antiga; a do principal o servidor assina com ela). */
+/**
+ * Validade da URL assinada das fotos mensais do Treino (a mesma da tela antiga). As do principal — a Evolução do aluno (20a) e a casca/
+ * Avaliação do painel (20b) — o servidor assina, com o mesmo prazo (o bucket `evolucao` saiu daqui: ninguém no navegador assina mais nele).
+ */
 export const VALIDADE_URL_S = 3600;
 
 /** As colunas do perfil que a Evolução mostra (a composição atual). */

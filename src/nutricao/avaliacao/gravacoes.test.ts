@@ -166,13 +166,14 @@ describe("hml-19c — as 3 libs da Avaliação gravam pelo servidor (mesmas assi
   it("as 12 funções de gravação estão aqui; toda outra função exportada das 3 libs é leitura (nenhuma gravação ficou de fora)", () => {
     expect(CASOS).toHaveLength(12);
     const modulos = { evolucao, antropometrias, avaliacaoApi };
-    // hml-20b: + buscar (a buscarAntropometria — o "Editar" da Avaliação lendo pela função, consulta antropometria { id })
-    const LEITURA = /^(listar|buscar|url|urls|ErroAvaliacao$)/;
+    const LEITURA = /^(listar|url|urls|ErroAvaliacao$)/;
+    // hml-20b (revisão): a leitura nova, pelo NOME (não um prefixo inteiro): o "Editar" da Avaliação lendo pela função (antropometria { id })
+    const LEITURAS_PELO_NOME = new Set(["antropometrias.buscarAntropometria"]);
     const noContrato = new Set(CASOS.map((c) => c.nome));
     const semDecisao: string[] = [];
     for (const [modulo, exportados] of Object.entries(modulos)) {
       for (const [nome, valor] of Object.entries(exportados)) {
-        if (typeof valor !== "function" || LEITURA.test(nome)) continue;
+        if (typeof valor !== "function" || LEITURA.test(nome) || LEITURAS_PELO_NOME.has(`${modulo}.${nome}`)) continue;
         if (!noContrato.has(`${modulo}.${nome}`)) semDecisao.push(`${modulo}.${nome}`);
       }
     }

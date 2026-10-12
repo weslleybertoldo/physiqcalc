@@ -48,15 +48,29 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; m
   // diretas aqui (33 desta W; o progresso_20b); agora só 1, de OUTRA W: a mensagens_desligadas (o aviso único da P15, que a faixa lê —
   // Mensagens, H-43/hml-21) mora no mesmo api.ts do perfil e fica no navegador. O resto do Resumo que lê direto (planos_do_aluno e
   // refeicoes_concluidas — 20c; aluno_compromissos, aluno_responsavel, aluno_acesso e o paciente_dado_livre — H-43) está fora destas pastas.
+  // revisão da 20b: + a casca (Cabecalho.tsx, AlunoLayout.tsx), a aba Prontuário (abas/Prontuario.tsx) e os cards do Resumo (resumo/) — 104
+  // arquivos; o detector acha 0 leitura direta neles (antes e depois: o que o Resumo lê de outra W mora nas libs de lá — 20c e H-43).
   "painel-aluno": {
     pastas: [
       "src/nutricao/prontuario", "src/painel/aluno/dados", "src/painel/aluno/avaliacao", "src/nutricao/avaliacao", "src/painel/aluno/abas/Avaliacao.tsx",
       "src/nutricao/editor/lib/profissional.ts", "src/nutricao/editor/lib/antropometrias.ts",
+      "src/painel/aluno/Cabecalho.tsx", "src/painel/aluno/AlunoLayout.tsx", "src/painel/aluno/abas/Prontuario.tsx", "src/painel/aluno/resumo",
     ],
     base: 1,
     desvio: { "src/painel/aluno/dados/api.ts": ["rpc.mensagens_desligadas"] },
-    minimo: 80,
+    minimo: 100,
   },
+};
+/**
+ * revisão da 20b: as RPCs que a área do Painel › Aluno AINDA chama direto — todas de OUTRA W, nomeadas (o H-43: o acesso do aluno — a
+ * aluno_acesso lê E garante, por isso está em RPC_QUE_GRAVAM e o detector de leitura não a conta —, a senha, os dados/ajustes/link do aluno
+ * e o aviso das mensagens desligadas, a única de LEITURA, contada no desvio da área). Uma RPC nova na área entra aqui com o motivo.
+ */
+const RPCS_DE_OUTRA_W_NO_PAINEL: Record<string, string[]> = {
+  "src/painel/aluno/dados/api.ts": [
+    "aluno_novo_link", "aluno_salvar_ajustes", "aluno_salvar_dados", "mensagens_aviso_fechar", "mensagens_desligadas", "mensagens_ligar_para_todos",
+  ],
+  "src/painel/aluno/resumo/acesso/api.ts": ["aluno_acesso", "paciente_criar_acesso", "paciente_redefinir_senha"],
 };
 /**
  * O que saiu do navegador para o servidor — no src/ inteiro, ninguém lê direto (o nome escrito na chamada). hml-20a: as 2 do app do
@@ -225,6 +239,20 @@ describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)
     expect(porArquivo, achados.join("\n")).toEqual(desvio);
     expect(Object.values(desvio).flat()).toHaveLength(base);
     expect(fontes.length).toBeGreaterThanOrEqual(minimo);
+  });
+
+  it("revisão da 20b — painel-aluno: as RPCs que a área ainda chama direto são SÓ as nomeadas, todas de outra W (H-43); nenhuma das 4 da 20b", () => {
+    const { pastas } = AREAS["painel-aluno"];
+    const achadas: Record<string, string[]> = {};
+    for (const arq of pastas.flatMap(fontesDa)) {
+      const nomes = [...semComentarios(readFileSync(arq, "utf-8")).matchAll(RPC)].map((m) => m[1]);
+      if (nomes.length) achadas[relative(RAIZ, arq)] = [...new Set(nomes)].sort();
+    }
+    expect(achadas).toEqual(RPCS_DE_OUTRA_W_NO_PAINEL);
+    const todas = Object.values(achadas).flat();
+    for (const r of ["aluno_perfil", "aluno_evolucao", "aluno_anotacoes", "exames_do_aluno"]) expect(todas, r).not.toContain(r);
+    // de leitura (RPC_SO_LEITURA) entre elas, só a do desvio da área (o aviso das mensagens — H-43)
+    expect(todas.filter((r) => RPC_SO_LEITURA.has(r))).toEqual(["mensagens_desligadas"]);
   });
 
   it("o desvio do gate J é SÓ o Treino: as 3 tabelas physiq_* pelo cliente do Treino e o bucket registros; nada do principal direto na área", () => {
