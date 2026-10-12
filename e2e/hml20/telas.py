@@ -8,13 +8,16 @@ Prints (prints/hml20/a/<base>_<caso>.png + a cópia de 900 px para conferir — 
   a_dieta             a Dieta
   a_evolucao_cache    a Evolução reaberta: o Cache Storage mostra a última abertura na hora (antes de a rede responder)
   a_evolucao_offline  a Evolução sem rede: o que foi aberto + o aviso "Sem conexão · mostrando o que foi aberto…"
-  a_evolucao_erro     a Evolução com a parte do Treino barrada (depois: a admin-avaliacoes; antes: o REST do Treino): o aviso da parte do
-                      Treino (o texto fixo) por cima do que foi aberto
+  a_evolucao_erro     a Evolução com a parte do Treino barrada (o REST do Treino — antes e depois: a parte do Treino segue no navegador,
+                      o desvio do gate J): o aviso da parte do Treino (o texto fixo) por cima do que foi aberto
 Tempo (spec §4 e contrato K/J), pela regra do medir_leituras20.py da spec (pronto = sem esqueleto/"carregando" e sem pedido pendente,
 quieto 3 s): cada tela aberta 3 vezes pela navegação do app (aquecido), a mediana ≤ a do ANTES + 0,3 s (o antes = a rodada do staging com
 o código antigo nesta mesma planilha; sem ela, o da spec, hml20/medicao/rede_por_tela.tsv); o Início pelo instante em que o card do peso
 mostra o dado. GATE J (só no depois): a Evolução com o Cache Storage VAZIO, 5 aberturas: mediana ≤ 1,3 s; e o card do peso do Início com
 o cache vazio (3 aberturas) sem piora visível (≤ o antes + 0,3 s). Reprovou → a linha "GATE REPROVADO …" (a decisão é da sessão principal).
+Depois do gate reprovado (12/10/2026, decisão da sessão principal: a parte do TREINO segue no navegador — o desvio do docs/desvios.md),
+o gate mede a 1ª abertura de verdade: a função ociosa (ESPERA_GATE_S, ~30 s, antes de CADA abertura com o cache vazio) e, além do teto
+de 1,3 s, a Evolução também ≤ o antes + 0,3 s (o antes medido pela MESMA regra: as medidas *_ociosa).
 Planilha: hml20/medicao/telas_hml20a.tsv (antes × depois). No fim, o logout da sessão do TREINO que a troca do app abriu (decisão 23).
 Antes de CADA execução: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "telas.py …" (e o /health, aqui dentro).
 Uso: python3 e2e/hml20/telas.py --area aluno --base local|staging --canal msedge [--casos prints,tempo,gate] [--seco]
@@ -51,9 +54,12 @@ SELETORES = {
     "src/app-aluno/abas/Inicio.tsx": ["data-aba-inicio", "data-inicio-nome"],
     "src/evolucao/cache.ts": [NOME_CACHE_EVOLUCAO],
 }
-# a parte do Treino da Evolução, barrada no navegador (o a_evolucao_erro): depois = a função; antes = o REST do Treino
-BARRA_DEPOIS = re.compile(r"https://api\.physiqcalc\.com\.br/functions/v1/admin-avaliacoes")
-BARRA_ANTES = re.compile(r"https://api\.physiqcalc\.com\.br/rest/v1/physiq_(profiles|avaliacoes|registros_fotos)")
+# a parte do Treino da Evolução, barrada no navegador (o a_evolucao_erro): o REST do Treino (antes e depois — o desvio do gate J)
+BARRA_TREINO = re.compile(r"https://api\.physiqcalc\.com\.br/rest/v1/physiq_(profiles|avaliacoes|registros_fotos)")
+# o gate depois do gate reprovado: a função ociosa antes de cada abertura (a 1ª abertura de verdade); as medidas com o sufixo _ociosa
+ESPERA_GATE_S = 30.0
+MEDIDA_GATE_EVOLUCAO = "gate:evolucao_cache_vazio_ociosa"
+MEDIDA_GATE_PESO = "gate:peso_cache_vazio_ociosa"
 
 
 def referencia(medida: str) -> float | None:
@@ -125,7 +131,7 @@ def caso_prints(o, t, pend, base: str, fase: str) -> None:
     # a_evolucao_erro: a parte do Treino barrada (o aviso dela, o texto fixo, por cima do que foi aberto)
     B.navegar(t, "/perfil")
     t.pg.wait_for_timeout(1500)
-    barra = BARRA_DEPOIS if fase == "depois" else BARRA_ANTES
+    barra = BARRA_TREINO
     t.ctx.route(barra, lambda r: r.abort())
     try:
         B.navegar(t, "/evolucao")
@@ -154,36 +160,43 @@ def caso_tempo(o, t, pend, base: str, commit: str, fase: str) -> None:
 
 
 def caso_gate(o, t, pend, base: str, commit: str, fase: str) -> None:
-    """GATE J: a Evolução com o Cache Storage vazio (5 aberturas) e o card do peso do Início com o cache vazio (3 aberturas)."""
+    """GATE J: a Evolução com o Cache Storage vazio (5 aberturas) e o card do peso do Início com o cache vazio (3 aberturas) — cada
+    abertura depois de ESPERA_GATE_S parado no Perfil (a função ociosa: a 1ª abertura de verdade)."""
+    espera_ms = int(ESPERA_GATE_S * 1000)
     ev: list[float | None] = []
     for _ in range(ABERTURAS_GATE):
         B.navegar(t, "/perfil")
-        t.pg.wait_for_timeout(600)
+        t.pg.wait_for_timeout(espera_ms)
         limpar_cache_evolucao(t)
         B.navegar(t, "/evolucao")
         r = B.esperar_pronto(t, pend, marca=DADOS_EVOLUCAO)
         ev.append(r["t_pronto_s"])
     med = B.mediana(ev)
-    ok_ev = med is not None and med <= GATE_EVOLUCAO_S
-    anotar(base, commit, fase, "gate:evolucao_cache_vazio", ev, med, GATE_EVOLUCAO_S, ok_ev if fase == "depois" else None)
+    ref_ev = referencia(MEDIDA_GATE_EVOLUCAO)
+    ok_ev = med is not None and med <= GATE_EVOLUCAO_S and (ref_ev is None or med <= ref_ev + FOLGA_S)
+    anotar(base, commit, fase, MEDIDA_GATE_EVOLUCAO, ev, med, ref_ev, ok_ev if fase == "depois" else None)
     peso: list[float | None] = []
     for _ in range(ABERTURAS_TEMPO):
         B.navegar(t, "/perfil")
-        t.pg.wait_for_timeout(600)
+        t.pg.wait_for_timeout(espera_ms)
         limpar_cache_evolucao(t)
         B.navegar(t, "/")
         r = B.esperar_pronto(t, pend, marca=DADOS_PESO)
         peso.append(r["t_marca_s"])
     med_p = B.mediana(peso)
-    ref_p = referencia("gate:peso_cache_vazio")
+    ref_p = referencia(MEDIDA_GATE_PESO)
     ok_p = None if fase == "antes" or ref_p is None or med_p is None else med_p <= ref_p + FOLGA_S
-    anotar(base, commit, fase, "gate:peso_cache_vazio", peso, med_p, ref_p, ok_p)
+    anotar(base, commit, fase, MEDIDA_GATE_PESO, peso, med_p, ref_p, ok_p)
     if fase == "antes":
-        o.linha(f"   [antes] gate: Evolução cache vazio {ev} → mediana {med} s; card do peso {peso} → mediana {med_p} s (a referência)")
+        o.linha(f"   [antes] gate (a função ociosa {ESPERA_GATE_S:.0f} s): Evolução cache vazio {ev} → mediana {med} s; card do peso {peso} → "
+                f"mediana {med_p} s (a referência)")
         return
-    if not o.ok(ok_ev, f"[depois] GATE J: a Evolução com o Cache Storage vazio, 5 aberturas → mediana {med} s ≤ {GATE_EVOLUCAO_S} s ({ev})"):
-        o.linha(f"GATE REPROVADO evolucao_cache_vazio mediana={med}s valores={ev} (≤ {GATE_EVOLUCAO_S} s) — a decisão do desvio é da sessão principal")
-    o.ok(ok_p is not False, f"[depois] GATE J: o card do peso do Início com o cache vazio → mediana {med_p} s (antes {ref_p}; ≤ antes + {FOLGA_S} s) ({peso})")
+    if not o.ok(ok_ev, f"[depois] GATE J: a Evolução com o Cache Storage vazio, 5 aberturas (a função ociosa {ESPERA_GATE_S:.0f} s) → mediana "
+                       f"{med} s ≤ {GATE_EVOLUCAO_S} s e ≤ antes {ref_ev} + {FOLGA_S} s ({ev})"):
+        o.linha(f"GATE REPROVADO evolucao_cache_vazio_ociosa mediana={med}s valores={ev} (≤ {GATE_EVOLUCAO_S} s; antes {ref_ev}) — a decisão é da sessão principal")
+    if not o.ok(ok_p is not False, f"[depois] GATE J: o card do peso do Início com o cache vazio (a função ociosa) → mediana {med_p} s (antes {ref_p}; "
+                                   f"≤ antes + {FOLGA_S} s) ({peso})"):
+        o.linha(f"GATE REPROVADO peso_cache_vazio_ociosa mediana={med_p}s valores={peso} (antes {ref_p} + {FOLGA_S} s) — a decisão é da sessão principal")
 
 
 def seco(o) -> None:
@@ -196,8 +209,11 @@ def seco(o) -> None:
     o.ok(spec.get("/evolucao") == 0.66 and spec.get("/dieta") == 0.22, f"o antes da spec (rede_por_tela.tsv): Evolução {spec.get('/evolucao')} s, Dieta {spec.get('/dieta')} s")
     o.ok((FOLGA_S, GATE_EVOLUCAO_S, ABERTURAS_TEMPO, ABERTURAS_GATE) == (0.3, 1.3, 3, 5), "os números do contrato: ≤ antes + 0,3 s (3 aberturas); gate ≤ 1,3 s (5 aberturas)")
     o.ok(B.mediana([1.0, None, 3.0, 2.0]) == 2.0 and B.mediana([1.0, 2.0]) == 1.5 and B.mediana([None]) is None, "a mediana ignora a abertura que não ficou pronta")
-    o.ok(BARRA_DEPOIS.match("https://api.physiqcalc.com.br/functions/v1/admin-avaliacoes") and not BARRA_DEPOIS.match("https://api-principal.physiqcalc.com.br/functions/v1/nutricao")
-         and BARRA_ANTES.match("https://api.physiqcalc.com.br/rest/v1/physiq_avaliacoes?select=*"), "o a_evolucao_erro barra SÓ a parte do Treino (a função no depois; o REST no antes)")
+    o.ok(BARRA_TREINO.match("https://api.physiqcalc.com.br/rest/v1/physiq_avaliacoes?select=*") and BARRA_TREINO.match("https://api.physiqcalc.com.br/rest/v1/physiq_profiles?id=eq.x")
+         and not BARRA_TREINO.match("https://api-principal.physiqcalc.com.br/functions/v1/nutricao") and not BARRA_TREINO.match("https://api.physiqcalc.com.br/functions/v1/admin-avaliacoes"),
+         "o a_evolucao_erro barra SÓ a parte do Treino (o REST do Treino, antes e depois — o desvio do gate J)")
+    o.ok(ESPERA_GATE_S == 30.0 and MEDIDA_GATE_EVOLUCAO.endswith("_ociosa") and MEDIDA_GATE_PESO.endswith("_ociosa"),
+         "o gate mede a 1ª abertura de verdade: a função ociosa 30 s antes de cada abertura; o antes pela MESMA regra (as medidas _ociosa)")
     o.ok(B.MAX_S == 30.0 and B.QUIETO_S == 3.0 and B.MIN_S == 5.0, "a regra do pronto é a da spec (medir_leituras20.py: quieto 3 s, mínimo 5 s, máximo 30 s)")
 
 

@@ -8,8 +8,10 @@
 // Cada sub-worktree põe as pastas dela em AREAS, com a base (o que ainda lê direto e está aceito — só diminui) e o `fora` (arquivos de
 // outra W, e os links públicos sem login, /d/:codigo e /f/:slug, que ficam no navegador — decisão 13 da hml-19, spec hml-20 §2.8).
 // hml-20a: o app do aluno — a Evolução (src/evolucao), a Dieta e o Diário (src/nutricao/app), as abas Evolução e Dieta, os cards do
-// Início, a lib das fotos mensais e a própria porta das leituras (leitura.ts, leituraEmLote.ts): base 0. E no src/ inteiro ninguém lê
-// direto as 2 RPCs e as 2 tabelas do Treino que a 20a levou para o servidor (o painel lê o Treino pela treino-leitura).
+// Início, a lib das fotos mensais e a própria porta das leituras (leitura.ts, leituraEmLote.ts): só o DESVIO 23 (o gate J, 12/10/2026,
+// docs/desvios.md) — a parte do TREINO da Evolução segue no navegador (src/evolucao/fontes.ts: as 3 leituras do REST do Treino e a
+// assinatura do `registros`, iguais ao 637363f), listada e contada; nada do PRINCIPAL. E no src/ inteiro ninguém lê direto as 2 RPCs que
+// a 20a levou para o servidor; as 2 tabelas do Treino da Evolução, só o fontes.ts (o desvio; o painel lê o Treino pela treino-leitura).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -24,20 +26,25 @@ const RAIZ = resolve(__dirname, "../..");
  * W (ou os links públicos); `pastas` aceita pasta ou arquivo avulso; `minimo` = quantos arquivos a área tem de ter (a guarda não passa por
  * não achar arquivo).
  */
-const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; minimo: number }> = {
+const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; minimo: number; desvio?: Record<string, string[]> }> = {
   // hml-20a: o app do aluno (Início, Evolução, Dieta/Diário) e a porta das leituras — 47 arquivos hoje
   aluno: {
     pastas: [
       "src/evolucao", "src/nutricao/app", "src/app-aluno/abas/Evolucao.tsx", "src/app-aluno/abas/Dieta.tsx", "src/app-aluno/abas/Inicio.tsx",
       "src/app-aluno/inicio", "src/lib/registrosFotos.ts", "src/nutricao/leitura.ts", "src/integrations/leituraEmLote.ts",
     ],
-    base: 0,
+    base: 4,
+    // o desvio do gate J (docs/desvios.md): a parte do TREINO da Evolução no navegador — physiq_profiles, physiq_avaliacoes,
+    // physiq_registros_fotos e o createSignedUrls do `registros` (o assinar do fontes.ts). Nenhuma outra leitura direta na área.
+    desvio: { "src/evolucao/fontes.ts": ["storage.createSignedUrls", "tabela.select", "tabela.select", "tabela.select"] },
     minimo: 40,
   },
 };
 /** hml-20a: o que saiu do navegador para o servidor — no src/ inteiro, ninguém lê direto (o nome escrito na chamada). */
 const RPCS_DO_SERVIDOR = ["minha_dieta", "minha_evolucao"] as const;
-const TABELAS_DO_SERVIDOR = ["physiq_avaliacoes", "physiq_registros_fotos"] as const;
+/** hml-20a (desvio do gate J): as 2 tabelas do Treino da Evolução do aluno — só o src/evolucao/fontes.ts lê direto (1 vez cada). */
+const TABELAS_DO_DESVIO = ["physiq_avaliacoes", "physiq_registros_fotos"] as const;
+const SO_O_DESVIO = "src/evolucao/fontes.ts";
 
 const FROM_DE_TABELA = /(?<!\bArray)(?<!storage\s*)\.from\(/g;
 const LE_STORAGE = /\.storage\s*\.from\(([^()]|\([^()]*\))*\)\s*\.(createSignedUrls?|download|list)\(/g;
@@ -88,7 +95,7 @@ function leiturasDoQueSaiu(fonte: string): string[] {
   for (const m of texto.matchAll(RPC)) if ((RPCS_DO_SERVIDOR as readonly string[]).includes(m[1])) achados.push(`${linhaDe(texto, m.index!)}: rpc.${m[1]}`);
   for (const m of texto.matchAll(FROM_DE_TABELA)) {
     const nome = TABELA_ESCRITA.exec(texto.slice(m.index! + m[0].length))?.[1];
-    if (nome && (TABELAS_DO_SERVIDOR as readonly string[]).includes(nome)) achados.push(`${linhaDe(texto, m.index!)}: ${nome}`);
+    if (nome && (TABELAS_DO_DESVIO as readonly string[]).includes(nome)) achados.push(`${linhaDe(texto, m.index!)}: ${nome}`);
   }
   return achados;
 }
@@ -157,18 +164,37 @@ describe("hml-20a — o detector acha o que procura (controle positivo)", () => 
   });
 });
 
-describe("hml-20a — as áreas migradas não leem direto (base 0)", () => {
-  it.each(Object.entries(AREAS))("%s: nenhuma leitura direta nas pastas da área", (_area, { pastas, base, fora = [], minimo }) => {
+describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)", () => {
+  it.each(Object.entries(AREAS))("%s: nenhuma leitura direta nas pastas da área além do desvio listado", (_area, { pastas, base, fora = [], minimo, desvio = {} }) => {
     const fontes = pastas.flatMap(fontesDa).filter((arq) => !fora.includes(relative(RAIZ, arq)));
     const achados = fontes.flatMap((arq) => leiturasDiretas(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
     expect(achados.length, achados.join("\n")).toBe(base);
+    // cada leitura que ficou é a do desvio (o arquivo e o tipo); o resto da área: 0
+    const porArquivo: Record<string, string[]> = {};
+    for (const a of achados) {
+      const [arq, , oque] = a.split(":");
+      (porArquivo[arq] ??= []).push(oque.trim());
+    }
+    for (const lista of Object.values(porArquivo)) lista.sort();
+    expect(porArquivo, achados.join("\n")).toEqual(desvio);
+    expect(Object.values(desvio).flat()).toHaveLength(base);
     expect(fontes.length).toBeGreaterThanOrEqual(minimo);
   });
 
-  it("no src/ inteiro, ninguém lê direto a minha_dieta, a minha_evolucao, physiq_avaliacoes nem physiq_registros_fotos", () => {
+  it("o desvio do gate J é SÓ o Treino: as 3 tabelas physiq_* pelo cliente do Treino e o bucket registros; nada do principal direto na área", () => {
+    const texto: string = semComentarios(readFileSync(resolve(RAIZ, SO_O_DESVIO), "utf-8"));
+    expect(texto.match(/\bsupabase\.from\("physiq_(profiles|avaliacoes|registros_fotos)"\)\.select\(/g)).toHaveLength(3);
+    expect(texto).toMatch(/assinar\(supabase\.storage\.from\(BUCKET_REGISTROS\), c\)/);
+    // o fontes.ts não usa o cliente do principal para nada (a parte do principal vai pelo lerNutricao)
+    expect(texto).not.toMatch(/\bprincipal\s*\.\s*(from|rpc|storage|functions)\b/);
+  });
+
+  it("no src/ inteiro, ninguém lê direto a minha_dieta nem a minha_evolucao; physiq_avaliacoes e physiq_registros_fotos só no desvio", () => {
     const fontes = fontesDa("src");
     const achados = fontes.flatMap((arq) => leiturasDoQueSaiu(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
-    expect(achados, achados.join("\n")).toEqual([]);
+    const fora = achados.filter((a) => !a.startsWith(`${SO_O_DESVIO}:`));
+    expect(fora, fora.join("\n")).toEqual([]);
+    expect(achados.map((a) => a.split(":").at(-1)!.trim()).sort()).toEqual([...TABELAS_DO_DESVIO]);
     expect(fontes.length).toBeGreaterThan(500);
   });
 

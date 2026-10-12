@@ -498,11 +498,13 @@ def main() -> int:
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
     ap.add_argument("--nutri", default="https://physiqnutri-staging.vercel.app")
+    # hml-20a: o E2E de tela com o Edge no notebook (como o w12/telas.py desde a hml-18a); sem o --canal, o Chromium de antes
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     B.ESTADO["schema"] = "staging"
     ESTADO.update(prefixo=a.prefixo, nutri=a.nutri)
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage"])
         for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
             print(f"\n── {nome} ──", flush=True)
             if not B.saude_treino():

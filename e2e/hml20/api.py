@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Physiq hml-20a (H-42 · jeito 2, etapa 2, 11/10/2026) — os casos de SERVIDOR das leituras do app do aluno: a ação `ler` da nutricao
-(as consultas aluno_dieta, aluno_diario_urls e aluno_evolucao) e a `minha_evolucao` da admin-avaliacoes (Treino).
+(as consultas aluno_dieta, aluno_diario_urls e aluno_evolucao) e a `minha_evolucao` da admin-avaliacoes (Treino). Desde o gate J
+reprovado (12/10/2026, decisão da sessão principal) a tela NÃO chama a minha_evolucao (a parte do Treino segue no navegador — o desvio do
+docs/desvios.md); a ação fica publicada e os casos dela aqui (P do Treino, N4/N5/N8 no Treino, N10) são a prova do SERVIDOR.
 
 Contas (staging, só de TESTE): A = w5p-aluna (o app — a sessão do principal e a do Treino pela MESMA troca do app); P = w5p-nutri (a nutri
 da aluna: a foto de evolução da massa); T = w5p-personal (a personal da aluna: a foto mensal da massa, no Treino; N10); N1 = w13-dono

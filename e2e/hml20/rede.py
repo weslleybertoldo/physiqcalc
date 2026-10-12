@@ -8,9 +8,12 @@ guarda que CONTA (_base.contar_tela) separa, em cada tela:
     antropometrias, POST rpc/minha_dieta e rpc/minha_evolucao, POST storage/v1/object/sign/<diario|evolucao|registros>(-staging));
   · as leituras PELA FUNÇÃO (a `ler` da nutricao, com as consultas de cada uma, e a minha_evolucao da admin-avaliacoes);
   · as gravações ao abrir (a regra da Guarda dos E2E, com o corpo) — têm de ser 0.
-Depois da hml-20a (--base local, e o staging depois do push): 0 leitura direta da área em todas as telas; no máximo 1 `ler` por tela (2
-quando há série: o Início com a dieta e a evolução em voltas diferentes; as URLs do diário depois da dieta) e no máximo 1 minha_evolucao;
-0 gravação ao abrir. Antes (--base staging com o código antigo): as leituras iam direto (a linha de base da mesma planilha).
+Depois da hml-20a (--base local, e o staging depois do push): 0 leitura direta do PRINCIPAL da área em todas as telas; no máximo 1 `ler`
+por tela (2 quando há série: o Início com a dieta e a evolução em voltas diferentes; as URLs do diário depois da dieta); 0 gravação ao
+abrir. DESVIO do gate J (decisão da sessão principal, 12/10/2026; docs/desvios.md): a parte do TREINO da Evolução/Início segue no
+navegador, igual ao código antigo — as 3 GET physiq_* (e o sign do registros, com foto) são aceitas SÓ no Início e na Evolução, contadas à
+parte; a minha_evolucao da admin-avaliacoes não é chamada pela tela (0). Antes (--base staging com o código antigo): as leituras iam
+direto (a linha de base da mesma planilha).
 Produção (--base prod): SÓ abre as telas com a Guarda (nada grava; o `ler` e a minha_evolucao passam: são leitura) — 0 gravação tentada.
 No fim, o logout (scope=local) da sessão do TREINO que a troca do app abriu neste navegador (decisão 23).
 Antes de CADA execução: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "rede.py …" (e o /health, aqui dentro).
@@ -47,7 +50,10 @@ SELETORES = {
 }
 # depois: o teto de chamadas de leitura por tela (o Início pode ter a dieta e a evolução em 2 voltas; o diário, as URLs depois da dieta)
 TETO_LER = {"inicio": 2, "evolucao": 1, "dieta": 2, "diario": 2}
-TETO_MINHA_EVOLUCAO = {"inicio": 1, "evolucao": 1, "dieta": 0, "diario": 0}
+# desvio do gate J: a tela não chama a minha_evolucao (a parte do Treino segue no navegador); as telas que leem o Treino direto
+TETO_MINHA_EVOLUCAO = {"inicio": 0, "evolucao": 0, "dieta": 0, "diario": 0}
+TELAS_DO_DESVIO = {"inicio", "evolucao"}
+GET_DO_DESVIO = {"tab:physiq_profiles", "tab:physiq_avaliacoes", "tab:physiq_registros_fotos"}
 
 
 def conferir(o, base: str, fase: str, tela: str, cont: dict, pronta: dict) -> None:
@@ -59,7 +65,16 @@ def conferir(o, base: str, fase: str, tela: str, cont: dict, pronta: dict) -> No
         if tela in ("inicio", "evolucao"):
             o.ok(diretas >= 1, f"[antes] {tela}: a leitura de saúde ia direto do navegador ({cont['diretas']})")
         return
-    o.ok(diretas == 0, f"[depois] {tela}: 0 leitura direta das tabelas/RPCs/buckets da área ({cont['diretas'] or '—'})")
+    principal = sum(cont["diretas_principal"].values())
+    desvio = cont["desvio"]
+    o.ok(principal == 0, f"[depois] {tela}: 0 leitura direta do PRINCIPAL da área (as RPCs, as tabelas e os buckets diario/evolucao) "
+         f"({cont['diretas_principal'] or '—'}; total direto {diretas})")
+    if tela in TELAS_DO_DESVIO:
+        o.ok(set(desvio) >= GET_DO_DESVIO and all(v == 1 for k, v in desvio.items() if k in GET_DO_DESVIO),
+             f"[depois] {tela}: o desvio do gate J — a parte do Treino direto do navegador, igual ao antes (as 3 GET physiq_*, 1 vez cada; "
+             f"o sign do registros só com foto): {desvio or '—'}")
+    else:
+        o.ok(not desvio, f"[depois] {tela}: 0 leitura direta do Treino ({desvio or '—'})")
     o.ok(ler <= TETO_LER[tela] and me <= TETO_MINHA_EVOLUCAO[tela],
          f"[depois] {tela}: {ler} `ler` (≤ {TETO_LER[tela]}; consultas {cont['consultas'] or '—'}) e {me} minha_evolucao (≤ {TETO_MINHA_EVOLUCAO[tela]}) "
          f"— t_pronto {pronta['t_pronto_s']} s")
@@ -96,17 +111,25 @@ def seco(o) -> None:
     corpo_ler = json.dumps({"acao": "ler", "itens": [{"dia": "2026-10-11", "q": "aluno_dieta"}, {"q": "aluno_evolucao"}]})
     depois = [
         {"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "ler", "url": f"{P}/functions/v1/nutricao", "corpo": corpo_ler},
-        {"metodo": "POST", "tipo": "fn", "nome": "admin-avaliacoes", "acao": "minha_evolucao", "url": f"{T}/functions/v1/admin-avaliacoes",
-         "corpo": json.dumps({"action": "minha_evolucao"})},
+        # o desvio do gate J: a parte do Treino direto (as 3 GET; o sign do registros com foto)
+        {"metodo": "GET", "tipo": "tab", "nome": "physiq_profiles", "url": f"{T}/rest/v1/physiq_profiles?select=id", "corpo": ""},
+        {"metodo": "GET", "tipo": "tab", "nome": "physiq_avaliacoes", "url": f"{T}/rest/v1/physiq_avaliacoes?select=*", "corpo": ""},
+        {"metodo": "GET", "tipo": "tab", "nome": "physiq_registros_fotos", "url": f"{T}/rest/v1/physiq_registros_fotos?select=id", "corpo": ""},
+        {"metodo": "POST", "tipo": "storage", "nome": "sign", "url": f"{T}/storage/v1/object/sign/registros-staging", "corpo": "{}"},
         {"metodo": "OPTIONS", "tipo": "fn", "nome": "nutricao", "acao": None, "url": f"{P}/functions/v1/nutricao", "corpo": ""},
         {"metodo": "POST", "tipo": "fn", "nome": "pos-login", "acao": None, "url": f"{P}/functions/v1/pos-login", "corpo": "{}"},
         {"metodo": "POST", "tipo": "fn", "nome": "trocar-token", "acao": None, "url": f"{T}/functions/v1/trocar-token", "corpo": "{}"},
         {"metodo": "GET", "tipo": "storage", "nome": "sign", "url": f"{P}/storage/v1/object/sign/evolucao-staging/a/b.jpg?token=t", "corpo": ""},
     ]
     c = B.contar_tela(depois)
-    o.ok(c["diretas"] == {} and c["funcao"] == {"fn:nutricao(ler)": 1, "fn:admin-avaliacoes(minha_evolucao)": 1}
-         and c["consultas"] == {"aluno_dieta": 1, "aluno_evolucao": 1} and not c["gravacoes"],
-         f"a guarda do DEPOIS: 0 direta, 1 `ler` (as 2 consultas), 1 minha_evolucao, 0 gravação (o GET da imagem não conta): {c}")
+    o.ok(c["diretas_principal"] == {} and c["desvio"] == {"tab:physiq_profiles": 1, "tab:physiq_avaliacoes": 1, "tab:physiq_registros_fotos": 1,
+                                                           "sign:registros-staging": 1}
+         and c["funcao"] == {"fn:nutricao(ler)": 1} and c["consultas"] == {"aluno_dieta": 1, "aluno_evolucao": 1} and not c["gravacoes"],
+         f"a guarda do DEPOIS: 0 direta do principal, o desvio do Treino à parte, 1 `ler` (as 2 consultas), 0 gravação (o GET da imagem não conta): {c}")
+    principal_direto = B.contar_tela([{"metodo": "POST", "tipo": "rpc", "nome": "minha_evolucao", "url": f"{P}/rest/v1/rpc/minha_evolucao", "corpo": "{}"},
+                                      {"metodo": "POST", "tipo": "storage", "nome": "sign", "url": f"{P}/storage/v1/object/sign/diario-staging", "corpo": "{}"}])
+    o.ok(principal_direto["diretas_principal"] == {"rpc:minha_evolucao": 1, "sign:diario-staging": 1} and not principal_direto["desvio"],
+         "o desvio é SÓ o Treino: a RPC e o sign do principal seguem contando como leitura direta (têm de ser 0)")
     grava = [
         {"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "aluno_marcar_refeicao", "url": f"{P}/functions/v1/nutricao",
          "corpo": json.dumps({"acao": "aluno_marcar_refeicao"})},
@@ -116,7 +139,9 @@ def seco(o) -> None:
     ]
     c = B.contar_tela(grava)
     o.ok(sum(c["gravacoes"].values()) == 3 and not c["funcao"], f"a guarda acha as gravações ao abrir (o `ler` disfarçado também): {c['gravacoes']}")
-    o.ok(set(TETO_LER) == {t for t, _r, _m in TELAS} == set(TETO_MINHA_EVOLUCAO), "cada tela tem o teto de chamadas de leitura do depois")
+    o.ok(set(TETO_LER) == {t for t, _r, _m in TELAS} == set(TETO_MINHA_EVOLUCAO) and not any(TETO_MINHA_EVOLUCAO.values())
+         and TELAS_DO_DESVIO < set(TETO_LER) and GET_DO_DESVIO < B.AREAS["aluno"]["desvio"],
+         "cada tela tem o teto de chamadas de leitura do depois; a minha_evolucao = 0 (o desvio); o desvio aceito só no Início e na Evolução")
     o.ok(B.fase_do_codigo("local", "x") == "depois" and B.fase_do_codigo("staging", "637363f") == "antes",
          "antes × depois vem do CÓDIGO medido (o 637363f não tem src/nutricao/leitura.ts: antes)")
 

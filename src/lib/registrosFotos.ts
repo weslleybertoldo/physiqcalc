@@ -2,7 +2,8 @@ import { DB_SCHEMA } from "@/integrations/supabase/client";
 
 // Bucket privado — staging tem espelho próprio (mesmo padrão do bucket de exercícios)
 // hml-20a (H-42): sem a leitura direta que sobrava aqui (carregarRegistros, urlAssinada e o formatarMesRef — 0 uso desde a W28): as
-// fotos mensais do próprio aluno saem da admin-avaliacoes › minha_evolucao (src/evolucao/fontes.ts) e as do painel, da treino-leitura.
+// fotos mensais do próprio aluno são lidas e assinadas em src/evolucao/fontes.ts (o carregarTreino — no navegador, o desvio do gate J,
+// docs/desvios.md) e as do painel, pela treino-leitura.
 export const BUCKET_REGISTROS = DB_SCHEMA === "staging" ? "registros-staging" : "registros";
 
 export const TIPOS_FOTO = [

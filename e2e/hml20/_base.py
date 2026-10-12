@@ -220,6 +220,10 @@ AREAS = {
         "tabelas": {"physiq_profiles", "physiq_avaliacoes", "physiq_registros_fotos", "diario_alimentar", "fotos_evolucao", "antropometrias"},
         "rpcs": {"minha_dieta", "minha_evolucao"},
         "buckets": {"diario", "diario-staging", "evolucao", "evolucao-staging", "registros", "registros-staging"},
+        # o DESVIO do gate J (decisão da sessão principal, 12/10/2026; docs/desvios.md): a parte do TREINO da Evolução/Início segue no
+        # navegador, igual ao 637363f — as 3 GET physiq_* e o sign do registros. Contado à parte: aceito só no Início e na Evolução; as
+        # leituras diretas do PRINCIPAL da área (as 2 RPCs, as tabelas e os buckets diario/evolucao) têm de ser 0 depois
+        "desvio": {"tab:physiq_profiles", "tab:physiq_avaliacoes", "tab:physiq_registros_fotos", "sign:registros", "sign:registros-staging"},
     },
 }
 
@@ -279,13 +283,17 @@ def gravacao(p: dict) -> str | None:
 
 
 def contar_tela(pedidos: list[dict], area: str = "aluno") -> dict:
-    """O que a guarda CONTA numa tela: as leituras diretas da área, as leituras pela função (e as consultas de cada `ler`) e as
+    """O que a guarda CONTA numa tela: as leituras diretas da área (todas; e separadas em `desvio` — a parte do Treino que ficou no
+    navegador — e `diretas_principal` — o resto, que tem de ser 0 depois), as leituras pela função (e as consultas de cada `ler`) e as
     gravações (que têm de ser 0 ao abrir)."""
     diretas = Counter(x for x in (leitura_direta(p, area) for p in pedidos) if x)
+    desvio = AREAS[area].get("desvio", set())
     funcao = Counter(x for x in (leitura_pela_funcao(p) for p in pedidos) if x)
     gravacoes = Counter(x for x in (gravacao(p) for p in pedidos) if x)
     qs = Counter(q for p in pedidos if leitura_pela_funcao(p) == "fn:nutricao(ler)" for q in consultas_do_corpo(p.get("corpo")))
-    return {"diretas": dict(diretas), "funcao": dict(funcao), "consultas": dict(qs), "gravacoes": dict(gravacoes)}
+    return {"diretas": dict(diretas), "desvio": {k: v for k, v in diretas.items() if k in desvio},
+            "diretas_principal": {k: v for k, v in diretas.items() if k not in desvio}, "funcao": dict(funcao), "consultas": dict(qs),
+            "gravacoes": dict(gravacoes)}
 
 
 # ───────────────────────── a sessão do Treino que o app abriu no navegador (decisão 23) ─────────────────────────
