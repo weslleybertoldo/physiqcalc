@@ -20,7 +20,7 @@ o gate mede a 1ª abertura de verdade: a função ociosa (ESPERA_GATE_S, ~30 s, 
 de 1,3 s, a Evolução também ≤ o antes + 0,3 s (o antes medido pela MESMA regra: as medidas *_ociosa).
 Planilha: hml20/medicao/telas_hml20a.tsv (antes × depois). No fim, o logout da sessão do TREINO que a troca do app abriu (decisão 23).
 Antes de CADA execução: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "telas.py …" (e o /health, aqui dentro).
-Uso: python3 e2e/hml20/telas.py --area aluno --base local|staging --canal msedge [--casos prints,tempo,gate] [--seco]
+Uso: python3 e2e/hml20/telas.py --area aluno --base local|staging --canal msedge [--casos prints,tempo,gate] [--prefixo staging2] [--seco]
 """
 from __future__ import annotations
 
@@ -95,8 +95,8 @@ def abrir(t, pend, rota: str, marca: str, desvio: str = "/perfil", max_s: float 
     return B.esperar_pronto(t, pend, marca=marca, max_s=max_s)
 
 
-def caso_prints(o, t, pend, base: str, fase: str) -> None:
-    pr = lambda caso: B.print_reduzido(t.pg, base, caso, o)  # noqa: E731
+def caso_prints(o, t, pend, base: str, fase: str, prefixo: str | None = None) -> None:
+    pr = lambda caso: B.print_reduzido(t.pg, prefixo or base, caso, o)  # noqa: E731
     ok = t.esperar(lambda: t.n(DADOS_PESO) > 0, 60)
     o.ok(ok, f"[{base}] a_inicio: o Início com o card do peso ({(t.attr('[data-card-peso]', 'data-card-peso') or ['?'])[0]})")
     pr("a_inicio")
@@ -217,7 +217,7 @@ def seco(o) -> None:
     o.ok(B.MAX_S == 30.0 and B.QUIETO_S == 3.0 and B.MIN_S == 5.0, "a regra do pronto é a da spec (medir_leituras20.py: quieto 3 s, mínimo 5 s, máximo 30 s)")
 
 
-def rodar(o, base: str, canal: str | None, casos: list[str]) -> None:
+def rodar(o, base: str, canal: str | None, casos: list[str], prefixo: str | None = None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     if base == "prod":
@@ -238,7 +238,7 @@ def rodar(o, base: str, canal: str | None, casos: list[str]) -> None:
                 t.entrar(L, B.A_CONTA, "/")
                 o.ok(t.esperar(lambda: t.n("[data-aba-inicio]") > 0, 60), f"[{base}] o app da aluna de teste abriu no Início", parar=True)
                 if "prints" in casos:
-                    caso_prints(o, t, pend, base, fase)
+                    caso_prints(o, t, pend, base, fase, prefixo)
                 if "tempo" in casos:
                     caso_tempo(o, t, pend, base, commit, fase)
                 if "gate" in casos:
@@ -258,6 +258,8 @@ def main() -> int:
     ap.add_argument("--base", default="local", choices=("local", "staging"))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--casos", default=",".join(CASOS))
+    # o nome dos prints (<prefixo>_a_*.png; padrão = a base): o F7 no staging usa staging2 e não grava por cima dos staging_a_* do antes
+    ap.add_argument("--prefixo", default=None)
     ap.add_argument("--seco", action="store_true")
     a = ap.parse_args()
     B.corte_vira_saida()
@@ -270,7 +272,7 @@ def main() -> int:
         return o.fim()
     o = C.Saida(f"telas20_{a.area}_{a.base}")
     try:
-        rodar(o, a.base, a.canal, casos)
+        rodar(o, a.base, a.canal, casos, a.prefixo)
     except (Exception, SystemExit) as e:  # noqa: BLE001
         o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
     C.C2.registrar_rodada(o.oks, o.oks + o.falhas)

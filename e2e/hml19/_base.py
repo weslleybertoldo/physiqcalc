@@ -136,7 +136,8 @@ ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # (hml20/agente/logins_etapa2_20a.txt — o da 19d fica) e o teto, 6 logins na etapa 2 (a sessão principal guarda 4 para o staging); os
 # E2E da hml-20 (e2e/hml20/_base.py) e a regressão da hml-19 contam no MESMO registro
 REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20a.txt"
-MAX_LOGINS = 6
+# hml-20a F7 (sessão principal, 12/10/2026): +4 logins para o F7 no staging — o teto da W inteira passa a 10 (os 6 da etapa 2 já usados)
+MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 
 
