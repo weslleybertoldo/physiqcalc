@@ -134,9 +134,14 @@ ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # a troca do Treino (trocar-token) também entra nele — abre uma sessão nova no Auth do Treino. hml-19d (decisão G): o registro passa a
 # ser o logins_etapa2_19d.txt (o da 19c fica). hml-20a (decisão G do contrato da 20a): o registro passa a ser o da hml-20a
 # (hml20/agente/logins_etapa2_20a.txt — o da 19d fica) e o teto, 6 logins na etapa 2 (a sessão principal guarda 4 para o staging); os
-# E2E da hml-20 (e2e/hml20/_base.py) e a regressão da hml-19 contam no MESMO registro
-REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20a.txt"
-# hml-20a F7 (sessão principal, 12/10/2026): +4 logins para o F7 no staging — o teto da W inteira passa a 10 (os 6 da etapa 2 já usados)
+# E2E da hml-20 (e2e/hml20/_base.py) e a regressão da hml-19 contam no MESMO registro. hml-20b (decisão G do contrato da 20b): o registro
+# passa a ser o da hml-20b (hml20/agente/logins_etapa2_20b.txt — o da 20a fica); o teto da W segue 10 (no máximo 6 na etapa 2: a sessão
+# principal guarda 4 para o smoke e o F6)
+REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20b.txt"
+# hml-20a F7 (sessão principal, 12/10/2026): +4 logins para o F7 no staging — o teto da W inteira passa a 10 (os 6 da etapa 2 já usados).
+# hml-20b (revisão, 🟡2): o registro novo (logins_etapa2_20b.txt) começa com o teto de 6 — os da etapa 2 desta W; a sessão principal sobe
+# para 10 no F6 (o staging), como fez na 20a
+# hml-20b F6 (sessão principal, 12/10/2026): o teto da W inteira passa a 10 (5 da etapa 2 + o smoke já usados)
 MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 
@@ -285,6 +290,30 @@ class Sessoes:
             self._salvar()
         elif ARQ_SESSOES.exists():
             ARQ_SESSOES.unlink()
+
+
+def sair_do_treino_do_navegador(o, pg, rotulo: str) -> None:
+    """hml-20b (decisão 23 da spec hml-20): o logout (scope=local) da sessão do TREINO que a troca do APP abriu neste navegador (a chave
+    padrão do supabase-js, sb-<host>-auth-token; a do principal é a physiq-principal-auth) — o E2E não deixa sessão do Treino aberta. A
+    mesma regra do e2e/hml20/_base.sair_do_treino, para os E2E de tela da hml-19 que abrem o painel de quem tem Treino (a personal da
+    foto mensal do rede_avaliacao)."""
+    try:
+        bruto = pg.evaluate("""() => { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i);
+            if (/^sb-.*-auth-token$/.test(k)) return localStorage.getItem(k); } return null; }""")
+        s = json.loads(bruto) if bruto else None
+    except Exception:  # noqa: BLE001 — a página fechou / o valor não é JSON
+        s = None
+    if isinstance(s, dict):
+        s = s.get("currentSession") or s
+    tok = s.get("access_token") if isinstance(s, dict) else None
+    if not (isinstance(tok, str) and tok):
+        o.linha(f"   ({rotulo}: nenhuma sessão do Treino no navegador para fechar)")
+        return
+    try:
+        st: object = C.sair_local(tok, "treino")
+    except Exception as e:  # noqa: BLE001
+        st = type(e).__name__
+    o.ok(st in (200, 204), f"{rotulo}: logout (scope=local) da sessão do Treino que o app abriu ({st})", parar=False)
 
 
 # ───────────────────────── a função como a tela chama ─────────────────────────

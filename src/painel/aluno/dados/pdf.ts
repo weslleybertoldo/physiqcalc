@@ -3,10 +3,12 @@
  * perfil e as avaliações do Banco do Treino, como o antigo; quem veio do Nutri: o cadastro e as antropometrias do banco
  * principal; quem tem os dois: as duas listas juntas, por data) e "Treino" para quem tem o módulo Treino (o mesmo do antigo).
  * Os geradores são os de sempre (src/lib/generateAdminPDF.ts e generateWorkoutPlanPDF.ts), carregados só na hora.
+ * hml-20b (H-42 · jeito 2, etapa 2): as antropometrias do PDF vão pela função nutricao (consulta antropometrias_pdf: as MESMAS 12
+ * colunas, as vivas, da mais antiga para a mais nova), como a pessoa; o admin-get-user do Treino segue como está (decisão 15).
  */
-import { principal } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { avaliacaoDoPrincipal } from "@/evolucao/serie";
+import { lerNutricao } from "@/nutricao/leitura";
 import type { AntropometriaPrincipal, Avaliacao as AvaliacaoSerie } from "@/evolucao/tipos";
 import { idadeDe, numero } from "./regras";
 import type { PerfilAluno } from "./tipos";
@@ -42,14 +44,8 @@ export function linhaDaAntropometria(a: AvaliacaoSerie): LinhaPdf {
 }
 
 async function antropometriasDoAluno(pacienteId: string): Promise<AvaliacaoSerie[]> {
-  const { data, error } = await principal
-    .from("antropometrias" as never)
-    .select("id, data, peso, altura, sexo, idade, circunferencias, dobras, protocolo, resultados, nutricionista_id, created_at")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: true });
-  if (error) throw error;
-  return ((data ?? []) as unknown as Array<Record<string, unknown>>).map((r) =>
+  const { linhas } = await lerNutricao("antropometrias_pdf", { paciente: pacienteId });
+  return ((linhas ?? []) as Array<Record<string, unknown>>).map((r) =>
     avaliacaoDoPrincipal({
       ...(r as unknown as AntropometriaPrincipal),
       autor_id: (r.nutricionista_id as string) ?? null,

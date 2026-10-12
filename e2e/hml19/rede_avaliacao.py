@@ -404,6 +404,7 @@ def rodar(o, base: str, casos: list[str], canal: str | None, prefixo: str | None
                                  f"[{base}] foto_erro: 1 aviso com a frase fixa, sem toast em laço e 1 tentativa só (no máx. {n} toast igual; barrou {barrar.barradas})")
                             conferir(o, base, "foto_erro", cont, ok_tela, ms, fase)
                     finally:
+                        B.sair_do_treino_do_navegador(o, t.pg, f"[{base}] {PERSONAL_TELA}")  # hml-20b (decisão 23): a troca do app abriu
                         L.do_navegador(PERSONAL_TELA, t.pg)
                         t.fim()
                 # a nutri: a antropometria e a foto de evolução (o principal)

@@ -22,18 +22,23 @@ vi.mock("../dados/api", () => ({
   buscarPerfilAluno: h.perfil,
   buscarDadosTreino: vi.fn(),
 }));
-vi.mock("@/nutricao/editor/lib/banco", () => ({
-  supabase: {
+// hml-20b (H-42): as LEITURAS vão pela nutricao (`ler`): o módulo de verdade do servidor roda sobre o banco falso daqui
+// (src/test/nutricaoFalsa.ts) — as idas ao banco (a RPC com os args, a tabela, a página) são as mesmas de quando a tela lia direto.
+vi.mock("@/nutricao/editor/lib/banco", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const banco = {
     rpc: h.rpc,
     from: (t: string) => {
       h.from(t);
       return cadeia();
     },
     storage: { from: () => cadeia() },
-    // hml-19a: as gravações e os padrões do 1º acesso vão pela função nutricao (functions.invoke)
-    functions: { invoke: async () => ({ data: { ok: true, criados: 0, lista: [] }, error: null }) },
-  },
-}));
+  };
+  // hml-19a: as gravações e os padrões do 1º acesso vão pela função nutricao (functions.invoke)
+  const invoke = async (_f: string, o: { body: Record<string, unknown> }) =>
+    ehLer(o?.body) ? lerPeloModulo(banco, { userId: h.usuario.id })(o.body) : { data: { ok: true, criados: 0, lista: [] }, error: null };
+  return { supabase: { ...banco, functions: { invoke } } };
+});
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: h.usuario, treino: { estado: "desnecessario", erro: null } }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 

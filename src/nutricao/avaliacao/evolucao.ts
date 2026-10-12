@@ -1,5 +1,4 @@
 // Physiq W17 — porta do PhysiqNutri (main ca9f66f, src/lib/evolucao.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { bucketDoAmbiente } from "@/integrations/principal/buckets";
 import { supabase, type Database } from "@/nutricao/editor/lib/banco";
 import { NOME_MAX } from "@/nutricao/editor/lib/anexosUtil";
 import {
@@ -14,28 +13,14 @@ import { ErroNutricao, acaoNutricao, comFraseDoCodigo } from "@/nutricao/servido
 // hml-19c (H-41 · jeito 2): ENVIAR = a função nutricao dá o link assinado (foto_evolucao_preparar: o caminho — o mesmo formato do
 // montarPath — é montado NO SERVIDOR) → a imagem sobe direto nele (uploadToSignedUrl) → foto_evolucao_registrar (o servidor confere
 // que o arquivo chegou naquele caminho e grava a linha; se a linha falhar, ele mesmo tira o arquivo). Editar e excluir também pela
-// função (excluir, decisão 8: a linha à Lixeira e DEPOIS o arquivo — antes era o contrário). As leituras (lista, URLs) seguem aqui.
+// função (excluir, decisão 8: a linha à Lixeira e DEPOIS o arquivo — antes era o contrário).
+// hml-20b (H-42 · decisão 21 da spec hml-20): saiu o código MORTO de leitura (listarFotosDoPaciente, urlAssinada e urlsAssinadas — 0
+// chamador desde a W17: a Avaliação do painel lê as fotos pela aluno_evolucao, hoje pela função nutricao, consulta
+// aluno_evolucao_painel, com a URL assinada no servidor). Aqui ficam só as gravações (enviar, editar, excluir).
 
 export type FotoEvolucao = Database["public"]["Tables"]["fotos_evolucao"]["Row"];
-export const BUCKET_EVOLUCAO = bucketDoAmbiente("evolucao");
 
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
 const observacaoPraGravar = (s: string | null | undefined): string | null => normalizarObservacao(s).slice(0, OBSERVACAO_FOTO_MAX) || null;
-
-/** Fotos vivas do paciente: data mais recente primeiro; na mesma data, a enviada por último primeiro. */
-export async function listarFotosDoPaciente(pacienteId: string): Promise<FotoEvolucao[]> {
-  const { data, error } = await supabase
-    .from("fotos_evolucao")
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as FotoEvolucao[];
-}
 
 /** As frases de antes da tela (o validarImagem) para os 2 códigos do arquivo — o resto é a frase fixa do código. */
 const FRASES_DA_FOTO = { tipo_invalido: "Use uma imagem JPG, PNG ou WebP", arquivo_grande: `Imagem acima de ${FOTO_TAMANHO_MAX_ROTULO}` };
@@ -62,31 +47,6 @@ export async function enviarFoto(nutricionistaId: string, pacienteId: string, ar
   } catch (e) {
     return comFraseDoCodigo(e, FRASES_DA_FOTO);
   }
-}
-
-/** URL assinada (padrão 5 min). `download` = nome do arquivo → o navegador baixa com esse nome; sem, abre inline (img). */
-export async function urlAssinada(foto: Pick<FotoEvolucao, "path">, segundos = 300, download: string | false = false): Promise<string> {
-  const { data, error } = await supabase.storage.from(BUCKET_EVOLUCAO).createSignedUrl(foto.path, segundos, download ? { download } : undefined);
-  falhou(error);
-  if (!data?.signedUrl) throw new Error("Não foi possível gerar o link da foto");
-  return data.signedUrl;
-}
-
-/** URLs assinadas em lote (miniaturas da grade), por id da foto. As que falharem ficam de fora. */
-export async function urlsAssinadas(fotos: Pick<FotoEvolucao, "id" | "path">[], segundos = 3600): Promise<Record<string, string>> {
-  if (!fotos.length) return {};
-  const { data, error } = await supabase.storage.from(BUCKET_EVOLUCAO).createSignedUrls(fotos.map((f) => f.path), segundos);
-  falhou(error);
-  const porPath = new Map<string, string>();
-  for (const d of data ?? []) {
-    if (d.path && d.signedUrl) porPath.set(d.path, d.signedUrl);
-  }
-  const saida: Record<string, string> = {};
-  for (const f of fotos) {
-    const u = porPath.get(f.path);
-    if (u) saida[f.id] = u;
-  }
-  return saida;
 }
 
 /** Posição, data e/ou observação (a imagem não muda — pra trocar, exclui e envia outra). hml-19c: pela nutricao (foto_evolucao_editar). */

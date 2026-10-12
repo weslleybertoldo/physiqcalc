@@ -4,7 +4,6 @@ import { ChartLine, ChevronDown, CircleAlert, ClipboardCheck, ClipboardPlus, Ref
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { principal } from "@/integrations/principal/client";
 import { contagemAvaliacoes } from "@/evolucao/formato";
 import { avaliacoesDaTabela, hojeSP, kpisDaSerie, periodoInicial, serieVazia, temDados, ultimaAvaliacao, variacaoDaMetrica } from "@/evolucao/serie";
 import type { Avaliacao, Periodo } from "@/evolucao/tipos";
@@ -14,7 +13,7 @@ import { SheetAvaliacoes } from "@/evolucao/ui/SheetAvaliacoes";
 import { SheetComparar } from "@/evolucao/ui/SheetComparar";
 import { SheetComposicao } from "@/evolucao/ui/SheetComposicao";
 import AntropometriaDialog from "@/nutricao/avaliacao/AntropometriaDialog";
-import type { Antropometria } from "@/nutricao/editor/lib/antropometrias";
+import { buscarAntropometria, type Antropometria } from "@/nutricao/editor/lib/antropometrias";
 import { ehProtocolo, type Protocolo } from "@/nutricao/editor/lib/antropometriaUtil";
 import { sobDemanda, useAcaoSobDemanda } from "@/lib/sobDemanda";
 import { useTreinoDoAlunoPainel } from "@/treino/editor/useTreinoDoAlunoPainel";
@@ -161,13 +160,14 @@ export default function Avaliacao({ alunoId }: { alunoId: string }) {
     });
   };
 
+  // hml-20b (H-42): a antropometria pelo id vem da lib (buscarAntropometria — a função nutricao, como a pessoa); o resto igual
   const editar = async (av: Avaliacao) => {
-    const { data, error } = await principal.from("antropometrias").select("*").eq("id", av.idOriginal).maybeSingle();
-    if (error || !data) {
+    const a = await buscarAntropometria(av.idOriginal).catch(() => null);
+    if (!a) {
       toast.error("Não deu para abrir esta antropometria agora.");
       return;
     }
-    setEditarAntropo(data as Antropometria);
+    setEditarAntropo(a);
     setAbrir("antropometria");
   };
 

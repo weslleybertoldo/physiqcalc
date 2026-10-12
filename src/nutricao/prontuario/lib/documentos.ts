@@ -1,7 +1,7 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/documentos.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
-import { lerDadosProfissionais, type DadosProfissionais, type RegistroDocumento, type TipoDocumento } from "@/nutricao/prontuario/lib/documentosUtil";
+import { lerNutricao } from "@/nutricao/leitura";
+import { type RegistroDocumento, type TipoDocumento } from "@/nutricao/prontuario/lib/documentosUtil";
 import { acaoNutricao } from "@/nutricao/servidor";
 
 // Acesso às tabelas `modelos_documento` e `documentos` (RLS: a nutricionista só vê os dela; master vê tudo; criar documento
@@ -9,26 +9,19 @@ import { acaoNutricao } from "@/nutricao/servidor";
 // tags já substituídas — mudar ou excluir o modelo depois não mexe nele (padrão dos recibos, W13). O banco mexe em
 // `pacientes.updated_at` a cada documento (trigger).
 // hml-19a (H-41 · H-81 · jeito 2): as gravações vão pela função nutricao (o texto final segue montado aqui); os 3 modelos padrão do
-// 1º acesso nascem no servidor (padroes_garantir: 1 chamada, 1 vez só). Mesmas assinaturas; leituras seguem pelo banco.
+// 1º acesso nascem no servidor (padroes_garantir: 1 chamada, 1 vez só). Mesmas assinaturas.
+// hml-20b (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa:
+// modelos_documento (o RLS decide, como antes) e documentos_do_aluno; o nome e os dados profissionais vêm da fonte única
+// (src/nutricao/editor/lib/profissional.ts — a mesma leitura de antes, do profiles de quem chama). Mesmos tipos; o erro é ErroLeitura.
 
 export type ModeloDocumento = Database["public"]["Tables"]["modelos_documento"]["Row"];
 export type ModeloDocumentoUpdate = Database["public"]["Tables"]["modelos_documento"]["Update"];
 export type Documento = Database["public"]["Tables"]["documentos"]["Row"];
 
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
 // ---- Modelos ----
 export async function listarModelosDocumento(): Promise<ModeloDocumento[]> {
-  const { data, error } = await supabase
-    .from("modelos_documento")
-    .select("*")
-    .is("deleted_at", null)
-    .order("favorito", { ascending: false })
-    .order("titulo", { ascending: true });
-  falhou(error);
-  return (data ?? []) as ModeloDocumento[];
+  const r = await lerNutricao("modelos_documento");
+  return (r.linhas ?? []) as ModeloDocumento[];
 }
 
 /**
@@ -67,14 +60,8 @@ export async function excluirModeloDocumento(id: string): Promise<void> {
 // ---- Documentos ----
 /** Documentos vivos do paciente, mais recente primeiro. */
 export async function listarDocumentosDoPaciente(pacienteId: string): Promise<Documento[]> {
-  const { data, error } = await supabase
-    .from("documentos")
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as Documento[];
+  const r = await lerNutricao("documentos_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as Documento[];
 }
 
 export async function criarDocumento(nutricionistaId: string, pacienteId: string, r: RegistroDocumento): Promise<Documento> {
@@ -95,12 +82,8 @@ export async function excluirDocumento(id: string): Promise<void> {
   await acaoNutricao("documento_excluir", { id });
 }
 
-/** Nome da nutricionista (assinatura) — mesma consulta das orientações (W10). */
-export { nomeDaNutricionista } from "@/nutricao/editor/lib/orientacoes";
-
-/** CRN/telefone/endereço guardados em `profiles.dados_profissionais` (a tela de preencher é a W35); nada preenchido → null. */
-export async function dadosProfissionais(userId: string): Promise<DadosProfissionais | null> {
-  const { data, error } = await supabase.from("profiles").select("dados_profissionais").eq("id", userId).maybeSingle();
-  if (error) return null;
-  return lerDadosProfissionais((data as { dados_profissionais: unknown } | null)?.dados_profissionais);
-}
+/**
+ * Nome da nutricionista (assinatura) e CRN/telefone/endereço guardados em `profiles.dados_profissionais` (a tela de preencher é a
+ * W35; nada preenchido → null) — a fonte única (hml-20b: o profiles de quem chama, pela função; o mesmo lerDadosProfissionais).
+ */
+export { dadosProfissionais, nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";

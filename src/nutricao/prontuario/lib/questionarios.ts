@@ -1,6 +1,6 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/questionarios.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { lerNutricao } from "@/nutricao/leitura";
 import { copiaDeQuestionario, type RegistroAplicacao, type RegistroQuestionario } from "@/nutricao/prontuario/lib/questionariosUtil";
 import { acaoNutricao } from "@/nutricao/servidor";
 
@@ -11,23 +11,21 @@ import { acaoNutricao } from "@/nutricao/servidor";
 // calculados pelo app (questionariosUtil) ao criar e ao editar. O banco mexe em `pacientes.updated_at` a cada aplicação
 // (trigger). jsonb chega como JSON pelo PostgREST; a tela lê com `lerPerguntas`/`lerFaixas`/`lerRespostas` (tolerantes).
 // hml-19a (H-41 · jeito 2): as gravações vão pela função nutricao (a pontuação/faixa/nível seguem calculados aqui — o servidor
-// confere a forma). Também a Pré-consulta › "importar como questionário" (src/painel/preconsulta/dados.ts). Leituras aqui.
+// confere a forma). Também a Pré-consulta › "importar como questionário" (src/painel/preconsulta/dados.ts).
+// hml-20b (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa:
+// questionarios (os do sistema + os próprios — o RLS decide, como antes) e respostas_questionario_do_aluno; o nome e os dados
+// profissionais do PDF vêm da fonte única (src/nutricao/editor/lib/profissional.ts). Mesmos tipos; o erro é ErroLeitura (frase fixa).
 
 export type Questionario = Database["public"]["Tables"]["questionarios"]["Row"];
 type QuestionarioUpdate = Database["public"]["Tables"]["questionarios"]["Update"];
 export type Aplicacao = Database["public"]["Tables"]["respostas_questionario"]["Row"];
 type AplicacaoUpdate = Database["public"]["Tables"]["respostas_questionario"]["Update"];
 
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
 // ---- Questionários (do sistema + próprios) ----
 /** Vivos que a RLS deixa ver: os 4 do sistema + os próprios (a tela ordena com `ordenarQuestionarios`). */
 export async function listarQuestionarios(): Promise<Questionario[]> {
-  const { data, error } = await supabase.from("questionarios").select("*").is("deleted_at", null).order("titulo", { ascending: true });
-  falhou(error);
-  return (data ?? []) as Questionario[];
+  const r = await lerNutricao("questionarios");
+  return (r.linhas ?? []) as Questionario[];
 }
 
 export async function criarQuestionario(nutricionistaId: string, r: RegistroQuestionario): Promise<Questionario> {
@@ -60,15 +58,8 @@ export const duplicarQuestionario = (q: Questionario, nutricionistaId: string): 
 // ---- Aplicações do paciente ----
 /** Aplicações vivas do paciente, mais recente primeiro. */
 export async function listarAplicacoesDoPaciente(pacienteId: string): Promise<Aplicacao[]> {
-  const { data, error } = await supabase
-    .from("respostas_questionario")
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as Aplicacao[];
+  const r = await lerNutricao("respostas_questionario_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as Aplicacao[];
 }
 
 export async function criarAplicacao(nutricionistaId: string, pacienteId: string, r: RegistroAplicacao): Promise<Aplicacao> {
@@ -108,7 +99,5 @@ export async function excluirAplicacao(id: string): Promise<void> {
   await acaoNutricao("aplicacao_excluir", { id });
 }
 
-/** Nome da nutricionista (assinatura do PDF) — mesma consulta das orientações (W10). */
-export { nomeDaNutricionista } from "@/nutricao/editor/lib/orientacoes";
-/** CRN/telefone/endereço no PDF quando já existirem (W15; preenchidos na W35). */
-export { dadosProfissionais } from "@/nutricao/prontuario/lib/documentos";
+/** Nome da nutricionista e CRN/telefone/endereço (assinatura do PDF) — a fonte única (hml-20b: o profiles de quem chama, pela função). */
+export { dadosProfissionais, nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";

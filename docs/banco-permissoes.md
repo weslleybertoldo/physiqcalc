@@ -130,6 +130,29 @@ O Supabase dá `EXECUTE` a `anon` e a `authenticated` em toda função nova. Por
   a `ler` da `nutricao`/`financeiro`, pelo campo `acao`, e a `minha_evolucao` da `admin-avaliacoes`, pelo campo `action` — pronta para
   quando o desvio 23 sair); as gravações dessas funções seguem indo 1 vez.
 
+## Principal: as leituras de saúde do Painel › Aluno pela função (hml-20b, H-42 · jeito 2, etapa 2)
+- A casca do aluno no painel (o cabeçalho, os KPIs e os cards), o Resumo (as anotações), o Prontuário ×10 (Anotações, Consultas,
+  Anamnese, Questionários, Exames, Avaliação 360, Gestacional, Fármaco-nutrientes, Documentos, Anexos), a Avaliação (a série do principal
+  e o "Editar") e o PDF "Dados & Evolução" não leem mais as tabelas, as RPCs e o Storage do principal no navegador: as libs mandam a ação
+  **`ler`** da `nutricao` (o mesmo motor e o mesmo catálogo da hml-20a — só ganharam as 27 consultas da 20b), que roda cada consulta
+  **como a pessoa** (o mesmo token): o select das 18 tabelas da área com as colunas do tipo (o `*` de antes, escrito coluna a coluna), o
+  filtro do aluno (`paciente_id` do corpo — o RLS de hoje decide se a pessoa vê; outra conta = lista vazia/`nao_encontrado`, como
+  antes), as vivas e a ordem de antes; as RPCs de leitura de hoje (`aluno_perfil`, `aluno_evolucao`, `aluno_anotacoes` — definer, com a
+  `w14_matricula_da_rota`, cujos códigos `sem_login`/`sem_acesso`/`aluno_inexistente` voltam como o erro do item —, e `exames_do_aluno`,
+  invoker); e o `profiles` de QUEM CHAMA (nome e dados profissionais — a única consulta "minha": o `id` vem do token, nunca do corpo).
+  Os modelos e catálogos (anamnese, questionários, exames, interações, documentos) seguem como a lib lia: sem filtro de dono — o RLS
+  decide os do sistema + os próprios.
+- **Storage:** as fotos de evolução da casca/Avaliação são assinadas na MESMA ida da `aluno_evolucao` (bucket `evolucao`, 1 h — a policy
+  de hoje deixa quem vê o aluno assinar); o Ver/Baixar dos anexos é a consulta `anexo_url { id, download }`: o servidor relê a linha
+  pelo id como a pessoa e assina SÓ o caminho dela no `anexos` do ambiente, com o prazo de hoje (60 s para baixar com o nome do
+  arquivo, 120 s para ver). Nenhum caminho nem nome vem do navegador; a URL volta relativa e a tela monta com o domínio dela.
+- Ficam no navegador (de OUTRA W): no Resumo, o plano e os ✓ (`planos_do_aluno`, `refeicoes_concluidas` — 20c) e os compromissos, o
+  responsável, o acesso e o "Editar dados" (`aluno_compromissos`, `aluno_responsavel`, `aluno_acesso`, `paciente_dado_livre` — H-43); o
+  aviso das mensagens desligadas (`mensagens_desligadas`, H-43); e o Treino do painel (a `treino-leitura`, a `admin-get-user` e a
+  `admin-semana-treinos`, já pelo servidor — desvio 22).
+- Nenhuma migration; os grants e as policies de LEITURA **ficam** (decisão 12 da spec hml-20: a função lê com a sessão da pessoa, que
+  precisa deles; os APKs antigos e o AAB ainda leem direto — desvio 2).
+
 ## Treino: quem lê os treinos montados
 - `tb_grupos_treino` e `tb_grupos_exercicios` (`physiq_pode_ler_grupo`): o master; o professor dono; qualquer profissional,
   se o grupo é do catálogo global do master (`professor_id` vazio); e o aluno que recebe o grupo (`tb_grupos_treino_perfis`).

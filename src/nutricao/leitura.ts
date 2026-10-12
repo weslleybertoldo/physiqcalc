@@ -5,7 +5,11 @@
 //     (supabase-principal/functions/_shared/nutricao-leituras.ts: ConsultaDaNutricao); as libs mantêm a assinatura e o tipo de hoje;
 //   · o erro vira ErroLeitura(codigo), cuja mensagem é o TEXTO FIXO do código (decisão 20 — a mensagem crua do banco não chega à tela);
 //     quem precisa do código (o app do aluno compara "sem_internet") usa o `codigo` ou troca a mensagem (src/nutricao/app/pacienteApp.ts).
+// hml-20b (Painel › Aluno): + a frase do muitas_linhas (o laço dos resultados de exame) e o urlAssinadaDoServidor — a URL assinada que o
+// servidor devolve RELATIVA (/storage/v1/object/sign/…) montada com o domínio do cliente do principal (a MESMA URL de hoje: o host das
+// funções fica fora do CSP do site), para as fotos da casca/Avaliação e o Ver/Baixar dos anexos.
 import { criarLeitor, type OpcoesLeitura, type ResultadoDeLeitura } from "@/integrations/leituraEmLote";
+import { PRINCIPAL_URL } from "@/integrations/principal/client";
 import { supabase } from "@/nutricao/editor/lib/banco";
 import type { ConsultaDaNutricao } from "../../supabase-principal/functions/_shared/nutricao-leituras";
 
@@ -27,6 +31,8 @@ export const MENSAGEM_ERRO_LEITURA: Record<string, string> = {
   muitas_acoes: "Muitas aberturas seguidas. Espere um pouco e tente de novo.",
   tempo_esgotado: "O servidor demorou para responder. Tente de novo.",
   erro_interno: "Não deu para carregar agora. Tente de novo.",
+  // hml-20b — o laço que passou do teto de leituras (os resultados de exame de um aluno: 50 × 1000)
+  muitas_linhas: "Informações demais para ler de uma vez.",
 };
 
 export function mensagemErroLeitura(codigo: string | null | undefined, padrao = "Não deu para carregar agora. Tente de novo."): string {
@@ -54,4 +60,17 @@ const leitor = criarLeitor({
 /** Uma leitura da nutricao, no lote da volta (1 chamada por tela). Erro → ErroLeitura com o código. */
 export function lerNutricao(q: ConsultaDaNutricao, params?: Record<string, unknown>, opcoes?: OpcoesLeitura): Promise<ResultadoDeLeitura> {
   return leitor(q, params, opcoes);
+}
+
+/** O começo da URL assinada de leitura que o servidor devolve (relativa ao projeto). */
+const PREFIXO_ASSINADA = "/storage/v1/object/sign/";
+
+/**
+ * hml-20b: a URL assinada que o servidor devolve (RELATIVA ao projeto — /storage/v1/object/sign/<bucket>/…?token=…) montada com o
+ * domínio do cliente do principal: a MESMA URL que o navegador assinava. Fora do formato (ou sem o domínio) → null (a tela mostra o
+ * "indisponível" dela, como quando a assinatura falhava).
+ */
+export function urlAssinadaDoServidor(relativa: unknown, base: string = PRINCIPAL_URL): string | null {
+  if (typeof relativa !== "string" || !relativa.startsWith(PREFIXO_ASSINADA) || !base) return null;
+  return `${base.replace(/\/+$/, "")}${relativa}`;
 }

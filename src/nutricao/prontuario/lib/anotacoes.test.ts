@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // hml-19a (H-41 · jeito 2): escrever passa pela função nutricao (functions.invoke) — gravar direto na tabela quebra o teste.
+// hml-20b (H-42): LER também — o `ler` roda o módulo de verdade do servidor (src/test/nutricaoFalsa.ts) sobre o banco falso daqui: a
+// aluno_anotacoes chega ao banco com os MESMOS args de quando a tela chamava direto (o h.rpc segue provando os args).
 const h = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn() }));
-vi.mock("@/nutricao/editor/lib/banco", () => ({
-  supabase: {
+vi.mock("@/nutricao/editor/lib/banco", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const banco = {
     rpc: h.rpc,
-    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
     from: (t: string) => {
       throw new Error(`gravação direta na tabela ${t}`);
     },
-  },
-}));
+  };
+  const invoke = (f: string, o: { body: Record<string, unknown> }) => (ehLer(o?.body) ? lerPeloModulo(banco)(o.body) : h.invoke(f, o));
+  return { supabase: { ...banco, functions: { invoke } } };
+});
 const recusa = (status: number, erro: string) => ({
   data: null,
   error: { name: "FunctionsHttpError", context: new Response(JSON.stringify({ ok: false, erro }), { status, headers: { "Content-Type": "application/json" } }) },
@@ -46,7 +50,8 @@ describe("W18 — anotações da equipe (dados)", () => {
   it("sem limite = todas; erro do banco vira texto que a pessoa entende", async () => {
     h.rpc.mockResolvedValue({ data: null, error: { message: "sem_acesso" } });
     await expect(listarAnotacoes("p1")).rejects.toThrow("Você não acompanha este aluno.");
-    expect(h.rpc).toHaveBeenCalledWith("aluno_anotacoes", { p_aluno: "p1", p_limite: null });
+    // hml-20b: todas = anotacoes_todas — sem o p_limite (o padrão null da RPC: todas), como o p_limite null de antes
+    expect(h.rpc).toHaveBeenCalledWith("aluno_anotacoes", { p_aluno: "p1" });
     expect(mensagemDoErro('new row violates row-level security policy for table "registros_prontuario"')).toBe(
       "Você não pode gravar essa anotação para este aluno.",
     );
@@ -102,7 +107,7 @@ describe("hml-14d (B21 · D33) — a aba em páginas: o p_offset só vai quando 
 
     h.rpc.mockResolvedValue({ data: { ok: true, paciente_id: "p1", total: 2, clinico: true, anotacoes: [] }, error: null });
     const todas = await listarAnotacoes("p1");
-    expect(h.rpc).toHaveBeenLastCalledWith("aluno_anotacoes", { p_aluno: "p1", p_limite: null });
+    expect(h.rpc).toHaveBeenLastCalledWith("aluno_anotacoes", { p_aluno: "p1" }); // hml-20b: o padrão null da RPC (todas)
     expect("ultima" in todas).toBe(false);
   });
 });

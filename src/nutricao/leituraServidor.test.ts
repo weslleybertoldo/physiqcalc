@@ -12,12 +12,19 @@ import {
   LOTE_MAX, LOTE_PARALELO, PREFIXO_ASSINADA, Q_MAX, TETO_MAX, UUIDS_MAX, VALIDADE_MAX_S, argsDaRpc, assinaturaRelativa, caminhosParaAssinar, comUrls,
   comUrlsNaLista, ehRpc, erroDaLeitura, lerParams, lerPedidoDeLeitura, planoDaTabela, rodarLote, urlsAssinadas, validadeDaAssinatura, valorDoParam,
   type CatalogoLeitura, type ConsultaLeitura, type FonteTabela, type ItemValido, type ParamLeitura, type RespostaDeItem,
+  // hml-20b
+  ERRO_MUITAS_LINHAS, LACO_LEITURAS_MAX, extrasDaTabela, intervaloDaPagina, nomeDoDownload,
 } from "../../supabase-principal/functions/_shared/leitura-lote";
 import {
-  CONSULTAS_DA_NUTRICAO, CONSULTAS_NUTRICAO, DIARIO_IDS_MAX, VALIDADE_URL_LEITURA_S, bucketDaLeitura, consultaDaNutricao,
+  BUCKETS_DE_LEITURA, CONSULTAS_DA_NUTRICAO, CONSULTAS_NUTRICAO, DIARIO_IDS_MAX, VALIDADE_URL_LEITURA_S, bucketDaLeitura, consultaDaNutricao,
+  // hml-20b
+  ANOTACOES_LIMITE_MAX, COLUNAS_DO_PAINEL, ERROS_DA_ROTA, EXAMES_LIMITE_MAX, EXAME_NOME_MAX, INT4_MAX, MAX_LEITURAS_RESULTADOS, POR_PAGINA_LEITURA,
+  RESULTADOS_POR_LEITURA, TETO_LISTA, VALIDADE_ANEXO_BAIXAR_S, VALIDADE_ANEXO_VER_S,
 } from "../../supabase-principal/functions/_shared/nutricao-leituras";
 import {
   ACOES_NUTRICAO, ACOES_DA_DIETA, ACOES_DO_ALUNO, ACOES_DA_AVALIACAO, erroDoBanco, moduloDoPedido,
+  // hml-20b
+  ERROS_DO_AVISO, bucketDosAnexos,
 } from "../../supabase-principal/functions/_shared/nutricao-regras";
 import { atenderLeitura } from "../../supabase-principal/functions/nutricao/leituras";
 import { RPC_SO_LEITURA } from "@/integrations/repeticao";
@@ -258,8 +265,10 @@ describe("hml-20a — o motor: a consulta montada NO SERVIDOR (dono, filtros, ar
 
 // ───────────────────────── o catálogo da nutricao ─────────────────────────
 describe("hml-20a — o catálogo da nutricao (as 3 consultas do app do aluno; as próximas W só acrescentam)", () => {
-  it("as consultas da 20a", () => {
-    expect([...CONSULTAS_DA_NUTRICAO].sort()).toEqual(["aluno_diario_urls", "aluno_dieta", "aluno_evolucao"]);
+  it("as consultas da 20a (hml-20b: seguem as 3, iguais; as da 20b só ACRESCENTARAM — a lista delas no bloco hml-20b abaixo)", () => {
+    const da20a = ["aluno_diario_urls", "aluno_dieta", "aluno_evolucao"];
+    expect([...CONSULTAS_DA_NUTRICAO].filter((q) => da20a.includes(q)).sort()).toEqual(da20a);
+    expect(CONSULTAS_DA_NUTRICAO.slice(0, 3)).toEqual(["aluno_dieta", "aluno_diario_urls", "aluno_evolucao"]); // o bloco da 20a na frente
     expect(consultaDaNutricao("aluno_dieta")).toBe(CONSULTAS_NUTRICAO.aluno_dieta);
     for (const q of ["__proto__", "constructor", "nao_existe", 1, null]) expect(consultaDaNutricao(q), String(q)).toBeNull();
   });
@@ -280,11 +289,41 @@ describe("hml-20a — o catálogo da nutricao (as 3 consultas do app do aluno; a
         expect(c.params[f.param], f.param).toBeDefined();
         expect(f.coluna).not.toBe(c.dono); // o dono nunca vem de param
       }
+      // hml-20b (revisão): os campos opcionais, na forma — a página com o param declarado (inteiro ≥ 1) e o tamanho no teto; o laço sem
+      // assinatura nem contagem (todas as linhas, uma leitura atrás da outra) e no teto de leituras; a de 1 linha com teto 1
+      const f = c.fonte;
+      if (f.pagina) {
+        expect(c.params[f.pagina.param], f.pagina.param).toMatchObject({ tipo: "inteiro", min: 1 });
+        expect(f.pagina.tamanho).toBeGreaterThan(0);
+        expect(f.pagina.tamanho).toBeLessThanOrEqual(TETO_MAX);
+        expect(f.laco).toBeUndefined();
+      }
+      if (f.laco) {
+        expect(c.assinar).toBeUndefined();
+        expect(f.contar).not.toBe(true);
+        expect(f.laco.tamanho).toBeGreaterThan(0);
+        expect(f.laco.tamanho).toBeLessThanOrEqual(TETO_MAX);
+        expect(f.laco.leituras).toBeGreaterThan(0);
+        expect(f.laco.leituras).toBeLessThanOrEqual(LACO_LEITURAS_MAX);
+      }
+      if (f.uma) expect(f.teto).toBe(1);
     }
+    if (ehRpc(c.fonte)) for (const e of c.fonte.erros ?? []) expect(e, e).toMatch(/^[a-z_]+$/); // os códigos de propósito: só códigos
     if (c.assinar) {
       expect(c.assinar.validade).toBeLessThanOrEqual(VALIDADE_MAX_S);
-      expect(["diario", "evolucao"]).toContain(c.assinar.bucket);
+      expect(BUCKETS_DE_LEITURA).toContain(c.assinar.bucket); // a lista fechada (20a: diario, evolucao; 20b: + anexos)
       if (!ehRpc(c.fonte)) expect(c.fonte.colunas).toContain(c.assinar.coluna);
+      // hml-20b (revisão): o "baixar com o nome" — só em tabela (1 URL por linha), o nome numa coluna que a PRÓPRIA consulta lê, o param
+      // dele declarado como booleano e o prazo dele no teto de 1 h
+      const d = c.assinar.download;
+      if (d) {
+        expect(ehRpc(c.fonte)).toBe(false);
+        expect(c.assinar.lista).toBeUndefined();
+        if (!ehRpc(c.fonte)) expect(c.fonte.colunas).toContain(d.nome);
+        expect(c.params[d.param], d.param).toEqual({ tipo: "booleano" });
+        expect(d.validade).toBeGreaterThan(0);
+        expect(d.validade).toBeLessThanOrEqual(VALIDADE_MAX_S);
+      }
     }
   });
 
@@ -509,5 +548,532 @@ describe("hml-20a (revisão) — o teto da validade da URL assinada vale para TO
       vi.doUnmock(caminho);
       vi.resetModules();
     }
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// hml-20b (H-42 · Painel › Aluno, 12/10/2026) — as ~29 consultas do painel (spec hml-20 §2.5.2) e os campos OPCIONAIS do motor que elas
+// usam (RPC com os códigos de propósito, página + total, laço, 1 linha, a URL de 1 arquivo com o "baixar"). As consultas da 20a não
+// declaram nenhum desses campos: o caminho delas é o de antes (os testes acima seguem iguais).
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+const ALUNO = "55555555-5555-4555-8555-555555555555";
+
+/** As consultas da 20b (o conjunto do contrato; os nomes que mudaram estão no progresso_20b). */
+const CONSULTAS_20B = [
+  "aluno_perfil", "aluno_evolucao_painel", "profissional", "anotacoes", "anotacoes_todas", "consultas_do_aluno", "anamneses_do_aluno", "modelos_anamnese",
+  "questionarios", "respostas_questionario_do_aluno", "pedidos_exame_do_aluno", "exames_do_aluno", "exames_catalogo", "resultados_exame_do_aluno",
+  "avaliacoes_integradas_do_aluno", "gestacoes_do_aluno", "registros_gestacionais", "interacoes_farmaco", "medicamentos_do_aluno",
+  "analises_farmaco_do_aluno", "documentos_do_aluno", "modelos_documento", "anexos_do_aluno", "anexo_url", "antropometrias_do_aluno", "antropometria",
+  "antropometrias_pdf",
+] as const;
+
+/** As listas do aluno (tabela + paciente_id = o aluno do corpo + vivas + a ordem da lib de hoje) — a lib, a tabela e a ordem. */
+const LISTAS_DO_ALUNO: Array<{ q: string; tabela: string; ordem: Array<[string, boolean]>; lib: string }> = [
+  { q: "consultas_do_aluno", tabela: "consultas", ordem: [["data", false], ["created_at", false]], lib: "prontuario/lib/consultas.ts listarConsultas" },
+  { q: "anamneses_do_aluno", tabela: "anamneses", ordem: [["data", false], ["created_at", false]], lib: "prontuario/lib/anamneses.ts listarAnamneses" },
+  { q: "respostas_questionario_do_aluno", tabela: "respostas_questionario", ordem: [["data", false], ["created_at", false]], lib: "questionarios.ts listarAplicacoesDoPaciente" },
+  { q: "avaliacoes_integradas_do_aluno", tabela: "avaliacoes_integradas", ordem: [["data", false], ["created_at", false]], lib: "avaliacaoIntegrada.ts listarAvaliacoes" },
+  { q: "gestacoes_do_aluno", tabela: "gestacoes", ordem: [["created_at", false]], lib: "gestacional.ts listarGestacoes" },
+  { q: "registros_gestacionais", tabela: "registros_gestacionais", ordem: [["data", false], ["created_at", false]], lib: "gestacional.ts listarRegistrosDoPaciente" },
+  { q: "medicamentos_do_aluno", tabela: "medicamentos_paciente", ordem: [["ativo", false], ["created_at", true]], lib: "farmaco.ts listarMedicamentosDoPaciente" },
+  { q: "analises_farmaco_do_aluno", tabela: "analises_farmaco", ordem: [["data", false], ["created_at", false]], lib: "farmaco.ts listarAnalises" },
+  { q: "documentos_do_aluno", tabela: "documentos", ordem: [["created_at", false]], lib: "documentos.ts listarDocumentosDoPaciente" },
+  { q: "anexos_do_aluno", tabela: "anexos", ordem: [["created_at", false]], lib: "anexos.ts listarAnexosDoPaciente" },
+  { q: "antropometrias_do_aluno", tabela: "antropometrias", ordem: [["data", false], ["created_at", false]], lib: "editor/lib/antropometrias.ts listarAntropometrias" },
+];
+/** Os modelos e catálogos (o RLS decide: os do sistema + os próprios — a lib não filtrava por dono, o servidor também não). */
+const LISTAS_DA_CONTA: Array<{ q: string; tabela: string; ordem: Array<[string, boolean]> }> = [
+  { q: "modelos_anamnese", tabela: "modelos_anamnese", ordem: [["favorito", false], ["titulo", true]] },
+  { q: "questionarios", tabela: "questionarios", ordem: [["titulo", true]] },
+  { q: "exames_catalogo", tabela: "exames_catalogo", ordem: [["favorito", false], ["nome", true]] },
+  { q: "interacoes_farmaco", tabela: "interacoes_farmaco_nutriente", ordem: [["medicamento", true], ["nutriente", true]] },
+  { q: "modelos_documento", tabela: "modelos_documento", ordem: [["favorito", false], ["titulo", true]] },
+];
+
+/** As colunas do Row de cada tabela no tipo gerado do principal (src/integrations/principal/types.ts) — o "tipo" que a lib devolve. */
+function colunasDoTipo(tabela: string): string[] {
+  const tipos = readFileSync(resolve(RAIZ, "src/integrations/principal/types.ts"), "utf-8");
+  const m = new RegExp(`\\n      ${tabela}: \\{\\n        Row: \\{\\n([\\s\\S]*?)\\n        \\}`).exec(tipos);
+  if (!m) throw new Error(`tabela ${tabela} fora do tipo gerado`);
+  return [...m[1].matchAll(/^ {10}([a-z_0-9]+)\??: /gm)].map((x) => x[1]).sort();
+}
+
+// ───────────────────────── o cliente falso da 20b (RLS simulado, count, range, createSignedUrl) ─────────────────────────
+interface Consulta20b {
+  tabela: string;
+  colunas: string | null;
+  contar: boolean;
+  filtros: Array<[string, string, unknown]>;
+  ordem: Array<[string, boolean]>;
+  limite: number | null;
+  range: [number, number] | null;
+}
+interface Banco20b {
+  rpc?: (nome: string, args: Record<string, unknown>) => { data: unknown; error: unknown };
+  tabela?: (c: Consulta20b) => { data: unknown; error: unknown; count?: number | null };
+  assinarUma?: (bucket: string, caminho: string, validade: number, opcoes?: { download: string }) => { data: unknown; error: unknown };
+  assinar?: (bucket: string, caminhos: string[], validade: number) => { data: unknown; error: unknown };
+}
+function clienteFalso20b(banco: Banco20b) {
+  const rpcs: Array<{ nome: string; args: Record<string, unknown> }> = [];
+  const consultas: Consulta20b[] = [];
+  const assinaturas: Array<{ bucket: string; caminhos: string[]; validade: number; opcoes?: { download: string } }> = [];
+  const cliente = {
+    rpc: async (nome: string, args: Record<string, unknown>) => {
+      rpcs.push({ nome, args });
+      return banco.rpc ? banco.rpc(nome, args) : { data: null, error: null };
+    },
+    from: (tabela: string) => ({
+      select: (colunas: string, opcoes?: { count?: string }) => {
+        const c: Consulta20b = { tabela, colunas, contar: opcoes?.count === "exact", filtros: [], ordem: [], limite: null, range: null };
+        consultas.push(c);
+        const fim = () => Promise.resolve(banco.tabela ? banco.tabela(c) : { data: [], error: null, count: c.contar ? 0 : null });
+        const b = {
+          in: (col: string, v: unknown) => (c.filtros.push(["in", col, v]), b),
+          eq: (col: string, v: unknown) => (c.filtros.push(["eq", col, v]), b),
+          is: (col: string, v: unknown) => (c.filtros.push(["is", col, v]), b),
+          order: (col: string, o: { ascending: boolean }) => (c.ordem.push([col, o.ascending]), b),
+          limit: (n: number) => ((c.limite = n), fim()),
+          range: (de: number, ate: number) => ((c.range = [de, ate]), fim()),
+        };
+        return b;
+      },
+    }),
+    storage: {
+      from: (bucket: string) => ({
+        createSignedUrls: async (caminhos: string[], validade: number) => {
+          assinaturas.push({ bucket, caminhos, validade });
+          return banco.assinar ? banco.assinar(bucket, caminhos, validade) : assinadas(bucket, caminhos);
+        },
+        createSignedUrl: async (caminho: string, validade: number, opcoes?: { download: string }) => {
+          assinaturas.push({ bucket, caminhos: [caminho], validade, ...(opcoes ? { opcoes } : {}) });
+          if (banco.assinarUma) return banco.assinarUma(bucket, caminho, validade, opcoes);
+          const extra = opcoes ? `&download=${encodeURIComponent(opcoes.download)}` : "";
+          return { data: { signedUrl: `https://hkxv.supabase.co${PREFIXO_ASSINADA}${bucket}/${caminho}?token=t1${extra}` }, error: null };
+        },
+      }),
+    },
+  };
+  return { cliente, rpcs, consultas, assinaturas };
+}
+function contexto20b(itens: unknown[], banco: Banco20b, prazo?: { esgotado(): boolean }) {
+  const f = clienteFalso20b(banco);
+  const log = { info: vi.fn(), aviso: vi.fn(), erro: vi.fn(), excecao: vi.fn() };
+  const c = { schema: "staging" as const, origin: null, corpo: { acao: "ler", itens }, userId: EU, comoPessoa: f.cliente, log, ...(prazo ? { prazo } : {}) };
+  return { c: c as unknown as Parameters<typeof atenderLeitura>[0], ...f, log };
+}
+const raise = (codigo: string) => ({ data: null, error: { code: "P0001", message: codigo, details: null, hint: null } });
+
+describe("hml-20b — o motor: os campos opcionais (página, total, laço, 1 linha, baixar, códigos de propósito)", () => {
+  it("erroDaLeitura com os códigos de propósito: a mensagem conhecida volta como ela (não inesperado); sem a lista, a tabela de sempre", () => {
+    for (const codigo of ERROS_DA_ROTA) {
+      expect(erroDaLeitura({ code: "P0001", message: codigo }, ERROS_DA_ROTA), codigo).toEqual({ erro: codigo, inesperado: false });
+      expect(erroDaLeitura({ code: "P0001", message: codigo }), codigo).toEqual(erroDoBanco({ code: "P0001", message: codigo })); // a 20a
+    }
+    expect(ERROS_DA_ROTA).toEqual(ERROS_DO_AVISO); // os da w14_matricula_da_rota (a 19c já os conhecia)
+    expect(erroDaLeitura({ code: "P0001", message: "outra coisa" }, ERROS_DA_ROTA)).toEqual({ erro: "erro_interno", inesperado: true });
+    expect(erroDaLeitura({ code: "42501", message: "sem_acesso" }, [])).toEqual({ erro: "sem_acesso", inesperado: false });
+    expect(erroDaLeitura({ code: "22P02", message: "invalid input syntax" }, ERROS_DA_ROTA)).toEqual({ erro: "dados_invalidos", inesperado: false });
+  });
+
+  it("intervaloDaPagina: a página (a 1ª é 1) no tamanho, no teto de 1000 — o intervalo() da tela", () => {
+    expect(intervaloDaPagina(1, 20)).toEqual([0, 19]);
+    expect(intervaloDaPagina(3, 20)).toEqual([40, 59]);
+    expect(intervaloDaPagina(0, 20)).toEqual([0, 19]);
+    expect(intervaloDaPagina(2.7, 20)).toEqual([20, 39]);
+    expect(intervaloDaPagina(2, 5000)).toEqual([1000, 1999]);
+    expect(intervaloDaPagina(Number.NaN, 20)).toEqual([0, 19]);
+  });
+
+  it("extrasDaTabela: nada nas consultas da 20a (o caminho de antes); a página, a contagem, o laço (no teto) e o 1 linha nas da 20b", () => {
+    const vazio = { intervalo: null, contar: false, laco: null, uma: false };
+    expect(extrasDaTabela(CONSULTAS_NUTRICAO.aluno_diario_urls.fonte as FonteTabela, { ids: [D1] })).toEqual(vazio);
+    expect(extrasDaTabela(CONSULTAS_NUTRICAO.consultas_do_aluno.fonte as FonteTabela, { aluno: ALUNO })).toEqual(vazio);
+    expect(extrasDaTabela(CONSULTAS_NUTRICAO.pedidos_exame_do_aluno.fonte as FonteTabela, { aluno: ALUNO, pagina: 3 })).toEqual({ ...vazio, intervalo: [40, 59], contar: true });
+    expect(extrasDaTabela(CONSULTAS_NUTRICAO.resultados_exame_do_aluno.fonte as FonteTabela, { aluno: ALUNO })).toEqual({ ...vazio, laco: { tamanho: 1000, leituras: 50 } });
+    expect(extrasDaTabela({ tabela: "x", colunas: ["id"], teto: 1, laco: { tamanho: 9999, leituras: 999 } }, {}).laco).toEqual({ tamanho: 1000, leituras: LACO_LEITURAS_MAX });
+    expect(extrasDaTabela(CONSULTAS_NUTRICAO.anexo_url.fonte as FonteTabela, { id: D1 })).toEqual({ ...vazio, uma: true });
+    expect(extrasDaTabela(CONSULTAS_NUTRICAO.antropometria.fonte as FonteTabela, { id: D1 })).toEqual({ ...vazio, uma: true });
+  });
+
+  it("nomeDoDownload: só com o download declarado, o param = true e o nome (da linha que a consulta leu) em texto", () => {
+    const a = CONSULTAS_NUTRICAO.anexo_url.assinar;
+    expect(nomeDoDownload(a, { download: true }, { path: "p", nome: "Laudo.pdf" })).toBe("Laudo.pdf");
+    expect(nomeDoDownload(a, { download: false }, { path: "p", nome: "Laudo.pdf" })).toBeNull();
+    expect(nomeDoDownload(a, {}, { path: "p", nome: "Laudo.pdf" })).toBeNull();
+    expect(nomeDoDownload(a, { download: true }, { path: "p", nome: "  " })).toBeNull();
+    expect(nomeDoDownload(a, { download: true }, { path: "p", nome: 3 })).toBeNull();
+    expect(nomeDoDownload({ download: undefined }, { download: true }, { nome: "x" })).toBeNull();
+  });
+});
+
+describe("hml-20b — o catálogo do Painel › Aluno (forma, dono, colunas = as do tipo, códigos de propósito)", () => {
+  it("as consultas da 20b — o conjunto do contrato (só acrescentou: 20a + 20b = o catálogo)", () => {
+    expect(CONSULTAS_DA_NUTRICAO.slice(3)).toEqual([...CONSULTAS_20B]);
+    expect(CONSULTAS_DA_NUTRICAO).toHaveLength(3 + CONSULTAS_20B.length);
+  });
+
+  it("as colunas de cada tabela = as do Row do tipo gerado (o select('*') de hoje, escrito coluna a coluna); o PDF e o profiles, os recortes", () => {
+    for (const [tabela, colunas] of Object.entries(COLUNAS_DO_PAINEL)) {
+      if (tabela === "antropometrias_pdf" || tabela === "profiles") continue;
+      expect([...colunas].sort(), tabela).toEqual(colunasDoTipo(tabela));
+    }
+    // o PDF lia estas 12 (painel/aluno/dados/pdf.ts) e o profissional, nome + dados profissionais (profissional.ts)
+    expect(COLUNAS_DO_PAINEL.antropometrias_pdf).toEqual([
+      "id", "data", "peso", "altura", "sexo", "idade", "circunferencias", "dobras", "protocolo", "resultados", "nutricionista_id", "created_at",
+    ]);
+    for (const col of COLUNAS_DO_PAINEL.antropometrias_pdf) expect(colunasDoTipo("antropometrias"), col).toContain(col);
+    expect(COLUNAS_DO_PAINEL.profiles).toEqual(["nome", "dados_profissionais"]);
+    for (const col of COLUNAS_DO_PAINEL.profiles) expect(colunasDoTipo("profiles"), col).toContain(col);
+  });
+
+  it("'minha' = SÓ o profissional (o id = quem chama); os modelos/catálogos o RLS decide (a lib não filtrava por dono)", () => {
+    const comDono = CONSULTAS_20B.filter((q) => (CONSULTAS_NUTRICAO[q] as ConsultaLeitura).dono);
+    expect(comDono).toEqual(["profissional"]);
+    expect(CONSULTAS_NUTRICAO.profissional.dono).toBe("id");
+    for (const { q } of LISTAS_DA_CONTA) {
+      const c = CONSULTAS_NUTRICAO[q as keyof typeof CONSULTAS_NUTRICAO] as ConsultaLeitura;
+      expect(c.params, q).toEqual({});
+      expect(c.dono, q).toBeUndefined();
+      expect((c.fonte as FonteTabela).filtros, q).toBeUndefined();
+    }
+  });
+
+  it("as RPCs: os args montados aqui e os códigos de propósito da w14_matricula_da_rota (aluno_perfil, aluno_evolucao, aluno_anotacoes)", () => {
+    expect(CONSULTAS_NUTRICAO.aluno_perfil.fonte).toEqual({ rpc: "aluno_perfil", args: { p_aluno: "aluno" }, erros: ERROS_DO_AVISO });
+    expect(CONSULTAS_NUTRICAO.aluno_evolucao_painel.fonte).toEqual({ rpc: "aluno_evolucao", args: { p_aluno: "aluno" }, erros: ERROS_DO_AVISO });
+    expect(CONSULTAS_NUTRICAO.aluno_evolucao_painel.assinar).toEqual({ bucket: "evolucao", coluna: "path", lista: "fotos", validade: 3600 });
+    expect(CONSULTAS_NUTRICAO.anotacoes.fonte).toEqual({ rpc: "aluno_anotacoes", args: { p_aluno: "aluno", p_limite: "limite", p_offset: "offset" }, erros: ERROS_DO_AVISO });
+    expect(CONSULTAS_NUTRICAO.anotacoes.params).toEqual({
+      aluno: { tipo: "uuid", obrigatorio: true }, limite: { tipo: "inteiro", min: 1, max: ANOTACOES_LIMITE_MAX, obrigatorio: true },
+      offset: { tipo: "inteiro", min: 0, max: INT4_MAX },
+    });
+    expect(CONSULTAS_NUTRICAO.anotacoes_todas.fonte).toEqual({ rpc: "aluno_anotacoes", args: { p_aluno: "aluno" }, erros: ERROS_DO_AVISO });
+    // a exames_do_aluno é INVOKER, sem a w14 (não levanta código): a tabela de sempre
+    expect(CONSULTAS_NUTRICAO.exames_do_aluno.fonte).toEqual({ rpc: "exames_do_aluno", args: { p_aluno: "aluno", p_exame: "exame", p_offset: "offset", p_limite: "limite" } });
+    expect(CONSULTAS_NUTRICAO.exames_do_aluno.params).toEqual({
+      aluno: { tipo: "uuid", obrigatorio: true }, exame: { tipo: "texto", max: EXAME_NOME_MAX },
+      offset: { tipo: "inteiro", min: 0, max: INT4_MAX, obrigatorio: true }, limite: { tipo: "inteiro", min: 1, max: EXAMES_LIMITE_MAX, obrigatorio: true },
+    });
+    expect([ANOTACOES_LIMITE_MAX, EXAMES_LIMITE_MAX, EXAME_NOME_MAX, INT4_MAX]).toEqual([500, 100, 500, 2_147_483_647]);
+  });
+
+  it("as pesadas vão sozinhas (resultados em laço, a URL por clique); o resto, no lote da tela", () => {
+    expect(CONSULTAS_20B.filter((q) => (CONSULTAS_NUTRICAO[q] as ConsultaLeitura).sozinha === true)).toEqual(["resultados_exame_do_aluno", "anexo_url"]);
+  });
+
+  it("anexo_url: relê id/path/nome pelo id (só as vivas, 1 linha) e assina no anexos do ambiente — 60 s baixar com o nome, 120 s ver", () => {
+    expect(CONSULTAS_NUTRICAO.anexo_url.params).toEqual({ id: { tipo: "uuid", obrigatorio: true }, download: { tipo: "booleano" } });
+    expect(CONSULTAS_NUTRICAO.anexo_url.fonte).toEqual({
+      tabela: "anexos", colunas: ["id", "path", "nome"], teto: 1, filtros: [{ param: "id", coluna: "id", op: "eq" }], vivas: true, uma: true,
+    });
+    expect(CONSULTAS_NUTRICAO.anexo_url.assinar).toEqual({ bucket: "anexos", coluna: "path", validade: 120, download: { param: "download", nome: "nome", validade: 60 } });
+    expect([VALIDADE_ANEXO_BAIXAR_S, VALIDADE_ANEXO_VER_S]).toEqual([60, 120]);
+    expect(bucketDaLeitura("anexos", "staging")).toBe("anexos-staging");
+    expect(bucketDaLeitura("anexos", "public")).toBe("anexos");
+    for (const s of ["public", "staging"] as const) expect(bucketDaLeitura("anexos", s)).toBe(bucketDosAnexos(s));
+    expect(BUCKETS_DE_LEITURA).toEqual(["diario", "evolucao", "anexos"]);
+  });
+
+  it("a página dos pedidos (20, com o total), o laço dos resultados (1000 × 50) e o 1 linha do Editar; os tetos", () => {
+    expect(CONSULTAS_NUTRICAO.pedidos_exame_do_aluno.params).toEqual({ aluno: { tipo: "uuid", obrigatorio: true }, pagina: { tipo: "inteiro", min: 1, max: INT4_MAX, obrigatorio: true } });
+    expect(CONSULTAS_NUTRICAO.pedidos_exame_do_aluno.fonte).toMatchObject({ pagina: { param: "pagina", tamanho: 20 }, contar: true, ordem: [{ coluna: "data", asc: false }, { coluna: "created_at", asc: false }, { coluna: "id", asc: false }] });
+    expect(CONSULTAS_NUTRICAO.resultados_exame_do_aluno.fonte).toMatchObject({ laco: { tamanho: 1000, leituras: 50 }, ordem: [{ coluna: "data", asc: false }, { coluna: "exame", asc: true }, { coluna: "id", asc: true }] });
+    expect([POR_PAGINA_LEITURA, RESULTADOS_POR_LEITURA, MAX_LEITURAS_RESULTADOS, TETO_LISTA]).toEqual([20, 1000, 50, 1000]);
+    // o Editar da Avaliação lia pelo id SEM o filtro das vivas (.select("*").eq("id", …).maybeSingle()) — igual
+    expect(CONSULTAS_NUTRICAO.antropometria.fonte).toEqual({
+      tabela: "antropometrias", colunas: COLUNAS_DO_PAINEL.antropometrias, teto: 1, filtros: [{ param: "id", coluna: "id", op: "eq" }], uma: true,
+    });
+    expect(CONSULTAS_NUTRICAO.antropometrias_pdf.params).toEqual({ paciente: { tipo: "uuid", obrigatorio: true } });
+    expect(CONSULTAS_NUTRICAO.antropometrias_pdf.fonte).toMatchObject({ filtros: [{ param: "paciente", coluna: "paciente_id", op: "eq" }], vivas: true, ordem: [{ coluna: "data", asc: true }] });
+  });
+});
+
+describe("hml-20b — cada consulta nova no módulo (como a pessoa, com o RLS simulado): positivo e negativo", () => {
+  it.each(LISTAS_DO_ALUNO.map((l) => [l.q, l] as const))("%s: as colunas do tipo, paciente_id = o aluno, as vivas, a ordem da lib, teto 1000; o corpo não vira filtro", async (_q, l) => {
+    const linhas = [{ id: D1 }, { id: D2 }];
+    const { c, consultas, rpcs } = contexto20b([{ q: l.q, aluno: ALUNO, nutricionista_id: OUTRA, user_id: OUTRA, paciente_id: OUTRA, deleted_at: "x", colunas: "*" }], {
+      tabela: () => ({ data: linhas, error: null }),
+    });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, linhas }]);
+    expect(rpcs).toEqual([]);
+    expect(consultas).toEqual([{
+      tabela: l.tabela, colunas: COLUNAS_DO_PAINEL[l.tabela as keyof typeof COLUNAS_DO_PAINEL].join(", "), contar: false,
+      filtros: [["eq", "paciente_id", ALUNO], ["is", "deleted_at", null]], ordem: l.ordem, limite: 1000, range: null,
+    }]);
+    expect(consultas[0].colunas).not.toContain("*");
+  });
+
+  it.each(LISTAS_DO_ALUNO.map((l) => l.q))("%s: aluno ruim ou faltando → dados_invalidos (nada roda)", async (q) => {
+    const { c, consultas } = contexto20b([{ q, aluno: "abc" }, { q }, { q, aluno: 5 }], {});
+    expect(itensDa(await atenderLeitura(c))).toEqual(Array(3).fill({ ok: false, erro: "dados_invalidos" }));
+    expect(consultas).toEqual([]);
+  });
+
+  it("N1 (como hoje): outra conta — o RLS devolve vazio → lista vazia, nunca uma linha do aluno", async () => {
+    const { c } = contexto20b(LISTAS_DO_ALUNO.map((l) => ({ q: l.q, aluno: ALUNO })), { tabela: () => ({ data: [], error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual(Array(LISTAS_DO_ALUNO.length).fill({ ok: true, linhas: [] }));
+  });
+
+  it.each(LISTAS_DA_CONTA.map((l) => [l.q, l] as const))("%s: o RLS decide (sem filtro de dono nem do corpo), as vivas e a ordem da lib", async (_q, l) => {
+    const { c, consultas } = contexto20b([{ q: l.q, nutricionista_id: OUTRA, user_id: OUTRA, aluno: ALUNO }], { tabela: () => ({ data: [{ id: D1 }], error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, linhas: [{ id: D1 }] }]);
+    expect(consultas).toEqual([{
+      tabela: l.tabela, colunas: COLUNAS_DO_PAINEL[l.tabela as keyof typeof COLUNAS_DO_PAINEL].join(", "), contar: false,
+      filtros: [["is", "deleted_at", null]], ordem: l.ordem, limite: 1000, range: null,
+    }]);
+  });
+
+  it("profissional: o profiles de QUEM CHAMA (id = o user do token), nome + dados profissionais, 1 linha; o id do corpo é ignorado", async () => {
+    const { c, consultas } = contexto20b([{ q: "profissional", id: OUTRA, user_id: OUTRA, nutricionista_id: OUTRA }], {
+      tabela: () => ({ data: [{ nome: "Camila", dados_profissionais: { crn: "1" } }], error: null }),
+    });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, linhas: [{ nome: "Camila", dados_profissionais: { crn: "1" } }] }]);
+    expect(consultas).toEqual([{ tabela: "profiles", colunas: "nome, dados_profissionais", contar: false, filtros: [["eq", "id", EU]], ordem: [], limite: 1, range: null }]);
+  });
+
+  it("aluno_perfil: a aluno_perfil(p_aluno) como a pessoa; o código de propósito volta como ele (aviso, não excecao); o resto, erro_interno", async () => {
+    const perfil = { ok: true, paciente_id: D1, nome: "Aluna" };
+    const ok = contexto20b([{ q: "aluno_perfil", aluno: ALUNO, p_aluno: OUTRA }], { rpc: () => ({ data: perfil, error: null }) });
+    expect(itensDa(await atenderLeitura(ok.c))).toEqual([{ ok: true, valor: perfil }]);
+    expect(ok.rpcs).toEqual([{ nome: "aluno_perfil", args: { p_aluno: ALUNO } }]);
+    for (const codigo of ERROS_DO_AVISO) {
+      const r = contexto20b([{ q: "aluno_perfil", aluno: ALUNO }], { rpc: () => raise(codigo) });
+      expect(itensDa(await atenderLeitura(r.c)), codigo).toEqual([{ ok: false, erro: codigo }]);
+      expect(r.log.excecao, codigo).not.toHaveBeenCalled();
+      expect(r.log.aviso).toHaveBeenCalledWith(expect.objectContaining({ codigo, acao: "aluno_perfil", pg: "P0001" }));
+    }
+    const ruim = contexto20b([{ q: "aluno_perfil", aluno: ALUNO }], { rpc: () => raise("division_by_zero qualquer") });
+    expect(itensDa(await atenderLeitura(ruim.c))).toEqual([{ ok: false, erro: "erro_interno" }]);
+    expect(ruim.log.excecao).toHaveBeenCalledTimes(1);
+  });
+
+  it("aluno_evolucao_painel: a aluno_evolucao(p_aluno) + as URLs das fotos na MESMA ida — só os caminhos que a RPC devolveu (N8), evolucao do ambiente, 1 h", async () => {
+    const valor = { paciente_id: D1, objetivo: null, antropometrias: [{ id: "a1" }], fotos: [{ id: "f1", path: `${EU}/${D1}/x.jpg` }] };
+    const { c, rpcs, assinaturas } = contexto20b([{ q: "aluno_evolucao_painel", aluno: ALUNO, path: "outra/pasta/z.jpg", caminhos: ["outra/pasta/z.jpg"] }], {
+      rpc: () => ({ data: valor, error: null }),
+      assinar: (bucket, caminhos) => assinadas(bucket, caminhos, ["outra/pasta/z.jpg"]),
+    });
+    const [item] = itensDa(await atenderLeitura(c));
+    expect(rpcs).toEqual([{ nome: "aluno_evolucao", args: { p_aluno: ALUNO } }]);
+    expect(assinaturas).toEqual([{ bucket: "evolucao-staging", caminhos: [`${EU}/${D1}/x.jpg`], validade: 3600 }]);
+    const p = `${EU}/${D1}/x.jpg`;
+    expect(item).toEqual({ ok: true, valor: { ...valor, fotos: [{ id: "f1", path: p, url: `${PREFIXO_ASSINADA}evolucao-staging/${p}?token=t-${p.length}` }] } });
+    // N1: outra conta → a w14 levanta sem_acesso → o código, e nada é assinado
+    const n1 = contexto20b([{ q: "aluno_evolucao_painel", aluno: ALUNO }], { rpc: () => raise("sem_acesso") });
+    expect(itensDa(await atenderLeitura(n1.c))).toEqual([{ ok: false, erro: "sem_acesso" }]);
+    expect(n1.assinaturas).toEqual([]);
+  });
+
+  it("anotacoes: as últimas N (card), a página (limite + offset) e todas (anotacoes_todas, o PDF) — os args de hoje; os negativos", async () => {
+    const valor = { ok: true, paciente_id: D1, total: 0, clinico: true, anotacoes: [] };
+    const { c, rpcs } = contexto20b([
+      { q: "anotacoes", aluno: ALUNO, limite: 3 },
+      { q: "anotacoes", aluno: ALUNO, limite: 20, offset: 40 },
+      { q: "anotacoes_todas", aluno: ALUNO, limite: 3, offset: 0, p_limite: 9 },
+      { q: "anotacoes", aluno: ALUNO }, // sem limite → dados_invalidos (todas = anotacoes_todas)
+      { q: "anotacoes", aluno: ALUNO, limite: 0 },
+      { q: "anotacoes", aluno: ALUNO, limite: ANOTACOES_LIMITE_MAX + 1 },
+      { q: "anotacoes", aluno: ALUNO, limite: 20, offset: -1 },
+      { q: "anotacoes", aluno: ALUNO, limite: 2.5 },
+    ], { rpc: () => ({ data: valor, error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual([
+      { ok: true, valor }, { ok: true, valor }, { ok: true, valor },
+      ...Array(5).fill({ ok: false, erro: "dados_invalidos" }),
+    ]);
+    expect(rpcs).toEqual([
+      { nome: "aluno_anotacoes", args: { p_aluno: ALUNO, p_limite: 3 } },
+      { nome: "aluno_anotacoes", args: { p_aluno: ALUNO, p_limite: 20, p_offset: 40 } },
+      { nome: "aluno_anotacoes", args: { p_aluno: ALUNO } },
+    ]);
+  });
+
+  it("exames_do_aluno: os args de hoje (o p_exame só quando há filtro); texto acima do teto e limite fora da faixa → dados_invalidos", async () => {
+    const valor = { ok: true, total_datas: 0, datas: [] };
+    const { c, rpcs } = contexto20b([
+      { q: "exames_do_aluno", aluno: ALUNO, offset: 20, limite: 20 },
+      { q: "exames_do_aluno", aluno: ALUNO, exame: "HDL", offset: 0, limite: 20 },
+      { q: "exames_do_aluno", aluno: ALUNO, exame: "x".repeat(EXAME_NOME_MAX + 1), offset: 0, limite: 20 },
+      { q: "exames_do_aluno", aluno: ALUNO, offset: 0, limite: EXAMES_LIMITE_MAX + 1 },
+      { q: "exames_do_aluno", aluno: ALUNO, limite: 20 },
+    ], { rpc: () => ({ data: valor, error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, valor }, { ok: true, valor }, ...Array(3).fill({ ok: false, erro: "dados_invalidos" })]);
+    expect(rpcs).toEqual([
+      { nome: "exames_do_aluno", args: { p_aluno: ALUNO, p_offset: 20, p_limite: 20 } },
+      { nome: "exames_do_aluno", args: { p_aluno: ALUNO, p_exame: "HDL", p_offset: 0, p_limite: 20 } },
+    ]);
+  });
+
+  it("pedidos_exame_do_aluno: a PÁGINA com o count exato (o total), a ordem estável; sem a contagem → erro_interno; página 0 → dados_invalidos", async () => {
+    const { c, consultas } = contexto20b([{ q: "pedidos_exame_do_aluno", aluno: ALUNO, pagina: 3, offset: 0 }], {
+      tabela: (q) => ({ data: [{ id: "p40" }], error: null, count: q.contar ? 41 : null }),
+    });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, linhas: [{ id: "p40" }], total: 41 }]);
+    expect(consultas).toEqual([{
+      tabela: "pedidos_exame", colunas: COLUNAS_DO_PAINEL.pedidos_exame.join(", "), contar: true, filtros: [["eq", "paciente_id", ALUNO], ["is", "deleted_at", null]],
+      ordem: [["data", false], ["created_at", false], ["id", false]], limite: null, range: [40, 59],
+    }]);
+    const semConta = contexto20b([{ q: "pedidos_exame_do_aluno", aluno: ALUNO, pagina: 1 }], { tabela: () => ({ data: [], error: null, count: null }) });
+    expect(itensDa(await atenderLeitura(semConta.c))).toEqual([{ ok: false, erro: "erro_interno" }]);
+    const ruim = contexto20b([{ q: "pedidos_exame_do_aluno", aluno: ALUNO, pagina: 0 }, { q: "pedidos_exame_do_aluno", aluno: ALUNO }], {});
+    expect(itensDa(await atenderLeitura(ruim.c))).toEqual(Array(2).fill({ ok: false, erro: "dados_invalidos" }));
+    expect(ruim.consultas).toEqual([]);
+  });
+
+  it("resultados_exame_do_aluno: TODOS, em leituras de 1000 com a ordem estável até a última (2007 → 3 leituras; 1000 exato → 2)", async () => {
+    const linhas = Array.from({ length: 2007 }, (_, i) => ({ id: `r${i}` }));
+    const fatia = (q: Consulta20b) => ({ data: linhas.slice(q.range![0], q.range![1] + 1), error: null });
+    const { c, consultas } = contexto20b([{ q: "resultados_exame_do_aluno", aluno: ALUNO }], { tabela: fatia });
+    const [item] = itensDa(await atenderLeitura(c));
+    expect(item).toEqual({ ok: true, linhas });
+    expect(consultas.map((q) => q.range)).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
+    expect(consultas[0]).toMatchObject({ tabela: "resultados_exame", colunas: COLUNAS_DO_PAINEL.resultados_exame.join(", "), contar: false, limite: null,
+      filtros: [["eq", "paciente_id", ALUNO], ["is", "deleted_at", null]], ordem: [["data", false], ["exame", true], ["id", true]] });
+    const mil = Array.from({ length: 1000 }, (_, i) => ({ id: `r${i}` }));
+    const exato = contexto20b([{ q: "resultados_exame_do_aluno", aluno: ALUNO }], { tabela: (q) => ({ data: mil.slice(q.range![0], q.range![1] + 1), error: null }) });
+    expect(itensDa(await atenderLeitura(exato.c))).toEqual([{ ok: true, linhas: mil }]);
+    expect(exato.consultas).toHaveLength(2);
+  });
+
+  it("resultados_exame_do_aluno: passou de 50 leituras → muitas_linhas (aviso); o prazo do pedido esgotado → tempo_esgotado (sem ler mais); o erro de uma leitura → o código", async () => {
+    const cheia = (q: Consulta20b) => ({ data: Array.from({ length: q.range![1] - q.range![0] + 1 }, (_, i) => ({ id: q.range![0] + i })), error: null });
+    const muitas = contexto20b([{ q: "resultados_exame_do_aluno", aluno: ALUNO }], { tabela: cheia });
+    expect(itensDa(await atenderLeitura(muitas.c))).toEqual([{ ok: false, erro: ERRO_MUITAS_LINHAS }]);
+    expect(muitas.consultas).toHaveLength(50);
+    expect(muitas.log.aviso).toHaveBeenCalledWith({ codigo: "muitas_linhas", schema: "staging", acao: "resultados_exame_do_aluno", n: 50 });
+    let leituras = 0;
+    const prazo = { esgotado: () => leituras >= 2 };
+    const esgotou = contexto20b([{ q: "resultados_exame_do_aluno", aluno: ALUNO }], { tabela: (q) => (leituras++, cheia(q)) }, prazo);
+    expect(itensDa(await atenderLeitura(esgotou.c))).toEqual([{ ok: false, erro: "tempo_esgotado" }]);
+    expect(esgotou.consultas).toHaveLength(2);
+    expect(esgotou.log.excecao).toHaveBeenCalledTimes(1);
+    const falha = contexto20b([{ q: "resultados_exame_do_aluno", aluno: ALUNO }], {
+      tabela: (q) => (q.range![0] === 0 ? cheia(q) : { data: null, error: { code: "42501", message: "permission denied" } }),
+    });
+    expect(itensDa(await atenderLeitura(falha.c))).toEqual([{ ok: false, erro: "sem_acesso" }]);
+  });
+
+  it("anexo_url: relê a linha pelo id COMO A PESSOA (vivas, 1) e assina SÓ o caminho dela, com o nome dela — o corpo não manda caminho nem nome (N8)", async () => {
+    const linha = { id: D1, path: `${EU}/${ALUNO}/${D1}-Laudo final.pdf`, nome: "Laudo final.pdf" };
+    const { c, consultas, assinaturas } = contexto20b([
+      { q: "anexo_url", id: D1, download: true, path: "outra/pasta/z.pdf", nome: "outro.pdf" },
+      { q: "anexo_url", id: D1, download: false },
+    ], { tabela: () => ({ data: [linha], error: null }) });
+    const [baixar, ver] = itensDa(await atenderLeitura(c));
+    expect(consultas).toEqual(Array(2).fill({
+      tabela: "anexos", colunas: "id, path, nome", contar: false, filtros: [["eq", "id", D1], ["is", "deleted_at", null]], ordem: [], limite: 1, range: null,
+    }));
+    expect(assinaturas).toEqual([
+      { bucket: "anexos-staging", caminhos: [linha.path], validade: 60, opcoes: { download: "Laudo final.pdf" } },
+      { bucket: "anexos-staging", caminhos: [linha.path], validade: 120 },
+    ]);
+    expect(baixar).toEqual({ ok: true, linhas: [{ ...linha, url: `${PREFIXO_ASSINADA}anexos-staging/${linha.path}?token=t1&download=Laudo%20final.pdf` }] });
+    expect(ver).toEqual({ ok: true, linhas: [{ ...linha, url: `${PREFIXO_ASSINADA}anexos-staging/${linha.path}?token=t1` }] });
+  });
+
+  it("anexo_url: outra conta / já excluído (0 linha) → nao_encontrado, nada assinado; o Storage fora → url null + aviso (sem o caminho); id ruim → dados_invalidos", async () => {
+    const vazio = contexto20b([{ q: "anexo_url", id: D1, download: true }], { tabela: () => ({ data: [], error: null }) });
+    expect(itensDa(await atenderLeitura(vazio.c))).toEqual([{ ok: false, erro: "nao_encontrado" }]);
+    expect(vazio.assinaturas).toEqual([]);
+    const linha = { id: D1, path: "n/p/a.pdf", nome: "a.pdf" };
+    const fora = contexto20b([{ q: "anexo_url", id: D1 }], { tabela: () => ({ data: [linha], error: null }), assinarUma: () => ({ data: null, error: { status: 400, message: "Object not found" } }) });
+    expect(itensDa(await atenderLeitura(fora.c))).toEqual([{ ok: true, linhas: [{ ...linha, url: null }] }]);
+    expect(fora.log.aviso).toHaveBeenCalledWith({ codigo: "assinar_falhou", schema: "staging", acao: "anexo_url", status: 400, n: 1 });
+    const ruim = contexto20b([{ q: "anexo_url", id: "../x" }, { q: "anexo_url", id: D1, download: "sim" }], {});
+    expect(itensDa(await atenderLeitura(ruim.c))).toEqual(Array(2).fill({ ok: false, erro: "dados_invalidos" }));
+    expect(ruim.consultas).toEqual([]);
+  });
+
+  it("antropometria (Avaliação › Editar): 1 pelo id, as colunas do tipo, sem o filtro das vivas (como a tela lia); 0 linha → nao_encontrado", async () => {
+    const a = { id: D1, peso: 70 };
+    const { c, consultas } = contexto20b([{ q: "antropometria", id: D1, paciente_id: OUTRA }], { tabela: () => ({ data: [a], error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, linhas: [a] }]);
+    expect(consultas).toEqual([{ tabela: "antropometrias", colunas: COLUNAS_DO_PAINEL.antropometrias.join(", "), contar: false, filtros: [["eq", "id", D1]], ordem: [], limite: 1, range: null }]);
+    const n1 = contexto20b([{ q: "antropometria", id: D1 }], { tabela: () => ({ data: [], error: null }) });
+    expect(itensDa(await atenderLeitura(n1.c))).toEqual([{ ok: false, erro: "nao_encontrado" }]);
+  });
+
+  it("antropometria/antropometrias_pdf: id/paciente ruim ou faltando (ou o param com outro nome) → dados_invalidos (nada roda)", async () => {
+    const { c, consultas } = contexto20b([
+      { q: "antropometria", id: "abc" }, { q: "antropometria" }, { q: "antropometria", id: 7 }, { q: "antropometria", aluno: D1 },
+      { q: "antropometrias_pdf", paciente: "x" }, { q: "antropometrias_pdf" }, { q: "antropometrias_pdf", aluno: ALUNO },
+    ], { tabela: () => ({ data: [{ id: D1 }], error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual(Array(7).fill({ ok: false, erro: "dados_invalidos" }));
+    expect(consultas).toEqual([]);
+  });
+
+  it("revisão — a página além do fim (PGRST103) na consulta COM página → dados_invalidos, com o aviso e SEM o log.excecao", async () => {
+    const alem = { data: null, error: { code: "PGRST103", message: "Requested range not satisfiable", details: "An offset of 9980 was requested, but there are only 41 rows." } };
+    const { c, log } = contexto20b([{ q: "pedidos_exame_do_aluno", aluno: ALUNO, pagina: 500 }], { tabela: () => ({ ...alem, count: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: false, erro: "dados_invalidos" }]);
+    expect(log.excecao).not.toHaveBeenCalled();
+    expect(log.aviso).toHaveBeenCalledWith({ codigo: "dados_invalidos", schema: "staging", acao: "pedidos_exame_do_aluno", pg: "PGRST103" });
+    expect(erroDaLeitura(alem.error, [], { pagina: true })).toEqual({ erro: "dados_invalidos", inesperado: false });
+  });
+
+  it("revisão — o PGRST103 SEM página (as outras consultas, as 3 da 20a, o laço e as RPCs) segue a tabela de sempre: erro_interno + log.excecao", async () => {
+    const alem = { code: "PGRST103", message: "Requested range not satisfiable" };
+    expect(erroDaLeitura(alem)).toEqual(erroDoBanco(alem)); // a 20a: igual ao erroDoBanco
+    expect(erroDaLeitura(alem, [], {})).toEqual({ erro: "erro_interno", inesperado: true });
+    expect(erroDaLeitura(alem, ERROS_DA_ROTA, { pagina: false })).toEqual({ erro: "erro_interno", inesperado: true });
+    const { c, log } = contexto20b([
+      { q: "consultas_do_aluno", aluno: ALUNO }, { q: "aluno_diario_urls", ids: [D1] }, { q: "resultados_exame_do_aluno", aluno: ALUNO },
+    ], { tabela: () => ({ data: null, error: alem }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual(Array(3).fill({ ok: false, erro: "erro_interno" }));
+    expect(log.excecao).toHaveBeenCalledTimes(3);
+    const rpc = contexto20b([{ q: "anotacoes", aluno: ALUNO, limite: 3 }], { rpc: () => ({ data: null, error: alem }) });
+    expect(itensDa(await atenderLeitura(rpc.c))).toEqual([{ ok: false, erro: "erro_interno" }]);
+  });
+
+  it("antropometrias_pdf: as 12 colunas do PDF, o paciente do corpo, as vivas, da mais antiga para a mais nova", async () => {
+    const { c, consultas } = contexto20b([{ q: "antropometrias_pdf", paciente: ALUNO, aluno: OUTRA }], { tabela: () => ({ data: [], error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, linhas: [] }]);
+    expect(consultas).toEqual([{
+      tabela: "antropometrias", colunas: "id, data, peso, altura, sexo, idade, circunferencias, dobras, protocolo, resultados, nutricionista_id, created_at", contar: false,
+      filtros: [["eq", "paciente_id", ALUNO], ["is", "deleted_at", null]], ordem: [["data", true]], limite: 1000, range: null,
+    }]);
+  });
+
+  it("a tela inteira numa ida: o Resumo/casca + uma seção = 1 lote; os iguais (o profissional 2×) rodam 1 vez", async () => {
+    const { c, rpcs, consultas } = contexto20b([
+      { q: "aluno_perfil", aluno: ALUNO }, { q: "aluno_evolucao_painel", aluno: ALUNO }, { q: "anotacoes", aluno: ALUNO, limite: 3 },
+      { q: "documentos_do_aluno", aluno: ALUNO }, { q: "modelos_documento" }, { q: "profissional" }, { q: "profissional" },
+    ], { rpc: () => ({ data: { ok: true, fotos: [] }, error: null }), tabela: () => ({ data: [], error: null }) });
+    const itens = itensDa(await atenderLeitura(c));
+    expect(itens.every((i) => i.ok === true)).toBe(true);
+    expect(rpcs.map((r) => r.nome)).toEqual(["aluno_perfil", "aluno_evolucao", "aluno_anotacoes"]);
+    expect(consultas.map((q) => q.tabela)).toEqual(["documentos", "modelos_documento", "profiles"]);
+  });
+
+  it("o log das consultas novas nunca leva params, linhas, caminhos nem nomes de arquivo", async () => {
+    const linha = { id: D1, path: "n/p/segredo-laudo.pdf", nome: "segredo-laudo.pdf" };
+    const { c, log } = contexto20b([
+      { q: "anexo_url", id: D1, download: true }, { q: "exames_do_aluno", aluno: ALUNO, exame: "Glicemia secreta", offset: 0, limite: 20 },
+      { q: "aluno_perfil", aluno: ALUNO }, { q: "resultados_exame_do_aluno", aluno: ALUNO },
+    ], {
+      tabela: (q) => (q.tabela === "anexos" ? { data: [linha], error: null } : { data: null, error: { code: "", message: `falhou ${ALUNO}` } }),
+      rpc: (nome) => (nome === "aluno_perfil" ? raise("sem_acesso") : { data: { segredo: "dado de saúde" }, error: null }),
+      assinarUma: () => ({ data: null, error: { status: 500, message: `não achou ${linha.path}` } }),
+    });
+    await atenderLeitura(c);
+    const texto = JSON.stringify([log.info.mock.calls, log.aviso.mock.calls]);
+    for (const proibido of [ALUNO, D1, linha.path, linha.nome, "Glicemia secreta", "dado de saúde"]) expect(texto, proibido).not.toContain(proibido);
+    const permitidos = new Set(["codigo", "schema", "acao", "n", "ms", "resultado", "status", "pg"]);
+    for (const [campos] of [...log.info.mock.calls, ...log.aviso.mock.calls]) for (const k of Object.keys(campos)) expect(permitidos.has(k), k).toBe(true);
+  });
+});
+
+describe("hml-20b — o módulo lê como a pessoa (fonte): a página, o laço e a URL de 1 arquivo só do que a consulta leu", () => {
+  const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/leituras.ts"), "utf-8");
+  it("o count pelo select, o .range pela página/laço, o createSignedUrl só do caminho lido (caminhosParaAssinar da linha) e o nome pelo nomeDoDownload", () => {
+    expect(fonte).toMatch(/select\(plano\.colunas, \{ count: "exact" \}\)/);
+    expect(fonte).toMatch(/montar\(\)\.range\(extras\.intervalo\[0\], extras\.intervalo\[1\]\)/);
+    expect(fonte).toMatch(/const \[caminho\] = caminhosParaAssinar\(\[linha\], a\.coluna\);/);
+    expect(fonte).toMatch(/const nome = nomeDoDownload\(a, item\.params, linha\);/);
+    expect(fonte).toMatch(/c\.comoPessoa\.storage\.from\(bucket\)\.createSignedUrl\(caminho, validade, /);
+    // revisão: só o select com página passa a opção da página ao falhou (a página além do fim → dados_invalidos)
+    expect(fonte.match(/\{ pagina: extras\.intervalo !== null \}/g)).toHaveLength(1);
+    expect(fonte).not.toMatch(/SERVICE_ROLE|service_role|createClient\(/);
   });
 });

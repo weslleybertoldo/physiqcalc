@@ -1,6 +1,6 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/farmaco.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { lerNutricao } from "@/nutricao/leitura";
 import {
   analiseParaBanco, interacaoParaBanco, medicamentoParaBanco, type FormAnalise, type FormInteracao, type FormMedicamento, type InteracaoCongelada,
   type MedicamentoCongelado,
@@ -14,30 +14,23 @@ import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 // do sistema); master vê tudo; criar medicamento/análise exige enxergar o paciente. Exclusão SOFT nas três (Lixeira, W32).
 // Os dados do perfil pro PDF são reexportados pra tela ter uma porta só.
 // hml-19a (H-41 · jeito 2): as gravações vão pela função nutricao (a data da análise é a do servidor); as frases de antes ficam
-// (a do sistema → 0 linha → "Só as suas interações…"). Mesmas assinaturas; leituras seguem pelo banco.
+// (a do sistema → 0 linha → "Só as suas interações…"). Mesmas assinaturas.
+// hml-20b (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa:
+// interacoes_farmaco (a base do sistema + as próprias — o RLS decide, como antes), medicamentos_do_aluno e analises_farmaco_do_aluno;
+// o profissional vem da fonte única (src/nutricao/editor/lib/profissional.ts). Mesmos tipos; o erro é ErroLeitura (frase fixa).
 
-export { nomeDaNutricionista } from "@/nutricao/prontuario/lib/anamneses";
-export { dadosProfissionais } from "@/nutricao/prontuario/lib/documentos";
+export { dadosProfissionais, nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
 
 export type Interacao = Database["public"]["Tables"]["interacoes_farmaco_nutriente"]["Row"];
 export type Medicamento = Database["public"]["Tables"]["medicamentos_paciente"]["Row"];
 export type AnaliseFarmaco = Database["public"]["Tables"]["analises_farmaco"]["Row"];
 
-const T_BASE = "interacoes_farmaco_nutriente";
-const T_MED = "medicamentos_paciente";
-const T_ANA = "analises_farmaco";
-
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
 // ---- Base de interações ----
 
 /** Interações vivas visíveis (do sistema + próprias — RLS), por medicamento e nutriente. */
 export async function listarBase(): Promise<Interacao[]> {
-  const { data, error } = await supabase.from(T_BASE).select("*").is("deleted_at", null).order("medicamento", { ascending: true }).order("nutriente", { ascending: true });
-  falhou(error);
-  return (data ?? []) as Interacao[];
+  const r = await lerNutricao("interacoes_farmaco");
+  return (r.linhas ?? []) as Interacao[];
 }
 
 export async function criarInteracao(nutricionistaId: string, f: FormInteracao): Promise<Interacao> {
@@ -76,15 +69,8 @@ export async function excluirInteracao(id: string): Promise<void> {
 
 /** Medicamentos vivos do paciente (ativos primeiro, depois por criação). */
 export async function listarMedicamentosDoPaciente(pacienteId: string): Promise<Medicamento[]> {
-  const { data, error } = await supabase
-    .from(T_MED)
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("ativo", { ascending: false })
-    .order("created_at", { ascending: true });
-  falhou(error);
-  return (data ?? []) as Medicamento[];
+  const r = await lerNutricao("medicamentos_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as Medicamento[];
 }
 
 export async function criarMedicamento(nutricionistaId: string, pacienteId: string, f: FormMedicamento): Promise<Medicamento> {
@@ -112,15 +98,8 @@ export async function excluirMedicamento(id: string): Promise<void> {
 
 /** Análises vivas do paciente, mais recente primeiro. */
 export async function listarAnalises(pacienteId: string): Promise<AnaliseFarmaco[]> {
-  const { data, error } = await supabase
-    .from(T_ANA)
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as AnaliseFarmaco[];
+  const r = await lerNutricao("analises_farmaco_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as AnaliseFarmaco[];
 }
 
 export interface NovaAnalise {

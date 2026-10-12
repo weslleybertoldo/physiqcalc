@@ -18,7 +18,11 @@ produção, a Tela com a sessão antes do 1º documento e os pedidos anotados po
                             já existem (o diário pela nutricao, a foto de evolução pela nutricao, a foto mensal pela admin-avaliacoes no mês
                             sentinela 2000-01); os ids no Estado (hml19/agente/e2e_estado.json) e o --limpar desfaz.
 Antes de CADA execução que toca o staging: a PAUSA (~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "<o que ia rodar>") e
-o /health (exigir_saude, dentro dos scripts). O registro de logins é o da hml-20a (hml20/agente/logins_etapa2_20a.txt, até 6).
+o /health (exigir_saude, dentro dos scripts). O registro de logins é o da W (hml-20b: hml20/agente/logins_etapa2_20b.txt — o da 20a
+fica; teto 10 da W, no máximo 6 na etapa 2).
+hml-20b: o `--area painel-aluno` (o Painel › Aluno: casca, Resumo, Prontuário ×10, Avaliação, PDF) mora em painel.py (as definições),
+painel_api.py (os casos de servidor) e painel_tela.py (a rede e as telas); daqui ele usa a guarda que conta (AREAS["painel-aluno"], posta
+pelo painel.py), o regras_leitura (o catálogo inteiro, com os campos da 20b) e o print_reduzido (a pasta prints/hml20/b).
 Sem segredo nem dado pessoal na saída: chaves pela Management API, senhas em ~/.physiq-teste-<nome> (600); das respostas só saem status,
 códigos, contagens e tempos.
 """
@@ -151,12 +155,15 @@ const consultas = Object.fromEntries(cat.CONSULTAS_DA_NUTRICAO.map((q) => {
   const c = cat.CONSULTAS_NUTRICAO[q];
   const f = c.fonte;
   return [q, { params: c.params, rpc: f.rpc ?? null, args: f.args ?? null, tabela: f.tabela ?? null, colunas: f.colunas ?? null, teto: f.teto ?? null,
-    filtros: f.filtros ?? null, vivas: f.vivas ?? false, dono: c.dono ?? null, assinar: c.assinar ?? null, sozinha: c.sozinha ?? false }];
+    filtros: f.filtros ?? null, vivas: f.vivas ?? false, dono: c.dono ?? null, assinar: c.assinar ?? null, sozinha: c.sozinha ?? false,
+    ordem: f.ordem ?? null, erros: f.erros ? [...f.erros] : null, pagina: f.pagina ?? null, contar: f.contar ?? false, laco: f.laco ?? null, uma: f.uma ?? false }];
 }));
 const saida = {
   consultas, lote_max: motor.LOTE_MAX, paralelo: motor.LOTE_PARALELO, q_max: motor.Q_MAX, teto_max: motor.TETO_MAX, validade_max: motor.VALIDADE_MAX_S,
   diario_ids_max: cat.DIARIO_IDS_MAX, validade: cat.VALIDADE_URL_LEITURA_S,
   buckets: Object.fromEntries(["diario", "evolucao"].flatMap((b) => ["public", "staging"].map((s) => [`${b}:${s}`, cat.bucketDaLeitura(b, s)]))),
+  buckets_todos: Object.fromEntries([...cat.BUCKETS_DE_LEITURA].flatMap((b) => ["public", "staging"].map((s) => [`${b}:${s}`, cat.bucketDaLeitura(b, s)]))),
+  limites: { lote_paralelo: motor.LOTE_PARALELO, laco_max: motor.LACO_LEITURAS_MAX, erro_laco: motor.ERRO_MUITAS_LINHAS },
   treino: { acoes_de_leitura: [...treino.ACOES_DE_LEITURA], acoes_que_gravam: [...treino.ACOES_QUE_GRAVAM], perfil: [...treino.COLUNAS_PERFIL_EVOLUCAO],
     avaliacoes: [...treino.COLUNAS_AVALIACOES_EVOLUCAO], fotos: [...treino.COLUNAS_FOTOS_EVOLUCAO], max_avaliacoes: treino.MAX_AVALIACOES_EVOLUCAO,
     max_fotos: treino.MAX_FOTOS_EVOLUCAO, validade: treino.VALIDADE_URL_EVOLUCAO_S, freio: treino.FREIO_EVOLUCAO_POR_MINUTO,
@@ -167,6 +174,7 @@ const saida = {
   }),
   acoes: (e.acoes ?? []).map((a) => ({ action: a, leitura: treino.ehAcaoDeLeitura(a), grava: treino.ACOES_QUE_GRAVAM.has(a) })),
   erros: (e.erros ?? []).map((x) => motor.erroDaLeitura(x)),
+  erros_rota: (e.erros ?? []).map((x) => motor.erroDaLeitura(x, cat.ERROS_DA_ROTA)),
 };
 console.log(JSON.stringify(saida));
 """
@@ -406,10 +414,12 @@ def anotar_planilha(arquivo: Path, cabecalho: list[str], valores: list[object]) 
         f.write("\t".join(str(v) for v in valores) + "\n")
 
 
-def print_reduzido(pg, prefixo: str, caso: str, o) -> Path:
-    """O print <prefixo>_<caso>.png em prints/hml20/a e a cópia de 900 px (para conferir: tela certa, sem login nem "carregando")."""
-    PRINTS.mkdir(parents=True, exist_ok=True)
-    caminho = PRINTS / f"{prefixo}_{caso}.png"
+def print_reduzido(pg, prefixo: str, caso: str, o, pasta: Path | None = None) -> Path:
+    """O print <prefixo>_<caso>.png em prints/hml20/a (hml-20b: `pasta` = prints/hml20/b) e a cópia de 900 px (para conferir: tela certa,
+    sem login nem "carregando")."""
+    destino = pasta or PRINTS
+    destino.mkdir(parents=True, exist_ok=True)
+    caminho = destino / f"{prefixo}_{caso}.png"
     for tentativa in range(3):
         try:
             pg.wait_for_timeout(700)

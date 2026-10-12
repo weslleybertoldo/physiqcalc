@@ -1,10 +1,12 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/anamneses.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
 // hml-19a (H-41 · H-81 · jeito 2): as GRAVAÇÕES saem do navegador e vão pela função nutricao (src/nutricao/servidor.ts) — a mesma
 // assinatura de antes (as telas não mudam); o dono vem da sessão no servidor (o nutricionistaId que a tela passa não vai mais). O
-// "garantir" dos modelos (o padrão do 1º acesso) é 1 chamada só ao servidor (padroes_garantir): a semente nasce lá, 1 vez. Leituras
-// seguem pelo banco (H-42 = etapa 2).
-import { supabase } from "@/nutricao/editor/lib/banco";
+// "garantir" dos modelos (o padrão do 1º acesso) é 1 chamada só ao servidor (padroes_garantir): a semente nasce lá, 1 vez.
+// hml-20b (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa:
+// modelos_anamnese (os do sistema + os próprios — o RLS decide, como a lib de antes, que não filtrava por dono) e anamneses_do_aluno; o
+// nome da nutricionista vem da fonte única (src/nutricao/editor/lib/profissional.ts). Mesmos tipos; o erro é ErroLeitura (frase fixa).
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { lerNutricao } from "@/nutricao/leitura";
 import { lerPerguntas, tituloCopia, type RegistroAnamnese } from "@/nutricao/prontuario/lib/anamneseUtil";
 import { acaoNutricao } from "@/nutricao/servidor";
 
@@ -16,20 +18,10 @@ export type ModeloAnamnese = Database["public"]["Tables"]["modelos_anamnese"]["R
 export type ModeloUpdate = Database["public"]["Tables"]["modelos_anamnese"]["Update"];
 export type Anamnese = Database["public"]["Tables"]["anamneses"]["Row"];
 
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
 // ---- Modelos ----
 export async function listarModelos(): Promise<ModeloAnamnese[]> {
-  const { data, error } = await supabase
-    .from("modelos_anamnese")
-    .select("*")
-    .is("deleted_at", null)
-    .order("favorito", { ascending: false })
-    .order("titulo", { ascending: true });
-  falhou(error);
-  return (data ?? []) as ModeloAnamnese[];
+  const r = await lerNutricao("modelos_anamnese");
+  return (r.linhas ?? []) as ModeloAnamnese[];
 }
 
 /**
@@ -69,15 +61,8 @@ export async function excluirModelo(id: string): Promise<void> {
 
 // ---- Anamneses ----
 export async function listarAnamneses(pacienteId: string): Promise<Anamnese[]> {
-  const { data, error } = await supabase
-    .from("anamneses")
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as Anamnese[];
+  const r = await lerNutricao("anamneses_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as Anamnese[];
 }
 
 /** Também a Pré-consulta › "importar como anamnese" (src/painel/preconsulta/dados.ts) — a mesma ação. */
@@ -103,9 +88,5 @@ export async function excluirAnamnese(id: string): Promise<void> {
   await acaoNutricao("anamnese_excluir", { id });
 }
 
-/** Nome da nutricionista (cabeçalho do PDF). */
-export async function nomeDaNutricionista(userId: string): Promise<string | null> {
-  const { data, error } = await supabase.from("profiles").select("nome").eq("id", userId).maybeSingle();
-  if (error) return null;
-  return (data as { nome: string | null } | null)?.nome ?? null;
-}
+/** Nome da nutricionista (cabeçalho do PDF) — a fonte única (hml-20b: o profiles de quem chama, pela função). */
+export { nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";

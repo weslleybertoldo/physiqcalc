@@ -12,6 +12,11 @@
 // docs/desvios.md) — a parte do TREINO da Evolução segue no navegador (src/evolucao/fontes.ts: as 3 leituras do REST do Treino e a
 // assinatura do `registros`, iguais ao 637363f), listada e contada; nada do PRINCIPAL. E no src/ inteiro ninguém lê direto as 2 RPCs que
 // a 20a levou para o servidor; as 2 tabelas do Treino da Evolução, só o fontes.ts (o desvio; o painel lê o Treino pela treino-leitura).
+// hml-20b: o Painel › Aluno — o Prontuário (src/nutricao/prontuario), a casca/Resumo (src/painel/aluno/dados), a Avaliação
+// (src/painel/aluno/avaliacao, src/nutricao/avaliacao, abas/Avaliacao.tsx) e as 2 libs da fronteira (editor/lib/profissional.ts e
+// antropometrias.ts): 0 leitura direta do principal, fora 1 de OUTRA W listada (a mensagens_desligadas do aviso da P15 — Mensagens, H-43,
+// no mesmo arquivo do perfil). O detector passa a ver também o invólucro local de RPC (`rpc("x"` / `rpc<T>("x"`, como o do
+// painel/aluno/dados/api.ts — o aluno_perfil saía por ele). E no src/ inteiro ninguém lê direto as 4 RPCs que a 20b levou para o servidor.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -39,9 +44,40 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; m
     desvio: { "src/evolucao/fontes.ts": ["storage.createSignedUrls", "tabela.select", "tabela.select", "tabela.select"] },
     minimo: 40,
   },
+  // hml-20b: o Painel › Aluno (casca, Resumo, Prontuário ×10, Avaliação, PDF) — 86 arquivos hoje. No 6fd3194 o detector achava 34 leituras
+  // diretas aqui (33 desta W; o progresso_20b); agora só 1, de OUTRA W: a mensagens_desligadas (o aviso único da P15, que a faixa lê —
+  // Mensagens, H-43/hml-21) mora no mesmo api.ts do perfil e fica no navegador. O resto do Resumo que lê direto (planos_do_aluno e
+  // refeicoes_concluidas — 20c; aluno_compromissos, aluno_responsavel, aluno_acesso e o paciente_dado_livre — H-43) está fora destas pastas.
+  // revisão da 20b: + a casca (Cabecalho.tsx, AlunoLayout.tsx), a aba Prontuário (abas/Prontuario.tsx) e os cards do Resumo (resumo/) — 104
+  // arquivos; o detector acha 0 leitura direta neles (antes e depois: o que o Resumo lê de outra W mora nas libs de lá — 20c e H-43).
+  "painel-aluno": {
+    pastas: [
+      "src/nutricao/prontuario", "src/painel/aluno/dados", "src/painel/aluno/avaliacao", "src/nutricao/avaliacao", "src/painel/aluno/abas/Avaliacao.tsx",
+      "src/nutricao/editor/lib/profissional.ts", "src/nutricao/editor/lib/antropometrias.ts",
+      "src/painel/aluno/Cabecalho.tsx", "src/painel/aluno/AlunoLayout.tsx", "src/painel/aluno/abas/Prontuario.tsx", "src/painel/aluno/resumo",
+    ],
+    base: 1,
+    desvio: { "src/painel/aluno/dados/api.ts": ["rpc.mensagens_desligadas"] },
+    minimo: 100,
+  },
 };
-/** hml-20a: o que saiu do navegador para o servidor — no src/ inteiro, ninguém lê direto (o nome escrito na chamada). */
-const RPCS_DO_SERVIDOR = ["minha_dieta", "minha_evolucao"] as const;
+/**
+ * revisão da 20b: as RPCs que a área do Painel › Aluno AINDA chama direto — todas de OUTRA W, nomeadas (o H-43: o acesso do aluno — a
+ * aluno_acesso lê E garante, por isso está em RPC_QUE_GRAVAM e o detector de leitura não a conta —, a senha, os dados/ajustes/link do aluno
+ * e o aviso das mensagens desligadas, a única de LEITURA, contada no desvio da área). Uma RPC nova na área entra aqui com o motivo.
+ */
+const RPCS_DE_OUTRA_W_NO_PAINEL: Record<string, string[]> = {
+  "src/painel/aluno/dados/api.ts": [
+    "aluno_novo_link", "aluno_salvar_ajustes", "aluno_salvar_dados", "mensagens_aviso_fechar", "mensagens_desligadas", "mensagens_ligar_para_todos",
+  ],
+  "src/painel/aluno/resumo/acesso/api.ts": ["aluno_acesso", "paciente_criar_acesso", "paciente_redefinir_senha"],
+};
+/**
+ * O que saiu do navegador para o servidor — no src/ inteiro, ninguém lê direto (o nome escrito na chamada). hml-20a: as 2 do app do
+ * aluno; hml-20b: as 4 do Painel › Aluno (aluno_perfil, aluno_evolucao, aluno_anotacoes, exames_do_aluno — nenhuma tem leitor em área de
+ * outra W).
+ */
+const RPCS_DO_SERVIDOR = ["minha_dieta", "minha_evolucao", "aluno_perfil", "aluno_evolucao", "aluno_anotacoes", "exames_do_aluno"] as const;
 /** hml-20a (desvio do gate J): as 2 tabelas do Treino da Evolução do aluno — só o src/evolucao/fontes.ts lê direto (1 vez cada). */
 const TABELAS_DO_DESVIO = ["physiq_avaliacoes", "physiq_registros_fotos"] as const;
 const SO_O_DESVIO = "src/evolucao/fontes.ts";
@@ -49,7 +85,8 @@ const SO_O_DESVIO = "src/evolucao/fontes.ts";
 const FROM_DE_TABELA = /(?<!\bArray)(?<!storage\s*)\.from\(/g;
 const LE_STORAGE = /\.storage\s*\.from\(([^()]|\([^()]*\))*\)\s*\.(createSignedUrls?|download|list)\(/g;
 const ASSINA_GUARDADO = /\.(createSignedUrls?)\(/g;
-const RPC = /\.rpc\(\s*["'`]([a-z0-9_]+)["'`]/g;
+// hml-20b: também o invólucro local (`rpc("x"` / `rpc<T>("x"`, sem o ponto) e o genérico no `.rpc<T>("x"`
+const RPC = /(?<![\w$])rpc\s*(?:<[^()]*?>)?\s*\(\s*["'`]([a-z0-9_]+)["'`]/g;
 const TABELA_ESCRITA = /^\s*["'`]([a-z0-9_]+)["'`]/;
 
 const linhaDe = (texto: string, pos: number) => texto.slice(0, pos).split("\n").length;
@@ -164,6 +201,29 @@ describe("hml-20a — o detector acha o que procura (controle positivo)", () => 
   });
 });
 
+describe("hml-20b — o detector também acha as leituras de antes do Painel › Aluno (controle positivo)", () => {
+  it("o invólucro local de RPC (com e sem o tipo), o .rpc com o tipo, a URL de 1 anexo e o profiles; a definição do invólucro não conta", () => {
+    expect(leiturasDiretas('const r = await rpc<PerfilAluno>("aluno_perfil", { p_aluno: alunoId });')).toEqual(["1: rpc.aluno_perfil"]);
+    expect(leiturasDiretas('const r = await rpc<MensagensDesligadas | null>("mensagens_desligadas", {});')).toEqual(["1: rpc.mensagens_desligadas"]);
+    expect(leiturasDiretas('return rpc("aluno_responsavel", { p_aluno: alunoId });')).toEqual(["1: rpc.aluno_responsavel"]);
+    expect(leiturasDiretas('const { data } = await supabase.rpc<Json>("exames_do_aluno", args);')).toEqual(["1: rpc.exames_do_aluno"]);
+    expect(leiturasDiretas("async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T> {")).toEqual([]);
+    expect(leiturasDiretas('await rpc("aluno_salvar_dados", { p_aluno: alunoId });')).toEqual([]); // RPC que grava
+    expect(leiturasDiretas('const x = await meuRpc("aluno_perfil", {}); const y = await prpc("aluno_perfil");')).toEqual([]);
+    const antes = [
+      'const { data, error } = await supabase.rpc("aluno_anotacoes" as never, args as never);',
+      'const { data, error } = await principal.rpc("aluno_evolucao" as never, { p_aluno: alunoIdDaRota } as never);',
+      "const { data, error } = await principal.storage.from(BUCKET_EVOLUCAO).createSignedUrls(caminhos, VALIDADE_URL_S);",
+      "const { data, error } = await supabase.storage.from(BUCKET_ANEXOS).createSignedUrl(anexo.path, segundos, download ? { download: anexo.nome } : undefined);",
+      'const { data, error } = await principal.from("antropometrias").select("*").eq("id", av.idOriginal).maybeSingle();',
+      'const { data, error } = await supabase.from("profiles").select("nome").eq("id", userId).maybeSingle();',
+      'const { data, error } = await supabase\n    .from("consultas")\n    .select("*")\n    .eq("paciente_id", pacienteId)',
+    ].join("\n");
+    expect(leiturasDiretas(antes)).toHaveLength(7);
+    expect(leiturasDoQueSaiu(antes)).toHaveLength(2); // aluno_anotacoes e aluno_evolucao (as 4 da 20b saíram do src/)
+  });
+});
+
 describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)", () => {
   it.each(Object.entries(AREAS))("%s: nenhuma leitura direta nas pastas da área além do desvio listado", (_area, { pastas, base, fora = [], minimo, desvio = {} }) => {
     const fontes = pastas.flatMap(fontesDa).filter((arq) => !fora.includes(relative(RAIZ, arq)));
@@ -181,6 +241,20 @@ describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)
     expect(fontes.length).toBeGreaterThanOrEqual(minimo);
   });
 
+  it("revisão da 20b — painel-aluno: as RPCs que a área ainda chama direto são SÓ as nomeadas, todas de outra W (H-43); nenhuma das 4 da 20b", () => {
+    const { pastas } = AREAS["painel-aluno"];
+    const achadas: Record<string, string[]> = {};
+    for (const arq of pastas.flatMap(fontesDa)) {
+      const nomes = [...semComentarios(readFileSync(arq, "utf-8")).matchAll(RPC)].map((m) => m[1]);
+      if (nomes.length) achadas[relative(RAIZ, arq)] = [...new Set(nomes)].sort();
+    }
+    expect(achadas).toEqual(RPCS_DE_OUTRA_W_NO_PAINEL);
+    const todas = Object.values(achadas).flat();
+    for (const r of ["aluno_perfil", "aluno_evolucao", "aluno_anotacoes", "exames_do_aluno"]) expect(todas, r).not.toContain(r);
+    // de leitura (RPC_SO_LEITURA) entre elas, só a do desvio da área (o aviso das mensagens — H-43)
+    expect(todas.filter((r) => RPC_SO_LEITURA.has(r))).toEqual(["mensagens_desligadas"]);
+  });
+
   it("o desvio do gate J é SÓ o Treino: as 3 tabelas physiq_* pelo cliente do Treino e o bucket registros; nada do principal direto na área", () => {
     const texto: string = semComentarios(readFileSync(resolve(RAIZ, SO_O_DESVIO), "utf-8"));
     expect(texto.match(/\bsupabase\.from\("physiq_(profiles|avaliacoes|registros_fotos)"\)\.select\(/g)).toHaveLength(3);
@@ -189,7 +263,7 @@ describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)
     expect(texto).not.toMatch(/\bprincipal\s*\.\s*(from|rpc|storage|functions)\b/);
   });
 
-  it("no src/ inteiro, ninguém lê direto a minha_dieta nem a minha_evolucao; physiq_avaliacoes e physiq_registros_fotos só no desvio", () => {
+  it("no src/ inteiro, ninguém lê direto as RPCs que foram para o servidor (20a: minha_dieta, minha_evolucao; 20b: aluno_perfil, aluno_evolucao, aluno_anotacoes, exames_do_aluno); physiq_avaliacoes e physiq_registros_fotos só no desvio", () => {
     const fontes = fontesDa("src");
     const achados = fontes.flatMap((arq) => leiturasDoQueSaiu(readFileSync(arq, "utf-8")).map((a) => `${relative(RAIZ, arq)}:${a}`));
     const fora = achados.filter((a) => !a.startsWith(`${SO_O_DESVIO}:`));

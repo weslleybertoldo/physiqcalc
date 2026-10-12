@@ -8,12 +8,18 @@
  *   · banco principal, pela função aluno_evolucao (W17): as antropometrias e as fotos de evolução da matrícula, com quem fez; o
  *     arquivo da foto sai por URL assinada do bucket privado `evolucao` (a política de Storage da W17 deixa quem vê o aluno assinar).
  * Escrever é pelo caminho de cada banco (avaliacaoApi.ts).
+ * hml-20b (H-42 · jeito 2, etapa 2): a parte do PRINCIPAL sai do servidor, com a sessão de quem chama — a função nutricao, consulta
+ * aluno_evolucao_painel (a MESMA aluno_evolucao(p_aluno) + a assinatura das fotos no evolucao do ambiente, 1 h, na mesma ida: 1 ida a
+ * menos), no lote da tela (src/nutricao/leitura.ts); a URL volta RELATIVA e é montada aqui com o domínio do cliente (a de hoje). O erro
+ * chega como o código na mensagem do ErroFonte (o sem_acesso/aluno_inexistente da w14_matricula_da_rota, como antes). A parte do
+ * TREINO (a treino-leitura) fica como está (decisão 15 da spec hml-20).
  */
 import { principal, principalConfigurado } from "@/integrations/principal/client";
 import { criarFetchResiliente, TEMPO_FUNCAO_MS } from "@/integrations/repeticao";
 import { DB_SCHEMA } from "@/integrations/supabase/client";
-import { BUCKET_EVOLUCAO, ErroFonte, VALIDADE_URL_S } from "@/evolucao/fontes";
+import { ErroFonte } from "@/evolucao/fontes";
 import type { AntropometriaPrincipal, FotoPrincipal, LinhaFotoTreino, LinhaTreino, ParteTreino, PartePrincipal } from "@/evolucao/tipos";
+import { ErroLeitura, lerNutricao, urlAssinadaDoServidor } from "@/nutricao/leitura";
 
 const URL_LEITURA = `${String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "")}/functions/v1/treino-leitura`;
 
@@ -57,20 +63,6 @@ export async function carregarTreinoDoPainel(alunoIdDaRota: string, f: typeof fe
   };
 }
 
-type Assinador = (caminhos: string[]) => Promise<Record<string, string>>;
-
-const assinarPrincipal: Assinador = async (caminhos) => {
-  if (!caminhos.length) return {};
-  const { data, error } = await principal.storage.from(BUCKET_EVOLUCAO).createSignedUrls(caminhos, VALIDADE_URL_S);
-  if (error || !data) {
-    console.warn("[avaliacao] não deu para assinar as fotos de evolução:", error?.message);
-    return {};
-  }
-  const mapa: Record<string, string> = {};
-  for (const item of data) if (item.path && item.signedUrl && !item.error) mapa[item.path] = item.signedUrl;
-  return mapa;
-};
-
 export interface AntropometriaDoPainel extends AntropometriaPrincipal {
   observacao?: string | null;
 }
@@ -78,18 +70,24 @@ export interface AntropometriaDoPainel extends AntropometriaPrincipal {
 /** O principal no painel: a parte da série (W10) com a observação de cada antropometria e a matrícula. */
 export type PrincipalDoPainel = Omit<PartePrincipal, "antropometrias"> & { antropometrias: AntropometriaDoPainel[]; pacienteId: string | null };
 
-/** A parte do banco principal: aluno_evolucao(aluno) (W17) + as URLs assinadas das fotos. */
-export async function carregarPrincipalDoPainel(alunoIdDaRota: string, assinador: Assinador = assinarPrincipal): Promise<PrincipalDoPainel> {
+/**
+ * A parte do banco principal: aluno_evolucao(aluno) (W17) + as URLs assinadas das fotos — hml-20b: as 2 numa ida só pela nutricao
+ * (consulta aluno_evolucao_painel); a foto que o servidor não conseguiu assinar fica sem URL ("Foto indisponível"), como antes.
+ */
+export async function carregarPrincipalDoPainel(alunoIdDaRota: string): Promise<PrincipalDoPainel> {
   if (!principalConfigurado) throw new ErroFonte("principal", "principal_nao_configurado");
-  const { data, error } = await principal.rpc("aluno_evolucao" as never, { p_aluno: alunoIdDaRota } as never);
-  if (error) throw new ErroFonte("principal", error.message);
-  const d = (data ?? {}) as { paciente_id?: string; objetivo?: string | null; antropometrias?: AntropometriaDoPainel[]; fotos?: FotoPrincipal[] };
+  let valor: unknown;
+  try {
+    valor = (await lerNutricao("aluno_evolucao_painel", { aluno: alunoIdDaRota })).valor;
+  } catch (e) {
+    throw new ErroFonte("principal", e instanceof ErroLeitura ? e.codigo : "erro_interno");
+  }
+  const d = (valor ?? {}) as { paciente_id?: string; objetivo?: string | null; antropometrias?: AntropometriaDoPainel[]; fotos?: FotoPrincipal[] };
   const fotos = Array.isArray(d.fotos) ? d.fotos : [];
-  const urls = await assinador(fotos.map((x) => x.path));
   return {
     pacienteId: d.paciente_id ?? null,
     objetivo: d.objetivo ?? null,
     antropometrias: Array.isArray(d.antropometrias) ? d.antropometrias : [],
-    fotos: fotos.map((x) => ({ ...x, url: urls[x.path] ?? null })),
+    fotos: fotos.map((x) => ({ ...x, url: urlAssinadaDoServidor(x.url) })),
   };
 }

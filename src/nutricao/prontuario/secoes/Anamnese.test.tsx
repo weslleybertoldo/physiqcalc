@@ -24,15 +24,19 @@ function cadeia(): unknown {
   return p;
 }
 
-vi.mock("@/nutricao/editor/lib/banco", () => ({
-  supabase: {
+// hml-20b (H-42): as LEITURAS vão pela nutricao (`ler`): o módulo de verdade do servidor roda sobre o banco falso daqui
+// (src/test/nutricaoFalsa.ts; o h.invoke segue vendo só o que GRAVA — o garantir) — as idas ao banco (a RPC com os args, a tabela, a página) são as mesmas de quando a tela lia direto.
+vi.mock("@/nutricao/editor/lib/banco", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const banco = {
     from: (t: string) => {
       h.from(t);
       return cadeia();
     },
-    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
-  },
-}));
+  };
+  const invoke = (f: string, o: { body: Record<string, unknown> }) => (ehLer(o?.body) ? lerPeloModulo(banco, { userId: h.usuario.id })(o.body) : h.invoke(f, o));
+  return { supabase: { ...banco, functions: { invoke } } };
+});
 // a sessão devolve um objeto NOVO a cada render (como o refresh do token faria): o useAuth() tem de segurar o mesmo
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { ...h.usuario } }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: (...a: unknown[]) => h.toastErro(...a) } }));
