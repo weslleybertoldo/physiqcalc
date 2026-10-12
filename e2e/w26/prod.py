@@ -15,11 +15,13 @@ Uso: python3 e2e/w26/prod.py [--base https://physiqcalc.com.br] [--canal msedge]
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))
 import _base as B  # noqa: E402
@@ -39,8 +41,22 @@ ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro)(?:[/?#]|$)")
 
 
-def eh_escrita(metodo: str, url: str) -> bool:
-    """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e na financeiro e no Storage (fora o link de leitura)."""
+def leitura_da_funcao(corpo: str | None) -> bool:
+    """hml-20a (decisão I): o corpo { "acao": "ler" } da nutricao/financeiro é a ação de LEITURA do jeito 2 (o campo que elas leem é o
+    `acao`); corpo ilegível, sem a ação ou com outra ação → não (segue escrita)."""
+    try:
+        b = json.loads(corpo) if isinstance(corpo, str) else None
+    except ValueError:
+        return False
+    return isinstance(b, dict) and b.get("acao") == "ler"
+
+
+def eh_escrita(metodo: str, url: str, corpo: str | None = None) -> bool:
+    """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e na financeiro (hml-20a: menos o POST com o
+    corpo de leitura, { "acao": "ler" }) e no Storage (fora o link de leitura)."""
+    # hml-20a (revisão): a exceção olha só o CAMINHO (um POST em /rest/v1/<tabela>?x=/functions/v1/nutricao com { acao: "ler" } é escrita)
+    if metodo == "POST" and ESCRITA_FUNCAO.search(urlparse(url).path) and leitura_da_funcao(corpo):
+        return False
     return metodo in ("POST", "PATCH", "PUT", "DELETE") and bool(
         ESCRITA_TABELA.search(url) or ESCRITA_RPC.search(url) or ESCRITA_FUNCAO.search(url)
         or ("/storage/v1/object/" in url and "/storage/v1/object/sign/" not in url))
@@ -69,7 +85,11 @@ class Guarda:
     def instalar(self, ctx) -> None:
         def rota(route, request) -> None:
             u, m = request.url, request.method
-            if eh_escrita(m, u):
+            try:
+                corpo = request.post_data
+            except UnicodeDecodeError:  # corpo binário (a foto subindo): não é o JSON de uma ação
+                corpo = None
+            if eh_escrita(m, u, corpo):
                 self.bloqueadas.append(f"{m} {u.split('?')[0]}")
                 route.abort()
                 return

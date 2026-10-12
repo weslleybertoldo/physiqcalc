@@ -244,12 +244,42 @@ FUNCOES_CONHECIDAS = {
 # chamado pelo servidor dela) processa cobrança — se um dia sair do navegador, é gravação.
 # hml-19d (decisão I): a financeiro (jeito 2 do Financeiro: as gravações pelo servidor) grava em TODA ação, como a nutricao.
 FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno", "financeiro"}
+# hml-20a (decisão I da hml-20a, H-42): as LEITURAS do jeito 2 passam pelo CORPO — { "acao": "ler" } na nutricao e na financeiro e
+# { "action": "minha_evolucao" } na admin-avaliacoes. O campo é o que a FUNÇÃO lê (um { "action": "ler", "acao": "<gravação>" } na
+# nutricao grava → barrado); corpo ilegível, sem a ação ou com outra ação = gravação, como antes. Sem o corpo (quem só tem a ação), a
+# regra de antes. Teste: python3 e2e/hml19/guarda_teste.py.
+LEITURAS_PELO_CORPO = {"nutricao": ("acao", frozenset({"ler"})), "financeiro": ("acao", frozenset({"ler"})),
+                       "admin-avaliacoes": ("action", frozenset({"minha_evolucao"}))}
 
 
-def funcao_grava(nome: str, acao: str | None) -> bool:
+def corpo_de_leitura(nome: str, corpo: str | None) -> bool:
+    """O corpo (o texto JSON do pedido) é de uma ação de LEITURA da função (LEITURAS_PELO_CORPO)? Ilegível ou outra ação → não."""
+    regra = LEITURAS_PELO_CORPO.get(nome)
+    if not regra or not isinstance(corpo, str):
+        return False
+    try:
+        b = json.loads(corpo)
+    except Exception:  # noqa: BLE001
+        return False
+    return isinstance(b, dict) and isinstance(b.get(regra[0]), str) and b.get(regra[0]) in regra[1]
+
+
+def corpo_do_pedido(req) -> str | None:
+    """O post_data do pedido do Playwright (o corpo binário — a foto subindo — não é o JSON de uma ação: None)."""
+    try:
+        return req.post_data
+    except UnicodeDecodeError:
+        return None
+
+
+def funcao_grava(nome: str, acao: str | None, corpo: str | None = None) -> bool:
     """A chamada à função grava? Desconhecida e a nutricao: sempre; as de antes: pela regra de antes (a ação decide nas 4 mistas).
     hml-19c (decisão K): a admin-avaliacoes só LÊ na "list" — create, update, proxima, delete e as foto_* (a foto mensal pelo servidor)
-    gravam (antes, a Guarda deixava passar todas as ações dela)."""
+    gravam (antes, a Guarda deixava passar todas as ações dela).
+    hml-20a (decisão I): com o `corpo`, as leituras do jeito 2 (corpo_de_leitura: `ler` da nutricao/financeiro, minha_evolucao da
+    admin-avaliacoes) passam; o resto dessas funções segue gravação."""
+    if corpo is not None and corpo_de_leitura(nome, corpo):
+        return False
     if nome in FUNCOES_QUE_SEMPRE_GRAVAM or nome not in FUNCOES_CONHECIDAS:
         return True
     return (nome == "pagamentos-aluno" and acao not in LEITURAS_PAGAMENTOS) or nome in ("admin-delete-user", "admin-update-user") \
@@ -263,7 +293,8 @@ class Guarda:
     POST/PATCH/PUT/DELETE em tabela, RPC fora da lista de leitura, Storage que não é o "sign", e nas funções as ações que gravam
     (pagamentos-aluno fora das leituras, admin-semana-treinos fora das leituras, admin-delete-user, admin-update-user, admin-tags que
     não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava; hml-19c: a admin-avaliacoes fora
-    da "list"; hml-19d: a financeiro inteira). O resto segue (fallback: a
+    da "list"; hml-19d: a financeiro inteira; hml-20a: menos as LEITURAS pelo corpo — `ler` da nutricao/financeiro e minha_evolucao da
+    admin-avaliacoes). O resto segue (fallback: a
     queda da API, quando ligada, vem antes e aborta). Teste: python3 e2e/hml19/guarda_teste.py."""
 
     def __init__(self) -> None:
@@ -283,7 +314,7 @@ class Guarda:
         if tipo == "storage":
             return nome != "sign"
         if tipo == "fn":
-            return funcao_grava(nome, acao)
+            return funcao_grava(nome, acao, corpo_do_pedido(req))
         return False
 
     def instalar(self, ctx) -> None:

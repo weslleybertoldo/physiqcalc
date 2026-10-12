@@ -132,8 +132,11 @@ ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # hml-19b: o registro da etapa 2 DESTA W (o da 19a, logins_etapa2.txt, fica como estava); começa com os 3 logins da sessão principal
 # às 07:48 (o smoke da nutricao v2, já da 19b). hml-19c (decisão G): o registro passa a ser o logins_etapa2_19c.txt (o da 19b fica);
 # a troca do Treino (trocar-token) também entra nele — abre uma sessão nova no Auth do Treino. hml-19d (decisão G): o registro passa a
-# ser o logins_etapa2_19d.txt (o da 19c fica)
-REG_LOGINS = SCRATCH / "agente" / "logins_etapa2_19d.txt"
+# ser o logins_etapa2_19d.txt (o da 19c fica). hml-20a (decisão G do contrato da 20a): o registro passa a ser o da hml-20a
+# (hml20/agente/logins_etapa2_20a.txt — o da 19d fica) e o teto, 6 logins na etapa 2 (a sessão principal guarda 4 para o staging); os
+# E2E da hml-20 (e2e/hml20/_base.py) e a regressão da hml-19 contam no MESMO registro
+REG_LOGINS = SCRATCH.parent / "hml20" / "agente" / "logins_etapa2_20a.txt"
+# hml-20a F7 (sessão principal, 12/10/2026): +4 logins para o F7 no staging — o teto da W inteira passa a 10 (os 6 da etapa 2 já usados)
 MAX_LOGINS = 10
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 
@@ -184,7 +187,11 @@ class Sessoes:
 
     @staticmethod
     def logins_feitos() -> int:
-        return len(REG_LOGINS.read_text(encoding="utf-8").splitlines()) if REG_LOGINS.exists() else 0
+        """Os logins do STAGING já feitos (as linhas do registro). hml-20a: o login da PRODUÇÃO (o smoke só leitura da sessão principal —
+        o motivo termina em "prod)", a mesma marca que o prod_f8.py conta) não come o teto do staging da etapa 2."""
+        if not REG_LOGINS.exists():
+            return 0
+        return sum(1 for linha in REG_LOGINS.read_text(encoding="utf-8").splitlines() if linha.strip() and not linha.rstrip().endswith("prod)"))
 
     def sessao(self, conta: str) -> dict:
         email = B5.CONTAS[conta][0]
@@ -567,6 +574,10 @@ def classificar(p: dict) -> str | None:
     if tipo == "rpc":
         return "rpc_grava" if nome in RPC_GRAVA else None
     if tipo == "fn":
+        # hml-20a (revisão): a LEITURA pela função — o corpo `ler` da nutricao/financeiro e a minha_evolucao da admin-avaliacoes, pela regra
+        # da Guarda (o campo que a função lê) — não é gravação: o recarregamento da tela depois de gravar não entra na conta das ações
+        if B17.corpo_de_leitura(nome, p.get("corpo")):
+            return None
         return f"fn:{nome}" + (f"({p.get('acao')})" if p.get("acao") else "")
     if tipo == "storage":
         caminho = urlparse(url).path
@@ -588,14 +599,24 @@ def gravacoes_rest(cont: Counter) -> int:
 
 class BarrarNutricao:
     """A rota do navegador que BARRA a nutricao (route.abort) e conta cada ação barrada — o laco.py (H-81: 1 chamada só e o aviso
-    "Tentar de novo" na tela). Instale antes de abrir a tela."""
+    "Tentar de novo" na tela). Instale antes de abrir a tela.
+    hml-20a (revisão): a LEITURA (o corpo `ler`, pela regra da Guarda — B17.corpo_de_leitura) PASSA: o app do aluno lê a dieta pela
+    nutricao desde a 20a e, barrada, a tela nem abriria; só as ações que gravam são barradas. `leitura=True` = barrar a leitura também
+    (o caso que QUER a tela sem o dado — explícito)."""
 
-    def __init__(self) -> None:
+    def __init__(self, leitura: bool = False) -> None:
         self.barradas: Counter = Counter()
+        self.leitura = leitura
+
+    def barra(self, metodo: str, url: str, corpo: str | None) -> bool:
+        """O pedido é barrado? Só o POST na nutricao; a leitura pelo corpo só com leitura=True."""
+        if metodo != "POST" or not urlparse(url).path.startswith("/functions/v1/nutricao"):
+            return False
+        return self.leitura or not B17.corpo_de_leitura("nutricao", corpo)
 
     def instalar(self, ctx) -> None:
         def rota(route, req) -> None:
-            if req.method == "POST" and urlparse(req.url).path.startswith("/functions/v1/nutricao"):
+            if self.barra(req.method, req.url, B17.corpo_do_pedido(req)):
                 self.barradas[B17.acao_do_corpo(req) or "?"] += 1
                 route.abort()
                 return

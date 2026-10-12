@@ -5,8 +5,10 @@ import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { buscarComTempo, ORCAMENTO_MS, prazo, TEMPO_MS, type Prazo } from "../_shared/tempo.ts";
 import {
-  ACOES_QUE_GRAVAM, bucketDosRegistros, caminhoDoAluno, ehAcaoFoto, erroDoBanco, erroDoStorage, foiTempo, lerExclusaoDeFoto, lerPedidoDeFoto,
-  mesRef, schemaDaFoto, statusDaFoto, type AcaoFoto,
+  ACOES_QUE_GRAVAM, COLUNAS_AVALIACOES_EVOLUCAO, COLUNAS_FOTOS_EVOLUCAO, COLUNAS_PERFIL_EVOLUCAO, FREIO_EVOLUCAO_POR_MINUTO, MAX_AVALIACOES_EVOLUCAO,
+  MAX_FOTOS_EVOLUCAO, VALIDADE_URL_EVOLUCAO_S, bucketDosRegistros, caminhoDoAluno, caminhosDasFotos, criarFreio, ehAcaoDeLeitura, ehAcaoFoto,
+  erroDoBanco, erroDoStorage, foiTempo, lerExclusaoDeFoto, lerPedidoDeFoto, mesRef, parteDaEvolucao, schemaDaFoto, statusDaFoto, urlsAssinadas,
+  type AcaoFoto,
 } from "./regras.ts";
 // hml-14 (H-51 item 2): log em JSON sem dado pessoal (_shared/log.ts) — por enquanto só o GoTrue que não responde (os
 // console.error de antes ficam para o resto do H-48)
@@ -304,6 +306,70 @@ async function atenderFoto(req: Request, user: any, body: any, origin: string | 
   }
 }
 
+// ───────────────────────── hml-20a (H-42 · jeito 2, etapa 2 · decisão 14): minha_evolucao — a Evolução do PRÓPRIO aluno ─────────────────────────
+// A aba Evolução e o card do peso do Início (src/evolucao/fontes.ts, carregarTreino) deixam de ler direto no REST do Treino: o mesmo
+// conjunto sai daqui, numa ida só, ANTES do requireAdmin (que exige papel de profissional) — qualquer papel lê SÓ O PRÓPRIO:
+//   x-schema na lista (400 schema_invalido) → Bearer (401 missing_auth) → o token conferido pelo JWKS (usuarioDoToken, o caminho de
+//   leitura da list; 401 invalid_token) → o freio por pessoa (em memória, 60/min; 429 rate_limited) → o cliente COMO A PESSOA (a chave
+//   anon + o token dela; o RLS de hoje) → physiq_profiles (as 37 colunas) ∥ physiq_avaliacoes (as colunas da série, as 200 mais novas)
+//   ∥ physiq_registros_fotos (as 5 colunas, as 200 mais novas) — o dono das 3 é o `sub` do token, o corpo não entra → a URL das fotos
+//   (createSignedUrls no bucket do ambiente, 1 h, só os caminhos lidos; relativa) → { perfil, avaliacoes, fotos } (a ParteTreino).
+// O erro do banco: o RLS recusou (42501) → 403 forbidden; o resto → 500 internal (log.excecao + aviso). Não deu para assinar → as fotos
+// sem URL (como hoje) e um aviso no log. Nenhuma chave secreta neste bloco.
+const freioDaEvolucao = criarFreio(FREIO_EVOLUCAO_POR_MINUTO, 60_000);
+
+async function atenderMinhaEvolucao(req: Request, origin: string | null): Promise<Response> {
+  const acao = "minha_evolucao";
+  if (!schemaDaFoto(req.headers.get("x-schema"))) return jsonErr("schema_invalido", 400, origin);
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!auth.startsWith("Bearer ") || auth.length < 20) return jsonErr("missing_auth", 401, origin);
+  try {
+    const user = await usuarioDoToken(auth.slice(7).trim(), auth);
+    const sub = typeof user?.id === "string" ? user.id : "";
+    if (!sub) return jsonErr("invalid_token", 401, origin);
+    if (!freioDaEvolucao(`${currentSchema()}:${sub}`)) {
+      log.aviso({ codigo: "rate_limited", schema: currentSchema(), acao, ref: sub });
+      return jsonErr("rate_limited", 429, origin);
+    }
+    const pessoa = clienteDaPessoa(auth, prazo(ORCAMENTO_MS.usuario));
+    const [perfil, avaliacoes, fotos] = await Promise.all([
+      pessoa.from("physiq_profiles").select(COLUNAS_PERFIL_EVOLUCAO.join(", ")).eq("id", sub).maybeSingle(),
+      pessoa.from("physiq_avaliacoes").select(COLUNAS_AVALIACOES_EVOLUCAO.join(", ")).eq("user_id", sub)
+        .order("data_avaliacao", { ascending: false }).order("id", { ascending: false }).limit(MAX_AVALIACOES_EVOLUCAO),
+      pessoa.from("physiq_registros_fotos").select(COLUNAS_FOTOS_EVOLUCAO.join(", ")).eq("user_id", sub)
+        .order("mes_ref", { ascending: false }).limit(MAX_FOTOS_EVOLUCAO),
+    ]);
+    const erro = perfil.error ?? avaliacoes.error ?? fotos.error;
+    if (erro) {
+      if (erroDoBanco(erro) === "forbidden") {
+        log.aviso({ codigo: "leitura_recusada", schema: currentSchema(), acao, resultado: "forbidden", ref: sub });
+        return jsonErr("forbidden", 403, origin);
+      }
+      log.excecao(erro, { codigo: foiTempo(erro) ? "tempo_esgotado" : "banco_falhou", schema: currentSchema(), acao });
+      return jsonErr("internal", 500, origin);
+    }
+    const caminhos = caminhosDasFotos(fotos.data);
+    let urls = new Map<string, string>();
+    if (caminhos.length) {
+      const bucket = bucketDosRegistros(currentSchema());
+      const { data: assinadas, error: ea } = await pessoa.storage.from(bucket).createSignedUrls(caminhos, VALIDADE_URL_EVOLUCAO_S);
+      if (ea || !assinadas) {
+        const status = (ea as { status?: unknown } | null)?.status;
+        log.aviso({ codigo: "assinar_falhou", schema: currentSchema(), acao, status: typeof status === "number" ? status : 0, n: caminhos.length });
+      } else {
+        urls = urlsAssinadas(caminhos, assinadas, bucket);
+        if (urls.size < caminhos.length) log.aviso({ codigo: "assinar_parcial", schema: currentSchema(), acao, n: caminhos.length - urls.size });
+      }
+    }
+    return new Response(JSON.stringify(parteDaEvolucao(perfil.data, avaliacoes.data, fotos.data, urls)), {
+      headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+    });
+  } catch (e) {
+    log.excecao(e, { codigo: foiTempo(e) ? "tempo_esgotado" : "excecao", schema: currentSchema(), acao });
+    return jsonErr("internal", 500, origin);
+  }
+}
+
 Deno.serve(async (req) => {
   schemaCtx.enterWith(resolveSchema(req));
   const origin = req.headers.get("Origin");
@@ -312,6 +378,8 @@ Deno.serve(async (req) => {
   let body: any = null;
   let corpoOk = true;
   try { body = await req.json(); } catch { corpoOk = false; }
+  // hml-20a: a Evolução do PRÓPRIO aluno (minha_evolucao) vem antes do requireAdmin — qualquer papel lê só o próprio; as de antes não mudam
+  if (corpoOk && ehAcaoDeLeitura(body?.action)) return await atenderMinhaEvolucao(req, origin);
   // hml-19c: a foto mensal exige o x-schema da lista (fora dela → 400, nunca cai na produção por engano); as ações de antes não mudam
   const foto = corpoOk && ehAcaoFoto(body?.action);
   if (foto && !schemaDaFoto(req.headers.get("x-schema"))) return jsonErr("schema_invalido", 400, origin);

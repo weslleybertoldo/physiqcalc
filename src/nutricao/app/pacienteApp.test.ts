@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // hml-19b (decisão 14): as GRAVAÇÕES do app passam pela função nutricao (functions.invoke) — as mesmas RPCs de hoje lá, como o aluno;
-// a foto do diário sobe pelo link assinado que o servidor dá (uploadToSignedUrl). As leituras seguem pelas RPCs/Storage de antes.
+// a foto do diário sobe pelo link assinado que o servidor dá (uploadToSignedUrl).
+// hml-20a (H-42): as LEITURAS também — a minha_dieta pela consulta aluno_dieta e as URLs do diário pela aluno_diario_urls (ação `ler`,
+// no lote); nada direto na RPC nem no Storage. O erro de leitura chega com o CÓDIGO na mensagem (a tela compara "sem_internet").
 const h = vi.hoisted(() => ({
   rpc: vi.fn(),
   invoke: vi.fn(),
@@ -22,15 +24,18 @@ vi.mock("@/integrations/principal/client", () => ({
     },
   },
   PRINCIPAL_SCHEMA: "public",
+  PRINCIPAL_URL: "https://principal.teste.invalid",
 }));
 
-import { enviarFotoDiario, marcarMeta, marcarRefeicao, minhaDieta, normalizarDieta, urlsDoDiario } from "./pacienteApp";
+import { IDS_DO_DIARIO_POR_LEITURA, enviarFotoDiario, marcarMeta, marcarRefeicao, minhaDieta, normalizarDieta, urlsDoDiario } from "./pacienteApp";
 
 const recusa = (status: number, erro: string) => ({
   data: null,
   error: { name: "FunctionsHttpError", context: new Response(JSON.stringify({ ok: false, erro }), { status, headers: { "Content-Type": "application/json" } }) },
 });
 const corpos = (): Array<Record<string, unknown>> => h.invoke.mock.calls.map(([nome, o]) => ({ nome, ...(o as { body: Record<string, unknown> }).body }));
+/** A resposta da ação `ler` com 1 item por consulta pedida (na ordem). */
+const leitura = (...itens: unknown[]) => ({ data: { ok: true, itens }, error: null });
 
 beforeEach(() => {
   h.rpc.mockReset();
@@ -43,17 +48,18 @@ beforeEach(() => {
 });
 
 describe("acesso da aba Dieta ao banco principal", () => {
-  it("lê tudo pela minha_dieta(p_dia) e normaliza os números do jsonb", async () => {
-    h.rpc.mockResolvedValue({
-      data: {
+  it("lê tudo pela minha_dieta(p_dia) — agora pela função (consulta aluno_dieta { dia }) — e normaliza os números do jsonb", async () => {
+    h.invoke.mockResolvedValue(leitura({
+      ok: true,
+      valor: {
         hoje: "2026-09-30", dia: "2026-09-30", matriculas: [{ id: "m1" }],
         planos: [{ id: "p1", kcal_alvo: "2450", refeicoes: [{ id: "r1", dias_semana: ["1", 3], itens: [{ id: "i1", quantidade_g: "150.00", quantidade_medida: null }] }] }],
         metas: [{ id: "mt1", dias_semana: [1, "5"] }], refeicoes_concluidas: ["r1"], metas_concluidas: null, diario: [],
       },
-      error: null,
-    });
+    }));
     const d = await minhaDieta("2026-09-30");
-    expect(h.rpc).toHaveBeenCalledWith("minha_dieta", { p_dia: "2026-09-30" });
+    expect(corpos()).toEqual([{ nome: "nutricao", acao: "ler", itens: [{ dia: "2026-09-30", q: "aluno_dieta" }] }]);
+    expect(h.rpc).not.toHaveBeenCalled(); // nada direto no banco
     expect(d.planos[0].kcal_alvo).toBe(2450);
     expect(d.planos[0].refeicoes[0].dias_semana).toEqual([1, 3]);
     expect(d.planos[0].refeicoes[0].itens[0].quantidade_g).toBe(150);
@@ -90,7 +96,7 @@ describe("acesso da aba Dieta ao banco principal", () => {
     expect(h.invoke).not.toHaveBeenCalled();
   });
   it("erro de rede vira sem_internet (na leitura e na função)", async () => {
-    h.rpc.mockResolvedValue({ data: null, error: { message: "TypeError: Failed to fetch" } });
+    h.invoke.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new TypeError("Failed to fetch") } });
     await expect(minhaDieta("2026-09-30")).rejects.toThrow("sem_internet");
     h.invoke.mockResolvedValue({ data: null, error: { name: "FunctionsFetchError", context: new TypeError("Failed to fetch") } });
     await expect(marcarRefeicao("r1", "2026-09-30", true)).rejects.toThrow("sem_internet");
@@ -142,9 +148,47 @@ describe("foto do diário (pelo link assinado do servidor; o mesmo registro do l
       .rejects.toThrow("sem_acesso");
     expect(h.subir).not.toHaveBeenCalled();
   });
-  it("URLs assinadas das próprias fotos, por registro (a que falha fica de fora)", async () => {
-    h.assinar.mockResolvedValue({ data: [{ path: "a/b/1.jpg", signedUrl: "https://x/1", error: null }, { path: "a/b/2.jpg", signedUrl: "", error: "nope" }], error: null });
-    expect(await urlsDoDiario([{ id: "d1", path: "a/b/1.jpg" }, { id: "d2", path: "a/b/2.jpg" }])).toEqual({ d1: "https://x/1" });
+  it("URLs assinadas das próprias fotos, por registro (a que falha fica de fora) — só os ids vão; o servidor relê o caminho e assina", async () => {
+    h.invoke.mockResolvedValue(leitura({
+      ok: true,
+      linhas: [
+        { id: "d1", path: "a/b/1.jpg", url: "/storage/v1/object/sign/diario/a/b/1.jpg?token=t1" },
+        { id: "d2", path: "a/b/2.jpg", url: null },
+      ],
+    }));
+    expect(await urlsDoDiario([{ id: "d1", path: "a/b/1.jpg" }, { id: "d2", path: "a/b/2.jpg" }, { id: "d3", path: "" }])).toEqual({
+      d1: "https://principal.teste.invalid/storage/v1/object/sign/diario/a/b/1.jpg?token=t1",
+    });
+    expect(corpos()).toEqual([{ nome: "nutricao", acao: "ler", itens: [{ ids: ["d1", "d2"], q: "aluno_diario_urls" }] }]);
+    expect(h.assinar).not.toHaveBeenCalled(); // a assinatura saiu do navegador
+    h.invoke.mockClear();
     expect(await urlsDoDiario([])).toEqual({});
+    expect(h.invoke).not.toHaveBeenCalled();
+  });
+  it("mais de 60 registros: os ids vão em itens de até 60 no MESMO lote (1 chamada); a leitura que falha devolve vazio, como antes", async () => {
+    const registros = Array.from({ length: 61 }, (_, i) => ({ id: `d${i}`, path: `a/b/${i}.jpg` }));
+    h.invoke.mockImplementation(async (_n: string, o: { body: { itens: Array<{ ids: string[] }> } }) =>
+      leitura(...o.body.itens.map((it) => ({ ok: true, linhas: it.ids.map((id) => ({ id, url: `/storage/v1/object/sign/diario/${id}.jpg?token=t` })) }))));
+    const urls = await urlsDoDiario(registros);
+    expect(IDS_DO_DIARIO_POR_LEITURA).toBe(60);
+    expect(Object.keys(urls)).toHaveLength(61);
+    expect(h.invoke).toHaveBeenCalledTimes(1);
+    expect((h.invoke.mock.calls[0][1] as { body: { itens: Array<{ ids: string[] }> } }).body.itens.map((i) => i.ids.length)).toEqual([60, 1]);
+    h.invoke.mockReset().mockResolvedValue(leitura({ ok: false, erro: "tempo_esgotado" }));
+    expect(await urlsDoDiario([{ id: "d1", path: "a/b/1.jpg" }])).toEqual({});
+  });
+  it("revisão: o PRAZO da função (25 s) chega como tempo_esgotado (o erro com 'Tentar de novo'), NUNCA sem_internet; a rede caída segue sem_internet", async () => {
+    h.invoke.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new DOMException("The operation was aborted.", "AbortError") } });
+    const prazo = await minhaDieta("2026-09-30").catch((e) => e);
+    expect(prazo).toMatchObject({ codigo: "tempo_esgotado", message: "tempo_esgotado" });
+    expect(prazo.message).not.toBe("sem_internet"); // a Dieta compara d.erro.message === "sem_internet" para o "Sem conexão"
+    h.invoke.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new TypeError("Failed to fetch") } });
+    await expect(minhaDieta("2026-09-30")).rejects.toMatchObject({ message: "sem_internet" });
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    await expect(minhaDieta("2026-09-30")).rejects.toThrow("sem_internet");
+  });
+  it("a leitura da dieta que falha no servidor chega com o código na mensagem (a tela mostra o estado de erro, não o 'sem internet')", async () => {
+    h.invoke.mockResolvedValue(leitura({ ok: false, erro: "tempo_esgotado" }));
+    await expect(minhaDieta("2026-09-30")).rejects.toMatchObject({ codigo: "tempo_esgotado", message: "tempo_esgotado" });
   });
 });

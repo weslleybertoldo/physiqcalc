@@ -3,19 +3,28 @@
  *   · Banco do Treino, pelo REST (como a tela antiga): o perfil (`physiq_profiles` — a composição atual que o personal gravou),
  *     as avaliações (`physiq_avaliacoes`) e as fotos mensais (`physiq_registros_fotos`, bucket privado `registros`), todas
  *     com a regra de hoje (o aluno lê as próprias linhas e a própria pasta);
- *   · banco principal, pela função `minha_evolucao()` (W10): as antropometrias e as fotos de evolução da nutricionista, de
- *     todas as matrículas dele, com o nome de quem fez; o arquivo da foto sai por URL assinada do bucket privado `evolucao`
- *     (a política de Storage da W10 deixa o aluno dono assinar a própria foto).
+ *   · banco principal, pela `minha_evolucao()` (W10): as antropometrias e as fotos de evolução da nutricionista, de todas as matrículas
+ *     dele, com o nome de quem fez; o arquivo da foto sai por URL assinada do bucket privado `evolucao`.
  * Nada é copiado de um banco para o outro — a série é somada no aparelho (`serie.ts`).
+ *
+ * hml-20a (H-42 · jeito 2, etapa 2): a parte do PRINCIPAL sai do servidor, com a sessão do aluno — a função nutricao, ação `ler`, consulta
+ * `aluno_evolucao` (a `minha_evolucao()` + a assinatura das fotos na mesma ida), no lote da tela (src/nutricao/leitura.ts); a URL vem
+ * RELATIVA ao projeto e é montada aqui com o domínio do cliente (a mesma URL de hoje).
+ * DESVIO 23 (docs/desvios.md — o gate J da hml-20a, 12/10/2026): a parte do TREINO FICA no navegador, IGUAL ao 637363f — pela função
+ * (admin-avaliacoes › minha_evolucao) o card do peso do Início ficava ~1,5 s mais lento na 1ª abertura (a função ociosa no Treino
+ * pequeno, H-80). A ação minha_evolucao fica publicada (só lê o próprio), sem uso aqui; a volta dela é a condição do desvio.
+ * As formas (`ParteTreino`, `PartePrincipal`), o useEvolucaoDoAluno e o Cache Storage não mudam.
  */
 import { bucketDoAmbiente } from "@/integrations/principal/buckets";
-import { principal, principalConfigurado } from "@/integrations/principal/client";
+import { PRINCIPAL_URL, principalConfigurado } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { BUCKET_REGISTROS } from "@/lib/registrosFotos";
+import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import type { AntropometriaPrincipal, FotoPrincipal, LinhaFotoTreino, LinhaTreino, ParteTreino, PartePrincipal } from "./tipos";
 
+/** O bucket das fotos de evolução no ambiente (o painel ainda assina com ele: src/painel/aluno/avaliacao/fontes.ts — 20b). */
 export const BUCKET_EVOLUCAO = bucketDoAmbiente("evolucao");
-/** Validade da URL assinada das fotos (a mesma da tela antiga). */
+/** Validade da URL assinada das fotos (a mesma da tela antiga; a do principal o servidor assina com ela). */
 export const VALIDADE_URL_S = 3600;
 
 /** As colunas do perfil que a Evolução mostra (a composição atual). */
@@ -36,7 +45,7 @@ export class ErroFonte extends Error {
 
 type Assinador = (caminhos: string[]) => Promise<Record<string, string>>;
 
-/** O pedaço do Storage do supabase-js que a Evolução usa (os 2 clientes têm). */
+/** O pedaço do Storage do supabase-js que a Evolução usa (o cliente do Treino). */
 interface BucketAssinavel {
   createSignedUrls(
     caminhos: string[],
@@ -58,13 +67,12 @@ async function assinar(bucket: BucketAssinavel, caminhos: string[]): Promise<Rec
 }
 
 const assinarTreino: Assinador = (c) => assinar(supabase.storage.from(BUCKET_REGISTROS), c);
-const assinarPrincipal: Assinador = (c) => assinar(principal.storage.from(BUCKET_EVOLUCAO), c);
 
 /** hml-14d (D30): quantas avaliações e fotos mensais a Evolução lê (as MAIS NOVAS). */
 export const MAX_AVALIACOES = 200;
 export const MAX_FOTOS = 200;
 
-/** A parte do Banco do Treino (o usuário do Treino é o da troca de token). */
+/** A parte do Banco do Treino (o usuário do Treino é o da troca de token) — no navegador (o desvio do gate J, acima). */
 export async function carregarTreino(treinoId: string, assinador: Assinador = assinarTreino): Promise<ParteTreino> {
   const [perfil, avaliacoes, fotos] = await Promise.all([
     supabase.from("physiq_profiles").select(COLUNAS_PERFIL).eq("id", treinoId).maybeSingle(),
@@ -86,17 +94,28 @@ export async function carregarTreino(treinoId: string, assinador: Assinador = as
   };
 }
 
-/** A parte do banco principal: `minha_evolucao()` (só o que é do próprio aluno) + as URLs assinadas das fotos. */
-export async function carregarPrincipal(assinador: Assinador = assinarPrincipal): Promise<PartePrincipal> {
+const PREFIXO_ASSINADA = "/storage/v1/object/sign/";
+
+/** A URL assinada que o servidor devolve (relativa ao projeto) montada com o domínio do cliente; fora do formato → null. */
+export function urlDoServidor(base: string, relativa: unknown): string | null {
+  if (typeof relativa !== "string" || !relativa.startsWith(PREFIXO_ASSINADA) || !base) return null;
+  return `${base.replace(/\/+$/, "")}${relativa}`;
+}
+
+/** A parte do banco principal: `minha_evolucao()` (só o que é do próprio aluno) + as URLs das fotos, na mesma ida (consulta aluno_evolucao). */
+export async function carregarPrincipal(): Promise<PartePrincipal> {
   if (!principalConfigurado) throw new ErroFonte("principal", "principal_nao_configurado");
-  const { data, error } = await principal.rpc("minha_evolucao" as never);
-  if (error) throw new ErroFonte("principal", error.message);
-  const d = (data ?? {}) as { objetivo?: string | null; antropometrias?: AntropometriaPrincipal[]; fotos?: FotoPrincipal[] };
+  let valor: unknown;
+  try {
+    valor = (await lerNutricao("aluno_evolucao")).valor;
+  } catch (e) {
+    throw new ErroFonte("principal", e instanceof ErroLeitura ? e.codigo : "erro_interno");
+  }
+  const d = (valor ?? {}) as { objetivo?: string | null; antropometrias?: AntropometriaPrincipal[]; fotos?: FotoPrincipal[] };
   const fotos = Array.isArray(d.fotos) ? d.fotos : [];
-  const urls = await assinador(fotos.map((f) => f.path));
   return {
     objetivo: d.objetivo ?? null,
     antropometrias: Array.isArray(d.antropometrias) ? d.antropometrias : [],
-    fotos: fotos.map((f) => ({ ...f, url: urls[f.path] ?? null })),
+    fotos: fotos.map((f) => ({ ...f, url: urlDoServidor(PRINCIPAL_URL, f.url) })),
   };
 }

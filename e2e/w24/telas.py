@@ -457,12 +457,14 @@ if __name__ == "__main__":
     ap.add_argument("--base", required=True)
     ap.add_argument("--prefixo", required=True)
     ap.add_argument("--casos", default=",".join(CASOS))
+    # hml-20a: o E2E de tela com o Edge no notebook (como o w19/telas.py); sem o --canal, o Chromium de antes
+    ap.add_argument("--canal", default=None, help="msedge = o Edge")
     a = ap.parse_args()
     ESTADO.update(base=a.base.rstrip("/"), prefixo=a.prefixo, site="https://physiqcalc-staging.vercel.app")
     subprocess.run([sys.executable, str(Path(__file__).parent / "massa.py")], check=True, stdout=subprocess.DEVNULL)
     t0 = time.time()
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"]) if a.canal else pw.chromium.launch(args=["--no-sandbox"])
         for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
             print(f"\n══ caso {nome}", flush=True)
             try:

@@ -9,6 +9,9 @@
 // O aviso não muda nada para quem chamou: a resposta volta igual.
 // hml-14 (H-32, D5): função espera 25 s (TEMPO_FUNCAO_MS); tabela, RPC, Auth e Storage seguem com o tempo de quem criou (15 s nos
 // 2 clientes). Os fetch diretos do front (login, treino-leitura, invokeEdge, release do GitHub, foto) usam criarFetchResiliente(0, ms).
+// hml-20a (H-42 · decisão 18): as LEITURAS de saúde passam por funções (POST). Para não perder a nova tentativa que o GET tinha, o POST de
+// função repete quando o CORPO é de leitura, numa lista fechada (ACOES_DE_LEITURA: a `ler` da nutricao e da financeiro, a minha_evolucao
+// da admin-avaliacoes) — o campo é o que a função lê. Qualquer outra ação dessas funções (as gravações) segue indo 1 vez.
 import type { BancoErro } from "../../supabase-principal/functions/_shared/erros";
 import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 
@@ -67,7 +70,35 @@ export const RPC_QUE_GRAVAM = new Set<string>([
   "whatsapp_limpar_falhas", "whatsapp_reenviar", "whatsapp_salvar_config",
 ]);
 
-/** O pedido pode ir de novo sem risco de fazer 2 vezes? GET/HEAD e POST das RPCs de leitura; o resto, não. */
+/**
+ * hml-20a (decisão 18): as ações de LEITURA das funções do jeito 2 — o POST com um destes corpos repete 1 vez, como o GET de hoje.
+ * `campo` = o campo do corpo que a FUNÇÃO lê (a nutricao e a financeiro leem `acao`; a admin-avaliacoes, `action`): um corpo com
+ * { action: "ler", acao: "<gravação>" } não engana (a nutricao faria a gravação → não repete).
+ */
+export const ACOES_DE_LEITURA: Readonly<Record<string, { campo: "acao" | "action"; acoes: readonly string[] }>> = {
+  nutricao: { campo: "acao", acoes: ["ler"] },
+  financeiro: { campo: "acao", acoes: ["ler"] },
+  "admin-avaliacoes": { campo: "action", acoes: ["minha_evolucao"] },
+};
+
+/** O corpo (o texto JSON que o supabase-js manda) é de uma ação de LEITURA da função? Corpo ilegível, sem a ação ou outra → não. */
+export function corpoDeLeitura(funcao: string, corpo: unknown): boolean {
+  if (!Object.prototype.hasOwnProperty.call(ACOES_DE_LEITURA, funcao) || typeof corpo !== "string") return false;
+  const regra = ACOES_DE_LEITURA[funcao];
+  try {
+    const b = JSON.parse(corpo) as unknown;
+    if (!b || typeof b !== "object" || Array.isArray(b)) return false;
+    const acao = (b as Record<string, unknown>)[regra.campo];
+    return typeof acao === "string" && regra.acoes.includes(acao);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * O pedido pode ir de novo sem risco de fazer 2 vezes? GET/HEAD, POST das RPCs de leitura e (hml-20a) o POST de função com o corpo de
+ * uma ação de leitura (ACOES_DE_LEITURA); o resto, não.
+ */
 export function podeRepetir(input: RequestInfo | URL, init?: RequestInit): boolean {
   const pedido = typeof Request !== "undefined" && input instanceof Request ? input : null;
   const metodo = (init?.method ?? pedido?.method ?? "GET").toUpperCase();
@@ -79,6 +110,8 @@ export function podeRepetir(input: RequestInfo | URL, init?: RequestInit): boole
   } catch {
     return false; // endereço que não dá para ler: na dúvida, não repete
   }
+  const funcao = /^\/functions\/v1\/([a-z0-9-]+)$/.exec(caminho);
+  if (funcao) return corpoDeLeitura(funcao[1], init?.body); // o corpo de um Request não dá para ler aqui: na dúvida, não repete
   const rpc = /\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(caminho);
   return !!rpc && RPC_SO_LEITURA.has(rpc[1]);
 }

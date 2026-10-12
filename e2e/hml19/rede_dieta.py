@@ -349,6 +349,12 @@ def seco(o) -> None:
     o.ok(dict(c) == ESPERADO_DEPOIS["prescricao"], f"a classificação do DEPOIS (a nutricao; a RPC de leitura não conta): {dict(c)}")
     app = [{"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "aluno_marcar_refeicao", "url": f"{P}/functions/v1/nutricao"}]
     o.ok(dict(B.contar(app)) == ESPERADO_DEPOIS["app_marcar"], "a classificação do app depois: só a aluno_marcar_refeicao da nutricao")
+    # hml-20a (revisão): depois de marcar, a Dieta relê pela nutricao (o `ler` da aluno_dieta) — leitura, fora da conta do caso app_marcar
+    import json  # noqa: PLC0415
+    reler = {"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "ler", "url": f"{P}/functions/v1/nutricao",
+             "corpo": json.dumps({"acao": "ler", "itens": [{"dia": "2026-10-11", "q": "aluno_dieta"}]})}
+    o.ok(R.so_gravacoes(B.contar(app + [reler])) == ESPERADO_DEPOIS["app_marcar"],
+         "hml-20a: o recarregamento da Dieta pelo `ler` não entra na conta do app_marcar (só a aluno_marcar_refeicao)")
     o.ok(set(ESPERADO_DEPOIS) == set(CASOS) and set(PRINT_DO_CASO) <= set(CASOS), "cada caso tem o esperado do depois; os prints b_* são de casos da lista")
     o.ok({"rest_dieta"} <= set(R.GRAVACOES), "o rede.py conta o rest_dieta entre as gravações")
     class _Pedidos:

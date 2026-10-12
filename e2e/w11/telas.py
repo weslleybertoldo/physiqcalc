@@ -275,7 +275,7 @@ def caso_dieta(nav, base: str, prefixo: str) -> None:
 def caso_sem_internet(nav, base: str, prefixo: str) -> None:
     c = B.Caso(nav, base, prefixo, "sem_internet", desktop=False)
     try:
-        c.pg.route("**/rpc/minha_dieta", lambda r: r.abort("internetdisconnected"))
+        B.barrar_minha_dieta(c.pg)  # hml-20a: a RPC minha_dieta (o front antigo) e o `ler` da aluno_dieta (o novo)
         c.entrar("w10-aluno", "/dieta", zerar=True)
         c.fechar_avisos()
         # o arquivo da aba tem que estar no aparelho antes de cair a rede (no APK ele vem no pacote; no site, o service worker
@@ -285,7 +285,7 @@ def caso_sem_internet(nav, base: str, prefixo: str) -> None:
         ok = c.esperar(lambda: c.tem('[data-aba-dieta="sem-internet"]'), 60)
         p.check(ok and "A dieta aparece quando a internet voltar." in c.texto(), "[sem_internet] 'A dieta aparece quando a internet voltar.'")
         foto(c, "dieta_sem_internet")
-        c.pg.unroute("**/rpc/minha_dieta")
+        B.soltar_minha_dieta(c.pg)
         c.ctx.set_offline(False)
         ok = c.esperar(lambda: c.tem('[data-aba-dieta="plano"]'), 60)
         p.check(ok, "[sem_internet] a internet voltou: a dieta aparece sozinha")
@@ -498,11 +498,13 @@ def main() -> int:
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
     ap.add_argument("--nutri", default="https://physiqnutri-staging.vercel.app")
+    # hml-20a: o E2E de tela com o Edge no notebook (como o w12/telas.py desde a hml-18a); sem o --canal, o Chromium de antes
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
     B.ESTADO["schema"] = "staging"
     ESTADO.update(prefixo=a.prefixo, nutri=a.nutri)
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage"])
         for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
             print(f"\n── {nome} ──", flush=True)
             if not B.saude_treino():

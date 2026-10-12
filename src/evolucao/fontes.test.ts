@@ -1,6 +1,9 @@
 // Physiq hml-14d (B21 · D30): a Evolução do app lê as 200 avaliações MAIS NOVAS (antes, as 200 mais antigas — acima de 200 a
 // avaliação nova sumia do gráfico) e as devolve em ordem crescente, como antes; as fotos mensais também param em 200 (as mais
 // novas). O banco do Treino é falso: aplica o eq, a ordem e o limite da consulta sobre as linhas do teste.
+// hml-20a (H-42 · jeito 2, etapa 2): a parte do PRINCIPAL sai do servidor (nutricao › ler, aluno_evolucao: a tela não lê direto na RPC
+// nem no Storage do principal); a parte do TREINO FICA no navegador, igual ao 637363f (o desvio 23 do docs/desvios.md — o gate J): as 3
+// leituras pelo REST do Treino e a assinatura do `registros` em lote, sem chamar a admin-avaliacoes.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type Linha = Record<string, unknown>;
@@ -16,6 +19,12 @@ const h = vi.hoisted(() => ({
   tabelas: {} as Record<string, Array<Record<string, unknown>>>,
   consultas: [] as Consulta[],
   erro: null as null | { message: string },
+  assinaturas: [] as Array<{ bucket: string; caminhos: string[]; validade: number }>,
+  principal: vi.fn(),
+  /** o que não pode acontecer: a função do Treino (o desvio) e a leitura direta no principal */
+  proibido: (onde: string) => () => {
+    throw new Error(`proibido: ${onde}`);
+  },
 }));
 
 vi.mock("@/integrations/supabase/client", () => {
@@ -47,12 +56,35 @@ vi.mock("@/integrations/supabase/client", () => {
     };
     return b;
   };
-  return { DB_SCHEMA: "staging", supabase: { from, storage: { from: () => ({ createSignedUrls: async () => ({ data: [], error: null }) }) } } };
+  const storage = {
+    from: (bucket: string) => ({
+      createSignedUrls: async (caminhos: string[], validade: number) => {
+        h.assinaturas.push({ bucket, caminhos, validade });
+        return { data: caminhos.map((p) => ({ path: p, error: null, signedUrl: `https://treino.teste.invalid/storage/v1/object/sign/${bucket}/${p}?token=t` })), error: null };
+      },
+    }),
+  };
+  return { DB_SCHEMA: "staging", supabase: { from, storage, functions: { invoke: h.proibido("função do Treino (a admin-avaliacoes › minha_evolucao)") } } };
 });
+vi.mock("@/integrations/principal/client", () => ({
+  PRINCIPAL_SCHEMA: "staging",
+  PRINCIPAL_URL: "https://principal.teste.invalid",
+  principalConfigurado: true,
+  principal: {
+    functions: { invoke: (...a: unknown[]) => h.principal(...a) },
+    from: h.proibido("tabela do principal"),
+    rpc: h.proibido("RPC do principal"),
+    storage: { from: h.proibido("Storage do principal") },
+  },
+}));
 
-import { carregarTreino, ErroFonte, MAX_AVALIACOES, MAX_FOTOS } from "./fontes";
+import { carregarPrincipal, carregarTreino, ErroFonte, MAX_AVALIACOES, MAX_FOTOS, urlDoServidor } from "./fontes";
 
 const semAssinar = async () => ({});
+const recusa = (status: number, corpo: unknown) => ({
+  data: null,
+  error: { name: "FunctionsHttpError", context: new Response(JSON.stringify(corpo), { status, headers: { "Content-Type": "application/json" } }) },
+});
 const dataDe = (i: number) => {
   const d = new Date(Date.UTC(2009, 0, 1) + i * 20 * 86_400_000);
   return d.toISOString().slice(0, 10);
@@ -65,6 +97,9 @@ beforeEach(() => {
   h.tabelas = { physiq_profiles: [{ id: "t1", peso: 78 }], physiq_avaliacoes: [], physiq_registros_fotos: [] };
   h.consultas = [];
   h.erro = null;
+  h.assinaturas = [];
+  h.principal.mockReset();
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
 });
 
 describe("Evolução do app — as avaliações mais novas (hml-14d, D30)", () => {
@@ -114,5 +149,91 @@ describe("Evolução do app — as avaliações mais novas (hml-14d, D30)", () =
   it("erro do banco nas avaliações → ErroFonte do Treino (a tela mostra o erro, nunca a lista vazia)", async () => {
     h.erro = { message: "statement timeout" };
     await expect(carregarTreino("t1", semAssinar)).rejects.toBeInstanceOf(ErroFonte);
+  });
+});
+
+describe("hml-20a — o desvio do gate J: a parte do Treino segue no navegador, igual ao 637363f", () => {
+  it("as 3 leituras pelo REST do Treino (o perfil pelo id; as avaliações e as fotos pelo user_id) e a assinatura do registros em 1 lote, 1 h", async () => {
+    h.tabelas.physiq_registros_fotos = [
+      { id: "f1", user_id: "t1", mes_ref: "2026-10-01", tipo: "frente", storage_path: "t1/2026-10/frente.jpg", created_at: "x" },
+      { id: "f2", user_id: "t1", mes_ref: "2026-09-01", tipo: "costas", storage_path: "t1/2026-09/costas.jpg", created_at: "x" },
+      { id: "f3", user_id: "outro", mes_ref: "2026-10-01", tipo: "frente", storage_path: "outro/2026-10/frente.jpg", created_at: "x" },
+    ];
+    const parte = await carregarTreino("t1"); // o assinador padrão (o Storage do Treino)
+    expect(h.consultas.map((c) => [c.tabela, c.filtros])).toEqual([
+      ["physiq_profiles", [["id", "t1"]]], ["physiq_avaliacoes", [["user_id", "t1"]]], ["physiq_registros_fotos", [["user_id", "t1"]]],
+    ]);
+    expect(h.assinaturas).toEqual([{ bucket: "registros-staging", caminhos: ["t1/2026-10/frente.jpg", "t1/2026-09/costas.jpg"], validade: 3600 }]);
+    expect(parte.fotos.map((f) => [f.id, f.url])).toEqual([
+      ["f1", "https://treino.teste.invalid/storage/v1/object/sign/registros-staging/t1/2026-10/frente.jpg?token=t"],
+      ["f2", "https://treino.teste.invalid/storage/v1/object/sign/registros-staging/t1/2026-09/costas.jpg?token=t"],
+    ]);
+    // a admin-avaliacoes › minha_evolucao não é chamada (o mock quebra se for) e nada do principal entra na parte do Treino
+    expect(h.principal).not.toHaveBeenCalled();
+  });
+
+  it("sem foto, nenhuma assinatura (0 pedido ao Storage)", async () => {
+    await carregarTreino("t1");
+    expect(h.assinaturas).toEqual([]);
+  });
+});
+
+describe("hml-20a — a parte do principal pela nutricao › ler (aluno_evolucao)", () => {
+  it("1 chamada `ler` com a consulta aluno_evolucao (sem id: a RPC usa o auth.uid()); a PartePrincipal de antes; URL com o domínio do principal", async () => {
+    h.principal.mockResolvedValue({
+      data: {
+        ok: true,
+        itens: [{
+          ok: true,
+          valor: {
+            objetivo: "emagrecer",
+            antropometrias: [{ id: "a1", data: "2026-10-01" }],
+            fotos: [
+              { id: "f1", data: "2026-10-01", posicao: "frente", path: "n/p/1.jpg", url: "/storage/v1/object/sign/evolucao-staging/n/p/1.jpg?token=t" },
+              { id: "f2", data: "2026-10-01", posicao: "costas", path: "n/p/2.jpg", url: null },
+            ],
+          },
+        }],
+      },
+      error: null,
+    });
+    const parte = await carregarPrincipal();
+    expect(h.principal.mock.calls).toEqual([["nutricao", { body: { acao: "ler", itens: [{ q: "aluno_evolucao" }] } }]]);
+    expect(parte).toEqual({
+      objetivo: "emagrecer",
+      antropometrias: [{ id: "a1", data: "2026-10-01" }],
+      fotos: [
+        { id: "f1", data: "2026-10-01", posicao: "frente", path: "n/p/1.jpg", url: "https://principal.teste.invalid/storage/v1/object/sign/evolucao-staging/n/p/1.jpg?token=t" },
+        { id: "f2", data: "2026-10-01", posicao: "costas", path: "n/p/2.jpg", url: null },
+      ],
+    });
+  });
+
+  it("valor torto não quebra (listas vazias); o erro vira ErroFonte do principal com o código", async () => {
+    h.principal.mockResolvedValueOnce({ data: { ok: true, itens: [{ ok: true, valor: null }] }, error: null });
+    expect(await carregarPrincipal()).toEqual({ objetivo: null, antropometrias: [], fotos: [] });
+    h.principal.mockResolvedValueOnce({ data: { ok: true, itens: [{ ok: false, erro: "tempo_esgotado" }] }, error: null });
+    await expect(carregarPrincipal()).rejects.toMatchObject({ parte: "principal", message: "tempo_esgotado" });
+    h.principal.mockResolvedValueOnce(recusa(429, { ok: false, erro: "muitas_acoes" }));
+    await expect(carregarPrincipal()).rejects.toMatchObject({ parte: "principal", message: "muitas_acoes" });
+  });
+
+  it("revisão: o PRAZO da nutricao (o AbortError do fetch) chega ao principal como tempo_esgotado", async () => {
+    h.principal.mockResolvedValueOnce({ data: null, error: { name: "FunctionsFetchError", context: new DOMException("aborted", "AbortError") } });
+    await expect(carregarPrincipal()).rejects.toMatchObject({ parte: "principal", message: "tempo_esgotado" });
+  });
+
+  it("sem internet: o principal recusa com sem_internet sem chamar a função", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    await expect(carregarPrincipal()).rejects.toMatchObject({ parte: "principal", message: "sem_internet" });
+    expect(h.principal).not.toHaveBeenCalled();
+  });
+});
+
+describe("hml-20a — a URL assinada que o servidor devolve (relativa) montada com o domínio do cliente", () => {
+  it("só o link de leitura do Storage; outra coisa → null", () => {
+    expect(urlDoServidor("https://api.x.br/", "/storage/v1/object/sign/registros/a.jpg?token=t")).toBe("https://api.x.br/storage/v1/object/sign/registros/a.jpg?token=t");
+    for (const r of ["https://outro.site/x.jpg", "/storage/v1/object/public/a.jpg", "storage/v1/object/sign/a.jpg", null, 3]) expect(urlDoServidor("https://api.x.br", r), String(r)).toBeNull();
+    expect(urlDoServidor("", "/storage/v1/object/sign/a.jpg")).toBeNull();
   });
 });

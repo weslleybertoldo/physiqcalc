@@ -9,17 +9,21 @@
 // servidor dá (aluno_diario_preparar: o caminho <nutricionista>/<aluno>/<uuid>.<ext> é montado lá; o app sobe com uploadToSignedUrl) e
 // o registro vai pela aluno_diario_enviar (o servidor confere que o arquivo chegou naquele caminho e chama a diario_enviar). Mesmas
 // assinaturas; o erro chega com o CÓDIGO na mensagem, como antes (as telas traduzem: refeicaoConcluidaUtil, metasUtil, diarioUtil), e o
-// otimista do useDieta não muda. As leituras (minha_dieta, as URLs assinadas) seguem aqui.
+// otimista do useDieta não muda.
+// hml-20a (H-42 · jeito 2, etapa 2): as LEITURAS também passam pela função nutricao (ação `ler`, no lote da tela — src/nutricao/leitura.ts),
+// com a sessão do aluno: a minha_dieta(p_dia) pela consulta aluno_dieta e as URLs das fotos do próprio diário pela aluno_diario_urls (o
+// servidor relê o caminho de cada registro como o aluno e assina no bucket do ambiente, 1 h — nunca um caminho mandado daqui). Mesmas
+// assinaturas e os mesmos tipos de antes; o useDieta (chaves, staleTime, o cache de 50 min das URLs) não muda. O erro de leitura chega
+// com o CÓDIGO na mensagem, como o das gravações (a tela compara "sem_internet").
 // Online (9A): sem internet nada é gravado e a tela avisa.
-import { bucketDoAmbiente } from "@/integrations/principal/buckets";
-import { principal } from "@/integrations/principal/client";
+import { PRINCIPAL_URL, principal } from "@/integrations/principal/client";
+import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import { ErroNutricao, acaoNutricao } from "@/nutricao/servidor";
 import { mimeDaFotoDiario, type Refeicao } from "./diarioUtil";
 import type { DadosDieta, MatriculaNutricao, RegistroDiario } from "./tipos";
 
-export const BUCKET_DIARIO = bucketDoAmbiente("diario");
-/** Validade das URLs assinadas das fotos do diário (1 h, a mesma das fotos da Evolução). */
-export const VALIDADE_URL_S = 3600;
+/** Quantos registros do diário por consulta (o DIARIO_IDS_MAX do catálogo do servidor): acima, a lista vai em mais de um item do lote. */
+export const IDS_DO_DIARIO_POR_LEITURA = 60;
 
 function semInternet(): boolean {
   return typeof navigator !== "undefined" && navigator.onLine === false;
@@ -38,6 +42,19 @@ function erroDoApp(e: unknown): Error {
   if (e instanceof ErroNutricao) {
     const codigo = e.codigo === "rede" ? "sem_internet" : e.codigo;
     return new ErroNutricao(codigo, e.extra, codigo);
+  }
+  return e instanceof Error ? e : new Error("erro_interno");
+}
+
+/**
+ * O erro de uma leitura no app: a mensagem passa a ser o CÓDIGO, como o erroDoApp das gravações. sem_internet SÓ quando a rede caiu de
+ * verdade (navigator.onLine === false, que o lote recusa antes de chamar, ou a falha de rede — "rede"); o prazo estourado chega como
+ * tempo_esgotado e a tela mostra o erro com "Tentar de novo" (como a RPC que passava do prazo antes), nunca "Sem conexão".
+ */
+function erroDaLeituraDoApp(e: unknown): Error {
+  if (e instanceof ErroLeitura) {
+    const codigo = e.codigo === "rede" ? "sem_internet" : e.codigo;
+    return new ErroLeitura(codigo, e.extra, codigo);
   }
   return e instanceof Error ? e : new Error("erro_interno");
 }
@@ -73,12 +90,13 @@ export function normalizarDieta(bruto: unknown, dia: string): DadosDieta {
   };
 }
 
-/** Tudo o que a aba Dieta mostra, com os ✓ do `dia` (yyyy-mm-dd de São Paulo). */
+/** Tudo o que a aba Dieta mostra, com os ✓ do `dia` (yyyy-mm-dd de São Paulo) — a minha_dieta(p_dia) pela função (consulta aluno_dieta). */
 export async function minhaDieta(dia: string): Promise<DadosDieta> {
   if (semInternet()) throw new Error("sem_internet");
-  const { data, error } = await principal.rpc("minha_dieta" as never, { p_dia: dia } as never);
-  if (error) throw erro(error);
-  return normalizarDieta(data, dia);
+  const r = await lerNutricao("aluno_dieta", { dia }).catch((e) => {
+    throw erroDaLeituraDoApp(e);
+  });
+  return normalizarDieta(r.valor, dia);
 }
 
 /** Marca (true) ou desmarca a refeição no dia; devolve o estado gravado. Erro com o código da função (a tela traduz). */
@@ -128,18 +146,29 @@ export async function enviarFotoDiario(m: Pick<MatriculaNutricao, "id" | "link_c
   return r.registro;
 }
 
-/** URLs assinadas das fotos do próprio diário, por id do registro (as que falharem ficam de fora: a tela usa a foto padrão). */
+/**
+ * URLs assinadas das fotos do próprio diário, por id do registro (as que falharem ficam de fora: a tela usa a foto padrão). Vão só os
+ * ids (até 60 por item, no mesmo lote): o servidor relê o caminho de cada um como o aluno e assina — a URL vem relativa e é montada com
+ * o domínio do cliente (a mesma de hoje). A leitura que falha devolve vazio, como a assinatura que falhava antes.
+ */
 export async function urlsDoDiario(registros: Pick<RegistroDiario, "id" | "path">[]): Promise<Record<string, string>> {
-  const comPath = registros.filter((r) => r.path);
-  if (!comPath.length) return {};
-  const { data, error } = await principal.storage.from(BUCKET_DIARIO).createSignedUrls(comPath.map((r) => r.path), VALIDADE_URL_S);
-  if (error || !data) return {};
-  const porPath = new Map<string, string>();
-  for (const d of data) if (d.path && d.signedUrl && !d.error) porPath.set(d.path, d.signedUrl);
+  const ids = [...new Set(registros.filter((r) => r.path).map((r) => r.id))];
+  if (!ids.length) return {};
+  const partes: string[][] = [];
+  for (let i = 0; i < ids.length; i += IDS_DO_DIARIO_POR_LEITURA) partes.push(ids.slice(i, i + IDS_DO_DIARIO_POR_LEITURA));
+  const respostas = await Promise.all(partes.map((p) => lerNutricao("aluno_diario_urls", { ids: p }).catch(() => ({ linhas: [] }))));
   const saida: Record<string, string> = {};
-  for (const r of comPath) {
-    const u = porPath.get(r.path);
-    if (u) saida[r.id] = u;
+  for (const r of respostas) {
+    for (const linha of (Array.isArray(r.linhas) ? r.linhas : []) as Array<{ id?: unknown; url?: unknown }>) {
+      const u = urlAssinadaDoServidor(linha.url);
+      if (typeof linha.id === "string" && u) saida[linha.id] = u;
+    }
   }
   return saida;
+}
+
+/** A URL assinada que o servidor devolve (relativa ao projeto) montada com o domínio do cliente do principal; fora do formato → null. */
+function urlAssinadaDoServidor(relativa: unknown): string | null {
+  if (typeof relativa !== "string" || !relativa.startsWith("/storage/v1/object/sign/") || !PRINCIPAL_URL) return null;
+  return `${PRINCIPAL_URL.replace(/\/+$/, "")}${relativa}`;
 }

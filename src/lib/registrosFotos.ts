@@ -1,6 +1,9 @@
-import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
+import { DB_SCHEMA } from "@/integrations/supabase/client";
 
 // Bucket privado — staging tem espelho próprio (mesmo padrão do bucket de exercícios)
+// hml-20a (H-42): sem a leitura direta que sobrava aqui (carregarRegistros, urlAssinada e o formatarMesRef — 0 uso desde a W28): as
+// fotos mensais do próprio aluno são lidas e assinadas em src/evolucao/fontes.ts (o carregarTreino — no navegador, o desvio do gate J,
+// docs/desvios.md) e as do painel, pela treino-leitura.
 export const BUCKET_REGISTROS = DB_SCHEMA === "staging" ? "registros-staging" : "registros";
 
 export const TIPOS_FOTO = [
@@ -12,47 +15,10 @@ export const TIPOS_FOTO = [
 
 export type TipoFoto = (typeof TIPOS_FOTO)[number]["key"];
 
-export interface RegistroFoto {
-  id: string;
-  user_id: string;
-  mes_ref: string; // yyyy-mm-dd (sempre dia 1)
-  tipo: TipoFoto;
-  storage_path: string;
-}
-
 // "2026-08-01" → "2026-08" (valor do <input type="month">)
 export const mesRefParaInput = (mesRef: string) => mesRef.slice(0, 7);
 // "2026-08" → "2026-08-01"
 export const inputParaMesRef = (input: string) => `${input}-01`;
-
-const MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
-
-export function formatarMesRef(mesRef: string) {
-  const [ano, mes] = mesRef.split("-");
-  return `${MESES[parseInt(mes, 10) - 1]} ${ano}`;
-}
-
-export async function carregarRegistros(userId: string): Promise<RegistroFoto[]> {
-  const { data, error } = await supabase
-    .from("physiq_registros_fotos")
-    .select("id, user_id, mes_ref, tipo, storage_path")
-    .eq("user_id", userId)
-    .order("mes_ref", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as RegistroFoto[];
-}
-
-export async function urlAssinada(path: string): Promise<string | null> {
-  const { data, error } = await supabase.storage.from(BUCKET_REGISTROS).createSignedUrl(path, 3600);
-  if (error) {
-    console.warn("[registros] Erro ao assinar URL:", error.message);
-    return null;
-  }
-  return data?.signedUrl ?? null;
-}
 
 // Decodifica a imagem; HEIC/HEIF (padrão do iPhone) o browser não abre nativo —
 // converte via heic2any (lazy, só carrega o chunk quando precisa)

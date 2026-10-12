@@ -154,7 +154,7 @@ def caso_offline(nav, base: str, prefixo: str) -> None:
     c = B.Caso(nav, base, prefixo, "prod_offline", desktop=False)
     vigiar(c)
     try:
-        c.pg.route("**/rpc/minha_dieta", lambda r: r.abort("internetdisconnected"))
+        B.barrar_minha_dieta(c.pg)  # hml-20a: o front da produção é o ANTIGO até a release da 20a — os 2 caminhos (a RPC e o `ler`)
         c.entrar("paciente", "/dieta", zerar=False)
         c.fechar_avisos()
         # o arquivo da aba tem que estar no aparelho antes de cair a rede (no APK ele vem no pacote; no site, o service worker
@@ -164,7 +164,7 @@ def caso_offline(nav, base: str, prefixo: str) -> None:
         ok = c.esperar(lambda: c.tem('[data-aba-dieta="sem-internet"]'), 60)
         p.check(ok and "A dieta aparece quando a internet voltar." in c.texto(), "[prod] sem internet: o aviso")
         T.foto(c, "dieta_sem_internet")
-        c.pg.unroute("**/rpc/minha_dieta")
+        B.soltar_minha_dieta(c.pg)
         c.ctx.set_offline(False)
         p.check(c.esperar(lambda: c.tem('[data-aba-dieta="plano"]'), 60), "[prod] a internet voltou: a dieta aparece")
     finally:

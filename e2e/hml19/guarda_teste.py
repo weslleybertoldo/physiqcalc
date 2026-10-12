@@ -7,7 +7,11 @@ pedidos de mentira passam pela decisão de cada uma.
                       pela ação; admin-delete-user e admin-update-user sempre); toda função das pastas do repo tem de estar decidida.
                       hml-19c (decisão K): a admin-avaliacoes só lê na "list" — as de antes que gravam e as foto_* ficam barradas.
                       hml-19d (decisão I): a financeiro grava em TODA ação (inclusive a semente) — o preflight passa.
-  e2e/w26/prod.py     eh_escrita: o POST na nutricao e na financeiro é escrita (como o POST em tabela); a leitura passa.
+                      hml-20a (decisão I): menos as LEITURAS pelo corpo — { acao: "ler" } na nutricao/financeiro e { action:
+                      "minha_evolucao" } na admin-avaliacoes passam; o corpo "disfarçado" (o campo que a função NÃO lê com a
+                      leitura), ilegível ou sem a ação segue barrado.
+  e2e/w26/prod.py     eh_escrita: o POST na nutricao e na financeiro é escrita (como o POST em tabela); a leitura passa. hml-20a: o
+                      POST com o corpo { acao: "ler" } é leitura.
 Uso: python3 e2e/hml19/guarda_teste.py   (sai 1 se algum caso falhar)
 """
 from __future__ import annotations
@@ -37,9 +41,9 @@ def carregar(nome: str, caminho: Path):
 class Pedido:
     """O que a Guarda lê de um pedido do Playwright: url, method e post_data."""
 
-    def __init__(self, metodo: str, url: str, corpo: dict | None = None) -> None:
+    def __init__(self, metodo: str, url: str, corpo: dict | list | None = None, cru: str | None = None) -> None:
         self.method, self.url = metodo, url
-        self.post_data = json.dumps(corpo) if corpo is not None else None
+        self.post_data = cru if cru is not None else (json.dumps(corpo) if corpo is not None else None)
 
 
 P = "https://api-principal.physiqcalc.com.br"
@@ -123,6 +127,26 @@ def casos_hml17(b) -> list[tuple]:
         ("Storage: link de leitura (sign)", g.escrita(Pedido("POST", f"{P}/storage/v1/object/sign/anexos/a/b/c.pdf", {})), False),
         ("Storage: subida pelo link assinado (PUT)", g.escrita(Pedido("PUT", f"{P}/storage/v1/object/upload/sign/anexos/a/b/c.pdf?token=x")), True),
         ("fora da API (o próprio site)", g.escrita(Pedido("POST", "https://physiqcalc.com.br/qualquer")), False),
+        # hml-20a (decisão I): as LEITURAS do jeito 2 passam pelo corpo (o campo que a função lê); o resto dessas funções segue barrado
+        ("hml-20a: nutricao › ler (leitura em lote)", g.escrita(Pedido("POST", f"{P}/functions/v1/nutricao", {"acao": "ler", "itens": [{"q": "aluno_dieta"}]})), False),
+        ("hml-20a: financeiro › ler (leitura em lote)", g.escrita(Pedido("POST", f"{P}/functions/v1/financeiro", {"acao": "ler", "itens": []})), False),
+        ("hml-20a: admin-avaliacoes › minha_evolucao (leitura do próprio)", fnt("admin-avaliacoes", "minha_evolucao"), False),
+        ("hml-20a: nutricao › OPTIONS do ler (preflight)", fn("nutricao", "ler", "OPTIONS"), False),
+        ("hml-20a: nutricao › disfarçado {action: ler, acao: anotacao_criar}", g.escrita(Pedido("POST", f"{P}/functions/v1/nutricao", {"action": "ler", "acao": "anotacao_criar"})), True),
+        ("hml-20a: nutricao › {action: ler} (a nutricao lê o campo acao)", g.escrita(Pedido("POST", f"{P}/functions/v1/nutricao", {"action": "ler"})), True),
+        ("hml-20a: financeiro › disfarçado {action: ler, acao: transacao_criar}", g.escrita(Pedido("POST", f"{P}/functions/v1/financeiro", {"action": "ler", "acao": "transacao_criar"})), True),
+        ("hml-20a: admin-avaliacoes › disfarçado {acao: minha_evolucao, action: create}", g.escrita(Pedido("POST", f"{T}/functions/v1/admin-avaliacoes", {"acao": "minha_evolucao", "action": "create"})), True),
+        ("hml-20a: admin-avaliacoes › {acao: minha_evolucao} (a função lê o campo action)", g.escrita(Pedido("POST", f"{T}/functions/v1/admin-avaliacoes", {"acao": "minha_evolucao"})), True),
+        ("hml-20a: nutricao › corpo ilegível", g.escrita(Pedido("POST", f"{P}/functions/v1/nutricao", cru="{acao: ler")), True),
+        ("hml-20a: nutricao › {acao: [ler]} (lista)", g.escrita(Pedido("POST", f"{P}/functions/v1/nutricao", {"acao": ["ler"]})), True),
+        ("hml-20a: nutricao › {acao: LER}", fn("nutricao", "LER"), True),
+        ("hml-20a: nutricao › corpo que é lista [{acao: ler}]", g.escrita(Pedido("POST", f"{P}/functions/v1/nutricao", [{"acao": "ler"}])), True),
+        ("hml-20a: pagamentos-aluno › {acao: ler} (outra função: a regra dela)", fn("pagamentos-aluno", "ler"), True),
+        ("hml-20a: funcao_grava SEM o corpo: nutricao 'ler' segue gravação (só o corpo libera)", b.funcao_grava("nutricao", "ler"), True),
+        ("hml-20a: funcao_grava SEM o corpo: admin-avaliacoes 'minha_evolucao' segue a regra de antes", b.funcao_grava("admin-avaliacoes", "minha_evolucao"), True),
+        ("hml-20a: funcao_grava COM o corpo de leitura: passa", b.funcao_grava("nutricao", "ler", json.dumps({"acao": "ler"})), False),
+        ("revisão: POST em tabela com /functions/v1/nutricao na query e {acao: ler} (a Guarda lê o caminho)",
+         g.escrita(Pedido("POST", f"{P}/rest/v1/anexos?x=/functions/v1/nutricao", {"acao": "ler"})), True),
     ]
     # toda função das pastas do repo está decidida (conhecida ou "sempre grava"): função nova sem decisão falha aqui
     pastas = {d.name for raiz in ("supabase-principal/functions", "supabase/functions") for d in (REPO / raiz).iterdir()
@@ -153,6 +177,18 @@ def casos_w26(w) -> list[tuple]:
         ("w26 · RPC lixeira_da_conta (leitura)", e("POST", f"{P}/rest/v1/rpc/lixeira_da_conta"), False),
         ("w26 · Storage sign (leitura)", e("POST", f"{P}/storage/v1/object/sign/anexos/a.pdf"), False),
         ("w26 · Storage upload pelo link assinado", e("PUT", f"{P}/storage/v1/object/upload/sign/anexos/a.pdf?token=x"), True),
+        # hml-20a (decisão I): o POST com o corpo { acao: "ler" } na nutricao/financeiro é LEITURA; o resto segue escrita
+        ("w26 · hml-20a: POST nutricao {acao: ler}", e("POST", f"{P}/functions/v1/nutricao", json.dumps({"acao": "ler", "itens": []})), False),
+        ("w26 · hml-20a: POST financeiro {acao: ler}", e("POST", f"{P}/functions/v1/financeiro", json.dumps({"acao": "ler", "itens": []})), False),
+        ("w26 · hml-20a: POST nutricao disfarçado {action: ler, acao: anotacao_criar}", e("POST", f"{P}/functions/v1/nutricao", json.dumps({"action": "ler", "acao": "anotacao_criar"})), True),
+        ("w26 · hml-20a: POST nutricao {acao: anamnese_criar}", e("POST", f"{P}/functions/v1/nutricao", json.dumps({"acao": "anamnese_criar"})), True),
+        ("w26 · hml-20a: POST nutricao corpo ilegível", e("POST", f"{P}/functions/v1/nutricao", "{acao: ler"), True),
+        ("w26 · hml-20a: PATCH nutricao {acao: ler}", e("PATCH", f"{P}/functions/v1/nutricao", json.dumps({"acao": "ler"})), True),
+        ("w26 · hml-20a: POST em tabela com corpo {acao: ler} (a exceção é só da função)", e("POST", f"{P}/rest/v1/anexos", json.dumps({"acao": "ler"})), True),
+        # revisão: a exceção olha só o caminho — o nome da função na QUERY (ou no fragmento) não libera a tabela nem a RPC que grava
+        ("w26 · revisão: POST em tabela com /functions/v1/nutricao na query e {acao: ler}", e("POST", f"{P}/rest/v1/anexos?x=/functions/v1/nutricao", json.dumps({"acao": "ler"})), True),
+        ("w26 · revisão: POST na RPC que grava com /functions/v1/financeiro na query e {acao: ler}", e("POST", f"{P}/rest/v1/rpc/lixeira_restaurar?y=/functions/v1/financeiro", json.dumps({"acao": "ler"})), True),
+        ("w26 · revisão: POST nutricao com query (o caminho é da função) e {acao: ler}", e("POST", f"{P}/functions/v1/nutricao?x=1", json.dumps({"acao": "ler"})), False),
     ]
 
 

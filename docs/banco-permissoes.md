@@ -107,6 +107,29 @@ O Supabase dá `EXECUTE` a `anon` e a `authenticated` em toda função nova. Por
   do `pacientes` **ficam** nesta etapa (a função grava com a sessão da pessoa; os APKs antigos ainda gravam direto —
   `docs/desvios.md`, desvio 2).
 
+## Principal (e o Treino, desvio 23): as leituras de saúde do app do aluno pelas funções (hml-20a, H-42 · jeito 2, etapa 2)
+- **Principal:** o app do aluno (Início, Evolução, Dieta/Diário) não lê mais a `minha_dieta`, a `minha_evolucao` nem assina as fotos
+  do `diario`/`evolucao` no navegador: a função `nutricao` ganhou a ação **`ler`** (em lote — motor `_shared/leitura-lote.ts`, catálogo
+  fechado `_shared/nutricao-leituras.ts`, módulo `nutricao/leituras.ts`), que roda cada consulta **como a pessoa** (o mesmo token): as
+  RPCs de leitura de hoje (`minha_dieta`, `minha_evolucao` — definer, com o `auth.uid()` dentro; o EXECUTE do `authenticated` não
+  muda) e o select de `diario_alimentar` (`id`, `path`, só as vivas) pelo RLS de hoje ("paciente: ler o proprio diario" + a restritiva
+  da W24, que deixa passar o `paciente_do_meu_login`). A URL assinada sai do servidor com a sessão da pessoa (as policies de leitura
+  dos buckets de hoje), só para os caminhos que a própria consulta leu, com o prazo de hoje (1 h); volta relativa ao projeto e a tela
+  monta com o domínio dela (a mesma URL de antes). Colunas em lista fechada (nenhum `*`); consulta "minha" = o dono vem do `user`.
+- **Treino:** a Evolução do próprio aluno (a aba Evolução e o card do peso do Início) **segue lendo direto do navegador**, como antes
+  (`physiq_profiles`, `physiq_avaliacoes`, `physiq_registros_fotos` pelo REST, com o RLS "o aluno lê as próprias linhas", e a URL
+  assinada do `registros` pela policy `registros_read_own_or_admin`) — o desvio 23 do `docs/desvios.md` (o gate de latência, 12/10/2026).
+  A `admin-avaliacoes` tem a ação **`minha_evolucao`** pronta e publicada (antes do `requireAdmin`; o token conferido pelo JWKS; freio
+  por pessoa em memória; o cliente **como a pessoa** — a chave anon + o token, nenhuma chave secreta — lê as 3 do `sub` do token, só as
+  colunas que a tela usa, e assina as fotos no `registros`/`registros-staging`; qualquer papel lê só o próprio), sem uso pelo front até a
+  condição do desvio.
+- Nenhuma migration: os grants e as policies de LEITURA **ficam** (decisão 12 da spec hml-20): a função lê com a sessão da pessoa,
+  que precisa deles; os APKs antigos e o AAB ainda leem direto (`docs/desvios.md`, desvio 2). Fechar o `rest` é a etapa 4 do jeito 2,
+  quando não houver mais leitura direta (H-43) e houver versão mínima de app.
+- O fetch dos 2 clientes repete o POST de LEITURA 1 vez, como o GET de hoje (`ACOES_DE_LEITURA` em `src/integrations/repeticao.ts`:
+  a `ler` da `nutricao`/`financeiro`, pelo campo `acao`, e a `minha_evolucao` da `admin-avaliacoes`, pelo campo `action` — pronta para
+  quando o desvio 23 sair); as gravações dessas funções seguem indo 1 vez.
+
 ## Treino: quem lê os treinos montados
 - `tb_grupos_treino` e `tb_grupos_exercicios` (`physiq_pode_ler_grupo`): o master; o professor dono; qualquer profissional,
   se o grupo é do catálogo global do master (`professor_id` vazio); e o aluno que recebe o grupo (`tb_grupos_treino_perfis`).

@@ -447,7 +447,7 @@ def caso_sem_internet(nav, base: str, prefixo: str) -> None:
     c = B.Caso(nav, base, prefixo, "sem_internet", desktop=False)
     try:
         # a dieta não chega (como se a internet tivesse caído antes dela) — o resto do Início abre com internet
-        c.pg.route("**/rpc/minha_dieta", lambda r: r.abort("internetdisconnected"))
+        B.B11.barrar_minha_dieta(c.pg)  # hml-20a: a RPC minha_dieta (o front antigo) e o `ler` da aluno_dieta (o novo)
         c.entrar("w10-aluno", "/", zerar=True)
         c.fechar_avisos()
         p.check(esperar_inicio(c, dieta=False), "[sem_internet] Início aberto com internet (o treino baixou para o aparelho)")
@@ -469,7 +469,7 @@ def caso_sem_internet(nav, base: str, prefixo: str) -> None:
         ok = c.esperar(lambda: c.caminho() == "/treino" and c.tem("[data-cartao-treino]") and c.tem("[data-pilula-tempo]"), 40)
         p.check(ok, "[sem_internet] Começar treino sem internet abre a aba Treino com o cronômetro")
         foto(c, "treino_sem_internet_pelo_inicio")
-        c.pg.unroute("**/rpc/minha_dieta")
+        B.B11.soltar_minha_dieta(c.pg)
         c.ctx.set_offline(False)
         aba(c, "Início")
         ok = c.esperar(lambda: c.tem('[data-card-dieta-hoje="plano"]'), 60)

@@ -118,6 +118,18 @@ def seco(o) -> None:
     o.ok(set(DIETA) <= SEMEIA and all(s in AVISO and s in RAIZ for s in DIETA), "Manipulados, Metas e Orientações: raiz, aviso e semente decididos")
     app = [{"metodo": "POST", "tipo": "rpc", "nome": "paciente_marcar_refeicao", "url": f"{B.API_P}/rest/v1/rpc/paciente_marcar_refeicao"}]
     o.ok(B.contar(app).get("rpc_grava") == 1, "o app de antes (a RPC direta paciente_marcar_refeicao) conta como RPC que grava")
+    # hml-20a (revisão): o BarrarNutricao deixa a LEITURA passar (a Dieta do app lê pela nutricao: barrada, nem abriria) e barra só o que grava;
+    # com leitura=True (explícito), barra a leitura também
+    import json  # noqa: PLC0415
+    url = f"{B.API_P}/functions/v1/nutricao"
+    ler = json.dumps({"acao": "ler", "itens": [{"dia": "2026-10-11", "q": "aluno_dieta"}]})
+    marcar = json.dumps({"acao": "aluno_marcar_refeicao", "refeicao_id": "x"})
+    disfarcado = json.dumps({"action": "ler", "acao": "aluno_marcar_refeicao"})
+    b, todas = B.BarrarNutricao(), B.BarrarNutricao(leitura=True)
+    o.ok(not b.barra("POST", url, ler) and b.barra("POST", url, marcar) and b.barra("POST", url, disfarcado) and b.barra("POST", url, None)
+         and not b.barra("OPTIONS", url, marcar) and not b.barra("POST", f"{B.API_P}/functions/v1/financeiro", marcar)
+         and todas.barra("POST", url, ler) and todas.barra("POST", url, marcar),
+         "hml-20a: o BarrarNutricao barra só o que grava (o `ler` passa; o disfarçado e o sem corpo são barrados); leitura=True barra o `ler` também")
 
 
 class BarrarModelosAntigos:
