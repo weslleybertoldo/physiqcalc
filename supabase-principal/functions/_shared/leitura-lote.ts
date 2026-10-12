@@ -15,7 +15,17 @@
 //     caminho que não foi pedido) e volta RELATIVA ao projeto (/storage/v1/object/sign/…?token=…): a tela monta com o domínio dela — a
 //     mesma URL de hoje (o host das funções é o <ref>.supabase.co, fora do CSP do site);
 //   · erroDaLeitura: o erro do banco como código — a MESMA tabela do erroDoBanco de nutricao-regras.ts (o teste confere).
-// As próximas sub-worktrees (20b, 20c, 20d) só ACRESCENTAM entradas nos catálogos: este arquivo não muda.
+// As próximas sub-worktrees (20b, 20c, 20d) só ACRESCENTAM entradas nos catálogos.
+// hml-20b (Painel › Aluno, 12/10/2026): capacidades OPCIONAIS da consulta — só quem as declara usa; as consultas da 20a não declaram
+// nenhuma, então o comportamento delas não muda (o leituraServidor.test.ts confere as 2 coisas):
+//   · FonteRpc.erros: os códigos que a RPC levanta de propósito (raise exception '<código>' — a w14_matricula_da_rota: sem_login,
+//     sem_acesso, aluno_inexistente) voltam como o erro do item, sem o log.excecao — o erroDaRpc da 19c (erroDaLeitura com `conhecidos`);
+//   · FonteTabela.pagina + contar: UMA página (o param inteiro ≥ 1 e o tamanho; o servidor monta o .range) e o total (count exato);
+//   · FonteTabela.laco: TODAS as linhas, em leituras de `tamanho` com a ordem estável, até `leituras` (passou → muitas_linhas), dentro
+//     do prazo do pedido (esgotou → tempo_esgotado);
+//   · FonteTabela.uma: a consulta de 1 linha (pelo id): 0 linha → nao_encontrado;
+//   · AssinarLeitura.download: 1 URL por linha, com o "baixar com o nome" (a coluna do nome que a consulta leu) quando o param vem true
+//     e o prazo do baixar (o `validade` fica para o ver) — o Ver/Baixar dos anexos de hoje.
 
 /** Itens por pedido (acima → 400 lote_grande). */
 export const LOTE_MAX = 16;
@@ -105,6 +115,8 @@ export function lerParams(
 export interface FonteRpc {
   rpc: string;
   args?: Readonly<Record<string, string>>;
+  /** hml-20b: os códigos que a RPC levanta de propósito (raise exception '<código>'): voltam como o erro do item (não inesperado) */
+  erros?: readonly string[];
 }
 /** select numa tabela com as colunas em lista fechada (nunca "*"), os filtros declarados (param → coluna), o teto e a ordem. */
 export interface FonteTabela {
@@ -115,6 +127,14 @@ export interface FonteTabela {
   /** só as linhas fora da Lixeira (deleted_at is null) */
   vivas?: boolean;
   ordem?: readonly { coluna: string; asc: boolean }[];
+  /** hml-20b: UMA página da lista — o param (inteiro ≥ 1) e o tamanho (≤ TETO_MAX); o servidor monta o .range(de, ate) */
+  pagina?: { param: string; tamanho: number };
+  /** hml-20b: devolve também o `total` (o count exato, com os mesmos filtros) */
+  contar?: boolean;
+  /** hml-20b: TODAS as linhas, em leituras de `tamanho` (≤ TETO_MAX) com a ordem estável, até `leituras` (≤ LACO_LEITURAS_MAX) */
+  laco?: { tamanho: number; leituras: number };
+  /** hml-20b: a consulta é de 1 linha (pelo id): 0 linha → nao_encontrado */
+  uma?: boolean;
 }
 /**
  * A URL assinada de leitura: o bucket (o nome de produção — o catálogo da função diz qual é o do ambiente: no staging, o "-staging"), a
@@ -125,6 +145,11 @@ export interface AssinarLeitura {
   coluna: string;
   lista?: string;
   validade: number;
+  /**
+   * hml-20b: 1 URL por linha (createSignedUrl) — com o param `param` = true, o "baixar com o nome" (a coluna `nome` que a consulta
+   * leu) e a validade `validade` (a do baixar); sem ele, abre no navegador com a validade da consulta (a do ver).
+   */
+  download?: { param: string; nome: string; validade: number };
 }
 export interface ConsultaLeitura {
   params: ParamsLeitura;
@@ -167,6 +192,52 @@ export function planoDaTabela(
   if (consulta.dono) filtros.push({ op: "eq", coluna: consulta.dono, valor: userId });
   if (f.vivas) filtros.push({ op: "is_null", coluna: "deleted_at" });
   return { tabela: f.tabela, colunas: f.colunas.join(", "), filtros, ordem: f.ordem ?? [], teto: Math.min(f.teto, TETO_MAX) };
+}
+
+// ───────────────────────── hml-20b: página, contagem, laço, 1 linha (os campos opcionais da FonteTabela) ─────────────────────────
+/** O teto de leituras de um laço (as 50 de 1000 da lib de hoje: listarResultadosDoPaciente). */
+export const LACO_LEITURAS_MAX = 50;
+/** O erro do laço que passou do teto de leituras (a lib de hoje lançava "… demais para ler de uma vez"). */
+export const ERRO_MUITAS_LINHAS = "muitas_linhas";
+
+/** `[de, ate]` da página `pagina` (a 1ª é 1) de `tamanho` linhas (no teto TETO_MAX) — o .range do supabase-js (o intervalo da tela). */
+export function intervaloDaPagina(pagina: number, tamanho: number): [number, number] {
+  const n = Math.max(1, Math.min(Number.isFinite(tamanho) ? Math.floor(tamanho) : TETO_MAX, TETO_MAX));
+  const p = Number.isFinite(pagina) ? Math.max(1, Math.floor(pagina)) : 1;
+  const de = (p - 1) * n;
+  return [de, de + n - 1];
+}
+
+/**
+ * O que a FonteTabela pede além do select (hml-20b; nada disso existe nas consultas da 20a): o intervalo da página (o param declarado
+ * em `pagina`), se conta o total, o laço (tamanho e leituras no teto) e se é de 1 linha.
+ */
+export function extrasDaTabela(
+  fonte: FonteTabela,
+  params: Record<string, unknown>,
+): { intervalo: [number, number] | null; contar: boolean; laco: { tamanho: number; leituras: number } | null; uma: boolean } {
+  const p = fonte.pagina ? params[fonte.pagina.param] : undefined;
+  return {
+    intervalo: fonte.pagina ? intervaloDaPagina(typeof p === "number" ? p : 1, fonte.pagina.tamanho) : null,
+    contar: fonte.contar === true,
+    laco: fonte.laco
+      ? {
+          tamanho: Math.max(1, Math.min(Math.floor(fonte.laco.tamanho), TETO_MAX)),
+          leituras: Math.max(1, Math.min(Math.floor(fonte.laco.leituras), LACO_LEITURAS_MAX)),
+        }
+      : null,
+    uma: fonte.uma === true,
+  };
+}
+
+/**
+ * O nome do "baixar" de uma linha (hml-20b): só com `assinar.download` declarado, o param dele = true no item e a coluna do nome
+ * (que a PRÓPRIA consulta leu) em texto; senão null (a URL abre no navegador). O nome nunca vem do corpo.
+ */
+export function nomeDoDownload(a: Pick<AssinarLeitura, "download">, params: Record<string, unknown>, linha: unknown): string | null {
+  if (!a.download || params[a.download.param] !== true || !ehObjeto(linha)) return null;
+  const nome = linha[a.download.nome];
+  return typeof nome === "string" && nome.trim().length > 0 ? nome : null;
 }
 
 // ───────────────────────── o pedido ─────────────────────────
@@ -253,11 +324,17 @@ export async function rodarLote(
  * O erro do banco (PostgREST/Postgres) numa leitura, como código — a MESMA tabela do erroDoBanco de nutricao-regras.ts (42501 →
  * sem_acesso · classe 22 e 23502/23503/23514 → dados_invalidos · PGRST301–303 → sem_login · tempo → tempo_esgotado · o resto →
  * erro_interno). `inesperado` = a função avisa (log.excecao). Aqui também o erro que chega pelo name (o TimeoutError lançado).
+ * hml-20b: `conhecidos` = os códigos que a RPC levanta de propósito (FonteRpc.erros): a mensagem que é um deles volta como ele, não
+ * inesperado (o erroDaRpc de nutricao-regras.ts); sem a lista (a 20a), a tabela de sempre.
  */
-export function erroDaLeitura(e: { code?: unknown; message?: unknown; name?: unknown } | null | undefined): { erro: string; inesperado: boolean } {
+export function erroDaLeitura(
+  e: { code?: unknown; message?: unknown; name?: unknown } | null | undefined,
+  conhecidos: readonly string[] = [],
+): { erro: string; inesperado: boolean } {
   const code = typeof e?.code === "string" ? e.code : "";
   const msg = typeof e?.message === "string" ? e.message : "";
   const nome = typeof e?.name === "string" ? e.name : "";
+  if (msg.trim() && conhecidos.includes(msg.trim())) return { erro: msg.trim(), inesperado: false };
   if (code === "42501") return { erro: "sem_acesso", inesperado: false };
   if (code === "23505") return { erro: "conflito", inesperado: false };
   if (code.startsWith("22") || code === "23502" || code === "23503" || code === "23514") return { erro: "dados_invalidos", inesperado: false };
