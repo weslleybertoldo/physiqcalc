@@ -11,6 +11,9 @@
 // hml-19d: o Financeiro (src/financeiro e src/painel/financeiro — as libs, os diálogos e as tags do aluno) grava pela função financeiro.
 // As pastas são divididas com a LINUX 3 (cobrança, Mercado Pago, InfinitePay, planos): nesta área só contam as gravações nas 4 tabelas
 // do Financeiro e em pacientes (as tags) — `tabelas`; e, no src/ inteiro, ninguém grava direto nas 4 tabelas.
+// hml-20c (H-102 🟡): a Pré-consulta (src/painel/preconsulta) grava pela função nutricao — as 5 gravações que ficaram de fora do H-41
+// (criar/editar/excluir o formulário; ligar/marcar importada e excluir a resposta): base 5 → 0. O formulário público /f/:slug (publico.ts,
+// anônimo — decisão 13) fica fora: responde pela RPC pública de hoje.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -46,6 +49,13 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; m
     pastas: ["src/financeiro", "src/painel/financeiro"],
     base: 0,
     tabelas: ["transacoes", "recibos", "modelos_recibo", "categorias_financeiras", "pacientes"],
+  },
+  // hml-20c: a Pré-consulta (os formulários e as respostas do painel) — 14 arquivos hoje (15 menos o formulário público)
+  preconsulta: {
+    pastas: ["src/painel/preconsulta"],
+    base: 0,
+    fora: ["src/painel/preconsulta/publico.ts"],
+    minimo: 14,
   },
 };
 /** As 4 tabelas do Financeiro (hml-19d): ninguém no src/ grava direto nelas. */
@@ -150,6 +160,21 @@ describe("hml-19a — o detector acha o que procura (controle positivo)", () => 
     expect(gravacoesDiretas('await principal.rpc("lixeira_apagar", { p_id: id });', tabelas)).toEqual([]);
     // sem a lista, como antes
     expect(gravacoesDiretas('await principal.from("mp_contas").update({ ativo: false });')).toEqual(["1: tabela.update"]);
+  });
+});
+
+describe("hml-20c — o detector acha as 5 gravações de antes da Pré-consulta (controle positivo; base 5 → 0)", () => {
+  it("o insert do formulário (com o .select().single() da volta), os 2 updates do formulário e os 2 da resposta", () => {
+    const antes = [
+      "const { data, error } = await principal\n      .from(\"formularios_preconsulta\")\n      .insert({\n        nutricionista_id: uid,\n        conta_id: contaId,\n      })\n      .select(\"*\")\n      .single();",
+      'const { data, error } = await principal.from("formularios_preconsulta").update(dados).eq("id", id).select("*").single();',
+      'const { error } = await principal.from("formularios_preconsulta").update({ deleted_at: new Date().toISOString() }).eq("id", id);',
+      'const { data, error } = await principal.from("respostas_preconsulta").update(dados).eq("id", id).select(SELECT_RESPOSTA).single();',
+      'const { error } = await principal.from("respostas_preconsulta").update({ deleted_at: new Date().toISOString() }).eq("id", id);',
+    ].join("\n");
+    expect(gravacoesDiretas(antes).map((a) => a.split(": ")[1])).toEqual(["tabela.insert", "tabela.update", "tabela.update", "tabela.update", "tabela.update"]);
+    // o que a 20c põe no lugar não é gravação direta: a ação pela função
+    expect(gravacoesDiretas('const { linha } = await acaoNutricao("preconsulta_resposta_ligar", { id, paciente_id: alunoId });')).toEqual([]);
   });
 });
 
