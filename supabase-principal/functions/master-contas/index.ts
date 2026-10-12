@@ -22,12 +22,18 @@
 // ≥ 1) a RPC recebe p_offset/p_limite (20 por página) e devolve só a página + `total` (a busca de Contas vai nos filtros, ao
 // banco); SEM `pagina` a RPC é chamada exatamente como antes (o APK antigo e a tela de produção). `alunos` não muda (a tela
 // manda limite 20).
+// W2 (Task 12 — MENOR 7 da revisão da W1): `acao {tipo: "recebimento", args: {modo, cancelar_automaticas?, forcar_sem_acesso?}}` mora em
+// ./recebimento.ts: sair de um Mercado Pago com cobrança automática viva → 409 automaticas_ativas {alunos}; com o OK, cancela cada uma
+// com a credencial DELA (o MP do Physiq ou o da conta do personal) e só então troca; sem acesso ao MP da conta → 409
+// automaticas_sem_acesso, e com forcar_sem_acesso marca no Physiq, avisa o personal e os alunos (MENOR 17). Segredos a mais:
+// MP_TOKENS_CHAVE (sem ela, a conta do personal conta como "sem acesso") e MP_CLIENT_ID/MP_CLIENT_SECRET (a renovação do acesso).
 import { MpIndisponivel, credencialDoSchema, mpFetch, type OpcoesMp } from "../_shared/cobranca-mp.ts";
 import { mpTransitorio } from "../_shared/cobranca-regras.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { ehAcaoConta, ehUuid, idsDe, lerPedidoCriarConta } from "../_shared/master-regras.ts";
 import { json, responder, rpc, servir, type Contexto } from "../_shared/master-porta.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
+import { trocarRecebimento } from "./recebimento.ts";
 
 const simulado = (id: string | null | undefined) => !!id && id.startsWith("sim-");
 
@@ -145,6 +151,14 @@ servir("master-contas", async (c) => {
       if (!ehUuid(corpo.conta_id)) return json({ ok: false, erro: "conta_inexistente" }, 404, origin);
       if (!ehAcaoConta(corpo.tipo)) return json({ ok: false, erro: "acao_invalida" }, 400, origin);
       const args = corpo.args && typeof corpo.args === "object" ? corpo.args : {};
+      if (corpo.tipo === "recebimento") {
+        // W2 (MENOR 7): o "Desligar" cancela ANTES as automáticas (com o OK) ou força sem acesso — a regra e as respostas em ./recebimento.ts
+        const r = await trocarRecebimento({
+          schema: c.schema, masterId: c.userId, db: c.db, log: c.log, prazo: p,
+          noBanco: (a) => rpc(c.comoPessoa, "master_conta_acao", { p_conta: corpo.conta_id, p_acao: "recebimento", p_args: a }),
+        }, String(corpo.conta_id), args as Record<string, unknown>);
+        return json(r.corpo, r.status, origin);
+      }
       // hml-14 (H-32): troca de plano lê ANTES de mexer (a RPC grava o plano novo): a leitura que falha lança aqui (500) e nada muda
       const lido = corpo.tipo === "plano" ? await lerAntesDoPlano(c, String(corpo.conta_id)) : null;
       const r = await rpc(c.comoPessoa, "master_conta_acao", { p_conta: corpo.conta_id, p_acao: corpo.tipo, p_args: args });
