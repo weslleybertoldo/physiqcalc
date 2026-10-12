@@ -278,7 +278,7 @@ async function pagamentoDaConta(t: Trato, id: string): Promise<string> {
   if (!preId) return "nao_e_de_aluno";
   const a = await assinaturaPorPreapproval(t, preId);
   if (!a) return "assinatura_inexistente";
-  if (Number(a.mp_collector_id) !== t.integ.mp_user_id) return "assinatura_de_outro_collector";
+  if (Number(a.mp_collector_id) !== t.integ.mp_user_id) return "assinatura_de_outro_collector"; // W2: depois do schemaTemW2
   const m = await matriculaDaConta(t, a.paciente_id);
   if (typeof m === "string") return m;
   return await recorrenteDaConta(t, m, pay, preId);
@@ -290,7 +290,7 @@ async function cobrancaDaConta(t: Trato, m: Matricula, pay: PagamentoDaConta, co
   if (error) throw error;
   let c = data as unknown as Cobranca | null;
   if (!c) return "cobranca_inexistente";
-  if (Number(c.mp_collector_id) !== t.integ.mp_user_id) return "cobranca_de_outro_collector";
+  if (Number(c.mp_collector_id) !== t.integ.mp_user_id) return "cobranca_de_outro_collector"; // W2: depois do schemaTemW2
   if (!c.mp_payment_id) {
     const { error: eg } = await t.db.from("cobrancas").update({ mp_payment_id: String(pay.id) }).eq("id", c.id).is("mp_payment_id", null);
     if (eg) throw eg;
