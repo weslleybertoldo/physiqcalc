@@ -92,8 +92,9 @@ GRAVACOES = ("rest_prontuario", "rest_dieta", "rest_avaliacao", "rest_financeiro
 
 
 def so_gravacoes(cont) -> dict:
-    """Do que a guarda contou, só o que GRAVA: rest, RPC que grava, Storage (o link assinado à parte) e a nutricao (todas as ações dela
-    gravam). As funções de leitura (treino-leitura, pos-login…) e os GET não entram."""
+    """Do que a guarda contou, só o que GRAVA: rest, RPC que grava, Storage (o link assinado à parte) e a nutricao (as ações dela que
+    gravam). As funções de leitura (treino-leitura, pos-login…) e os GET não entram. hml-20a (revisão): a leitura pela nutricao (o corpo
+    `ler`, pela regra da Guarda) nem chega aqui — o _base.classificar a trata como leitura (None)."""
     return {k: v for k, v in cont.items() if k in GRAVACOES or k == "storage_link_assinado" or k.startswith("fn:nutricao")}
 
 
@@ -256,6 +257,15 @@ def seco(o) -> None:
     ]
     c = B.contar(exemplo_depois)
     o.ok({k: v for k, v in c.items()} == ESPERADO_DEPOIS["anexo"], f"a classificação do DEPOIS (a nutricao e o PUT no link assinado): {dict(c)}")
+    # hml-20a (revisão): a leitura pela nutricao (o `ler`, pelo corpo) não é gravação; o corpo disfarçado (o campo que a nutricao NÃO lê) é
+    import json  # noqa: PLC0415
+    ler = {"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "ler", "url": f"{B.API_P}/functions/v1/nutricao",
+           "corpo": json.dumps({"acao": "ler", "itens": [{"dia": "2026-10-11", "q": "aluno_dieta"}]})}
+    disfarcado = {**ler, "corpo": json.dumps({"action": "ler", "acao": "anexo_registrar"})}
+    c = B.contar(exemplo_depois + [ler])
+    o.ok(dict(c) == ESPERADO_DEPOIS["anexo"] and so_gravacoes(c) == ESPERADO_DEPOIS["anexo"] and B.classificar(ler) is None
+         and B.classificar(disfarcado) == "fn:nutricao(ler)" and so_gravacoes(B.contar([disfarcado])) == {"fn:nutricao(ler)": 1},
+         "hml-20a: o `ler` (pelo corpo) não entra nas gravações; o corpo disfarçado entra")
     o.ok(B.TABELAS == set(B.regras()["tabelas"]) and len(B.TABELAS) == 18, "as 18 tabelas do Prontuário (as mesmas do servidor)")
 
 

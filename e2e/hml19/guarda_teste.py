@@ -145,6 +145,8 @@ def casos_hml17(b) -> list[tuple]:
         ("hml-20a: funcao_grava SEM o corpo: nutricao 'ler' segue gravação (só o corpo libera)", b.funcao_grava("nutricao", "ler"), True),
         ("hml-20a: funcao_grava SEM o corpo: admin-avaliacoes 'minha_evolucao' segue a regra de antes", b.funcao_grava("admin-avaliacoes", "minha_evolucao"), True),
         ("hml-20a: funcao_grava COM o corpo de leitura: passa", b.funcao_grava("nutricao", "ler", json.dumps({"acao": "ler"})), False),
+        ("revisão: POST em tabela com /functions/v1/nutricao na query e {acao: ler} (a Guarda lê o caminho)",
+         g.escrita(Pedido("POST", f"{P}/rest/v1/anexos?x=/functions/v1/nutricao", {"acao": "ler"})), True),
     ]
     # toda função das pastas do repo está decidida (conhecida ou "sempre grava"): função nova sem decisão falha aqui
     pastas = {d.name for raiz in ("supabase-principal/functions", "supabase/functions") for d in (REPO / raiz).iterdir()
@@ -183,6 +185,10 @@ def casos_w26(w) -> list[tuple]:
         ("w26 · hml-20a: POST nutricao corpo ilegível", e("POST", f"{P}/functions/v1/nutricao", "{acao: ler"), True),
         ("w26 · hml-20a: PATCH nutricao {acao: ler}", e("PATCH", f"{P}/functions/v1/nutricao", json.dumps({"acao": "ler"})), True),
         ("w26 · hml-20a: POST em tabela com corpo {acao: ler} (a exceção é só da função)", e("POST", f"{P}/rest/v1/anexos", json.dumps({"acao": "ler"})), True),
+        # revisão: a exceção olha só o caminho — o nome da função na QUERY (ou no fragmento) não libera a tabela nem a RPC que grava
+        ("w26 · revisão: POST em tabela com /functions/v1/nutricao na query e {acao: ler}", e("POST", f"{P}/rest/v1/anexos?x=/functions/v1/nutricao", json.dumps({"acao": "ler"})), True),
+        ("w26 · revisão: POST na RPC que grava com /functions/v1/financeiro na query e {acao: ler}", e("POST", f"{P}/rest/v1/rpc/lixeira_restaurar?y=/functions/v1/financeiro", json.dumps({"acao": "ler"})), True),
+        ("w26 · revisão: POST nutricao com query (o caminho é da função) e {acao: ler}", e("POST", f"{P}/functions/v1/nutricao?x=1", json.dumps({"acao": "ler"})), False),
     ]
 
 

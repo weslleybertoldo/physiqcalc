@@ -81,3 +81,44 @@ def json_arquivo(caminho: Path, dados) -> None:
 
 def pausa(s: float) -> None:
     time.sleep(s)
+
+
+# ───────────────────────── hml-20a (H-42): a dieta "não chega" (a rede caiu antes dela) nos 2 caminhos ─────────────────────────
+# Até a hml-20a o app lia a dieta pela RPC minha_dieta; desde a 20a, pela função nutricao (a ação `ler`, consulta aluno_dieta — no lote
+# da tela, às vezes junto com a evolução do principal). Os casos "Sem conexão" barram os 2: a RPC (o front ANTIGO — a produção até a
+# release da 20a) e o lote `ler` que leva a aluno_dieta (cai inteiro, como a requisição da minha_dieta caía). O resto da nutricao passa.
+ROTA_MINHA_DIETA = "**/rpc/minha_dieta"
+ROTA_NUTRICAO = "**/functions/v1/nutricao"
+
+
+def leva_a_dieta(corpo: str | None) -> bool:
+    """O corpo é um `ler` da nutricao com a consulta aluno_dieta?"""
+    try:
+        b = json.loads(corpo or "")
+    except (ValueError, TypeError):
+        return False
+    itens = b.get("itens") if isinstance(b, dict) and b.get("acao") == "ler" else None
+    return isinstance(itens, list) and any(isinstance(i, dict) and i.get("q") == "aluno_dieta" for i in itens)
+
+
+def barrar_minha_dieta(pg) -> None:
+    """A dieta não chega: a RPC minha_dieta (o front antigo) e o `ler` da aluno_dieta (o front novo) caem como a rede desligada."""
+    pg.route(ROTA_MINHA_DIETA, lambda r: r.abort("internetdisconnected"))
+
+    def nutricao(route) -> None:
+        try:
+            corpo = route.request.post_data
+        except UnicodeDecodeError:  # corpo binário: não é o `ler`
+            corpo = None
+        if route.request.method == "POST" and leva_a_dieta(corpo):
+            route.abort("internetdisconnected")
+            return
+        route.fallback()
+
+    pg.route(ROTA_NUTRICAO, nutricao)
+
+
+def soltar_minha_dieta(pg) -> None:
+    """Tira as 2 rotas do barrar_minha_dieta (a dieta volta a chegar)."""
+    pg.unroute(ROTA_MINHA_DIETA)
+    pg.unroute(ROTA_NUTRICAO)

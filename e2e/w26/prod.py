@@ -21,6 +21,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))
 import _base as B  # noqa: E402
@@ -53,7 +54,8 @@ def leitura_da_funcao(corpo: str | None) -> bool:
 def eh_escrita(metodo: str, url: str, corpo: str | None = None) -> bool:
     """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e na financeiro (hml-20a: menos o POST com o
     corpo de leitura, { "acao": "ler" }) e no Storage (fora o link de leitura)."""
-    if metodo == "POST" and ESCRITA_FUNCAO.search(url) and leitura_da_funcao(corpo):
+    # hml-20a (revisão): a exceção olha só o CAMINHO (um POST em /rest/v1/<tabela>?x=/functions/v1/nutricao com { acao: "ler" } é escrita)
+    if metodo == "POST" and ESCRITA_FUNCAO.search(urlparse(url).path) and leitura_da_funcao(corpo):
         return False
     return metodo in ("POST", "PATCH", "PUT", "DELETE") and bool(
         ESCRITA_TABELA.search(url) or ESCRITA_RPC.search(url) or ESCRITA_FUNCAO.search(url)

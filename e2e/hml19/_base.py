@@ -573,6 +573,10 @@ def classificar(p: dict) -> str | None:
     if tipo == "rpc":
         return "rpc_grava" if nome in RPC_GRAVA else None
     if tipo == "fn":
+        # hml-20a (revisão): a LEITURA pela função — o corpo `ler` da nutricao/financeiro e a minha_evolucao da admin-avaliacoes, pela regra
+        # da Guarda (o campo que a função lê) — não é gravação: o recarregamento da tela depois de gravar não entra na conta das ações
+        if B17.corpo_de_leitura(nome, p.get("corpo")):
+            return None
         return f"fn:{nome}" + (f"({p.get('acao')})" if p.get("acao") else "")
     if tipo == "storage":
         caminho = urlparse(url).path
@@ -594,14 +598,24 @@ def gravacoes_rest(cont: Counter) -> int:
 
 class BarrarNutricao:
     """A rota do navegador que BARRA a nutricao (route.abort) e conta cada ação barrada — o laco.py (H-81: 1 chamada só e o aviso
-    "Tentar de novo" na tela). Instale antes de abrir a tela."""
+    "Tentar de novo" na tela). Instale antes de abrir a tela.
+    hml-20a (revisão): a LEITURA (o corpo `ler`, pela regra da Guarda — B17.corpo_de_leitura) PASSA: o app do aluno lê a dieta pela
+    nutricao desde a 20a e, barrada, a tela nem abriria; só as ações que gravam são barradas. `leitura=True` = barrar a leitura também
+    (o caso que QUER a tela sem o dado — explícito)."""
 
-    def __init__(self) -> None:
+    def __init__(self, leitura: bool = False) -> None:
         self.barradas: Counter = Counter()
+        self.leitura = leitura
+
+    def barra(self, metodo: str, url: str, corpo: str | None) -> bool:
+        """O pedido é barrado? Só o POST na nutricao; a leitura pelo corpo só com leitura=True."""
+        if metodo != "POST" or not urlparse(url).path.startswith("/functions/v1/nutricao"):
+            return False
+        return self.leitura or not B17.corpo_de_leitura("nutricao", corpo)
 
     def instalar(self, ctx) -> None:
         def rota(route, req) -> None:
-            if req.method == "POST" and urlparse(req.url).path.startswith("/functions/v1/nutricao"):
+            if self.barra(req.method, req.url, B17.corpo_do_pedido(req)):
                 self.barradas[B17.acao_do_corpo(req) or "?"] += 1
                 route.abort()
                 return
