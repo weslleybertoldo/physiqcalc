@@ -866,8 +866,28 @@ describe("W2 (Task 9) — o token da conta em TODAS as chamadas do MP da pagamen
   });
 
   it("o melhor esforço (fecharNoMp): a credencial DA LINHA (escrita) → o cancelarNoMp; a conexão caída ou o MP fora só vão ao log", () => {
-    ordem(ajudante("fecharNoMp"), "lerSemDerrubar(c.id, async () => {", "credencialDaCobranca(db, ctxMp, c, credencial, { escrita: true })",
-      "if (cred) await cancelarNoMp(c, m, cred);", '"mp_fechar_sem_mp"');
+    // revisão I-3: e diz o que houve — fechado, sem_escrita (outra conta do MP ou a desconectada: o Physiq não fecha) ou falhou (só o log)
+    ordem(ajudante("fecharNoMp"), "lerSemDerrubar(c.id, async (): Promise<Fechamento> => {", "credencialDaCobranca(db, ctxMp, c, credencial, { escrita: true })",
+      'if (!cred) return "sem_escrita";', "await cancelarNoMp(c, m, cred);", 'return "fechado";', '"falhou", "mp_fechar_sem_mp"');
+  });
+
+  it("revisão I-3: antes de um pagamento novo (Pix OU cartão), TODO Pix aberto que não é reaproveitado é fechado no MP — inclusive o da própria avulsa; a condição da avulsa fica só no UPDATE da linha", () => {
+    const b = bloco("aluno_mp_pix");
+    const antes = b.slice(b.indexOf('const metodo = acao === "aluno_mp_pix" ? "pix" : "cartao";'), b.indexOf("const linha = await linhaParaMp("));
+    expect(antes.length).toBeGreaterThan(100);
+    expect(antes).not.toMatch(/if \(metodo === "pix"\) \{/);                // o laço roda nos 2: o cartão também fecha o Pix aberto
+    ordem(antes, '.eq("metodo", "pix").eq("status", "aguardando_confirmacao").is("deleted_at", null);', "const atual = await conferir(aberto, m);",
+      'if (metodo === "pix" && valida && mesmoAlvo && mesmaConta && ', "reutilizada: true",
+      'const fechou = atual.mp_payment_id && !simulado(atual.mp_payment_id) ? await fecharNoMp(atual, m) : "fechado";',
+      'if (fechou === "sem_escrita" && ', "if (!mesmoAlvo) continue;",
+      'if (metodo === "pix" && atual.pix_copia_cola) return json({ ok: true, cobranca: vista(atual, true), reutilizada: true }, 200, origin);',
+      'return falhar("mp_conta_indisponivel", 409);', "if (!alvo.avulsa || atual.id !== alvo.avulsa.id) {", 'update({ status: "aberta"');
+    // o fechamento no MP NÃO depende de ser outra cobrança: nenhum fecharNoMp dentro do `if (!alvo.avulsa || atual.id !== alvo.avulsa.id)`
+    const daLinha = antes.slice(antes.indexOf("if (!alvo.avulsa || atual.id !== alvo.avulsa.id) {"));
+    expect(daLinha.slice(0, daLinha.indexOf("if (erroFechar) throw erroFechar;"))).not.toContain("fecharNoMp(");
+    // o cartão que acha o Pix do MESMO alvo já pago não cobra de novo; o Pix pago de outra coisa não para o cartão
+    ordem(antes, 'if (atual.status === "paga") {', 'if (metodo === "pix") return json({ ok: true, cobranca: vista(atual), aprovada: true }, 200, origin);',
+      'if (mesmoAlvo) return json({ ok: true, cobranca: vista(atual), status: "paga", aprovada: true }, 200, origin);', "continue;");
   });
 
   it("aluno_mp_pix/cartão: a credencial de pagar em tudo; o Pix aberto só se reaproveita NA MESMA conta do MP; a linha nasce com o collector; o aviso volta pela conta", () => {

@@ -99,6 +99,12 @@ integração da conta gravada pelo e2e com tokens do simulador cifrados pela cha
                17) e nada no MP; o acesso revogado (/users/me 401 + a renovação recusada) → a conexão vira erro NA HORA → 409 → forçar 200
   pix_de_outra_conta  (T9 a) o Pix aberto do MP do Physiq com o modo já no MP da conta → não reaproveita: fechado com o physiq_teste e o novo
                na conta; o contrário (o "conectado sem trocar": o modo no MP do Physiq e a conexão ativa) → o da conta fechado com o token DELA
+  pix_avulsa_de_outra_conta  (revisão I-3) a AVULSA com o Pix P1 no MP do Physiq (collector nulo) e o modo já no MP da conta →
+               aluno_mp_pix na MESMA avulsa → no /_pedidos, o PUT /v1/payments/P1 {cancelled} com o physiq_teste ANTES do POST /v1/payments
+               com o token da conta A (o P1 cancelado no simulador; a avulsa com o pagamento novo e o collector A); idem aluno_mp_cartao (APRO)
+  pix_vivo_sem_escrita  (revisão I-3) o Pix vivo da avulsa na conta A e o modo no MP do Physiq (a conexão desconectada — decisão 10: só
+               leitura, nenhum PUT) → aluno_mp_pix devolve o MESMO P1 (reutilizada) e aluno_mp_cartao → 409 mp_conta_indisponivel, sem PUT
+               nem POST no simulador; o P1 pago DEPOIS + o aviso &conta= → a avulsa paga pela leitura dos 7 dias
   post_sem_decisao  (T9 b) expirar_token + o /users/me fora (500) no POST do Pix → 502 mp_error, a linha desfeita, nada renovado nem marcado
   pix_sem_chave  (T9 c, decisão 16) a conta do MP sem chave Pix → 400 mp_conta_sem_chave_pix, a linha desfeita e 1 aviso por dia ao dono
   cartao_outro_ambiente  (T9 d, MENOR 20) o cartão aprovado com live_mode true no staging → 502 mp_error, nada aplicado, a linha desfeita
@@ -175,8 +181,8 @@ SO_PEDINDO = {"oauth_real"}          # só com --casos (o Client Secret nas fun�
 CASOS_LOCAL = ("conectar", "confirmar_outro", "reusado", "troca_ruim", "modo_errado", "sem_chave", "outra_conta", "trocar_com_pix", "pagar",
                "registrado", "reembolso_forjado", "webhook", "criado_e_atualizado", "webhook_401_alheio", "sem_conta_pelo_user_id", "uso_401",
                "renovar", "recusada", "diario", "rede_automatica", "fila", "cancelar_automatica", "assinatura_antiga_viva", "salvar_recusado",
-               "desligar", "master", "pix_de_outra_conta", "post_sem_decisao", "pix_sem_chave", "cartao_outro_ambiente", "detalhe_outra_conta",
-               "registrado_cartao_e_avulsa", "teto", "tokens")
+               "desligar", "master", "pix_de_outra_conta", "pix_avulsa_de_outra_conta", "pix_vivo_sem_escrita", "post_sem_decisao",
+               "pix_sem_chave", "cartao_outro_ambiente", "detalhe_outra_conta", "registrado_cartao_e_avulsa", "teto", "tokens")
 CASA = Path.home()
 ESTADO_ARQ = CASA / "projetos" / "physiqcalc-scratch" / "w2" / "api-estado.json"
 LOG_LOCAL = CASA / "projetos" / "physiqcalc-scratch" / "w2" / "deno-local.log"
@@ -494,6 +500,21 @@ def sim_pedidos(desde: int = 0) -> list[dict]:
 
 def sim_info(token: str) -> dict:
     return sim_post("/_token_info", {"token": token})
+
+
+def pedido_em(pedidos: list[dict], metodo: str, caminho: str, token_nome: str | None = None, corpo: dict | None = None) -> int | None:
+    """O `n` do 1º pedido ao simulador com esse método, esse caminho (sem a busca), o NOME do token e — se dados — esses campos no corpo
+    (revisão I-3: a ORDEM do PUT que fecha o Pix antigo e do POST do pagamento novo). Nenhum → None."""
+    for x in pedidos:
+        if x.get("metodo") != metodo or str(x.get("caminho") or "").split("?")[0] != caminho:
+            continue
+        if token_nome is not None and x.get("token_nome") != token_nome:
+            continue
+        c = x.get("corpo") if isinstance(x.get("corpo"), dict) else {}
+        if corpo and any(c.get(k) != v for k, v in corpo.items()):
+            continue
+        return int(x["n"])
+    return None
 
 
 def sim_recurso(tipo: str, rid) -> dict:
@@ -2153,6 +2174,82 @@ def local_pix_de_outra_conta() -> None:
     modo_conta("pix_manual")
 
 
+def local_pix_avulsa_de_outra_conta() -> None:
+    print("\n── pix_avulsa_de_outra_conta (local, revisão I-3): o Pix aberto da PRÓPRIA avulsa noutra conta do MP é fechado NO MP (com o token "
+          "DELE) ANTES do pagamento novo — no Pix e no cartão")
+    base(A, ligar=False)
+    for metodo in ("pix", "cartao"):
+        esconder()
+        modo_conta("mercadopago")                  # o MP do Physiq, com a conexão da conta ativa (o "conectado sem trocar")
+        st, r = pedir(DONO, "prof_cobranca_criar", {"aluno": CTX["pac"], "descricao": f"{PREFIXO} avulsa I-3 {metodo}", "valor": 5,
+                                                    "vencimento": B.hoje()})
+        av = (r.get("cobranca") or {}).get("id")
+        st1, r1 = pedir(ALUNO, "aluno_mp_pix", {"paciente_id": CTX["pac"], "cobranca_id": av})
+        p1 = cobranca(av).get("mp_payment_id")
+        p.check(st == 200 and st1 == 200 and bool(p1) and cobranca(av).get("mp_collector_id") is None,
+                f"{metodo}: a avulsa com o Pix P1 no MP do Physiq (a linha sem collector) ({st}/{st1} {r.get('erro') or r1.get('erro')})")
+        modo_conta("mercadopago_conta")
+        n0 = sim_n()
+        if metodo == "pix":
+            st2, r2 = pedir(ALUNO, "aluno_mp_pix", {"paciente_id": CTX["pac"], "cobranca_id": av})
+        else:
+            st2, r2 = pedir(ALUNO, "aluno_mp_cartao", {"paciente_id": CTX["pac"], "cobranca_id": av, "card_token": "sim-card-APRO",
+                                                     "payment_method_id": "master", "installments": 1})
+        linha = cobranca(av)
+        peds = sim_pedidos(n0)
+        put = pedido_em(peds, "PUT", f"/v1/payments/{p1}", PHYSIQ, {"status": "cancelled"})
+        post = pedido_em(peds, "POST", "/v1/payments", CONTA_A)
+        situacao = "paga" if metodo == "cartao" else "aguardando_confirmacao"
+        p.check(st2 == 200 and put is not None and post is not None and put < post and bool(p1)
+                and sim_recurso("payment", p1).get("status") == "cancelled" and pedido_em(peds, "PUT", f"/v1/payments/{p1}", CONTA_A) is None
+                and linha.get("mp_collector_id") == A and bool(linha.get("mp_payment_id")) and linha.get("mp_payment_id") != p1
+                and linha.get("status") == situacao,
+                f"{metodo}: o P1 fechado NO MP com o physiq_teste ANTES do POST com o token da conta A; a avulsa no pagamento novo "
+                f"({st2} {r2.get('erro') or r2.get('status')} · PUT n{put} POST n{post} · "
+                f"{[(x['metodo'], x['caminho'].split('?')[0], x['token_nome']) for x in peds]})")
+        modo_conta("mercadopago")
+        # sair do MP da conta marcou a conexão desconectada (o gatilho contas_saiu_do_mp_conta): a volta seguinte a quer ativa
+        sql(f"""update {S}.recebimento_integracoes set status = 'ativa', desconectada_em = null where conta_id = '{CTX['conta']}'
+                  and provedor = 'mercadopago'""")
+    esconder()
+    modo_conta("pix_manual")
+
+
+def local_pix_vivo_sem_escrita() -> None:
+    print("\n── pix_vivo_sem_escrita (local, revisão I-3): o Pix vivo da avulsa numa conta que o Physiq não alcança para escrita (a desconectada "
+          "— decisão 10: só leitura) volta no Pix em vez de um 2º, recusa o cartão e, pago, dá baixa pela leitura dos 7 dias")
+    base(A)                                        # o modo no MP da conta e a conexão ativa
+    st, r = pedir(DONO, "prof_cobranca_criar", {"aluno": CTX["pac"], "descricao": f"{PREFIXO} avulsa I-3 sem escrita", "valor": 6,
+                                                "vencimento": B.hoje()})
+    av = (r.get("cobranca") or {}).get("id")
+    st1, r1 = pedir(ALUNO, "aluno_mp_pix", {"paciente_id": CTX["pac"], "cobranca_id": av})
+    p1 = cobranca(av).get("mp_payment_id")
+    p.check(st == 200 and st1 == 200 and bool(p1) and cobranca(av).get("mp_collector_id") == A,
+            f"a avulsa com o Pix P1 na conta A ({st}/{st1} {r.get('erro') or r1.get('erro')})")
+    modo_conta("mercadopago")                      # o MP do Physiq: o gatilho marca a conexão desconectada (os 7 dias de leitura)
+    desligada = (linha_integracao() or {}).get("status") == "desconectada"
+    n0 = sim_n()
+    st2, r2 = pedir(ALUNO, "aluno_mp_pix", {"paciente_id": CTX["pac"], "cobranca_id": av})
+    st3, r3 = pedir(ALUNO, "aluno_mp_cartao", {"paciente_id": CTX["pac"], "cobranca_id": av, "card_token": "sim-card-APRO",
+                                             "payment_method_id": "master", "installments": 1})
+    peds = sim_pedidos(n0)
+    mutou = [(x["metodo"], x["caminho"].split("?")[0], x["token_nome"]) for x in peds if x["metodo"] != "GET"]
+    linha = cobranca(av)
+    p.check(desligada and st2 == 200 and r2.get("reutilizada") is True and (r2.get("cobranca") or {}).get("id") == av
+            and linha.get("mp_payment_id") == p1 and linha.get("mp_collector_id") == A and linha.get("status") == "aguardando_confirmacao"
+            and st3 == 409 and r3.get("erro") == "mp_conta_indisponivel" and not mutou and bool(p1)
+            and sim_recurso("payment", p1).get("status") == "pending",
+            f"a conexão desconectada: o Pix devolve o MESMO P1 e o cartão dá 409 — nenhum PUT nem POST no simulador "
+            f"({st2} {r2.get('erro')} · {st3} {r3.get('erro')} · {mutou})")
+    if p1:
+        sim_post("/_status", {"tipo": "payment", "id": p1, "status": "approved"})
+    st4, r4 = avisar("payment", p1, conta=CTX["conta"], user_id=A)
+    p.check(st4 == 200 and r4.get("resultado") == "cobranca_paga_paga" and cobranca(av).get("status") == "paga",
+            f"o P1 pago DEPOIS + o aviso &conta= → a avulsa paga pela leitura dos 7 dias ({st4} {r4.get('resultado')})")
+    esconder()
+    modo_conta("pix_manual")
+
+
 def local_post_sem_decisao() -> None:
     print("\n── post_sem_decisao (local, T9 b): o 401 no POST do Pix com o /users/me fora (500) → 502 mp_error, a linha desfeita, nada renovado nem marcado")
     base(A)
@@ -2350,7 +2447,8 @@ FUNCOES_LOCAL = {"conectar": local_conectar, "confirmar_outro": local_confirmar_
                  "renovar": local_renovar, "recusada": local_recusada, "diario": local_diario, "rede_automatica": local_rede_automatica,
                  "fila": local_fila, "cancelar_automatica": local_cancelar_automatica, "assinatura_antiga_viva": local_assinatura_antiga_viva,
                  "salvar_recusado": local_salvar_recusado, "desligar": local_desligar, "master": local_master,
-                 "pix_de_outra_conta": local_pix_de_outra_conta, "post_sem_decisao": local_post_sem_decisao, "pix_sem_chave": local_pix_sem_chave,
+                 "pix_de_outra_conta": local_pix_de_outra_conta, "pix_avulsa_de_outra_conta": local_pix_avulsa_de_outra_conta,
+                 "pix_vivo_sem_escrita": local_pix_vivo_sem_escrita, "post_sem_decisao": local_post_sem_decisao, "pix_sem_chave": local_pix_sem_chave,
                  "cartao_outro_ambiente": local_cartao_outro_ambiente, "detalhe_outra_conta": local_detalhe_outra_conta,
                  "registrado_cartao_e_avulsa": local_registrado_cartao_e_avulsa, "teto": local_teto, "tokens": local_tokens}
 
@@ -2423,6 +2521,17 @@ def autotestes() -> None:
     j = janelas_conferidas(falsos, [{"rotulo": "pix", "esperado": CONTA_A, "de": 0, "ate": 2}, {"rotulo": "cancelar", "esperado": CONTA_A, "de": 2, "ate": 3}])
     p.check(j[0]["pedidos"] == 1 and not j[0]["trocados"] and j[1]["trocados"] == [PHYSIQ] and len(mutacoes_trocadas(falsos)) == 1,
             "seco: as janelas do MENOR 16 acham o token trocado e a mutação com o token de outro dono")
+    # revisão I-3: o pedido_em acha o PUT que fecha o Pix antigo ({cancelled}, com o token DELE) e o POST novo (com o da conta), pelo n
+    i3 = [{"n": 7, "metodo": "GET", "caminho": "/v1/payments/11", "token_nome": PHYSIQ, "corpo": None},
+          {"n": 8, "metodo": "PUT", "caminho": "/v1/payments/11", "token_nome": PHYSIQ, "corpo": {"status": "cancelled"}},
+          {"n": 9, "metodo": "POST", "caminho": "/v1/payments?x=1", "token_nome": CONTA_A, "corpo": {"transaction_amount": 5}}]
+    put, post = pedido_em(i3, "PUT", "/v1/payments/11", PHYSIQ, {"status": "cancelled"}), pedido_em(i3, "POST", "/v1/payments", CONTA_A)
+    al_reves = [dict(x, n=10 - x["n"]) for x in i3]         # o POST antes do PUT: o caso acusa
+    p.check(put == 8 and post == 9 and put < post and pedido_em(i3, "PUT", "/v1/payments/11", CONTA_A) is None
+            and pedido_em(i3, "PUT", "/v1/payments/11", PHYSIQ, {"status": "authorized"}) is None and pedido_em(i3, "PUT", "/v1/payments/12") is None
+            and not (pedido_em(al_reves, "PUT", "/v1/payments/11", PHYSIQ, {"status": "cancelled"})
+                     < pedido_em(al_reves, "POST", "/v1/payments", CONTA_A)),
+            "seco (revisão I-3): o pedido_em acha o PUT {cancelled} com o token DELE e o POST com o da conta, e a ordem pelo n acusa o contrário")
     est = {"paciente": "p1", "conta_id": "c1", "t0": "2026-10-11 23:00", "aluno_uid": "a1", "dono_uid": "d1", "assinaturas": ["x1"],
            "conta": {"modo": "pix_manual", "bloquear": False}, "vivas": [], "flags": {"mp_webhook": '{"exigir_assinatura": false}'},
            "jobs": {"mp-renovar-staging": True},

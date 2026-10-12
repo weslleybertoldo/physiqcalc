@@ -830,15 +830,18 @@ Deno.serve(async (req) => {
     return "cancelado";
   };
 
-  /** W2 (o Pix antigo do aluno_mp_pix, o I5 do prof_registrar): fecha no MP, por melhor esforço, o pagamento aberto desta linha com a credencial
-   *  DELA (escrita: outra conta do MP ou a desconectada → o Physiq não alcança e nada vai ao MP); a conexão caída ou o MP fora só vão ao log —
-   *  quem chama segue com a linha. */
-  const fecharNoMp = async (c: Cobranca, m: Matricula): Promise<void> => {
-    await lerSemDerrubar(c.id, async () => {
+  type Fechamento = "fechado" | "sem_escrita" | "falhou";
+  /** W2 (o Pix antigo do aluno_mp_pix/cartão, o I5 do prof_registrar): fecha no MP, por melhor esforço, o pagamento aberto desta linha com a
+   *  credencial DELA (escrita). Revisão I-3: diz o que houve — "fechado" (o PUT foi; ou o pagamento é de outra coisa e nada foi ao MP — W1b);
+   *  "sem_escrita" (outra conta do MP ou a desconectada: decisão 10, depois de desligar só leitura — a credencial dos 7 dias NÃO faz o PUT; o
+   *  Pix segue pagável); "falhou" (a conexão caída ou o MP fora — só ao log). Quem chama decide o que fazer com a linha. */
+  const fecharNoMp = async (c: Cobranca, m: Matricula): Promise<Fechamento> =>
+    await lerSemDerrubar(c.id, async (): Promise<Fechamento> => {
       const cred = await credencialDaCobranca(db, ctxMp, c, credencial, { escrita: true });
-      if (cred) await cancelarNoMp(c, m, cred);
-    }, undefined, "mp_fechar_sem_mp");
-  };
+      if (!cred) return "sem_escrita";
+      await cancelarNoMp(c, m, cred);
+      return "fechado";
+    }, "falhou", "mp_fechar_sem_mp");
 
   /** confere no MP uma cobrança que ainda pode mudar (webhook atrasado/perdido). W1b: o pagamento de outra coisa não é aplicado — só
    *  vai ao log (sem lançar: o aluno_status e o prof_aluno não caem). W2: com a credencial DESTA linha (o collector — leitura, I3): a de outra
@@ -1326,31 +1329,46 @@ Deno.serve(async (req) => {
       const assinatura = await assinaturaDe(m.id);
       if (!alvo.avulsa && assinatura?.status === "authorized") falhar("cartao_ativo");
       const metodo = acao === "aluno_mp_pix" ? "pix" : "cartao";
-      if (metodo === "pix") {
-        // Pix pendente igual, com mais de 30 min de validade e NA MESMA conta do MP → reaproveita; diferente → fecha no MP. W2: lido com as
-        // colunas da W2 (o collector de cada um: a conta dele e a credencial para fechá-lo)
-        const { data: abertos, error } = await db.from("cobrancas").select(await colunasCobranca()).eq("paciente_id", m.id).eq("forma", "mp")
-          .eq("metodo", "pix").eq("status", "aguardando_confirmacao").is("deleted_at", null);
-        if (error) throw error; // hml-06: sem ler o Pix aberto não se cria outro
-        for (const aberto of (abertos ?? []) as unknown as Cobranca[]) {
-          const atual = await conferir(aberto, m);
-          if (atual.status === "paga") return json({ ok: true, cobranca: vista(atual), aprovada: true }, 200, origin);
-          const valida = atual.pix_expira_em ? new Date(atual.pix_expira_em).getTime() > Date.now() + 30 * 60_000 : false;
-          const mesmoAlvo = alvo.avulsa ? atual.id === alvo.avulsa.id : atual.tipo === "mensalidade";
-          // W2: o Pix de OUTRA conta do MP não serve (o modo mudou — do MP do Physiq para o do personal, ou o contrário): o aluno pagaria a de antes
-          const mesmaConta = Number(atual.mp_collector_id ?? 0) === Number(collectorDe(cred) ?? 0); // W2: depois do schemaTemW2
-          if (atual.status === "aguardando_confirmacao" && valida && mesmoAlvo && mesmaConta && Number(atual.valor) === alvo.valor && atual.pix_copia_cola) {
-            return json({ ok: true, cobranca: vista(atual, true), reutilizada: true }, 200, origin);
-          }
-          if (atual.status === "aguardando_confirmacao" && (!alvo.avulsa || atual.id !== alvo.avulsa.id)) {
-            // W1b: no MP, só o Pix DESTA cobrança é fechado (o de outra coisa só vai ao log); a linha fecha de todo jeito. W2: com a credencial
-            // DELE, por melhor esforço (fecharNoMp: outra conta do MP, a conexão caída ou o MP fora não impedem o Pix novo)
-            if (atual.mp_payment_id && !simulado(atual.mp_payment_id)) await fecharNoMp(atual, m);
-            const { error: erroFechar } = atual.tipo === "avulsa"
-              ? await db.from("cobrancas").update({ status: "aberta", forma: null, mp_status: "cancelled", mp_payment_id: null, pix_qr: null, pix_copia_cola: null, pix_expira_em: null }).eq("id", atual.id)
-              : await db.from("cobrancas").update({ status: "cancelada", mp_status: "cancelled" }).eq("id", atual.id);
-            if (erroFechar) throw erroFechar;
-          }
+      // Os Pix abertos do aluno ANTES de um pagamento novo no MP (revisão I-3: no Pix E no cartão). O Pix igual, com mais de 30 min de
+      // validade e NA MESMA conta do MP → reaproveita (só no Pix). Os outros: TODO Pix que não vai ser reaproveitado é fechado NO MP com a
+      // credencial DELE (fecharNoMp) — inclusive o da própria avulsa (o linhaParaMp zera o mp_payment_id dela: o QR antigo seguia pagável e,
+      // pago, não dava baixa — o aluno pagava 2 vezes). O UPDATE da linha fica só para as OUTRAS (a da avulsa o linhaParaMp reescreve). A
+      // conta de antes que o Physiq não alcança para escrita (sem_escrita: a desconectada — decisão 10, só leitura; a credencial dos 7 dias
+      // não faz o PUT — ou outra conta do MP): o Pix dela segue pagável, então a linha FICA (paga, o aviso e a conferência dão baixa nela pela
+      // leitura dos 7 dias); o do MESMO alvo, vivo, volta no Pix em vez de um 2º e recusa o cartão (409 mp_conta_indisponivel). A conexão
+      // caída ou o MP fora no fechamento (falhou) não impedem o pagamento novo (o melhor esforço de sempre). W2: lido com as colunas da W2 (o
+      // collector de cada um: a conta dele e a credencial para fechá-lo)
+      const { data: abertos, error } = await db.from("cobrancas").select(await colunasCobranca()).eq("paciente_id", m.id).eq("forma", "mp")
+        .eq("metodo", "pix").eq("status", "aguardando_confirmacao").is("deleted_at", null);
+      if (error) throw error; // hml-06: sem ler o Pix aberto não se cria outro
+      for (const aberto of (abertos ?? []) as unknown as Cobranca[]) {
+        const atual = await conferir(aberto, m);
+        const mesmoAlvo = alvo.avulsa ? atual.id === alvo.avulsa.id : atual.tipo === "mensalidade";
+        if (atual.status === "paga") {
+          if (metodo === "pix") return json({ ok: true, cobranca: vista(atual), aprovada: true }, 200, origin);
+          if (mesmoAlvo) return json({ ok: true, cobranca: vista(atual), status: "paga", aprovada: true }, 200, origin);   // o cartão não cobra 2×
+          continue;
+        }
+        if (atual.status !== "aguardando_confirmacao") continue;
+        const valida = atual.pix_expira_em ? new Date(atual.pix_expira_em).getTime() > Date.now() + 30 * 60_000 : false;
+        // W2: o Pix de OUTRA conta do MP não serve (o modo mudou — do MP do Physiq para o do personal, ou o contrário): o aluno pagaria a de antes
+        const mesmaConta = Number(atual.mp_collector_id ?? 0) === Number(collectorDe(cred) ?? 0); // W2: depois do schemaTemW2
+        if (metodo === "pix" && valida && mesmoAlvo && mesmaConta && Number(atual.valor) === alvo.valor && atual.pix_copia_cola) {
+          return json({ ok: true, cobranca: vista(atual, true), reutilizada: true }, 200, origin);
+        }
+        // W1b: no MP, só o Pix DESTA cobrança é fechado (o de outra coisa só vai ao log — o cancelarNoMp)
+        const fechou = atual.mp_payment_id && !simulado(atual.mp_payment_id) ? await fecharNoMp(atual, m) : "fechado";
+        if (fechou === "sem_escrita" && !!atual.pix_expira_em && Date.parse(atual.pix_expira_em) > Date.now()) {
+          if (!mesmoAlvo) continue;
+          if (metodo === "pix" && atual.pix_copia_cola) return json({ ok: true, cobranca: vista(atual, true), reutilizada: true }, 200, origin);
+          log.aviso({ codigo: "mp_pix_vivo_sem_escrita", schema, acao, ref: atual.id });
+          return falhar("mp_conta_indisponivel", 409);
+        }
+        if (!alvo.avulsa || atual.id !== alvo.avulsa.id) {
+          const { error: erroFechar } = atual.tipo === "avulsa"
+            ? await db.from("cobrancas").update({ status: "aberta", forma: null, mp_status: "cancelled", mp_payment_id: null, pix_qr: null, pix_copia_cola: null, pix_expira_em: null }).eq("id", atual.id)
+            : await db.from("cobrancas").update({ status: "cancelada", mp_status: "cancelled" }).eq("id", atual.id);
+          if (erroFechar) throw erroFechar;
         }
       }
       const expira = metodo === "pix" ? new Date(Date.now() + PIX_HORAS * 3_600_000) : null;
