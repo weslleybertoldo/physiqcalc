@@ -41,6 +41,9 @@ ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 # NÃO entra: ela só grava no GET da volta do OAuth (o POST nela volta ?mp=invalido sem tocar no banco) e o GET é leitura aqui — um E2E
 # "só leitura" de produção NUNCA pode seguir uma volta do OAuth (o GET com o state certo grava a conexão). Teste: python3 e2e/hml19/guarda_teste.py.
 ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar)(?:[/?#]|$)")
+# hml-20a (decisão I): as funções em que o corpo { "acao": "ler" } é LEITURA — só a nutricao e a financeiro. A mp-contas-renovar (W2) não
+# lê o `acao` (o corpo dela é { schema, forcar_conta? }: com o schema certo, a rodada roda e grava) → segue escrita.
+LEITURA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro)(?:[/?#]|$)")
 
 
 def leitura_da_funcao(corpo: str | None) -> bool:
@@ -57,7 +60,7 @@ def eh_escrita(metodo: str, url: str, corpo: str | None = None) -> bool:
     """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e na financeiro (hml-20a: menos o POST com o
     corpo de leitura, { "acao": "ler" }), na mp-contas-renovar (W2) e no Storage (fora o link de leitura)."""
     # hml-20a (revisão): a exceção olha só o CAMINHO (um POST em /rest/v1/<tabela>?x=/functions/v1/nutricao com { acao: "ler" } é escrita)
-    if metodo == "POST" and ESCRITA_FUNCAO.search(urlparse(url).path) and leitura_da_funcao(corpo):
+    if metodo == "POST" and LEITURA_FUNCAO.search(urlparse(url).path) and leitura_da_funcao(corpo):
         return False
     return metodo in ("POST", "PATCH", "PUT", "DELETE") and bool(
         ESCRITA_TABELA.search(url) or ESCRITA_RPC.search(url) or ESCRITA_FUNCAO.search(url)

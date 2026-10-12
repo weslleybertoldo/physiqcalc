@@ -12,7 +12,8 @@ pedidos de mentira passam pela decisão de cada uma.
                       leitura), ilegível ou sem a ação segue barrado.
                       W2 (LINUX 3): a mp-conectar-retorno e a mp-contas-renovar (Mercado Pago do personal) gravam sempre.
   e2e/w26/prod.py     eh_escrita: o POST na nutricao, na financeiro e na mp-contas-renovar (W2) é escrita (como o POST em tabela); a
-                      leitura passa. hml-20a: o POST com o corpo { acao: "ler" } é leitura.
+                      leitura passa. hml-20a: o POST com o corpo { acao: "ler" } na nutricao/financeiro é leitura (na
+                      mp-contas-renovar, não: ela não lê o `acao`).
 Uso: python3 e2e/hml19/guarda_teste.py   (sai 1 se algum caso falhar)
 """
 from __future__ import annotations
@@ -93,6 +94,7 @@ def casos_hml17(b) -> list[tuple]:
         # W2 (LINUX 3): as 2 funções novas do Mercado Pago do personal gravam sempre
         ("mp-contas-renovar (só o pg_cron; grava)", fn("mp-contas-renovar"), True),
         ("mp-conectar-retorno (a volta do OAuth; grava)", fn("mp-conectar-retorno"), True),
+        ("W2 × hml-20a: mp-contas-renovar › {acao: ler, schema: public} (não é leitura dela; grava)", g.escrita(Pedido("POST", f"{P}/functions/v1/mp-contas-renovar", {"acao": "ler", "schema": "public"})), True),
         ("função desconhecida no Treino", fn("funcao-nova", "listar", host=T), True),
         # as de antes: a regra de antes
         ("pagamentos-aluno › prof_resumo (leitura)", fn("pagamentos-aluno", "prof_resumo"), False),
@@ -181,6 +183,10 @@ def casos_w26(w) -> list[tuple]:
         # W2 (LINUX 3): a mp-contas-renovar também
         ("w26 · POST mp-contas-renovar", e("POST", f"{P}/functions/v1/mp-contas-renovar"), True),
         ("w26 · POST mp-contas-renovar-x (outra função)", e("POST", f"{P}/functions/v1/mp-contas-renovar-x"), False),
+        # W2 × hml-20a (o rebase): a leitura pelo corpo { acao: "ler" } é só da nutricao/financeiro — a mp-contas-renovar não lê o `acao`
+        # (o corpo dela é { schema, forcar_conta? }: com o schema certo, a rodada roda e grava) → segue escrita
+        ("w26 · W2: POST mp-contas-renovar {acao: ler, schema: public} (ela não tem leitura)", e("POST", f"{P}/functions/v1/mp-contas-renovar", json.dumps({"acao": "ler", "schema": "public"})), True),
+        ("w26 · W2: POST mp-contas-renovar {acao: ler}", e("POST", f"{P}/functions/v1/mp-contas-renovar", json.dumps({"acao": "ler"})), True),
         ("w26 · POST em tabela", e("POST", f"{P}/rest/v1/anexos"), True),
         ("w26 · GET em tabela", e("GET", f"{P}/rest/v1/anexos?select=*"), False),
         ("w26 · RPC lixeira_restaurar", e("POST", f"{P}/rest/v1/rpc/lixeira_restaurar"), True),
