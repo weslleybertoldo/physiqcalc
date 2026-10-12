@@ -7743,6 +7743,342 @@ def stepper(nome="stepper", pivo=(-0.566, 0.043), braco=0.45, nivelador=0.055, x
 # ===== fim: Simulador de escada =====================================================================================================
 
 
+# ===== Remo ergômetro ===============================================================================================================
+# ── REMO ERGÔMETRO DE AR COM MONOTRILHO (Remo Ergômetro, lote 14, 12/10/2026) ──────────────────────────────────────────────────────────
+# O remo ergômetro de academia de volante a ar ("indoor rower"; o Concept2 RowErg, o antigo Model D — o das fotos do free-exercise-db e
+# dos estudos de cinemática): o MONOTRILHO (viga de alumínio com a pista de aço em cima) com o PÉ DE TRÁS no fim, o CARRINHO (o
+# assento, APOIO do glúteo, com as rodinhas que correm na pista), a VIGA DA FRENTE que sobe do fim do trilho até a CARENAGEM do volante
+# (o tambor redondo que fecha o volante e a ventoinha, com o regulador de ar no lado), os PÉS DA FRENTE (2 pernas em A até a travessa
+# com as rodinhas de transporte), os 2 APOIOS DOS PÉS inclinados (APOIO: a chapa com o calcanhar no fundo, a borda do calcanhar e a
+# TIRA por cima da bola do pé), a GUIA da corrente na traseira da carenagem com os 2 ganchos do manete, a CORRENTE que sai da guia até o
+# meio do MANETE (a barra de pegada das 2 mãos, com a dobra de 10° e as 2 manoplas de borracha) e o BRAÇO DO MONITOR com o monitor.
+# Medidas de fabricante (Concept2, página do RowErg e ficha RowErg_Specs de 05/2024): "Overall Length 96 in (244cm)", "Width 24 in
+# (61cm)", "Seat Height From Floor With standard legs 14in (36 cm)", "Monorail Length 54 in (137 cm)", "Chain or Cord Nickel-plated
+# steel chain", "Monitor Arm Pivots for storage and to adjust monitor height", "Aluminum rail capped with a stainless-steel track",
+# "Fully-enclosed, chain-driven steel flywheel"; o manete (loja da Concept2): "The handle measures 19" long and features an ergonomic
+# 10-degree bend" (48,3 cm; aqui 5° de cada lado, as pontas pra trás, pro remador: a manopla fica ⟂ ao antebraço que vem um pouco
+# pra dentro); o apoio dos pés a 41° da horizontal (Soper & Hume 2005, ISBS, Concept II: "41° (currently used angle)"; "By placing
+# the foot stretcher in a more vertical position (increased angle)"); a tira "crosses over the ball of your foot" (Concept2, A Foot
+# Position Primer). A carenagem com ~48 cm de diâmetro, o centro dela e a saída da corrente a ~66 cm do chão foram medidos no desenho
+# de lado do fabricante (manual RowErg 10/2024, p. 2) e conferidos na foto da ficha (a cena põe a saída na reta do manete, ~0,69 m);
+# o manete da foto da loja: 2 manoplas longas de borracha e a ponte de nylon no meio, com o engate na ponta. Escolha da fábrica: a
+# seção do trilho e das vigas, a forma do assento, das chapas dos pés, da carenagem, do monitor e do braço dele, a largura da
+# carenagem, o diâmetro das manoplas e a corrente lisa (uma fita de aço de 12 × 5 mm, sem os elos). A cena dá onde ficam o calcanhar,
+# o assento, o manete e a altura da corrente: o remo é montado EM VOLTA do corpo, como as outras máquinas.
+# O que mexe POR QUADRO (mover(carrinho_m, manete)): o carrinho anda no trilho; o manete vai onde as mãos estão (posição e giro em volta
+# do comprimento dele, que segue os punhos); a corrente gira e estica da guia até o engate no meio do manete — como o cabo da polia
+# (Polia.ligar), é UM objeto com a origem na saída e o comprimento no Z local, com a marca "anima_escala" (o exportar_exercicio.py grava
+# a escala só dele).
+# Uso numa cena (a pessoa olha pra −Y; x = 0 no meio):
+#   rm = e3.remo("remo", calcanhar=(y, z), x_pe=..., assento=(y, z_topo), trilho=(y_frente, y_tras), carenagem=(y, z, raio),
+#                saida=(y, z), manete=M0)       # M0 = matriz 4x4 (mundo) do manete na montagem (origem no meio da corda das 2
+#                                               # manoplas, X ao longo dela, −Y pra frente, o lado da dobra)
+#   rm.alca(s, perfil)                          # a tira do apoio do pé do lado s na forma do pé (perfil da pele medido pela cena)
+#   no pose(t): rm.mover(carrinho_m, M)         # carrinho andou carrinho_m m pra trás (+Y) desde a montagem; M = matriz do manete
+#   Cena(pose, rm.equipamentos, pegadas=[(L, ck.Barra(rm.pegadores[s], rm.raio_pegador, rm.meia_pegador, eixo=(0, 0, 1)))],
+#        apoios=rm.apoios)
+# As raízes (cada uma um equipamento da cena; a rigidez é por raiz): "<nome>_estrutura" (parada: trilho, pés, viga da frente,
+# carenagem, guia, ganchos, braço do monitor e monitor; não encosta no corpo), "<nome>_apoio_pes" (parada, APOIO: as 2 chapas com a
+# borda do calcanhar; quinas chanfradas — quina viva engana o sinal da medida da zona de apoio), "<nome>_tiras" (parada, APOIO: as 2
+# tiras, à parte — a tira é fina e curva, e a medida da zona de apoio lê "dentro" pela face mais perto, o que só vale em peça
+# convexa: com ela junto, a pele do peito do pé a 10 cm dava −97 mm), "<nome>_carrinho" (anda no
+# trilho, APOIO: o assento e, embaixo, a base e as rodinhas), "<nome>_manete" (vai com as mãos: a barra, o engate e as 2 manoplas
+# "<nome>_pegador_E"/"_D", filhas dele, com a origem no meio e o Z local ao longo delas) e "<nome>_corrente" (gira e estica). Peças
+# compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+class Remo:
+    """Remo ergômetro pronto na cena (remo())."""
+
+    def __init__(self, raizes, medidas):
+        self.raizes = raizes                  # {"estrutura", "apoio_pes", "tiras", "carrinho", "manete", "corrente"}
+        self.equipamentos = [raizes["estrutura"], raizes["manete"], raizes["corrente"]]
+        self.apoios = [raizes["carrinho"], raizes["apoio_pes"], raizes["tiras"]]
+        self.medidas = medidas
+        self.pegadores = medidas["pegadores"]   # {1: manopla esquerda, -1: direita}
+        self.raio_pegador, self.meia_pegador = medidas["raio_pegador"], medidas["meia_pegador"]
+        self.saida = Vector(medidas["saida"])   # onde a corrente sai da guia (mundo)
+        self.engate_local = Vector(medidas["engate"])   # engate da corrente no referencial do manete
+        self.carrinho0 = raizes["carrinho"].matrix_world.copy()
+        self.andado = 0.0
+        self.comprimento = 0.0                  # corrente pra fora da guia no último mover() (m)
+
+    def engate(self, M=None):
+        """Engate da corrente no meio do manete (mundo), com o manete em M (None = agora)."""
+        M = self.raizes["manete"].matrix_world if M is None else M
+        return M @ self.engate_local
+
+    def mover(self, carrinho_m, manete):
+        """O carrinho andou `carrinho_m` m pra trás (+Y) desde a montagem; o manete vai pra matriz `manete` (mundo); a corrente gira e
+        estica da saída da guia até o engate. Devolve o comprimento da corrente pra fora (m)."""
+        self.raizes["carrinho"].matrix_world = Matrix.Translation(Vector((0.0, carrinho_m, 0.0))) @ self.carrinho0
+        self.raizes["manete"].matrix_world = Matrix(manete)
+        d = self.engate(Matrix(manete)) - self.saida
+        L = d.length
+        z = d.normalized()
+        x = Vector((1.0, 0.0, 0.0))
+        x = (x - z * x.dot(z)).normalized()
+        R = Matrix((x, z.cross(x), z)).transposed()            # colunas: X de lado, Y, Z = ao longo da corrente
+        self.raizes["corrente"].matrix_world = (Matrix.Translation(self.saida) @ R.to_4x4()
+                                                @ Matrix.Diagonal((1.0, 1.0, L, 1.0)))
+        self.andado, self.comprimento = carrinho_m, L
+        bpy.context.view_layer.update()
+        return L
+
+    def alca(self, s, perfil, u=None, largura=0.045, espessura=0.003, folga=0.0015):
+        """Tira do apoio do pé do lado s por cima do pé, na forma da pele: `perfil` = [(x, n), …] da pele de cima do pé na fatia da tira
+        (o n mais alto em cada x, de dentro pra fora do pé), no referencial da chapa (origem no fundo do calcanhar, X de lado, Y ao longo
+        da chapa pra ponta do pé, Z pra fora da chapa, pro pé). A tira passa `folga` m acima da pele, desce dos 2 lados do pé e entra
+        1 cm na chapa, centrada em u (ao longo da chapa; padrão: a bola do pé, medidas["u_tira"]), com `largura` × `espessura` (escolha da
+        fábrica: tira de 45 × 3 mm)."""
+        import bmesh
+        u = self.medidas["u_tira"] if u is None else u
+        meia = self.medidas["largura_chapa"] / 2 - 0.006
+        xc = self.medidas["x_chapa"][s]
+        P = sorted((float(x), float(n) + folga) for x, n in perfil)
+        x0, x1 = max(P[0][0] - folga - 0.003, xc - meia), min(P[-1][0] + folga + 0.003, xc + meia)
+        linha = [Vector((x0, 0.0, -0.010))] + [Vector((x, 0.0, max(n, 0.004))) for x, n in P if x0 < x < x1]
+        linha.append(Vector((x1, 0.0, -0.010)))                 # as 2 pontas entram 1 cm na chapa (longe da sola)
+        meio = Vector(((x0 + x1) / 2, 0.0, 0.0))
+        fora = []
+        for i, p in enumerate(linha):
+            a, b = linha[max(i - 1, 0)], linha[min(i + 1, len(linha) - 1)]
+            tg = (b - a).normalized()
+            n = Vector((-tg.z, 0.0, tg.x))
+            fora.append(n if n.dot(p - meio) >= 0 else -n)
+        bm = bmesh.new()
+        faces = {}
+        for lado, dy in (("tras", -largura / 2), ("frente", largura / 2)):
+            faces[lado] = ([bm.verts.new((p.x, u + dy, p.z)) for p in linha],
+                           [bm.verts.new((p.x + n.x * espessura, u + dy, p.z + n.z * espessura)) for p, n in zip(linha, fora)])
+        (dt, ft), (df, ff) = faces["tras"], faces["frente"]
+        for i in range(len(linha) - 1):
+            bm.faces.new((dt[i], dt[i + 1], df[i + 1], df[i]))
+            bm.faces.new((ft[i], ff[i], ff[i + 1], ft[i + 1]))
+            bm.faces.new((dt[i], ft[i], ft[i + 1], dt[i + 1]))
+            bm.faces.new((df[i], df[i + 1], ff[i + 1], ff[i]))
+        for i in (0, len(linha) - 1):
+            bm.faces.new((dt[i], df[i], ff[i], ft[i]))
+        _normais_pra_fora(bm)
+        me = bpy.data.meshes.new(self.raizes["tiras"].name + "%+d" % s)
+        bm.to_mesh(me)
+        bm.free()
+        o = bpy.data.objects.new(me.name, me)
+        bpy.context.scene.collection.objects.link(o)
+        me.materials.append(mat_nylon())
+        m = o.modifiers.new("chanfro", "BEVEL")                  # quina viva engana o sinal da medida de apoio
+        m.width = min(0.0012, espessura * 0.4)
+        m.segments = 2
+        m.limit_method = "ANGLE"
+        o.parent = self.raizes["tiras"]
+        o.matrix_parent_inverse = Matrix()
+        o.matrix_basis = self.medidas["chapa_M"][s]               # os vértices estão no referencial da chapa
+        bpy.context.view_layer.update()
+        return o
+
+
+def _tambor(nome, raio, largura, centro, mat, pai, passo=0.03, lados=64, borda=0.02):
+    """Tambor (cilindro de eixo X) com as bordas arredondadas em `borda` m, feito em anéis de `passo` m (_revolucao): as tampas de
+    cilindro comum viram leques de triângulos compridos que deixam a checagem lenta."""
+    n = max(1, int(math.ceil((raio - borda) / passo)))
+    rs = [(raio - borda) * k / n for k in range(1, n + 1)]
+    perfil = [(0.0, -largura / 2)] + [(r_, -largura / 2) for r_ in rs]
+    for k in range(1, 5):                                       # quarto de círculo da borda de baixo
+        a = math.pi / 2 * k / 4
+        perfil.append((raio - borda + borda * math.sin(a), -largura / 2 + borda - borda * math.cos(a)))
+    m_ = max(1, int(math.ceil((largura - 2 * borda) / passo)))
+    perfil += [(raio, -largura / 2 + borda + (largura - 2 * borda) * k / m_) for k in range(1, m_)]
+    for k in range(0, 4):
+        a = math.pi / 2 * k / 4
+        perfil.append((raio - borda + borda * math.cos(a), largura / 2 - borda + borda * math.sin(a)))
+    perfil += [(r_, largura / 2) for r_ in reversed(rs)] + [(0.0, largura / 2)]
+    o = _revolucao(nome, perfil, mat, pai=pai, lados=lados, chata_embaixo=False)
+    o.matrix_basis = Matrix.Translation(Vector(centro)) @ Matrix.Rotation(math.radians(90), 4, "Y")
+    return o
+
+
+def mat_nylon_preto():
+    return b3.material_liso("NylonPreto", (0.02, 0.022, 0.025, 1), rug=0.45)
+
+
+def remo(nome="remo", calcanhar=(-0.40, 0.08), x_pe=0.10, angulo_apoio=41.0, chapa=(0.34, 0.13, 0.018), u_tira=0.20,
+         assento=(0.0, 0.36), assento_forma=(0.30, 0.27, 0.05), trilho=(-0.30, 1.07), trilho_secao=(0.05, 0.090), z_trilho=None,
+         carenagem=(-1.00, 0.66, 0.245), largura_carenagem=0.30, saida=(-0.74, 0.66), manete=None, manete_forma=(0.483, 10.0),
+         raio_pegador=0.016, compr_pegador=0.19, monitor=None, largura=0.61):
+    """Remo ergômetro (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y, tudo NA MONTAGEM:
+      calcanhar    = (y, z) do fundo do calcanhar nos 2 apoios dos pés (onde a parte de trás da sola encosta na borda); x_pe = |x| do
+                     meio de cada pé; angulo_apoio = chapa × horizontal (graus, a ponta pra frente e pra cima); chapa = (comprimento ao
+                     longo dela, largura, espessura); u_tira = onde a tira cruza o pé, ao longo da chapa a partir do fundo do calcanhar;
+      assento      = (y do meio, z do topo) do assento na montagem; assento_forma = (comprimento, largura, espessura do estofado);
+      trilho       = (y da ponta da frente, y da ponta de trás) do monotrilho; trilho_secao = (largura, altura) da viga; z_trilho = o
+                     topo da pista (padrão: embaixo do carrinho, o que o assento pede);
+      carenagem    = (y, z, raio) do centro e do raio do tambor do volante (eixo X); largura_carenagem = largura dele;
+      saida        = (y, z) de onde a corrente sai da guia (x = 0, na traseira da carenagem);
+      manete       = matriz 4x4 (mundo) do manete na montagem (origem no meio da corda das 2 manoplas, X ao longo dela, −Y = o lado da
+                     dobra, pra frente); manete_forma = (comprimento total, dobra em graus); raio_pegador, compr_pegador = as manoplas;
+      monitor      = (y, z) do meio da tela do monitor (padrão: em cima da saída, virado pro remador);
+      largura      = largura total (a travessa dos pés da frente).
+    Devolve um Remo (raizes, equipamentos, apoios, mover(), engate(), alca(), pegadores)."""
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, apo, car, man = raiz_nova("estrutura"), raiz_nova("apoio_pes"), raiz_nova("carrinho"), raiz_nova("manete")
+    tir = raiz_nova("tiras")
+    bpy.context.view_layer.update()
+    rot_x90 = (0, math.radians(90), 0)
+    y_c, z_c = calcanhar
+    a = math.radians(angulo_apoio)
+    u_ap = Vector((0.0, -math.cos(a), math.sin(a)))             # ao longo da chapa, pra ponta do pé (frente e cima)
+    n_ap = Vector((0.0, math.sin(a), math.cos(a)))              # normal da chapa, pro pé (trás e cima)
+    comp_ch, larg_ch, esp_ch = chapa
+    y_as, z_as = assento
+    comp_as, larg_as, esp_as = assento_forma
+    larg_tr, alt_tr = trilho_secao
+    z_tr = (z_as - esp_as - 0.145) if z_trilho is None else z_trilho   # topo da pista: estofado + carrinho de 145 mm em cima dela (no
+                                                                        # final a panturrilha esticada passa em cima do trilho)
+    y_tf, y_tt = trilho
+    y_v, z_v, R_v = carenagem
+    y_s, z_s = saida
+    # ── monotrilho (viga + pista de aço em cima) e o pé de trás ──────────────────────────────────────────────────────────────────────
+    _viga(nome + "_trilho", (0.0, y_tf, z_tr - 0.004 - alt_tr / 2), (0.0, y_tt, z_tr - 0.004 - alt_tr / 2), larg_tr, alt_tr,
+          mat_estrutura(), pai=estr)
+    _viga(nome + "_pista", (0.0, y_tf + 0.02, z_tr - 0.002), (0.0, y_tt - 0.02, z_tr - 0.002), 0.032, 0.004, mat_aco(), pai=estr)
+    caixa(nome + "_tampa_tras", (0.0, y_tt + 0.004, z_tr - 0.004 - alt_tr / 2), (larg_tr + 0.006, 0.012, alt_tr + 0.006), mat_borracha(),
+          pai=estr, chanfro=0.003)
+    z_pe_t = z_tr - 0.004 - alt_tr
+    _viga(nome + "_pe_tras_poste", (0.0, y_tt - 0.06, z_pe_t + 0.005), (0.0, y_tt - 0.13, 0.045), 0.06, 0.04, mat_estrutura(), pai=estr)
+    _viga(nome + "_pe_tras", (-0.22, y_tt - 0.13, 0.025), (0.22, y_tt - 0.13, 0.025), 0.05, 0.05, mat_estrutura(), pai=estr)
+    for s in (1, -1):
+        caixa(nome + "_pe_tras_borracha%+d" % s, (s * 0.20, y_tt - 0.13, 0.008), (0.05, 0.07, 0.016), mat_borracha(), pai=estr,
+              chanfro=0.004)
+    # ── viga da frente: sobe da ponta do trilho até embaixo da carenagem; pés da frente em A e a travessa com as rodinhas ─────────────
+    J = Vector((0.0, y_tf + 0.02, z_tr - 0.004 - alt_tr / 2))   # junção (a trava do trilho)
+    caixa(nome + "_junta", J + Vector((0.0, -0.025, -0.01)), (larg_tr + 0.012, 0.09, alt_tr + 0.03), mat_estrutura(), pai=estr,
+          chanfro=0.008)
+    topo_v = Vector((0.0, y_v + R_v * 0.55, z_v - R_v * 0.72))   # a viga entra embaixo e atrás do tambor
+    _viga(nome + "_viga_frente", J + Vector((0.0, -0.06, 0.0)), topo_v, 0.07, 0.10, mat_estrutura(), pai=estr)
+    y_pf = y_v - 0.10
+    for s in (1, -1):
+        _viga(nome + "_perna_frente%+d" % s, (s * 0.08, y_v + 0.05, z_v - R_v * 0.85), (s * (largura / 2 - 0.05), y_pf, 0.05), 0.05,
+              0.035, mat_estrutura(), pai=estr)
+        _cilindro(nome + "_rodinha%+d" % s, 0.035, 0.026, (s * (largura / 2 - 0.035), y_pf + 0.05, 0.036), rot_x90, mat_borracha(),
+                  vertices=24, pai=estr)
+    _viga(nome + "_travessa_frente", (-(largura / 2 - 0.012), y_pf, 0.03), ((largura / 2 - 0.012), y_pf, 0.03), 0.06, 0.06,
+          mat_estrutura(), pai=estr)
+    for s in (1, -1):
+        caixa(nome + "_ponteira_frente%+d" % s, (s * (largura / 2 - 0.006), y_pf, 0.03), (0.012, 0.065, 0.065), mat_borracha(),
+              pai=estr, chanfro=0.004)
+    # ── carenagem do volante (tambor), grade da ventoinha e o regulador de ar no lado esquerdo ───────────────────────────────────────
+    _tambor(nome + "_carenagem", R_v, largura_carenagem, (0.0, y_v, z_v), mat_carenagem(), estr)
+    for s in (1, -1):
+        _disco(nome + "_grade%+d" % s, R_v - 0.05, 0.004, Vector((s * (largura_carenagem / 2 + 0.002), y_v, z_v)), mat_nylon_preto(),
+               estr)
+    _disco(nome + "_regulador", 0.075, 0.012, Vector((largura_carenagem / 2 + 0.009, y_v, z_v)), mat_estrutura(), estr)
+    caixa(nome + "_regulador_alavanca", (largura_carenagem / 2 + 0.017, y_v - 0.06, z_v + 0.035), (0.010, 0.05, 0.022), mat_borracha(),
+          rot=(math.radians(-35), 0, 0), pai=estr, chanfro=0.003)
+    # ── guia da corrente (na traseira do tambor, na altura da saída) e os 2 ganchos do manete ───────────────────────────────────────
+    y_tras_tambor = y_v + math.sqrt(max(R_v * R_v - (z_s - z_v) ** 2, 0.0))
+    caixa(nome + "_guia", (0.0, (y_tras_tambor + y_s) / 2 - 0.004, z_s), (0.07, max(y_s - y_tras_tambor + 0.03, 0.03), 0.05),
+          mat_nylon_preto(), pai=estr, chanfro=0.008)
+    for s in (1, -1):
+        caixa(nome + "_gancho%+d" % s, (s * 0.16, y_tras_tambor + 0.012, z_s - 0.05), (0.03, 0.035, 0.012), mat_nylon_preto(), pai=estr,
+              chanfro=0.003)
+    # ── braço do monitor (sai de cima do tambor, sobe e vem pro remador) e o monitor virado pra ele ───────────────────────────────────
+    if monitor is None:
+        monitor = (y_v + R_v * 0.80 + 0.12, z_v + R_v + 0.24)
+    y_m, z_mn = monitor
+    base_b = Vector((0.0, y_v + R_v * 0.62, z_v + R_v * 0.80))   # em cima e atrás do tambor
+    topo_b = Vector((0.0, y_m - 0.035, z_mn - 0.085))
+    _viga(nome + "_braco_monitor", base_b, topo_b, 0.045, 0.035, mat_estrutura(), pai=estr)
+    a_m = math.radians(20)                                     # monitor virado pro remador (topo pra frente)
+    caixa(nome + "_monitor", (0.0, y_m, z_mn), (0.20, 0.05, 0.17), mat_nylon_preto(), rot=(a_m, 0, 0), pai=estr, chanfro=0.012)
+    n_m = Vector((0.0, math.cos(a_m), math.sin(a_m)))
+    caixa(nome + "_monitor_tela", Vector((0.0, y_m, z_mn)) + n_m * 0.026, (0.15, 0.003, 0.10), mat_borracha(), rot=(a_m, 0, 0), pai=estr,
+          chanfro=0.002)
+    # ── apoios dos pés (APOIO): chapa, borda do calcanhar no fundo; a tira vem depois (alca(), na forma do pé) ─────────────────────────
+    chapa_M = {}
+    x_chapa = {}
+    for s in (1, -1):
+        O = Vector((s * x_pe, y_c, z_c))
+        M = Matrix((Vector((-1.0, 0.0, 0.0)), u_ap, n_ap)).transposed().to_4x4()   # (−X, u, n): referencial de mão direita (com +X
+        M.translation = O                                       # ficaria espelhado e as normais das peças, pra dentro)
+        chapa_M[s] = M
+        x_chapa[s] = 0.0                                        # o meio da chapa no x do pé (referencial da chapa)
+        o = caixa(nome + "_chapa%+d" % s, (0, 0, 0), (larg_ch, comp_ch, esp_ch), mat_nylon_preto(), chanfro=0.003)
+        o.parent = apo
+        o.matrix_basis = M @ Matrix.Translation(Vector((0.0, comp_ch / 2 - 0.035, -esp_ch / 2)))
+        b = caixa(nome + "_borda_calcanhar%+d" % s, (0, 0, 0), (larg_ch, 0.022, 0.055), mat_nylon_preto(), chanfro=0.004)
+        b.parent = apo
+        b.matrix_basis = M @ Matrix.Translation(Vector((0.0, -0.011 - 0.001, 0.0275 - esp_ch * 0.3)))
+        # suporte da chapa: um braço embaixo dela, de lado até o meio (entre os 2 pés); o poste do meio sobe dele até a viga da frente
+        p_ch = M @ Vector((0.0, comp_ch * 0.45, -esp_ch - 0.012))
+        _viga(nome + "_suporte_chapa%+d" % s, p_ch + Vector((s * 0.03, 0.0, 0.0)), Vector((s * 0.002, p_ch.y, p_ch.z)), 0.024, 0.024,
+              mat_estrutura(), pai=estr)
+    frac = max(0.0, min(1.0, (J.y - 0.06 - p_ch.y) / (J.y - 0.06 - topo_v.y)))
+    z_viga = J.z + (topo_v.z - J.z) * frac                       # meio da viga da frente no y dos braços dos apoios
+    _viga(nome + "_poste_apoios", (0.0, p_ch.y, p_ch.z - 0.012), (0.0, p_ch.y, z_viga - 0.045), 0.028, 0.04, mat_estrutura(), pai=estr)
+    # ── carrinho (APOIO): estofado do assento, base e 4 rodinhas na pista ──────────────────────────────────────────────────────────────
+    caixa(nome + "_assento", (0.0, y_as, z_as - esp_as / 2), (larg_as, comp_as, esp_as), mat_estofado(), pai=car, chanfro=0.018)
+    caixa(nome + "_assento_base", (0.0, y_as, z_as - esp_as - 0.015), (0.16, comp_as - 0.06, 0.03), mat_estrutura(), pai=car,
+          chanfro=0.006)
+    z_cb = z_as - esp_as - 0.03                                 # embaixo da base: a caixa das rodinhas em volta do trilho
+    caixa(nome + "_assento_carro", (0.0, y_as, (z_cb + z_tr + 0.004) / 2), (larg_tr + 0.03, 0.20, z_cb - z_tr - 0.004),
+          mat_estrutura(), pai=car, chanfro=0.004)
+    for dy in (-0.08, 0.08):
+        for s in (1, -1):
+            _cilindro(nome + "_rodinha_assento%+d%+d" % (s, int(dy * 100)), 0.016, 0.010, (s * (larg_tr / 2 + 0.02), y_as + dy,
+                      z_tr + 0.018), rot_x90, mat_borracha(), vertices=20, pai=car)
+    # ── manete (raiz na matriz M0): 2 manoplas de borracha longas, a ponte do meio (treliça de nylon em triângulo, com a ponta pra frente)
+    #    e o engate na ponta da ponte; a dobra: cada manopla gira dobra/2 com a ponta de fora pra trás, pro remador (a foto do fabricante) ──
+    comp_m, dobra = manete_forma
+    b_ = math.radians(dobra / 2)
+    x_in = comp_m / 2 - compr_pegador                           # ponta de dentro da manopla (de lado, na corda)
+    xg = (x_in + compr_pegador / 2) * math.cos(b_)              # meio da manopla, de lado (a origem fica no meio da corda das 2 manoplas)
+    pegadores = {}
+    cantos = {}
+    for s, lado in ((1, "E"), (-1, "D")):
+        eixo = Vector((s * math.cos(b_), math.sin(b_), 0.0))      # da ponta de dentro pra de fora: a ponta de fora vai pra trás (+Y)
+        cg = Vector((s * xg, 0.0, 0.0))
+        pegadores[s] = _em_aneis(tubo(nome + "_pegador_" + lado, cg - eixo * compr_pegador / 2, cg + eixo * compr_pegador / 2,
+                                      raio_pegador, mat_borracha(), pai=man, vertices=32), passo=0.03)
+        _cilindro(nome + "_ponta%+d" % s, raio_pegador * 0.92, 0.008, cg + eixo * (compr_pegador / 2 + 0.003),
+                  eixo.to_track_quat("Z", "Y").to_euler(), mat_borracha(), vertices=24, pai=man)
+        cantos[s] = cg - eixo * (compr_pegador / 2 - 0.012)     # onde a ponte segura a manopla (1,2 cm pra dentro dela)
+    apice = Vector((0.0, (cantos[1].y + cantos[-1].y) / 2 - 0.050, 0.0))   # ponta da ponte, 5 cm à frente (o engate)
+    for s in (1, -1):
+        _em_aneis(tubo(nome + "_ponte%+d" % s, cantos[s], apice + Vector((s * 0.012, 0.0, 0.0)), 0.007, mat_nylon_preto(), pai=man,
+                       vertices=16), passo=0.03)
+    _em_aneis(tubo(nome + "_ponte_base", cantos[1], cantos[-1], 0.008, mat_nylon_preto(), pai=man, vertices=16), passo=0.03)
+    for s in (1, -1):                                           # 2 travessas da treliça
+        a_ = cantos[s] + (apice - cantos[s]) * 0.5
+        _em_aneis(tubo(nome + "_ponte_trav%+d" % s, a_, Vector((s * 0.012, cantos[s].y, 0.0)), 0.005, mat_nylon_preto(), pai=man,
+                       vertices=12), passo=0.03)
+    caixa(nome + "_ponte_ponta", apice + Vector((0.0, 0.004, 0.0)), (0.034, 0.016, 0.016), mat_nylon_preto(), pai=man, chanfro=0.004)
+    engate = apice + Vector((0.0, -0.022, 0.0))
+    tubo(nome + "_engate", apice + Vector((0.0, -0.004, 0.0)), engate, 0.004, mat_aco(), pai=man, vertices=12)
+    # ── corrente (raiz própria: origem na saída, fita de 1 m no Z local; mover() gira e estica) ──────────────────────────────────────
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.5))
+    cor = bpy.context.active_object
+    cor.name = nome + "_corrente"
+    cor.scale = (0.005, 0.012, 1.0)
+    bpy.ops.object.transform_apply(location=True, rotation=False, scale=True)
+    cor.data.materials.append(mat_aco())
+    _reto(cor)
+    _em_aneis(cor, passo=0.04)
+    cor["anima_escala"] = True                                  # exportar_exercicio.py: grava a escala só deste objeto
+    medidas = dict(pegadores=pegadores, raio_pegador=raio_pegador, meia_pegador=compr_pegador / 2, saida=(0.0, y_s, z_s),
+                   engate=tuple(engate), chapa_M=chapa_M, x_chapa=x_chapa, largura_chapa=larg_ch, u_tira=u_tira, z_trilho=z_tr,
+                   juncao=tuple(J), viga_topo=tuple(topo_v), monitor=(y_m, z_mn), tras_tambor=y_tras_tambor, angulo_apoio=angulo_apoio)
+    raizes = {"estrutura": estr, "apoio_pes": apo, "tiras": tir, "carrinho": car, "manete": man, "corrente": cor}
+    if manete is not None:
+        man.matrix_world = Matrix(manete)
+    bpy.context.view_layer.update()
+    rm = Remo(raizes, medidas)
+    rm.mover(0.0, man.matrix_world.copy())
+    return rm
+# ===== fim: Remo ergômetro ==========================================================================================================
+
+
 # ===== Barra W ======================================================================================================================
 # ── BARRA W LIVRE, COM ANILHAS (a barra EZ, "EZ curl bar"; Rosca Direta com Barra W, lote 13, 12/10/2026) ───────────────────────────────
 # A barra W olímpica de academia, solta (com anilhas; não é a "barra W" acessório da polia citada no bloco POLIA): o EIXO de aço com o

@@ -824,3 +824,38 @@ def bola_do_pe_quadril(j):
 
 MEDIDAS.update({"quadril_linha_ombro_tornozelo_lado": quadril_linha_ombro_tornozelo_lado, "bola_do_pe_quadril": bola_do_pe_quadril})
 UNIDADE.update({"quadril_linha_ombro_tornozelo_lado": "mm", "bola_do_pe_quadril": "mm"})
+
+
+# ── remo ergômetro (lote 14, 12/10/2026): sentado no carrinho, o tronco vai de inclinado à frente na pegada a inclinado pra trás no final,
+# passando pela vertical no meio da passada (Concept2, Indoor Rowing Technique: "Upper body is leaning forward from the hips with the
+# shoulders in front of the hips." / "swing the back through the vertical position" / "Upper body is leaning back slightly"), e na pegada a
+# canela fica em pé sem passar da vertical ("Shins are vertical, or as close to vertical as is comfortable for you. Shins should not move
+# beyond perpendicular."). O "tronco" do checagem3d (quadril → pescoço × vertical) não tem sinal: 20° à frente e 20° pra trás dão o mesmo
+# número; e a "inclinacao" da canela não diz se o joelho passou do tornozelo. Os estudos de remo medem o tronco com sinal, + pra trás
+# (Cardoso et al. 2024, Sensors 24:5686: "The thorax (positive) and knee angles indicate extension and flexion"; Penichet-Tomas et al.
+# 2025: "positive angles (AT+) indicating movement towards the finish position and negative angles (AT-) indicating movement towards the
+# catch position").
+def tronco_sinal(j):
+    """Tronco (quadril → pescoço) × a vertical do mundo COM SINAL, no plano sagital da pelve (vista de lado), graus: 0 = em pé, + =
+    inclinado pra TRÁS (o pescoço atrás do quadril: o final do remo), − = pra FRENTE (a pegada). O lado vem da linha dos quadris no chão
+    (eixos_pelve): inclinar de lado não muda o número; vale sentado ou em pé, virado pra qualquer lado."""
+    lado, frente = eixos_pelve(j)
+    d = j["Neck"] - j["Hips"]
+    d = d - lado * (d @ lado)
+    return [math.degrees(math.atan2(-float(d @ frente), float(d[2])))]
+
+
+def canela_sinal(j):
+    """Canela (tornozelo → centro do joelho) × a vertical do mundo COM SINAL, no plano sagital da pelve, graus [E, D]: 0 = canela em pé
+    (o joelho bem em cima do tornozelo), + = o joelho à frente do tornozelo (a canela passou da vertical), − = atrás. Abrir o joelho pro
+    lado não muda o número."""
+    lado, frente = eixos_pelve(j)
+    out = []
+    for L, _ in LADOS:
+        c = j[L + "Leg"] - j[L + "Foot"]
+        c = c - lado * (c @ lado)
+        out.append(math.degrees(math.atan2(float(c @ frente), float(c[2]))))
+    return out
+
+
+MEDIDAS.update({"tronco_sinal": tronco_sinal, "canela_sinal": canela_sinal})

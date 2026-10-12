@@ -812,3 +812,24 @@ def test_quadril_na_reta_ate_o_tornozelo_de_um_lado_e_bola_do_pe_no_escalador():
     alto = dict(p, LeftToeBase=p["LeftToeBase"] + np.array([0, 0, 0.06]))
     assert tc.bola_do_pe_quadril(alto) == pytest.approx([-200, -750], abs=1e-6)
     assert {"quadril_linha_ombro_tornozelo_lado", "bola_do_pe_quadril"} <= set(tc.MEDIDAS)
+
+
+def test_tronco_e_canela_com_sinal_no_remo():
+    """Remo ergômetro (lote 14): o tronco (quadril → pescoço) × vertical com sinal, + pra trás (o final) e − pra frente (a pegada), visto
+    de lado da pelve: o mesmo número com o boneco virado e com o tronco inclinado de lado; a canela (tornozelo → joelho) × vertical, + com
+    o joelho à frente do tornozelo."""
+    j = em_pe()
+    assert tc.tronco_sinal(j) == pytest.approx([0], abs=1e-6)
+    tras = dict(j, Neck=j["Hips"] + np.array([0, 0.5 * math.sin(math.radians(20)), 0.5 * math.cos(math.radians(20))]))
+    frente = dict(j, Neck=j["Hips"] + np.array([0, -0.5 * math.sin(math.radians(25)), 0.5 * math.cos(math.radians(25))]))
+    assert tc.tronco_sinal(tras) == pytest.approx([20], abs=1e-6)
+    assert tc.tronco_sinal(frente) == pytest.approx([-25], abs=1e-6)
+    assert tc.tronco_sinal(girar(frente, 70, (0, 0, 1))) == pytest.approx([-25], abs=1e-6)
+    de_lado = dict(frente, Neck=frente["Neck"] + np.array([0.10, 0, 0]))   # inclinar pro lado não conta
+    assert tc.tronco_sinal(de_lado) == pytest.approx([-25], abs=1e-6)
+    assert tc.canela_sinal(j)[0] == pytest.approx(math.degrees(math.atan2(0.02, 0.42)), abs=1e-6)   # em_pe: joelho 2 cm à frente
+    reta = dict(j, LeftLeg=j["LeftFoot"] + np.array([0, 0, 0.43]), RightLeg=j["RightFoot"] + np.array([0.05, 0.43 * math.sin(math.radians(10)),
+                                                                                                        0.43 * math.cos(math.radians(10))]))
+    assert tc.canela_sinal(reta) == pytest.approx([0, -10], abs=1e-6)        # o direito atrás (e aberto 5 cm pro lado: não conta)
+    assert tc.canela_sinal(girar(reta, -40, (0, 0, 1))) == pytest.approx([0, -10], abs=1e-6)
+    assert {"tronco_sinal", "canela_sinal"} <= set(tc.MEDIDAS)
