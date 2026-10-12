@@ -188,8 +188,8 @@ def seco(o) -> None:
     jpg, png = B.jpeg_sintetico(), B.png_sintetico()
     o.ok(jpg[:3] == b"\xff\xd8\xff" and png[:4] == b"\x89PNG" and len(jpg) < 2000 and len(png) < 2000,
          f"as imagens de teste são sintéticas e pequenas (JPEG {len(jpg)} B, PNG {len(png)} B)")
-    o.ok(B.REG_LOGINS.name in ("logins_etapa2_20a.txt", "logins_etapa2_20b.txt") and B.B19.MAX_LOGINS == 10,
-         f"o registro de logins da W (decisão G; hml-20b: o da 20b): {B.REG_LOGINS.name} (até {B.B19.MAX_LOGINS})")
+    o.ok((B.REG_LOGINS.name == "logins_etapa2_20a.txt" and B.B19.MAX_LOGINS == 10) or (B.REG_LOGINS.name == "logins_etapa2_20b.txt" and B.B19.MAX_LOGINS in (6, 10)),
+         f"o registro de logins da W (decisão G; hml-20b: o da 20b, 6 na etapa 2 — 10 no F6): {B.REG_LOGINS.name} (até {B.B19.MAX_LOGINS})")
     # o teto conta só o staging: o login do smoke da produção (o motivo termina em "prod)") não come os 6 da etapa 2 (num registro de mentira)
     real = B.B19.REG_LOGINS
     falso = B.SCRATCH / "tmp" / "logins_seco_20a.txt"

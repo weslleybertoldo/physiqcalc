@@ -175,6 +175,27 @@ def seco(o, qual: str) -> None:
     o.ok(sum(c["gravacoes_novas"].values()) == 2 and not c["funcao"], f"a guarda acha a gravação nova ao abrir (o `ler` disfarçado também): {c['gravacoes_novas']}")
     o.ok(fase_do_painel("local", "x") == "depois" and fase_do_painel("staging", "6fd3194") == "antes" and fase_do_painel("staging", "0000000") == "?",
          "antes × depois vem do CÓDIGO medido: o 6fd3194 (o staging do antes, que já tem o leitura.ts da 20a) lê a casca direto → antes")
+    # a produção (decisão K; revisão 🟡1): a nutri-legado e o aluno de teste DELA, os padrões por SQL só leitura, a recusa sem aluno
+    uid = "33333333-3333-4333-8333-333333333333"
+    sqls = [P.sql_uid_da_conta("Nutri.Teste.Claude@physiqnutri.app"), P.sql_aluno_de_teste("public", uid), P.sql_padroes("public", uid)]
+    escrita = re.compile(r"(?i)\b(insert|update|delete|truncate|alter|drop|create|grant|revoke|copy|merge|call)\b")
+    o.ok(P.PRODUCAO == B.PROD_CONTA == "nutri-legado" and not any(escrita.search(re.sub(r"'[^']*'", "''", x)) for x in sqls)
+         and sqls[0].startswith("select u.id::text as id from auth.users") and sqls[1].startswith("select p.id::text as id from public.pacientes")
+         and "%.teste.claude@physiqnutri.app" in sqls[1] and "not like '%revisao%'" in sqls[1] and "p.deleted_at is null" in sqls[1]
+         and sqls[2].count("count(*)") == 3 and "public.modelos_anamnese" in sqls[2] and "public.exames_catalogo" in sqls[2] and "public.modelos_documento" in sqls[2],
+         "a produção: a nutri-legado; o aluno de TESTE dela e os padrões por SQL SÓ LEITURA (só o id e as contagens voltam; o e-mail de teste, sem as revisao.*)")
+    tudo, nada = P.plano_da_producao({"modelos_anamnese": 1, "exames_catalogo": 12, "modelos_documento": 3}), P.plano_da_producao({})
+    o.ok(len(tudo[0]) == 12 and not tudo[1] and len(nada[0]) == 9 and [t for t, _m in nada[1]] == ["prontuario_anamnese", "prontuario_exames", "prontuario_documentos"]
+         and all("padroes_garantir" in m for _t, m in nada[1]) and "prontuario_consultas" in [t[0] for t in nada[0]],
+         "a produção: Anamnese, Exames e Documentos só abrem com os padrões da conta (sem eles: pulam, com o motivo); o resto abre só leitura")
+    recusou = ""
+    try:
+        P.escolher_aluno_de_producao([])
+    except SystemExit as e:
+        recusou = str(e)
+    o.ok("não tem aluno de TESTE" in recusou and "não abre nada" in recusou and P.escolher_aluno_de_producao([{"id": uid}]) == uid,
+         "a produção sem aluno de teste da nutri-legado: o --base prod RECUSA com a mensagem clara (antes de abrir o navegador)")
+    o.ok(BARRADAS_ACEITAS == {"POST fn:nutricao", "POST rpc:aluno_acesso"}, "a produção: a Guarda só pode barrar o garantir do 1º acesso e o aluno_acesso (H-43)")
     if qual == "telas":
         o.ok(len(PRINTS_B) == 16 and "b_anexo_ver" in PRINTS_B and "b_prontuario_erro" in PRINTS_B and PRINTS == B.PRINTS.parent / "b",
              f"os {len(PRINTS_B)} prints b_* da spec §5 (Resumo e Avaliação da nutri e da personal, as 10 seções, o Ver do anexo, o erro) em {PRINTS}")
@@ -207,18 +228,41 @@ def _t_principal(fim: FimDoPrincipal, inicio: float) -> float | None:
     return round(max(fim.fins) - inicio, 2) if fim.fins else None
 
 
-def percorrer(o, t, pend, fim: FimDoPrincipal, L, base: str, conta: str, pac: str, ao_abrir) -> None:
+def percorrer(o, t, pend, fim: FimDoPrincipal, L, base: str, conta: str, pac: str, ao_abrir, telas: list | None = None) -> None:
     """Entra no /painel e abre cada tela da conta pela navegação do app; ao_abrir(tela, sufixo, marca, teto, pronta, t_principal)."""
     t.entrar(L, conta, "/painel")
     o.ok(t.esperar(lambda: t.n("[data-casca]") > 0, 60), f"[{base}] {conta}: o painel abriu (a casca)", parar=True)
     B.esperar_pronto(t, pend, max_s=40)
-    for tela, sufixo, marca, teto in P.telas_da_conta(conta):
+    for tela, sufixo, marca, teto in (telas if telas is not None else P.telas_da_conta(conta)):
         fim.zerar()
         inicio = time.time()
         B.navegar(t, rota_do_aluno(pac, sufixo))
         pronta = B.esperar_pronto(t, pend, marca=marca)
         o.ok(t.n(marca) > 0, f"[{base}] {conta.split('-')[-1]} {tela}: a tela abriu ({marca}; marca em {pronta['t_marca_s']} s)", parar=False)
         ao_abrir(tela, sufixo, marca, teto, pronta, _t_principal(fim, inicio))
+
+
+def plano_da_base(o, base: str) -> tuple[str, list[tuple[str, list]]]:
+    """O aluno e as contas/telas da rodada: no local/staging, a w5p-aluna com a nutri (tudo) e a personal (Resumo e Avaliação); na
+    PRODUÇÃO (decisão K), SÓ a nutri-legado e o aluno de teste DELA (SQL só leitura: só ids/contagem, nada impresso) — sem aluno de teste,
+    recusa antes de abrir qualquer coisa; Anamnese, Exames e Documentos só se os padrões da conta já existem (senão pulam, com o motivo)."""
+    if base != "prod":
+        return B.B17.matricula_da_aluna(), [(P.NUTRI, P.telas_da_conta(P.NUTRI)), (P.PERSONAL, P.telas_da_conta(P.PERSONAL))]
+    email = B.B5.CONTAS[P.PRODUCAO][0]
+    uid = [x.get("id") for x in B.ler_principal(P.sql_uid_da_conta(email)) if C.eh_uuid(x.get("id"))]
+    if not uid:
+        raise SystemExit("produção: a conta de teste nutri-legado não existe no Auth — o --base prod não abre nada")
+    pac = P.escolher_aluno_de_producao(B.ler_principal(P.sql_aluno_de_teste("public", uid[0])))
+    padroes = (B.ler_principal(P.sql_padroes("public", uid[0])) or [{}])[0]
+    telas, pulos = P.plano_da_producao(padroes)
+    for tela, motivo in pulos:
+        o.linha(f"[prod] {tela}: PULADA — {motivo}")
+    o.linha(f"[prod] a nutri-legado e o aluno de teste dela (achado por SQL só leitura): {len(telas)} tela(s) só leitura com a Guarda, {len(pulos)} pulada(s)")
+    return pac, [(P.PRODUCAO, telas)]
+
+
+# as gravações que a Guarda pode barrar na produção ao abrir (não são desta W: o garantir do 1º acesso e o acesso do aluno, H-43)
+BARRADAS_ACEITAS = {"POST fn:nutricao", "POST rpc:aluno_acesso"}
 
 
 def rodar_rede(o, base: str, canal: str | None) -> None:
@@ -230,11 +274,11 @@ def rodar_rede(o, base: str, canal: str | None) -> None:
     fase = fase_do_painel(base, commit)
     try:
         B.exigir_saude(o, "o rede.py da hml-20 (painel-aluno)")
-        pac = B.B17.matricula_da_aluna()
+        pac, contas = plano_da_base(o, base)
         guarda = B.Guarda() if base == "prod" else None
         with sync_playwright() as pw:
             o.linha(f"[{base}] {commit}: o {fase}")
-            for conta in (P.NUTRI, P.PERSONAL):
+            for conta, telas in contas:
                 nav, t = _abrir_conta(pw, canal, base, conta, guarda)
                 pend = B.Pendentes(t.pg)
                 fim = FimDoPrincipal(t.pg)
@@ -245,9 +289,12 @@ def rodar_rede(o, base: str, canal: str | None) -> None:
                     anotar_rede(base, commit, fase, conta, tela, cont, pronta, t_principal)
 
                 try:
-                    percorrer(o, t, pend, fim, L, base, conta, pac, ao_abrir)
+                    percorrer(o, t, pend, fim, L, base, conta, pac, ao_abrir, telas)
                     if guarda:
-                        o.ok(not guarda.bloqueadas, f"[prod] a Guarda não barrou nada (as telas só leram): {guarda.bloqueadas or '—'}")
+                        fora = [b for b in guarda.bloqueadas if b not in BARRADAS_ACEITAS]
+                        o.ok(not fora, f"[prod] a Guarda só barrou as gravações que já existem e não são desta W (o garantir do 1º acesso e o "
+                                       f"aluno_acesso — H-43; a contagem por tela acima prova que eram essas): {sorted(set(guarda.bloqueadas)) or '—'}"
+                                       + (f" · outras: {fora}" if fora else ""))
                 finally:
                     _fechar_conta(o, base, conta, L, nav, t)
     finally:

@@ -121,10 +121,61 @@ AVALIACAO = ("avaliacao", "/avaliacao", '[data-aba-avaliacao="dados"], [data-aba
 
 
 def telas_da_conta(conta: str) -> list[tuple[str, str, str, int]]:
-    """As telas que cada conta abre: a nutri, a casca/Resumo, as 10 seções e a Avaliação; a personal, o Resumo e a Avaliação."""
+    """As telas que cada conta abre: a nutri (e a nutri-legado, na produção), a casca/Resumo, as 10 seções e a Avaliação; a personal, o
+    Resumo e a Avaliação."""
     if conta == PERSONAL:
         return [RESUMO, AVALIACAO]
     return [RESUMO] + [(f"prontuario_{s}", f"/prontuario?secao={s}" if s != "anotacoes" else "/prontuario", m, teto) for s, m, teto in SECOES] + [AVALIACAO]
+
+
+# ───────────────────────── a produção (decisão K do contrato da 20b; revisão 🟡1): SÓ LEITURA, a nutri-legado e o aluno de teste DELA ─────
+PRODUCAO = B.PROD_CONTA  # nutri-legado: a conta de teste do painel na produção
+# as seções que chamam o padroes_garantir ao abrir (hml-19a — GRAVA no 1º acesso): na produção só abrem se os padrões da conta já existem
+SECOES_COM_PADRAO = {"prontuario_anamnese": "modelos_anamnese", "prontuario_exames": "exames_catalogo", "prontuario_documentos": "modelos_documento"}
+SUFIXO_DE_TESTE = ".teste.claude@physiqnutri.app"  # o e-mail das contas de TESTE (e2e/hml09/_comum.py: eh_email_de_teste)
+
+
+def sql_uid_da_conta(email: str) -> str:
+    """Só leitura: o id (auth) da conta de teste da produção — só o id volta (nada impresso)."""
+    return f"select u.id::text as id from auth.users u where lower(u.email) = {C.txt(email.strip().lower())}"
+
+
+def sql_aluno_de_teste(s: str, uid: str) -> str:
+    """Só leitura: as matrículas VIVAS de que a conta é a nutri (ou a personal) e cujo e-mail (o do login, senão o da ficha) é de TESTE —
+    só os ids voltam (nada impresso), a mais antiga primeiro."""
+    email = "lower(coalesce(u.email, p.email, ''))"
+    return (f"select p.id::text as id from {s}.pacientes p left join auth.users u on u.id = p.user_id where p.deleted_at is null "
+            f"and (p.nutricionista_id = {C.txt(C.uuid_ok(uid))} or p.personal_id = {C.txt(C.uuid_ok(uid))}) "
+            f"and {email} like {C.txt('%' + SUFIXO_DE_TESTE)} and {email} not like '%revisao%' order by p.created_at limit 5")
+
+
+def sql_padroes(s: str, uid: str) -> str:
+    """Só leitura, só contagem: os modelos/catálogos PRÓPRIOS vivos da conta (os padrões do 1º acesso: anamnese, exames, documentos)."""
+    u = C.txt(C.uuid_ok(uid))
+    return "select " + ", ".join(f"(select count(*) from {s}.{t} where nutricionista_id = {u} and deleted_at is null)::int as {t}"
+                                 for t in SECOES_COM_PADRAO.values())
+
+
+def plano_da_producao(padroes: dict[str, int]) -> tuple[list[tuple[str, str, str, int]], list[tuple[str, str]]]:
+    """As telas da nutri-legado na produção: todas as da nutri, menos as seções com padrão cujos padrões a conta AINDA não tem (abrir
+    gravaria o padroes_garantir — a Guarda barraria e a tela mostraria o erro): essas pulam, com o motivo."""
+    abrir, pulos = [], []
+    for t in telas_da_conta(PRODUCAO):
+        tabela = SECOES_COM_PADRAO.get(t[0])
+        if tabela and int(padroes.get(tabela) or 0) <= 0:
+            pulos.append((t[0], f"a nutri-legado não tem os padrões ({tabela}) na produção — abrir gravaria o padroes_garantir (prova viva do Weslley)"))
+        else:
+            abrir.append(t)
+    return abrir, pulos
+
+
+def escolher_aluno_de_producao(linhas: list[dict]) -> str:
+    """O aluno de teste da nutri-legado na produção (o 1º); nenhum → recusa (o --base prod não abre nada)."""
+    ids = [x.get("id") for x in linhas if C.eh_uuid(x.get("id"))]
+    if not ids:
+        raise SystemExit("produção: a nutri-legado não tem aluno de TESTE na produção (nenhuma matrícula viva dela com e-mail de teste) — "
+                         "o --base prod não abre nada; a prova do painel na produção fica para a prova viva do Weslley")
+    return ids[0]
 
 
 # os seletores que o --seco confere no código (a tela que abriu e os do b_anexo_ver/b_prontuario_erro)
@@ -149,76 +200,124 @@ SELETORES = {
 }
 
 
-# ───────────────────────── o P: o SQL só leitura do que a tela lê hoje, montado do catálogo do servidor ─────────────────────────
+# ───────────────────────── o P: o SQL FIXO do que a tela lia no 6fd3194 (a lib de antes), nunca montado do catálogo ─────────────────────────
+# revisão da 20b (🟡3): o P compara a função com o que a LIB DE ANTES lia (git show 6fd3194:<lib>) — a tabela/RPC, o filtro, a ordem e o
+# limite/página dela, com `select *` (o que o PostgREST devolvia; o teto de 1000 era o max_rows) —, escrito aqui à mão, uma linha por
+# consulta. Assim, um erro no catálogo do servidor (uma coluna a menos, outra ordem, outro filtro) não se esconde num SQL montado dele.
+# {s} = o schema; {aluno} = a matrícula (pacientes.id) ou o id da rota; {id} = o id da linha; {uid} = quem está logado (os 2 já citados).
+SQL_DA_LIB: dict[str, tuple[str, str]] = {
+    # casca/Resumo e Avaliação (painel/aluno/dados/api.ts:31 · avaliacao/fontes.ts:84) e o card/aba/PDF das anotações (anotacoes.ts:77-78)
+    "aluno_perfil": ("painel/aluno/dados/api.ts:31", "select to_jsonb({s}.aluno_perfil(p_aluno => {aluno})) as v"),
+    "aluno_evolucao_painel": ("painel/aluno/avaliacao/fontes.ts:84", "select to_jsonb({s}.aluno_evolucao(p_aluno => {aluno})) as v"),
+    "anotacoes:card": ("prontuario/lib/anotacoes.ts:77-78", "select to_jsonb({s}.aluno_anotacoes(p_aluno => {aluno}, p_limite => 3)) as v"),
+    "anotacoes:pagina": ("prontuario/lib/anotacoes.ts:77-78", "select to_jsonb({s}.aluno_anotacoes(p_aluno => {aluno}, p_limite => 20, p_offset => 0)) as v"),
+    "anotacoes_todas": ("prontuario/lib/anotacoes.ts:77-78", "select to_jsonb({s}.aluno_anotacoes(p_aluno => {aluno}, p_limite => null)) as v"),
+    "exames_do_aluno": ("prontuario/lib/exames.ts:163-165", "select to_jsonb({s}.exames_do_aluno(p_aluno => {aluno}, p_exame => null, p_offset => 0, p_limite => 20)) as v"),
+    # o profissional (editor/lib/profissional.ts:8 e :27 — nome e dados_profissionais do profiles de quem está logado)
+    "profissional": ("editor/lib/profissional.ts:8,27", "select * from {s}.profiles where id = {uid}"),
+    # o Prontuário
+    "consultas_do_aluno": ("prontuario/lib/consultas.ts:21-27", "select * from {s}.consultas where paciente_id = {aluno} and deleted_at is null order by data desc, created_at desc limit 1000"),
+    "anamneses_do_aluno": ("prontuario/lib/anamneses.ts:72-78", "select * from {s}.anamneses where paciente_id = {aluno} and deleted_at is null order by data desc, created_at desc limit 1000"),
+    "modelos_anamnese": ("prontuario/lib/anamneses.ts:25-30", "select * from {s}.modelos_anamnese where deleted_at is null order by favorito desc, titulo asc limit 1000"),
+    "questionarios": ("prontuario/lib/questionarios.ts:28", "select * from {s}.questionarios where deleted_at is null order by titulo asc limit 1000"),
+    "respostas_questionario_do_aluno": ("prontuario/lib/questionarios.ts:63-69", "select * from {s}.respostas_questionario where paciente_id = {aluno} and deleted_at is null order by data desc, created_at desc limit 1000"),
+    "pedidos_exame_do_aluno": ("prontuario/lib/exames.ts:80-88", "select * from {s}.pedidos_exame where paciente_id = {aluno} and deleted_at is null order by data desc, created_at desc, id desc offset 0 limit 20"),
+    "pedidos_exame_do_aluno:total": ("prontuario/lib/exames.ts:82 (count exact)", "select count(*)::int as v from {s}.pedidos_exame where paciente_id = {aluno} and deleted_at is null"),
+    "exames_catalogo": ("prontuario/lib/exames.ts:29-34", "select * from {s}.exames_catalogo where deleted_at is null order by favorito desc, nome asc limit 1000"),
+    "resultados_exame_do_aluno": ("prontuario/lib/exames.ts:123-141", "select * from {s}.resultados_exame where paciente_id = {aluno} and deleted_at is null order by data desc, exame asc, id asc limit 50000"),
+    "avaliacoes_integradas_do_aluno": ("prontuario/lib/avaliacaoIntegrada.ts:33-39", "select * from {s}.avaliacoes_integradas where paciente_id = {aluno} and deleted_at is null order by data desc, created_at desc limit 1000"),
+    "gestacoes_do_aluno": ("prontuario/lib/gestacional.ts:34-39", "select * from {s}.gestacoes where paciente_id = {aluno} and deleted_at is null order by created_at desc limit 1000"),
+    "registros_gestacionais": ("prontuario/lib/gestacional.ts:75-81", "select * from {s}.registros_gestacionais where paciente_id = {aluno} and deleted_at is null order by data desc, created_at desc limit 1000"),
+    "interacoes_farmaco": ("prontuario/lib/farmaco.ts:38", "select * from {s}.interacoes_farmaco_nutriente where deleted_at is null order by medicamento asc, nutriente asc limit 1000"),
+    "medicamentos_do_aluno": ("prontuario/lib/farmaco.ts:79-85", "select * from {s}.medicamentos_paciente where paciente_id = {aluno} and deleted_at is null order by ativo desc, created_at asc limit 1000"),
+    "analises_farmaco_do_aluno": ("prontuario/lib/farmaco.ts:115-121", "select * from {s}.analises_farmaco where paciente_id = {aluno} and deleted_at is null order by data desc, created_at desc limit 1000"),
+    "documentos_do_aluno": ("prontuario/lib/documentos.ts:70-75", "select * from {s}.documentos where paciente_id = {aluno} and deleted_at is null order by created_at desc limit 1000"),
+    "modelos_documento": ("prontuario/lib/documentos.ts:24-29", "select * from {s}.modelos_documento where deleted_at is null order by favorito desc, titulo asc limit 1000"),
+    "anexos_do_aluno": ("prontuario/lib/anexos.ts:26-31", "select * from {s}.anexos where paciente_id = {aluno} and deleted_at is null order by created_at desc limit 1000"),
+    # o Ver/Baixar: a lib de antes assinava o anexo da LISTA (o anexo vivo pelo id) — a mesma linha
+    "anexo_url": ("prontuario/lib/anexos.ts:26-31,55-56", "select * from {s}.anexos where id = {id} and deleted_at is null"),
+    # a Avaliação e a Dieta (editor/lib/antropometrias.ts:32-38), o Editar (abas/Avaliacao.tsx:165: pelo id, SEM o filtro da Lixeira) e o PDF
+    "antropometrias_do_aluno": ("editor/lib/antropometrias.ts:32-38", "select * from {s}.antropometrias where paciente_id = {aluno} and deleted_at is null order by data desc, created_at desc limit 1000"),
+    "antropometria": ("painel/aluno/abas/Avaliacao.tsx:165", "select * from {s}.antropometrias where id = {id}"),
+    "antropometrias_pdf": ("painel/aluno/dados/pdf.ts:44-50", "select * from {s}.antropometrias where paciente_id = {aluno} and deleted_at is null order by data asc limit 1000"),
+}
+# as colunas que a TELA usa (o tipo do front) quando não é o Row inteiro da tabela: o Pick do anexo, as 12 do PDF, o nome/dados do profissional
+COLUNAS_DA_TELA_FIXAS: dict[str, list[str]] = {
+    "anexo_url": ["id", "path", "nome"],  # urlAssinada(anexo: Pick<Anexo, "id" | "path" | "nome">)
+    "antropometrias_pdf": ["id", "data", "peso", "altura", "sexo", "idade", "circunferencias", "dobras", "protocolo", "resultados", "nutricionista_id", "created_at"],
+    "profissional": ["nome", "dados_profissionais"],
+}
+
+
 def _txt(v: object) -> str:
     return C.txt(str(v))
 
 
-def sql_da_tabela(s: str, consulta: dict, params: dict, user_id: str) -> str:
-    """O select que o servidor monta para a consulta (as colunas, os filtros, o dono, as vivas, a ordem, a página/teto), com o rank da
-    ordem de cada linha (dense_rank: as linhas empatadas na ordem têm o mesmo rank — o P confere a ordem sem depender do desempate)."""
-    cols = ", ".join(consulta["colunas"])
-    onde: list[str] = []
-    for f in consulta.get("filtros") or []:
-        v = params.get(f["param"])
-        if v is None:
-            continue
-        if f["op"] == "in":
-            onde.append(f"{f['coluna']} = any(array[{', '.join(_txt(x) for x in v)}]::uuid[])")
-        else:
-            onde.append(f"{f['coluna']} = {_txt(v)}")
-    if consulta.get("dono"):
-        onde.append(f"{consulta['dono']} = {_txt(C.uuid_ok(user_id))}")
-    if consulta.get("vivas"):
-        onde.append("deleted_at is null")
-    ordem = ", ".join(f"{o['coluna']} {'asc' if o['asc'] else 'desc'}" for o in consulta.get("ordem") or []) or "1"
-    pagina = consulta.get("pagina")
-    if pagina:
-        n = int(pagina["tamanho"])
-        p = max(1, int(params.get(pagina["param"]) or 1))
-        corte = f"offset {(p - 1) * n} limit {n}"
-    elif consulta.get("laco"):
-        corte = f"limit {int(consulta['laco']['tamanho']) * int(consulta['laco']['leituras'])}"
-    else:
-        corte = f"limit {int(consulta['teto'])}"
-    where = (" where " + " and ".join(onde)) if onde else ""
-    return (f"select coalesce(jsonb_agg(jsonb_build_object('r', x.r, 'linha', to_jsonb(x) - 'r') order by x.r), '[]'::jsonb) as v from ("
-            f"select {cols}, dense_rank() over (order by {ordem}) as r from {s}.{consulta['tabela']}{where} order by {ordem} {corte}) x")
+def sql_da_lib(chave: str, s: str, aluno: str | None = None, id_: str | None = None, uid: str | None = None) -> str:
+    """O SQL fixo da lib de antes, com os valores (só uuid; citados)."""
+    _origem, modelo = SQL_DA_LIB[chave]
+    return modelo.format(s=s, aluno=_txt(C.uuid_ok(aluno)) if aluno else "null", id=_txt(C.uuid_ok(id_)) if id_ else "null",
+                         uid=_txt(C.uuid_ok(uid)) if uid else "null")
 
 
-def sql_do_total(s: str, consulta: dict, params: dict) -> str:
-    """O count exato da lista (os mesmos filtros, sem a página) — o `total` da consulta com página."""
-    onde = [f"{f['coluna']} = {_txt(params[f['param']])}" for f in consulta.get("filtros") or [] if params.get(f["param"]) is not None]
-    if consulta.get("vivas"):
-        onde.append("deleted_at is null")
-    return f"select count(*)::int as v from {s}.{consulta['tabela']}" + ((" where " + " and ".join(onde)) if onde else "")
+def ordem_do_sql(sql: str) -> str | None:
+    """A ordem (o `order by …`) do SQL fixo — para o rank dos empates (a ordem entre linhas iguais na ordem da lib é livre)."""
+    m = re.search(r"\border by (.+?)(?: offset \d+)?(?: limit \d+)?$", sql)
+    return m.group(1) if m else None
 
 
-def sql_da_rpc(s: str, consulta: dict, params: dict) -> str:
-    """A RPC de hoje com os args que o servidor monta (os nomeados; o que não veio fica no padrão da RPC)."""
-    args = []
-    for arg, param in (consulta.get("args") or {}).items():
-        if params.get(param) is None:
-            continue
-        v = params[param]
-        args.append(f"{arg} => {v if isinstance(v, int) and not isinstance(v, bool) else _txt(v)}")
-    return f"select to_jsonb({s}.{consulta['rpc']}({', '.join(args)})) as v"
+def sql_com_ordem(sql: str) -> str:
+    """O SQL fixo de uma lista com o nº da linha (_n) e o rank da ordem da lib (_r: os empatados têm o mesmo), num jsonb só."""
+    ordem = ordem_do_sql(sql) or "1"
+    return (f"select coalesce(jsonb_agg(jsonb_build_object('n', x._n, 'r', x._r, 'linha', to_jsonb(x) - '_n' - '_r') order by x._n), '[]'::jsonb) as v from ("
+            f"select t.*, row_number() over (order by {ordem}) as _n, dense_rank() over (order by {ordem}) as _r from ({sql}) t) x")
 
 
-def mesmas_linhas(fn_linhas: list, sql: list) -> tuple[bool, str]:
-    """As linhas da função = as do SQL (o mesmo conjunto, canônico) e na ORDEM do catálogo (o rank não desce)."""
+def colunas_do_tipo(tabela: str) -> list[str]:
+    """As colunas do Row da tabela no tipo gerado do front (src/integrations/principal/types.ts) — o que a tela recebia do `select *`."""
+    tipos = (B.REPO / "src" / "integrations" / "principal" / "types.ts").read_text(encoding="utf-8")
+    m = re.search(r"\n      " + re.escape(tabela) + r": \{\n        Row: \{\n(.*?)\n        \}", tipos, re.S)
+    if not m:
+        raise SystemExit(f"tabela {tabela} fora do tipo gerado do front")
+    return re.findall(r"^ {10}([a-z_0-9]+)\??: ", m.group(1), re.M)
+
+
+def colunas_da_tela(q: str, tabela: str | None) -> list[str]:
+    """As colunas que a tela usa na consulta: o Pick/recorte (anexo, PDF, profissional) ou o Row inteiro da tabela (as listas)."""
+    if q in COLUNAS_DA_TELA_FIXAS:
+        return COLUNAS_DA_TELA_FIXAS[q]
+    if not tabela:
+        raise SystemExit(f"{q}: sem tabela")
+    return colunas_do_tipo(tabela)
+
+
+def comparar_com_a_lib(fn_linhas: list, sql: list, chave_id: str | None = "id") -> tuple[bool, str]:
+    """As linhas da função × as do SQL fixo da lib: os mesmos ids, na MESMA ordem (os empatados na ordem da lib em qualquer ordem) e,
+    coluna a coluna, os valores das colunas que a função devolve (a `url` da assinatura fica de fora)."""
     can = lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False, separators=(",", ":"))  # noqa: E731
-    esperado = sorted(can(x["linha"]) for x in sql)
-    obtido = sorted(can(x) for x in fn_linhas)
-    if esperado != obtido:
-        return False, f"conjunto diferente ({len(obtido)} × {len(esperado)})"
-    rank = {}
-    for x in sql:
-        rank.setdefault(can(x["linha"]), x["r"])
-    ranks = [rank[can(x)] for x in fn_linhas]
-    if any(b < a for a, b in zip(ranks, ranks[1:])):
-        return False, "fora da ordem do catálogo"
-    return True, f"{len(obtido)} linha(s)"
+    lib = [x["linha"] for x in sql] if sql and isinstance(sql[0], dict) and "linha" in sql[0] else list(sql)
+    ranks = [x.get("r", 0) for x in sql] if sql and isinstance(sql[0], dict) and "linha" in sql[0] else [0] * len(lib)
+    if len(fn_linhas) != len(lib):
+        return False, f"{len(fn_linhas)} linha(s) × {len(lib)} na lib"
+    if chave_id is None:  # sem id (o profissional): por posição
+        pares = list(zip(fn_linhas, lib))
+    else:
+        por_id = {x.get(chave_id): (x, r) for x, r in zip(lib, ranks)}
+        if sorted(map(str, por_id)) != sorted(str(x.get(chave_id)) for x in fn_linhas) or len(por_id) != len(lib):
+            return False, "ids diferentes dos da lib"
+        r_fn = [por_id[x.get(chave_id)][1] for x in fn_linhas]
+        if any(b < a for a, b in zip(r_fn, r_fn[1:])):
+            return False, "fora da ordem da lib"
+        pares = [(x, por_id[x.get(chave_id)][0]) for x in fn_linhas]
+    for fn, li in pares:
+        for col, v in fn.items():
+            if col == "url":
+                continue
+            if col not in li:
+                return False, f"a coluna {col} não existe na tabela"
+            if can(v) != can(li[col]):
+                return False, f"a coluna {col} difere da lib"
+    return True, f"{len(fn_linhas)} linha(s), mesmos ids e ordem, {len(fn_linhas[0]) if fn_linhas else 0} coluna(s) iguais"
 
 
 # ───────────────────────── a URL assinada: o prazo e o caminho (do token, sem imprimir o token) ─────────────────────────

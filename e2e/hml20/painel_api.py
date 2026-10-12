@@ -5,10 +5,13 @@ Contas (staging, só de TESTE): P = w5p-nutri (a nutri da aluna: tudo); w5p-pers
 da equipe — o Resumo e a Avaliação do lado dela); N1 = w13-dono (OUTRA conta). No máximo 6 logins na etapa 2 (o registro:
 hml20/agente/logins_etapa2_20b.txt). A massa (decisão G): 1 anexo de imagem e 1 foto de evolução da aluna pela nutri (painel.py), só no
 staging, com a marca "hml20 e2e <rodada>"; o --limpar desfaz e confere por SQL só leitura (só contagem).
-  P   cada consulta com a conta certa = as MESMAS linhas/valor que o SQL só leitura rodado COMO A PESSOA (o papel authenticated + o sub,
-      igual ao PostgREST), montado do catálogo do SERVIDOR (as colunas, os filtros, o dono, as vivas, a ordem, a página): o mesmo conjunto
-      e na ordem do catálogo; a página dos pedidos com o total = o count; a URL do servidor (montada com o domínio do cliente, como a tela)
-      baixa o arquivo da massa — o anexo com o prazo de hoje (60 s baixar com o nome, 120 s ver) e a foto de evolução com 1 h
+  P   cada consulta com a conta certa = o que a LIB DE ANTES lia (o SQL FIXO de painel.SQL_DA_LIB, escrito a partir do 6fd3194: a
+      tabela/RPC, o filtro, a ordem e o limite/página da lib, `select *`), rodado COMO A PESSOA (o papel authenticated + o sub, igual ao
+      PostgREST) — nunca montado do catálogo do servidor: os mesmos ids na MESMA ordem (os empatados na ordem da lib em qualquer ordem),
+      coluna a coluna os valores das colunas que a função devolve, e TODA coluna que a tela usa (o tipo do front) na lista da função; a
+      RPC = a mesma RPC com os args da lib (fora o `agora`); a página dos pedidos com o total = o count; a URL do servidor (montada com o
+      domínio do cliente, como a tela) baixa o arquivo da massa — o anexo com o prazo de hoje (60 s baixar com o nome, 120 s ver) e a foto
+      de evolução com 1 h
   N1  outra conta (w13-dono) pede as consultas do aluno com os ids da aluna → listas vazias / sem_acesso / nao_encontrado, NUNCA uma
       linha da aluna
   N2  sem login → 401 · N3 q desconhecida → o item consulta_invalida (os outros respondem)
@@ -25,6 +28,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import subprocess
 from pathlib import Path
 
 import _base as B
@@ -169,27 +173,45 @@ def seco(o) -> None:
                            {"acao": "ler", "itens": [B.item(q) for q in P.COM_PARAM_OBRIGATORIO[16:]]}])["pedidos"]
     o.ok(all(p["ok"] for p in so) and all(i.get("erro") == "dados_invalidos" for p in so for i in p["itens"]) and len(P.COM_PARAM_OBRIGATORIO) == 21,
          f"--so-leitura: as {len(P.COM_PARAM_OBRIGATORIO)} consultas da 20b com param obrigatório, sem ele → dados_invalidos (no ar, sem banco)")
-    # o P "como a pessoa": o SQL do catálogo (só leitura) — as colunas fechadas, o filtro, as vivas, a ordem e o rank
-    c = consultas["anexos_do_aluno"]
-    sql = P.sql_da_tabela("staging", c, {"aluno": pac}, OUTRO)
-    o.ok(sql.startswith("select coalesce(jsonb_agg(") and "from staging.anexos where paciente_id = '" in sql and "deleted_at is null" in sql
-         and "order by created_at desc limit 1000" in sql and "dense_rank()" in sql and "*" not in sql,
-         "o SQL do P de uma lista do aluno: as colunas do catálogo (nenhum *), o paciente, as vivas, a ordem e o teto (com o rank da ordem)")
-    sql = P.sql_da_tabela("staging", consultas["profissional"], {}, OUTRO)
-    o.ok(f"from staging.profiles where id = '{OUTRO}'" in sql and "limit 1" in sql, "o SQL do profissional: o dono = quem chama (o id)")
-    sql = P.sql_da_tabela("staging", consultas["pedidos_exame_do_aluno"], {"aluno": pac, "pagina": 3}, OUTRO)
-    o.ok("order by data desc, created_at desc, id desc offset 40 limit 20" in sql, "o SQL da página dos pedidos: a 3ª página de 20 (offset 40)")
-    o.ok("limit 50000" in P.sql_da_tabela("staging", consultas["resultados_exame_do_aluno"], {"aluno": pac}, OUTRO), "o SQL dos resultados: o laço inteiro (1000 × 50)")
-    sql = P.sql_da_tabela("staging", consultas["antropometria"], {"id": antropo}, OUTRO)
-    o.ok("where id = '" in sql and "deleted_at is null" not in sql and "limit 1" in sql, "o SQL do Editar: pelo id, SEM o filtro da Lixeira (como a tela lia)")
-    sql = P.sql_da_rpc("staging", consultas["anotacoes"], {"aluno": pac, "limite": 20, "offset": 0})
-    o.ok(sql == f"select to_jsonb(staging.aluno_anotacoes(p_aluno => '{pac}', p_limite => 20, p_offset => 0)) as v", "o SQL da RPC: os args nomeados do catálogo")
-    o.ok(P.sql_da_rpc("staging", consultas["anotacoes_todas"], {"aluno": pac}) == f"select to_jsonb(staging.aluno_anotacoes(p_aluno => '{pac}')) as v",
-         "o SQL das anotações todas: só o p_aluno (o padrão null da RPC)")
-    ok, _msg = P.mesmas_linhas([{"id": 2}, {"id": 1}, {"id": 3}], [{"r": 1, "linha": {"id": 1}}, {"r": 1, "linha": {"id": 2}}, {"r": 2, "linha": {"id": 3}}])
-    ruim, _m = P.mesmas_linhas([{"id": 3}, {"id": 1}, {"id": 2}], [{"r": 1, "linha": {"id": 1}}, {"r": 1, "linha": {"id": 2}}, {"r": 2, "linha": {"id": 3}}])
-    falta, _m2 = P.mesmas_linhas([{"id": 1}], [{"r": 1, "linha": {"id": 1}}, {"r": 2, "linha": {"id": 3}}])
-    o.ok(ok and not ruim and not falta, "o comparador do P: o mesmo conjunto, na ordem do catálogo (o empate na ordem não conta); fora da ordem ou faltando → falha")
+    # o P "como a pessoa" (revisão, 🟡3): o SQL FIXO da lib de antes (6fd3194) — nunca montado do catálogo — e o comparador
+    chaves = {k.split(":")[0] for k in P.SQL_DA_LIB}
+    o.ok(chaves == set(P.CONSULTAS_20B) and all("*" in m or m.startswith("select to_jsonb(") or m.startswith("select count(") for _o, m in P.SQL_DA_LIB.values())
+         and all(o_.split(":")[0].endswith((".ts", ".tsx")) for o_, _m in P.SQL_DA_LIB.values()),
+         f"o SQL fixo da lib: 1 por consulta da 20b ({len(chaves)}), `select *` nas tabelas e a RPC da lib nas RPCs, cada um com a origem (arquivo:linha do 6fd3194)")
+    libs = {}
+    for origem, _m in P.SQL_DA_LIB.values():
+        arq = "src/" + ("nutricao/" if not origem.startswith("painel/") else "") + origem.split(":")[0]
+        libs.setdefault(arq, subprocess.run(["git", "-C", str(B.REPO), "cat-file", "-e", f"6fd3194:{arq}"], capture_output=True, timeout=10).returncode == 0)
+    o.ok(all(libs.values()), f"as {len(libs)} libs citadas existem no 6fd3194 (a origem de cada SQL fixo) — faltam: {[a for a, ok in libs.items() if not ok] or '—'}")
+    for q, consulta in [(q, consultas[q]) for q in P.CONSULTAS_20B if consultas[q]["tabela"]]:
+        _o, modelo = P.SQL_DA_LIB[q]
+        if consulta["tabela"] not in modelo or consulta["colunas"] and "*" not in modelo:
+            o.ok(False, f"o SQL fixo de {q} não lê a tabela da consulta ({consulta['tabela']}) com `select *`")
+    sql = P.sql_da_lib("anexos_do_aluno", "staging", aluno=pac)
+    o.ok(sql == f"select * from staging.anexos where paciente_id = '{pac}' and deleted_at is null order by created_at desc limit 1000"
+         and P.ordem_do_sql(sql) == "created_at desc" and "dense_rank() over (order by created_at desc)" in P.sql_com_ordem(sql),
+         "o SQL fixo de uma lista do aluno: o `select *` da lib, o paciente, as vivas, a ordem e o teto (e o rank da ordem da lib para os empates)")
+    o.ok(P.ordem_do_sql(P.sql_da_lib("pedidos_exame_do_aluno", "staging", aluno=pac)) == "data desc, created_at desc, id desc"
+         and "offset 0 limit 20" in P.sql_da_lib("pedidos_exame_do_aluno", "staging", aluno=pac)
+         and P.sql_da_lib("anotacoes_todas", "staging", aluno=pac) == f"select to_jsonb(staging.aluno_anotacoes(p_aluno => '{pac}', p_limite => null)) as v"
+         and P.sql_da_lib("exames_do_aluno", "staging", aluno=pac).endswith("p_exame => null, p_offset => 0, p_limite => 20)) as v")
+         and "deleted_at" not in P.sql_da_lib("antropometria", "staging", id_=antropo) and P.sql_da_lib("profissional", "staging", uid=OUTRO).endswith(f"id = '{OUTRO}'"),
+         "o SQL fixo: a 1ª página dos pedidos (a ordem da lib + offset 0 limit 20), as anotações todas com o p_limite null e os exames com o p_exame "
+         "null (os args da lib), o Editar pelo id SEM o filtro da Lixeira e o profiles de quem está logado")
+    lib = [{"n": 1, "r": 1, "linha": {"id": 1, "a": "x", "b": 1}}, {"n": 2, "r": 1, "linha": {"id": 2, "a": "y", "b": 2}}, {"n": 3, "r": 2, "linha": {"id": 3, "a": "z", "b": 3}}]
+    ok, _m = P.comparar_com_a_lib([{"id": 2, "a": "y"}, {"id": 1, "a": "x"}, {"id": 3, "a": "z", "url": "/x"}], lib)
+    fora, _m1 = P.comparar_com_a_lib([{"id": 3, "a": "z"}, {"id": 1, "a": "x"}, {"id": 2, "a": "y"}], lib)
+    falta, _m2 = P.comparar_com_a_lib([{"id": 1, "a": "x"}, {"id": 3, "a": "z"}], lib)
+    difere, _m3 = P.comparar_com_a_lib([{"id": 1, "a": "x"}, {"id": 2, "a": "OUTRO"}, {"id": 3, "a": "z"}], lib)
+    inventada, _m4 = P.comparar_com_a_lib([{"id": 1, "zz": 1}, {"id": 2}, {"id": 3}], lib)
+    o.ok(ok and not fora and not falta and not difere and not inventada,
+         "o comparador do P: os mesmos ids na ordem da lib (o empate em qualquer ordem) e, coluna a coluna, os valores; fora da ordem, linha a menos, "
+         "valor diferente ou coluna que a tabela não tem → falha (a `url` da assinatura fica de fora)")
+    tela = {q: P.colunas_da_tela(q, consultas[q]["tabela"]) for q in P.CONSULTAS_20B if consultas[q]["tabela"]}
+    faltam = {q: [c for c in cols if c not in consultas[q]["colunas"]] for q, cols in tela.items()}
+    o.ok(not any(faltam.values()) and tela["anexo_url"] == ["id", "path", "nome"] and len(tela["antropometrias_pdf"]) == 12,
+         f"TODA coluna que a tela usa (o tipo do front: o Row da tabela; o Pick do anexo, as 12 do PDF, o nome/dados do profissional) está na lista da "
+         f"função ({sum(len(v) for v in tela.values())} colunas em {len(tela)} consultas de tabela) — faltam: {[f'{q}:{c}' for q, cs in faltam.items() for c in cs] or '—'}")
     o.ok(igual(sem_volateis({"ok": True, "agora": "2026-10-12T06:00:00Z", "nome": "x"}), sem_volateis('{"ok": true, "agora": "2026-10-12T06:00:01Z", "nome": "x"}'))
          and not igual(sem_volateis({"nome": "x"}), sem_volateis({"nome": "y"})), "o P da RPC ignora só o `agora` (o now() da aluno_perfil); o resto tem de ser igual")
     # a URL: o prazo e o caminho do token (sem imprimir o token)
@@ -214,7 +236,8 @@ def seco(o) -> None:
     o.ok(recusas == 3, "a limpeza recusa outro schema, o DELETE sem id e tabela que não é da massa")
     conta = P.sql_contar_marca("staging", "seco-0000")
     o.ok("'%hml20 e2e%seco-0000%'" in conta and "staging.anexos" in conta and "staging.fotos_evolucao" in conta, "a conferência final: a marca nos anexos e nas fotos (só contagem)")
-    o.ok(B.REG_LOGINS.name == "logins_etapa2_20b.txt" and B.B19.MAX_LOGINS == 10, f"o registro de logins da 20b (decisão G): {B.REG_LOGINS.name} (teto {B.B19.MAX_LOGINS}; ≤ 6 na etapa 2)")
+    o.ok(B.REG_LOGINS.name == "logins_etapa2_20b.txt" and B.B19.MAX_LOGINS in (6, 10),
+         f"o registro de logins da 20b (decisão G): {B.REG_LOGINS.name}, teto {B.B19.MAX_LOGINS} (6 na etapa 2; a sessão principal sobe para 10 no F6)")
 
 
 # ───────────────────────── a rodada no staging ─────────────────────────
@@ -254,27 +277,30 @@ class Rodada:
         return jsonb(r[0]["v"]) if r else None
 
 
-def p_tabela(R: Rodada, token: str, uid: str, q: str, params: dict, rotulo: str) -> list:
-    """O P de uma consulta de tabela: as linhas da função = as do SQL do catálogo como a pessoa (o conjunto e a ordem)."""
+def p_tabela(R: Rodada, token: str, uid: str, q: str, params: dict, rotulo: str, aluno: str | None = None, id_: str | None = None) -> list:
+    """O P de uma consulta de tabela: as linhas da função = as do SQL FIXO da lib de antes, rodado como a pessoa (os mesmos ids na mesma
+    ordem e, coluna a coluna, os valores das colunas que a função devolve); e TODA coluna que a tela usa está na lista da função."""
     c = R.catalogo[q]
     it = R.item(token, B.item(q, **params))
-    sql = R.como(uid, P.sql_da_tabela(R.s, c, params, uid))
-    # a consulta que assina 1 arquivo por linha (o anexo_url) devolve a linha + a `url` (o resto é a linha lida): compara sem a url
-    assina = isinstance(c.get("assinar"), dict) and not c["assinar"].get("lista")
-    linhas = [{k: v for k, v in x.items() if k != "url"} if assina and isinstance(x, dict) else x for x in it.get("linhas") or []]
-    ok, msg = P.mesmas_linhas(linhas, sql if isinstance(sql, list) else []) if it.get("ok") else (False, str(it.get("erro")))
-    R.o.ok(ok, f"P {rotulo} {q}: as linhas da função = o SQL só leitura do catálogo como a pessoa ({msg})")
+    sql = R.como(uid, P.sql_com_ordem(P.sql_da_lib(q, R.s, aluno=aluno, id_=id_, uid=uid)))
+    ok, msg = (P.comparar_com_a_lib(it.get("linhas") or [], sql if isinstance(sql, list) else [], None if q == "profissional" else "id")
+               if it.get("ok") else (False, str(it.get("erro"))))
+    faltam = [col for col in P.colunas_da_tela(q, c["tabela"]) if col not in (c["colunas"] or [])]
+    R.o.ok(ok and not faltam, f"P {rotulo} {q}: a função = o que a lib de antes lia ({P.SQL_DA_LIB[q][0]} no 6fd3194), como a pessoa ({msg}); "
+           f"as colunas que a tela usa na lista da função (faltam: {faltam or '—'})")
     return it.get("linhas") or []
 
 
-def p_rpc(R: Rodada, token: str, uid: str, q: str, params: dict, rotulo: str, tirar_url: bool = False) -> object:
-    """O P de uma consulta de RPC: o valor da função = a MESMA RPC rodada como a pessoa (o JSON canônico; a série sem a url das fotos)."""
-    c = R.catalogo[q]
+def p_rpc(R: Rodada, token: str, uid: str, q: str, params: dict, rotulo: str, chave: str | None = None, aluno: str | None = None,
+          tirar_url: bool = False) -> object:
+    """O P de uma consulta de RPC: o valor da função = a MESMA RPC com os args DA LIB de antes (o SQL fixo), rodada como a pessoa (o
+    JSON canônico, fora o `agora`; a série sem a url das fotos)."""
     it = R.item(token, B.item(q, **params))
     valor = it.get("valor")
-    sql = R.como(uid, P.sql_da_rpc(R.s, c, params))
+    sql = R.como(uid, P.sql_da_lib(chave or q, R.s, aluno=aluno))
     R.o.ok(bool(it.get("ok")) and igual(sem_volateis(sem_url(valor) if tirar_url else valor), sem_volateis(sql)),
-           f"P {rotulo} {q}: o valor = a RPC {c['rpc']} rodada como a pessoa, fora o `agora` ({it.get('erro') or 'iguais'})")
+           f"P {rotulo} {q}: o valor = a RPC da lib de antes ({P.SQL_DA_LIB[chave or q][0]} no 6fd3194) rodada como a pessoa, fora o `agora` "
+           f"({it.get('erro') or 'iguais'})")
     return valor
 
 
@@ -290,46 +316,46 @@ def baixar_e_conferir(R: Rodada, rel: object, massa: dict, prazo: int, download:
 def caso_p(R: Rodada) -> None:
     o, s, pac = R.o, R.s, R.pac
     # a casca
-    perfil = p_rpc(R, R.tn, R.un, "aluno_perfil", {"aluno": pac}, "nutri")
+    perfil = p_rpc(R, R.tn, R.un, "aluno_perfil", {"aluno": pac}, "nutri", aluno=pac)
     pela_rota = R.item(R.tn, B.item("aluno_perfil", aluno=R.rota)).get("valor")
     o.ok(isinstance(perfil, dict) and isinstance(pela_rota, dict) and perfil.get("paciente_id") == pela_rota.get("paciente_id") == pac,
          "P nutri aluno_perfil pela matrícula e pelo id do Treino (a rota): a MESMA matrícula")
-    serie = p_rpc(R, R.tn, R.un, "aluno_evolucao_painel", {"aluno": pac}, "nutri", tirar_url=True)
+    serie = p_rpc(R, R.tn, R.un, "aluno_evolucao_painel", {"aluno": pac}, "nutri", aluno=pac, tirar_url=True)
     foto = R.massa["foto"]
     if foto:
         f = next((x for x in (serie or {}).get("fotos") or [] if x.get("id") == foto["id"]), None)
         baixar_e_conferir(R, (f or {}).get("url"), foto, 3600, None, "nutri aluno_evolucao_painel (a foto de evolução da massa)")
     p_tabela(R, R.tn, R.un, "profissional", {}, "nutri")
-    for params in ({"aluno": pac, "limite": 3}, {"aluno": pac, "limite": 20, "offset": 0}):
-        p_rpc(R, R.tn, R.un, "anotacoes", params, f"nutri ({'card' if 'offset' not in params else 'página'})")
-    p_rpc(R, R.tn, R.un, "anotacoes_todas", {"aluno": pac}, "nutri (o PDF)")
+    p_rpc(R, R.tn, R.un, "anotacoes", {"aluno": pac, "limite": 3}, "nutri (card)", chave="anotacoes:card", aluno=pac)
+    p_rpc(R, R.tn, R.un, "anotacoes", {"aluno": pac, "limite": 20, "offset": 0}, "nutri (página)", chave="anotacoes:pagina", aluno=pac)
+    p_rpc(R, R.tn, R.un, "anotacoes_todas", {"aluno": pac}, "nutri (o PDF)", aluno=pac)
     # o Prontuário ×10, a Avaliação e o PDF
     for q in P.LISTAS_DO_ALUNO:
-        p_tabela(R, R.tn, R.un, q, {"aluno": pac}, "nutri")
+        p_tabela(R, R.tn, R.un, q, {"aluno": pac}, "nutri", aluno=pac)
     for q in P.LISTAS_DA_CONTA:
         p_tabela(R, R.tn, R.un, q, {}, "nutri")
+    linhas = p_tabela(R, R.tn, R.un, "pedidos_exame_do_aluno", {"aluno": pac, "pagina": 1}, "nutri (a 1ª página)", aluno=pac)
     it = R.item(R.tn, B.item("pedidos_exame_do_aluno", aluno=pac, pagina=1))
-    c = R.catalogo["pedidos_exame_do_aluno"]
-    sql = R.como(R.un, P.sql_da_tabela(s, c, {"aluno": pac, "pagina": 1}, R.un))
-    total = R.como(R.un, P.sql_do_total(s, c, {"aluno": pac}))
-    ok, msg = P.mesmas_linhas(it.get("linhas") or [], sql if isinstance(sql, list) else [])
-    o.ok(bool(it.get("ok")) and ok and it.get("total") == total, f"P nutri pedidos_exame_do_aluno: a 1ª página = o SQL ({msg}) e o total = o count ({it.get('total')} × {total})")
-    p_rpc(R, R.tn, R.un, "exames_do_aluno", {"aluno": pac, "offset": 0, "limite": 20}, "nutri")
-    p_tabela(R, R.tn, R.un, "resultados_exame_do_aluno", {"aluno": pac}, "nutri")
+    total = R.como(R.un, P.sql_da_lib("pedidos_exame_do_aluno:total", s, aluno=pac))
+    o.ok(bool(it.get("ok")) and it.get("total") == total and len(linhas) == len(it.get("linhas") or []),
+         f"P nutri pedidos_exame_do_aluno: o total = o count exato da lib ({it.get('total')} × {total})")
+    p_rpc(R, R.tn, R.un, "exames_do_aluno", {"aluno": pac, "offset": 0, "limite": 20}, "nutri", aluno=pac)
+    p_tabela(R, R.tn, R.un, "resultados_exame_do_aluno", {"aluno": pac}, "nutri", aluno=pac)
     if C.eh_uuid(R.antropo) and R.antropo != FALSO:
-        p_tabela(R, R.tn, R.un, "antropometria", {"id": R.antropo}, "nutri (o Editar)")
-    p_tabela(R, R.tn, R.un, "antropometrias_pdf", {"paciente": pac}, "nutri (o PDF)")
+        p_tabela(R, R.tn, R.un, "antropometria", {"id": R.antropo}, "nutri (o Editar)", id_=R.antropo)
+    p_tabela(R, R.tn, R.un, "antropometrias_pdf", {"paciente": pac}, "nutri (o PDF)", aluno=pac)
     anexo = R.massa["anexo"]
     if anexo:
         for download, prazo in ((True, 60), (False, 120)):
-            linhas = p_tabela(R, R.tn, R.un, "anexo_url", {"id": anexo["id"], "download": download}, f"nutri ({'baixar' if download else 'ver'})")
+            linhas = p_tabela(R, R.tn, R.un, "anexo_url", {"id": anexo["id"], "download": download}, f"nutri ({'baixar' if download else 'ver'})",
+                              id_=anexo["id"])
             baixar_e_conferir(R, (linhas[0] if linhas else {}).get("url"), anexo, prazo, anexo["nome"] if download else None,
                               f"nutri anexo_url ({'baixar' if download else 'ver'})")
     # o lado da personal (o Resumo e a Avaliação): o perfil, a série e as anotações da equipe, como ELA
     tp, up = R.L.token(P.PERSONAL), R.L.uid(P.PERSONAL)
-    p_rpc(R, tp, up, "aluno_perfil", {"aluno": pac}, "personal")
-    p_rpc(R, tp, up, "aluno_evolucao_painel", {"aluno": pac}, "personal", tirar_url=True)
-    p_rpc(R, tp, up, "anotacoes", {"aluno": pac, "limite": 3}, "personal (o card)")
+    p_rpc(R, tp, up, "aluno_perfil", {"aluno": pac}, "personal", aluno=pac)
+    p_rpc(R, tp, up, "aluno_evolucao_painel", {"aluno": pac}, "personal", aluno=pac, tirar_url=True)
+    p_rpc(R, tp, up, "anotacoes", {"aluno": pac, "limite": 3}, "personal (o card)", chave="anotacoes:card", aluno=pac)
 
 
 def caso_n1(R: Rodada) -> None:
@@ -400,8 +426,8 @@ def caso_n4_n5_n8(R: Rodada, casos: list[str]) -> None:
         to, uo = R.L.token(P.OUTRA), R.L.uid(P.OUTRA)
         st, r = R.ler(to, [i("profissional", id=R.un, user_id=R.un, nutricionista_id=R.un)], corpo={"user_id": R.un, "nutricionista_id": R.un})
         linhas = ((r.get("itens") or [{}])[0]).get("linhas") or []
-        sql = R.como(uo, P.sql_da_tabela(R.s, R.catalogo["profissional"], {}, uo))
-        ok, msg = P.mesmas_linhas(linhas, sql if isinstance(sql, list) else [])
+        sql = R.como(uo, P.sql_com_ordem(P.sql_da_lib("profissional", R.s, uid=uo)))
+        ok, msg = P.comparar_com_a_lib(linhas, sql if isinstance(sql, list) else [], None)
         o.ok(st == 200 and ok, f"N4 o id/user_id/nutricionista_id da nutri no corpo do profissional (pedido pela w13-dono) → ignorados: volta o profiles de QUEM CHAMA ({msg})")
         st0, base = R.ler(R.tn, [i(q) for q in P.LISTAS_DA_CONTA])
         st1, outro = R.ler(R.tn, [i(q, nutricionista_id=OUTRO, user_id=OUTRO, aluno=OUTRO) for q in P.LISTAS_DA_CONTA])
