@@ -1,24 +1,34 @@
 #!/usr/bin/env python3
 """Physiq W2 — os segredos do Mercado Pago do personal, sem valor na tela, no log ou na conversa (revisão I9 e I10 do plano da W2).
 
-Uso:  python3 scripts/segredos/mp_conta.py <grupo> <subcomando> [--dry-run]
+Uso:  python3 scripts/segredos/mp_conta.py <grupo> <subcomando> [--dry-run] [--staging] [--papel integrador]
   cofre campos            os NOMES dos campos do item "Mercado Pago — PhysiqCalc", o que cada um parece ser (token de produção/teste,
                           chave pública, client id, client secret, assinatura dos avisos) e o tamanho — nunca o valor; num texto livre
                           (as notas), só QUANTOS tokens/chaves há dentro. E se os itens da W2 (usuários de teste, aplicação de teste)
                           já existem (só os nomes dos campos). Sai 2 sem o Client Secret.
   oauth local             ~/.physiq-mp-oauth.json (600) com client_id e client_secret (a prova da Task 1 e o oauth_real).
-  oauth copiar|conferir   MP_CLIENT_ID e MP_CLIENT_SECRET (+ os _STAGING do item "… — aplicação de teste (W2)", se existir: o plano B do I6)
-                          nos segredos das funções do principal / o digest das funções = sha256 do cofre (sai 1 se não bate).
+                          --staging: o client da APLICAÇÃO DE TESTE do integrador (plano B do I6) → ~/.physiq-mp-oauth-staging.json (600).
+  oauth testar            confere o par no POST /oauth/token com um code INVENTADO: o par certo dá invalid_grant (o MP aceitou o client e
+                          recusou só o code) e um secret falso (o controle) dá invalid_client — nenhum token é criado. --staging: o par da
+                          aplicação de teste.
+  oauth copiar|conferir   MP_CLIENT_ID e MP_CLIENT_SECRET (+ os _STAGING do item "… — aplicação de teste do integrador (W2, plano B)", se
+                          existir: o plano B do I6) nos segredos das funções do principal / o digest das funções = sha256 do cofre (sai 1 se
+                          não bate).
   usuarios-teste criar    vendedor e comprador de TESTE (POST /users/test, MLB) com o token de PRODUÇÃO só na memória → cofre ("Mercado
                           Pago — PhysiqCalc — usuários de teste (W2)", tipo login; gravado logo depois de CADA usuário criado) →
                           ~/.physiq-mp-{vendedor,comprador}-teste.json (600). Já no cofre → só os 2 arquivos (o MP não apaga usuário de
                           teste: até 15 por aplicação — não criar outro par); só um deles no cofre → cria só o que falta.
+                          --papel integrador: SÓ o integrador de teste (plano B do I6 — quem entra no painel de desenvolvedores e cria a
+                          aplicação de TESTE); no mesmo item (extras integrador_*) → ~/.physiq-mp-integrador-teste.json (600). Já no
+                          cofre → só o arquivo (1 integrador só); sem o item do par → para antes de qualquer POST.
   (A Task 11 acrescenta  chave gerar|conferir  — a MP_TOKENS_CHAVE, gerada SÓ quando não existe em lugar nenhum (I10) — e
    assinatura copiar|conferir  — a MP_WEBHOOK_ASSINATURA do item "… — assinatura dos avisos (W2)".)
 --dry-run (ou --seco): lê o cofre (só na memória), mas não grava nada — nem cofre, nem funções, nem arquivo — e não chama o MP.
 Na tela só ✅/❌, nomes de campo, tipo, tamanho e sha8: nunca um valor, o sha256 inteiro, o id ou o código de um usuário de teste.
 Saída: 0 ok · 1 erro ou não confere · 2 falta no cofre algo que é DELE (o Client Secret ou o token de produção — W2-a, no FIM).
-O item dos usuários: extras vendedor_id|usuario|email|senha|codigo_verificacao e comprador_… (o login de topo = o vendedor).
+O item dos usuários: extras vendedor_id|usuario|email|senha|codigo_verificacao, comprador_… e integrador_… (o login de topo = o vendedor).
+O item da aplicação de teste (tipo token): valor = o client secret; extras client_id e client_secret; url = a página dela no painel — gravado
+pelo e2e/w2/painel_mp_teste.py (gravar_aplicacao_teste) direto do navegador.
 Credenciais: o PAT em ~/.pc-pat (Management API) e o cofre pelo MCP local por stdio — o Remoto do servidor.py.
 Testes: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts/segredos/test_mp_conta.py
 """
@@ -27,6 +37,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import secrets
 import sys
 import traceback
 import urllib.error
@@ -38,12 +49,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import servidor as S  # noqa: E402  (Remoto, Falha, guardar, ok, nota, depois, onde, sha8, sha256_hex, gravar_arquivo, PROJETO_COFRE)
 
 ITEM = "Mercado Pago — PhysiqCalc"
-ITEM_TESTE_APP = "Mercado Pago — PhysiqCalc — aplicação de teste (W2)"
+ITEM_TESTE_APP = "Mercado Pago — PhysiqCalc — aplicação de teste do integrador (W2, plano B)"  # o nome que a sessão principal deu (11/10)
 ITEM_USUARIOS = "Mercado Pago — PhysiqCalc — usuários de teste (W2)"
 ARQ_OAUTH = ".physiq-mp-oauth.json"
-PAPEIS = ("vendedor", "comprador")
+ARQ_OAUTH_STAGING = ".physiq-mp-oauth-staging.json"  # o client da aplicação de TESTE do integrador (plano B do I6) — a prova --client staging
+PAPEIS = ("vendedor", "comprador")  # o par padrão do usuarios-teste criar (Task 1)
+INTEGRADOR = "integrador"  # plano B do I6: o usuário de teste que entra no painel de desenvolvedores e cria a aplicação de TESTE
+TODOS_OS_PAPEIS = PAPEIS + (INTEGRADOR,)
 CAMPOS_USUARIO = (("id", "id"), ("usuario", "nickname"), ("email", "email"), ("senha", "password"))  # (no cofre, no arquivo/no MP)
 USERS_TEST = "https://api.mercadopago.com/users/test"
+OAUTH_TOKEN = "https://api.mercadopago.com/oauth/token"
+REDIRECT_DA_PROVA = "https://www.mercadopago.com"  # o padrão do painel; o code inventado é recusado antes (a T1 mediu assim, 11/10)
+PERFIL = re.compile(r"[a-z_]{3,20}")  # o "profile" da resposta do POST /users/test sai na tela só se for um rótulo curto (seller, buyer…)
+NOTA_APP_TESTE = ("Aplicação de TESTE do Mercado Pago (dinheiro de mentira) criada no painel de desenvolvedores pelo INTEGRADOR de teste "
+                  "(extras integrador_* do item \"Mercado Pago — PhysiqCalc — usuários de teste (W2)\") — plano B do I6 da W2. O client "
+                  "vai SÓ para o staging (MP_CLIENT_ID_STAGING/MP_CLIENT_SECRET_STAGING: mp_conta.py oauth copiar) e para "
+                  "~/.physiq-mp-oauth-staging.json (mp_conta.py oauth local --staging). Gravado direto do navegador pelo "
+                  "e2e/w2/painel_mp_teste.py: nenhum valor passou pela conversa.")
 UA = "physiq-unificado/1.0 (segredos/mp_conta)"
 NOTA_USUARIOS = ("Usuários de TESTE do Mercado Pago (dinheiro de mentira) da aplicação PhysiqCalc, criados pelo "
                  "scripts/segredos/mp_conta.py usuarios-teste criar (W2). O login de topo é o do vendedor. O MP não apaga usuário de "
@@ -228,19 +250,123 @@ def cofre_campos(r: S.Remoto, a: argparse.Namespace) -> int:
     return 2
 
 
-def oauth_local(r: S.Remoto, a: argparse.Namespace) -> int:
-    cid, sec = exigir_cliente(ler_item(r, ITEM))
-    destino = casa() / ARQ_OAUTH
-    texto = f"~/{ARQ_OAUTH} (600): client_id {len(cid)} dígitos, client_secret {len(sec)} caracteres (sha8 {S.sha8(sec)})"
+def exigir_cliente_teste(r: S.Remoto) -> tuple[str, str]:
+    """O par da aplicação de TESTE do integrador (plano B do I6). Sem o item ou sem o par → Falha (sai 1): quem grava é o
+    e2e/w2/painel_mp_teste.py (não é coisa DELE — o plano B roda com usuários de teste)."""
+    pares = ler_item(r, ITEM_TESTE_APP)
+    if pares is None:
+        raise S.Falha(f"o item \"{ITEM_TESTE_APP}\" não existe no cofre: rode o e2e/w2/painel_mp_teste.py (plano B do I6)")
+    cid, sec = cliente(pares)
+    if not (cid and sec):
+        raise S.Falha(f"\"{ITEM_TESTE_APP}\" existe, mas sem client_id e client_secret — nada gravado")
+    return cid, sec
+
+
+def gravar_oauth_local(cid: str, sec: str, nome: str, a: argparse.Namespace) -> bool:
+    destino = casa() / nome
+    texto = f"~/{nome} (600): client_id {len(cid)} dígitos, client_secret {len(sec)} caracteres (sha8 {S.sha8(sec)})"
     if a.dry_run:
         S.nota(f"--dry-run: gravaria {texto}")
-        return 0
+        return True
     conteudo = {"client_id": cid, "client_secret": sec}
     S.gravar_arquivo(destino, json.dumps(conteudo))
-    certo = S.ok(modo_600(destino) and json.loads(destino.read_text(encoding="utf-8")) == conteudo, texto)
-    if certo:
+    return S.ok(modo_600(destino) and json.loads(destino.read_text(encoding="utf-8")) == conteudo, texto)
+
+
+def oauth_local(r: S.Remoto, a: argparse.Namespace) -> int:
+    if a.staging:
+        certo = gravar_oauth_local(*exigir_cliente_teste(r), ARQ_OAUTH_STAGING, a)
+        if certo and not a.dry_run:
+            S.depois("quem lê: a prova com a aplicação de teste (e2e/w2/prova_public_key.py --client staging)")
+        return 0 if certo else 1
+    certo = gravar_oauth_local(*exigir_cliente(ler_item(r, ITEM)), ARQ_OAUTH, a)
+    if certo and not a.dry_run:
         S.depois("quem lê: a prova da Task 1 (e2e/w2/prova_public_key.py) e o oauth_real do e2e/w2/api.py")
     return 0 if certo else 1
+
+
+def post_oauth_token(corpo: dict) -> tuple[int, dict]:
+    """POST /oauth/token → (status, corpo). O corpo da resposta só sai pelo limpo() (o erro e a mensagem); nunca um token."""
+    req = urllib.request.Request(OAUTH_TOKEN, method="POST", data=json.dumps(corpo).encode("utf-8"),
+                                 headers={"Content-Type": "application/json", "Accept": "application/json", "User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            status, txt = resp.status, resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        try:
+            status, txt = e.code, e.read().decode("utf-8", "replace")
+        finally:
+            e.close()
+    except (urllib.error.URLError, OSError) as e:
+        raise S.Falha(f"POST /oauth/token: sem resposta ({e})") from None
+    try:
+        dados = json.loads(txt or "{}")
+    except json.JSONDecodeError:
+        dados = {}
+    dados = dados if isinstance(dados, dict) else {}
+    for k in ("access_token", "refresh_token", "public_key", "user_id"):
+        if dados.get(k) not in (None, ""):
+            S.guardar(str(dados[k]))  # não devia vir (o code é inventado), mas se vier não sai
+    return status, dados
+
+
+def oauth_testar(r: S.Remoto, a: argparse.Namespace) -> int:
+    """O par no POST /oauth/token com um code INVENTADO (o formato TG-… do MP): o par certo → 400 invalid_grant; o mesmo client_id com
+    um secret FALSO (o controle: prova que o MP separa os 2 erros) → invalid_client. Nenhum token é criado (o code não existe)."""
+    cid, sec = exigir_cliente_teste(r) if a.staging else exigir_cliente(ler_item(r, ITEM))
+    qual = "da aplicação de TESTE do integrador" if a.staging else "da aplicação PhysiqCalc"
+    if a.dry_run:
+        S.nota(f"--dry-run: chamaria o POST /oauth/token 2 vezes com um code inventado (o par {qual} e o controle) — nada criado")
+        return 0
+    falso = "".join(secrets.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") for _ in range(len(sec)))
+    resultados = {}
+    for rotulo, segredo in (("o par", sec), ("o controle (secret falso)", falso)):
+        code = S.guardar(f"TG-{secrets.token_hex(12)}-{secrets.randbelow(10**9):09d}")
+        st, d = post_oauth_token({"client_id": cid, "client_secret": segredo, "grant_type": "authorization_code", "code": code,
+                                  "redirect_uri": REDIRECT_DA_PROVA})
+        erro = d.get("error") if isinstance(d.get("error"), str) else None
+        resultados[rotulo] = erro
+        S.nota(f"{rotulo}: HTTP {st} · error {erro!r} · message {str(d.get('message') or '')[:120]!r}")
+    par_ok = resultados["o par"] == "invalid_grant"
+    controle_ok = resultados["o controle (secret falso)"] == "invalid_client"
+    S.ok(par_ok, f"o client {qual} (client_id {len(cid)} dígitos, secret sha8 {S.sha8(sec)}): "
+         + ("VÁLIDO — o MP aceitou o client e recusou só o code inventado" if par_ok
+            else "NÃO confere (esperado invalid_grant)"))
+    S.ok(controle_ok, "o controle: o secret falso dá invalid_client" if controle_ok
+         else "o controle NÃO deu invalid_client — a conferência não separa os 2 erros (ler a mensagem acima)")
+    return 0 if par_ok and controle_ok else 1
+
+
+def gravar_aplicacao_teste(r: S.Remoto, cid: str, sec: str, url: str | None = None) -> bool:
+    """Plano B do I6 — quem chama é o e2e/w2/painel_mp_teste.py, com os valores lidos DIRETO do navegador: grava o client da aplicação de
+    TESTE no cofre (tipo token: valor = o client secret; extras client_id e client_secret; a nota; a url da página dela no painel), lê de
+    volta e confere; depois ~/.physiq-mp-oauth-staging.json (600). Na tela só ✅/❌, tamanho e sha8."""
+    cid, sec = str(cid).strip(), str(sec).strip()
+    S.guardar(cid)
+    S.guardar(sec)
+    if not (cid.isdigit() and 6 <= len(cid) <= 20):
+        raise S.Falha(f"o client id lido do painel não tem o formato (só dígitos; {len(cid)} caracteres) — nada gravado")
+    if not SECRET.fullmatch(sec):
+        raise S.Falha(f"o client secret lido do painel não tem o formato (letras e dígitos, 20 a 64; {len(sec)} caracteres) — nada gravado")
+    lido = ler_campos(r, ITEM_TESTE_APP)
+    if lido is not None and lido[0] != "token":
+        raise S.Falha(f"\"{ITEM_TESTE_APP}\" existe com o tipo {lido[0]}, não token: ajuste no cofre — nada gravado")
+    campos = lido[1] if lido else {}
+    nossos = {"client_id", "client_secret"}
+    extras = [e for e in (campos.get("extras") or []) if isinstance(e, dict) and e.get("nome") not in nossos]
+    extras += [{"nome": "client_id", "valor": cid, "oculto": False}, {"nome": "client_secret", "valor": sec, "oculto": True}]
+    gravar: dict = {"valor": sec, "extras": extras, "notas": NOTA_APP_TESTE}
+    if url:
+        gravar["url"] = url
+    erro, texto = r._mcp().ferramenta("salvar_segredo", {"projeto": S.PROJETO_COFRE, "nome": ITEM_TESTE_APP, "tipo": "token",
+                                                         "campos": gravar})
+    if erro:
+        raise S.Falha(f"cofre: salvar \"{ITEM_TESTE_APP}\" falhou — {texto[:200]}")
+    volta = cliente(ler_item(r, ITEM_TESTE_APP) or [])
+    if not S.ok(volta == (cid, sec), f"cofre {S.PROJETO_COFRE} › \"{ITEM_TESTE_APP}\": client_id {len(cid)} dígitos e client_secret "
+                                     f"{len(sec)} caracteres (sha8 {S.sha8(sec)}) gravados e lidos de volta iguais"):
+        return False
+    return gravar_oauth_local(cid, sec, ARQ_OAUTH_STAGING, argparse.Namespace(dry_run=False))
 
 
 def oauth_pares(r: S.Remoto) -> dict[str, str]:
@@ -319,6 +445,15 @@ def gravar_arquivo_do_papel(papel: str, d: dict[str, str], a: argparse.Namespace
     return S.ok(modo_600(destino) and not faltam, texto)
 
 
+def perfil_na_tela(v: object) -> str:
+    """O "profile" que o POST /users/test devolve (a doc não fala dele): na tela só se for um rótulo curto; objeto → só as chaves."""
+    if isinstance(v, str) and PERFIL.fullmatch(v):
+        return f" | profile {v!r}"
+    if isinstance(v, dict):
+        return f" | profile (objeto; chaves {sorted(map(str, v))})"
+    return "" if v in (None, "") else f" | profile ({type(v).__name__})"
+
+
 def criar_usuario_teste(token: str, papel: str) -> dict:
     """POST /users/test (MLB) com o token de PRODUÇÃO da aplicação — a referência do MP traz "Bearer APP_USR-…" e site_id +
     description obrigatórios — → id, nickname, password (e email, se vier). Cada valor vai para o limpo() antes de qualquer mensagem."""
@@ -363,6 +498,8 @@ def salvar_usuarios(r: S.Remoto, lido: tuple[str, dict] | None, dados: dict[str,
                for p in papeis for cof, arq in CAMPOS_USUARIO if dados[p].get(arq)]
     gravar: dict = {"extras": extras}
     if lido is None:
+        if "vendedor" not in dados:  # o login de topo é o do vendedor: o usuarios_criar já para antes de qualquer POST
+            raise S.Falha(f"\"{ITEM_USUARIOS}\" não existe: crie antes o par vendedor + comprador (usuarios-teste criar)")
         v = dados["vendedor"]
         gravar |= {"usuario": v.get("nickname") or v.get("email") or "", "senha": v.get("password") or "",
                    "url": "https://www.mercadopago.com.br", "notas": NOTA_USUARIOS}
@@ -373,16 +510,21 @@ def salvar_usuarios(r: S.Remoto, lido: tuple[str, dict] | None, dados: dict[str,
 
 
 def usuarios_criar(r: S.Remoto, a: argparse.Namespace) -> int:
+    papeis = [a.papel] if getattr(a, "papel", None) else list(PAPEIS)
     lido = ler_campos(r, ITEM_USUARIOS)
     if lido is not None and lido[0] != "login":
         raise S.Falha(f"\"{ITEM_USUARIOS}\" existe com o tipo {lido[0]}, não login: ajuste no cofre — nenhum usuário criado")
-    dados = {p: usuario_do_cofre(dict(pares_de(lido[1])) if lido else {}, p) for p in PAPEIS}
-    criar = [p for p in PAPEIS if not tem_usuario(dados[p])]
+    dados = {p: usuario_do_cofre(dict(pares_de(lido[1])) if lido else {}, p) for p in papeis}
+    criar = [p for p in papeis if not tem_usuario(dados[p])]
     if not criar:
-        S.nota("os usuários de teste já estão no cofre: só os 2 arquivos (nenhum POST /users/test)")
-        return 0 if all([gravar_arquivo_do_papel(p, dados[p], a) for p in PAPEIS]) else 1
-    if lido is not None:
-        S.nota(f"no cofre já está o {', '.join(p for p in PAPEIS if p not in criar)}: só o que falta é criado ({', '.join(criar)})")
+        S.nota("os usuários de teste já estão no cofre: só os 2 arquivos (nenhum POST /users/test)" if len(papeis) > 1
+               else f"o {papeis[0]} de teste já está no cofre: só o arquivo (nenhum POST /users/test)")
+        return 0 if all([gravar_arquivo_do_papel(p, dados[p], a) for p in papeis]) else 1
+    if lido is None and "vendedor" not in papeis:
+        raise S.Falha(f"\"{ITEM_USUARIOS}\" não existe: crie antes o par vendedor + comprador (usuarios-teste criar) — nenhum "
+                      f"{', '.join(criar)} criado")
+    if lido is not None and len(papeis) > 1:
+        S.nota(f"no cofre já está o {', '.join(p for p in papeis if p not in criar)}: só o que falta é criado ({', '.join(criar)})")
     tok = token_de_producao(ler_item(r, ITEM) or [])
     if not tok:
         raise FaltaDele("sem o token de produção no cofre: os usuários de teste vão para o FIM (W2-a, passo 7)")
@@ -394,7 +536,8 @@ def usuarios_criar(r: S.Remoto, a: argparse.Namespace) -> int:
         corpo = criar_usuario_teste(tok, papel)
         dados[papel] = {arq: str(corpo[arq]) for _, arq in CAMPOS_USUARIO if corpo.get(arq) not in (None, "")}
         S.gravar_arquivo(arquivo_do_papel(papel), json.dumps(dados[papel], ensure_ascii=False))  # se o cofre falhar, não se perde
-        S.nota(f"{papel}: criado no MP (id com {len(dados[papel]['id'])} dígitos) | chaves da resposta {sorted(corpo)}")
+        S.nota(f"{papel}: criado no MP (id com {len(dados[papel]['id'])} dígitos) | chaves da resposta {sorted(corpo)}"
+               + perfil_na_tela(corpo.get("profile")))
         try:
             salvar_usuarios(r, lido, dados, [papel])
         except S.Falha as e:
@@ -405,14 +548,16 @@ def usuarios_criar(r: S.Remoto, a: argparse.Namespace) -> int:
         if not S.ok(volta.get("id") == dados[papel]["id"] and volta.get("password") == dados[papel]["password"],
                     f"cofre {S.PROJETO_COFRE} › \"{ITEM_USUARIOS}\": o {papel} gravado e lido de volta igual"):
             return 1
-    return 0 if all([gravar_arquivo_do_papel(p, dados[p], a) for p in PAPEIS]) else 1
+    return 0 if all([gravar_arquivo_do_papel(p, dados[p], a) for p in papeis]) else 1
 
 
 # ───────────────────────── linha de comando ─────────────────────────
 
 
-COMANDOS = {("cofre", "campos"): cofre_campos, ("oauth", "local"): oauth_local, ("oauth", "copiar"): oauth_copiar,
-            ("oauth", "conferir"): oauth_conferir, ("usuarios-teste", "criar"): usuarios_criar}
+COMANDOS = {("cofre", "campos"): cofre_campos, ("oauth", "local"): oauth_local, ("oauth", "testar"): oauth_testar,
+            ("oauth", "copiar"): oauth_copiar, ("oauth", "conferir"): oauth_conferir, ("usuarios-teste", "criar"): usuarios_criar}
+COM_STAGING = {("oauth", "local"), ("oauth", "testar")}
+COM_PAPEL = {("usuarios-teste", "criar")}
 
 
 def argumentos(argv: list[str] | None = None) -> argparse.Namespace:
@@ -421,9 +566,17 @@ def argumentos(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("subcomando", help="o subcomando do grupo (lista acima)")
     ap.add_argument("--dry-run", "--seco", dest="dry_run", action="store_true",
                     help="lê o cofre, mas não grava nada (nem cofre, nem funções, nem arquivo) e não chama o MP")
+    ap.add_argument("--staging", action="store_true",
+                    help="oauth local|testar: o client da aplicação de TESTE do integrador (plano B do I6), não o da PhysiqCalc")
+    ap.add_argument("--papel", choices=TODOS_OS_PAPEIS,
+                    help="usuarios-teste criar: só este papel (o integrador do plano B do I6 — 1 só); sem ele, o par vendedor + comprador")
     a = ap.parse_args(argv)
     if (a.grupo, a.subcomando) not in COMANDOS:
         ap.error(f"comando desconhecido: {a.grupo} {a.subcomando} — os que existem: " + ", ".join(" ".join(c) for c in COMANDOS))
+    if a.staging and (a.grupo, a.subcomando) not in COM_STAGING:
+        ap.error("--staging só vale em: " + ", ".join(" ".join(c) for c in sorted(COM_STAGING)))
+    if a.papel and (a.grupo, a.subcomando) not in COM_PAPEL:
+        ap.error("--papel só vale em: usuarios-teste criar")
     return a
 
 

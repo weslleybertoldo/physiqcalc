@@ -157,8 +157,8 @@ class MpFalso:
     """O urlopen do POST /users/test: confere o método, a URL, o token de PRODUÇÃO no cabeçalho e o corpo; devolve um usuário de teste
     feito na hora — ou HTTP 400 no pedido de número `falhar_no` (0 = o 1º)."""
 
-    def __init__(self, token: str, falhar_no: int | None = None) -> None:
-        self.token, self.falhar_no = token, falhar_no
+    def __init__(self, token: str, falhar_no: int | None = None, perfil: object = None) -> None:
+        self.token, self.falhar_no, self.perfil = token, falhar_no, perfil
         self.pedidos: list[dict] = []
         self.criados: list[dict] = []
 
@@ -175,11 +175,39 @@ class MpFalso:
         u = {"id": int(digitos(10)), "nickname": f"TESTUSER{digitos(10)}", "password": letras(10), "site_status": "active",
              "site_id": "MLB", "description": corpo["description"], "email": f"test_user_{digitos(10)}@testuser.com",
              "date_created": "2026-10-11T19:00:00.000-04:00", "date_last_updated": "2026-10-11T19:00:00.000-04:00"}
+        if self.perfil is not None:
+            u["profile"] = self.perfil
         self.criados.append(u)
         return RespostaFalsa(json.dumps(u).encode())
 
     def valores(self) -> set[str]:
         return {str(u[k]) for u in self.criados for k in ("id", "nickname", "password", "email")}
+
+
+class OauthFalso:
+    """O urlopen do POST /oauth/token com um code inventado, como o MP respondeu em 11/10: o par certo → 400 invalid_grant; client ou
+    secret que não bate → 400 invalid_client. Confere o corpo (o code TG-… e o redirect da prova)."""
+
+    def __init__(self, cid: str, sec: str) -> None:
+        self.cid, self.sec = cid, sec
+        self.pedidos: list[dict] = []
+
+    def __call__(self, req, timeout=None):  # noqa: ANN001
+        assert req.get_method() == "POST" and req.full_url == "https://api.mercadopago.com/oauth/token", "não é o POST /oauth/token"
+        corpo = json.loads(req.data)
+        assert corpo["grant_type"] == "authorization_code" and corpo["code"].startswith("TG-"), "o corpo não é o de um code inventado"
+        assert corpo["redirect_uri"] == "https://www.mercadopago.com", "o redirect não é o da prova"
+        self.pedidos.append(corpo)
+        if corpo["client_id"] == self.cid and corpo["client_secret"] == self.sec:
+            erro = {"message": "Error validating grant. Your authorization code or refresh token may be expired or it was already used",
+                    "error": "invalid_grant", "status": 400, "cause": []}
+        else:
+            erro = {"message": "invalid client_id or client_secret", "error": "invalid_client", "status": 400, "cause": []}
+        raise urllib.error.HTTPError(req.full_url, 400, "Bad Request", None,  # type: ignore[arg-type]
+                                     io.BytesIO(json.dumps(erro).encode()))
+
+    def valores(self) -> set[str]:
+        return {self.cid, self.sec} | {p["code"] for p in self.pedidos} | {p["client_secret"] for p in self.pedidos}
 
 
 def sem_rede(*args: object, **kwargs: object) -> None:
@@ -559,6 +587,180 @@ class UsuariosTeste(Base):
         self.assertIn("faltam ['id', 'password']", saida)
         self.assertEqual(modo(self.arquivo(".physiq-mp-vendedor-teste.json")), 0o600)
 
+    # ── plano B do I6: o integrador de teste (--papel integrador) ──
+
+    def test_papel_integrador_cria_so_ele_no_mesmo_item(self):
+        self.por_item_mp({"client_secret": self.sec})
+        self.r.cofre.itens[M.ITEM_USUARIOS] = item_de_usuarios()[0]
+        antes = em_dict(copy.deepcopy(self.r.cofre.itens[M.ITEM_USUARIOS]["campos"]))
+        mp = MpFalso(self.tok, perfil="seller")
+        rc, saida = self.rodar("usuarios-teste", "criar", "--papel", "integrador", mp=mp)
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual([p["description"] for p in mp.pedidos], ["Physiq W2 integrador"])  # 1 POST só
+        (u,) = mp.criados
+        c = em_dict(self.r.cofre.itens[M.ITEM_USUARIOS]["campos"])
+        self.assertEqual((c["integrador_id"], c["integrador_usuario"], c["integrador_email"], c["integrador_senha"]),
+                         (str(u["id"]), u["nickname"], u["email"], u["password"]))
+        for nome, valor in antes.items():  # o par, o login de topo e o código do painel ficam iguais
+            self.assertEqual(c[nome], valor, nome)
+        senha = next(e for e in self.r.cofre.itens[M.ITEM_USUARIOS]["campos"]["extras"] if e["nome"] == "integrador_senha")
+        self.assertTrue(senha["oculto"])
+        arq = self.arquivo(".physiq-mp-integrador-teste.json")
+        self.assertEqual(modo(arq), 0o600)
+        self.assertEqual(json.loads(arq.read_text(encoding="utf-8")),
+                         {"id": str(u["id"]), "nickname": u["nickname"], "email": u["email"], "password": u["password"]})
+        self.assertEqual(os.listdir(self.casa.name), [arq.name])  # só o arquivo do papel pedido
+        self.assertIn("integrador: criado no MP (id com 10 dígitos) | chaves da resposta [", saida)
+        self.assertIn("| profile 'seller'", saida)  # o rótulo do profile sai (não é segredo)
+        self.assertIn("o integrador gravado e lido de volta igual", saida)
+
+    def test_papel_integrador_ja_no_cofre_so_o_arquivo(self):
+        self.por_item_mp({"client_secret": self.sec})
+        item, _ = item_de_usuarios()
+        integ = {"id": digitos(10), "usuario": f"TESTUSER{digitos(10)}", "senha": letras(10)}
+        item["campos"]["extras"] += [{"nome": f"integrador_{k}", "valor": v, "oculto": k == "senha"} for k, v in integ.items()]
+        self.r.cofre.itens[M.ITEM_USUARIOS] = item
+        rc, saida = self.rodar("usuarios-teste", "criar", "--papel", "integrador")  # sem_rede: nenhum POST
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("o integrador de teste já está no cofre: só o arquivo (nenhum POST /users/test)", saida)
+        self.assertEqual(json.loads(self.arquivo(".physiq-mp-integrador-teste.json").read_text(encoding="utf-8")),
+                         {"id": integ["id"], "nickname": integ["usuario"], "password": integ["senha"]})
+        self.assertNotIn("salvar_segredo", {n for n, _ in self.r.cofre.chamadas})
+        rc, saida = self.rodar("usuarios-teste", "criar")  # o padrão (o par) não toca no integrador
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("só os 2 arquivos", saida)
+        self.assertEqual(sorted(os.listdir(self.casa.name)), sorted(f".physiq-mp-{p}-teste.json" for p in M.TODOS_OS_PAPEIS))
+
+    def test_papel_integrador_sem_o_item_do_par_para_antes_do_post(self):
+        self.por_item_mp({"client_secret": self.sec})
+        rc, saida = self.rodar("usuarios-teste", "criar", "--papel", "integrador")  # sem_rede: nenhum POST
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("crie antes o par vendedor + comprador", saida)
+        self.assertNotIn(M.ITEM_USUARIOS, self.r.cofre.itens)
+        self.assertEqual(os.listdir(self.casa.name), [])
+
+    def test_papel_integrador_dry_run(self):
+        self.por_item_mp({"client_secret": self.sec})
+        self.r.cofre.itens[M.ITEM_USUARIOS] = item_de_usuarios()[0]
+        antes = copy.deepcopy(self.r.cofre.itens)
+        rc, saida = self.rodar("usuarios-teste", "criar", "--papel", "integrador", "--seco")  # sem_rede
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("criaria 1 usuário(s) de teste (integrador)", saida)
+        self.assertEqual(self.r.cofre.itens, antes)
+        self.assertEqual(os.listdir(self.casa.name), [])
+
+    def test_perfil_na_tela(self):
+        self.assertEqual(M.perfil_na_tela("seller"), " | profile 'seller'")
+        self.assertEqual(M.perfil_na_tela(letras(32)), " | profile (str)")  # texto que não é rótulo curto: só o tipo
+        self.assertEqual(M.perfil_na_tela({"tipo": "x", "b": 1}), " | profile (objeto; chaves ['b', 'tipo'])")
+        self.assertEqual(M.perfil_na_tela(None), "")
+
+
+def item_da_aplicacao_de_teste(tid: str, tsec: str) -> dict:
+    return {"tipo": "token", "campos": {"valor": tsec, "extras": [{"nome": "client_id", "valor": tid, "oculto": False},
+                                                                  {"nome": "client_secret", "valor": tsec, "oculto": True}]}}
+
+
+class AplicacaoDeTeste(Base):
+    """Plano B do I6: o client da aplicação de TESTE do integrador — gravado pelo painel_mp_teste.py, o arquivo do staging e a conferência."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.tid, self.tsec = digitos(16), letras(32)
+
+    def test_gravar_aplicacao_teste_cofre_arquivo_e_o_copiar(self):
+        buf = io.StringIO()
+        url = f"https://www.mercadopago.com.br/developers/panel/app/{self.tid}"
+        with contextlib.redirect_stdout(buf):
+            self.assertTrue(M.gravar_aplicacao_teste(self.r, self.tid, f" {self.tsec}\n", url=url))
+        saida = buf.getvalue()
+        self.sem_valor(saida, extras={self.tid, self.tsec})
+        item = self.r.cofre.itens[M.ITEM_TESTE_APP]
+        self.assertEqual(item["tipo"], "token")
+        c = em_dict(item["campos"])
+        self.assertEqual((c["valor"], c["client_id"], c["client_secret"], c["url"]), (self.tsec, self.tid, self.tsec, url))
+        self.assertIn("plano B do I6", c["notas"])
+        self.assertTrue(next(e for e in item["campos"]["extras"] if e["nome"] == "client_secret")["oculto"])
+        arq = self.arquivo(".physiq-mp-oauth-staging.json")
+        self.assertEqual(modo(arq), 0o600)
+        self.assertEqual(json.loads(arq.read_text(encoding="utf-8")), {"client_id": self.tid, "client_secret": self.tsec})
+        self.assertIn("gravados e lidos de volta iguais", saida)
+        self.assertIn(f"sha8 {S.sha8(self.tsec)}", saida)
+        self.por_item_mp({"client_secret": self.sec})  # o oauth copiar (Task 14) leva os _STAGING deste item
+        rc, saida = self.rodar("oauth", "copiar")
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual((self.r.funcoes["principal"]["MP_CLIENT_ID_STAGING"], self.r.funcoes["principal"]["MP_CLIENT_SECRET_STAGING"]),
+                         (self.tid, self.tsec))
+
+    def test_gravar_de_novo_troca_o_par_e_mantem_os_outros_extras(self):
+        self.r.cofre.itens[M.ITEM_TESTE_APP] = item_da_aplicacao_de_teste(digitos(16), letras(32))
+        self.r.cofre.itens[M.ITEM_TESTE_APP]["campos"]["extras"].append({"nome": "anotacao", "valor": "feita à mão", "oculto": False})
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertTrue(M.gravar_aplicacao_teste(self.r, self.tid, self.tsec))
+        c = em_dict(self.r.cofre.itens[M.ITEM_TESTE_APP]["campos"])
+        self.assertEqual((c["client_id"], c["client_secret"], c["anotacao"]), (self.tid, self.tsec, "feita à mão"))
+        self.assertEqual(sum(1 for e in self.r.cofre.itens[M.ITEM_TESTE_APP]["campos"]["extras"] if e["nome"] == "client_id"), 1)
+
+    def test_formato_errado_nao_grava_nada(self):
+        for cid, sec in ((letras(16), self.tsec), (self.tid, "curto"), (self.tid, f"com espaço {letras(24)}"), ("", self.tsec)):
+            with self.subTest(cid=len(cid), sec=len(sec)), contextlib.redirect_stdout(io.StringIO()), self.assertRaises(S.Falha):
+                M.gravar_aplicacao_teste(self.r, cid, sec)
+        self.assertNotIn(M.ITEM_TESTE_APP, self.r.cofre.itens)
+        self.assertEqual(os.listdir(self.casa.name), [])
+
+    def test_item_de_outro_tipo_para(self):
+        self.r.cofre.itens[M.ITEM_TESTE_APP] = {"tipo": "nota", "campos": {"texto": "anotado à mão"}}
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(S.Falha):
+            M.gravar_aplicacao_teste(self.r, self.tid, self.tsec)
+        self.assertEqual(os.listdir(self.casa.name), [])
+
+    def test_oauth_local_staging(self):
+        self.por_item_mp({"client_secret": self.sec})
+        self.r.cofre.itens[M.ITEM_TESTE_APP] = item_da_aplicacao_de_teste(self.tid, self.tsec)
+        rc, saida = self.rodar("oauth", "local", "--staging")
+        self.assertEqual(rc, 0, saida)
+        arq = self.arquivo(".physiq-mp-oauth-staging.json")
+        self.assertEqual(modo(arq), 0o600)
+        self.assertEqual(json.loads(arq.read_text(encoding="utf-8")), {"client_id": self.tid, "client_secret": self.tsec})
+        self.assertFalse(self.arquivo(".physiq-mp-oauth.json").exists())  # o da aplicação real não é tocado
+        self.assertIn("--client staging", saida)
+
+    def test_oauth_local_staging_sem_o_item_sai_1(self):
+        self.por_item_mp({"client_secret": self.sec})
+        rc, saida = self.rodar("oauth", "local", "--staging")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("rode o e2e/w2/painel_mp_teste.py", saida)
+        self.assertEqual(os.listdir(self.casa.name), [])
+
+    def test_oauth_testar_staging_par_valido(self):
+        self.por_item_mp({"client_secret": self.sec})
+        self.r.cofre.itens[M.ITEM_TESTE_APP] = item_da_aplicacao_de_teste(self.tid, self.tsec)
+        mp = OauthFalso(self.tid, self.tsec)
+        rc, saida = self.rodar("oauth", "testar", "--staging", mp=mp)
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual(len(mp.pedidos), 2)
+        self.assertEqual([p["client_id"] for p in mp.pedidos], [self.tid, self.tid])
+        self.assertEqual(mp.pedidos[0]["client_secret"], self.tsec)
+        self.assertNotEqual(mp.pedidos[1]["client_secret"], self.tsec)  # o controle: um secret falso
+        self.assertNotEqual(mp.pedidos[0]["code"], mp.pedidos[1]["code"])
+        self.assertIn("VÁLIDO — o MP aceitou o client e recusou só o code inventado", saida)
+        self.assertIn("o controle: o secret falso dá invalid_client", saida)
+        self.assertIn("error 'invalid_grant'", saida)
+
+    def test_oauth_testar_par_que_nao_confere_sai_1(self):
+        self.por_item_mp({"client_secret": self.sec})
+        self.r.cofre.itens[M.ITEM_TESTE_APP] = item_da_aplicacao_de_teste(self.tid, self.tsec)
+        rc, saida = self.rodar("oauth", "testar", "--staging", mp=OauthFalso(self.tid, letras(32)))  # o MP conhece outro secret
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("NÃO confere (esperado invalid_grant)", saida)
+
+    def test_oauth_testar_dry_run_nao_chama_o_mp(self):
+        self.por_item_mp({"client_secret": self.sec})
+        self.r.cofre.itens[M.ITEM_TESTE_APP] = item_da_aplicacao_de_teste(self.tid, self.tsec)
+        rc, saida = self.rodar("oauth", "testar", "--staging", "--dry-run")  # sem_rede
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("--dry-run: chamaria o POST /oauth/token 2 vezes", saida)
+
 
 class DryRun(Base):
     def test_nada_gravado(self):
@@ -587,6 +789,17 @@ class DryRun(Base):
             with self.subTest(args=args), contextlib.redirect_stderr(erro), self.assertRaises(SystemExit) as fim:
                 M.argumentos(args)
             self.assertEqual(fim.exception.code, 2)
+
+    def test_staging_e_papel_so_onde_valem(self):
+        for args in (["oauth", "copiar", "--staging"], ["cofre", "campos", "--staging"], ["usuarios-teste", "criar", "--staging"],
+                     ["oauth", "local", "--papel", "integrador"], ["usuarios-teste", "criar", "--papel", "outro"]):
+            with self.subTest(args=args), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as fim:
+                M.argumentos(args)
+            self.assertEqual(fim.exception.code, 2)
+        self.assertEqual(M.argumentos(["usuarios-teste", "criar", "--papel", "integrador"]).papel, "integrador")
+        self.assertIsNone(M.argumentos(["usuarios-teste", "criar"]).papel)
+        self.assertTrue(M.argumentos(["oauth", "testar", "--staging"]).staging)
+        self.assertTrue(M.argumentos(["oauth", "local", "--staging"]).staging)
 
 
 MCP_FALSO = ("import copy, json, os, sys\nPROJETO = 'PhysiqCalc'\n\n\n" + textwrap.dedent(inspect.getsource(aplicar_no_cofre))
