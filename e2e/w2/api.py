@@ -11,7 +11,9 @@ Casos (padrão — as funções PUBLICADAS no staging e o MP de verdade em SANDB
   guarda       o dono grava mercadopago_conta direto pelo banco (REST como a pessoa) sem integração → recusado (mp_conta_sem_integracao); o app
                não lê recebimento_integracoes nem mp_conexoes; rpc w27_conta_linha como o dono → recusado (I7)
   simulada     o master: prof_mp_simular_conexao (a credencial de TESTE da aplicação, teste_sem_oauth) → prof_recebimento_salvar mercadopago_conta
-               pelo dono → aluno_status com mp {disponivel: true, chave_publica: TEST-…} (MENOR 16: prova a GRAVAÇÃO; o token por ação é o --local)
+               pelo dono → aluno_status com mp {disponivel: true, chave_publica: TEST-…} (MENOR 16: prova a GRAVAÇÃO; o token por ação é o --local).
+               Com --conexao-sql: o prof_mp_simular_conexao do master de teste → 403 so_master (a regra da função: o master só pelo
+               app_metadata) e a MESMA conexão gravada por SQL do servidor (o upsert dela; o resto do caso igual)
   pix          aluno_mp_pix → Pix no MP (sandbox) com mp_collector_id e a notification_url com &conta= (lida de volta no GET do pagamento);
                simular_aprovacao → paga pela credencial da conta
   cartao       APRO → paga (mp_collector_id); detalhe_mp pela conta; prof_reembolsar pela conta → refunded
@@ -124,12 +126,18 @@ Precisa: a W2 no staging (a migration 20261011210000 — a rodada para antes se 
 as funções da W2 publicadas (Task 14) e a credencial de TESTE do MP (~/.physiq-mp-test e ~/.physiq-mp-public-test); no --local, o
 ~/.deno/bin/deno e as portas 8780–8785 e 8798 livres; o oauth_real, ~/.physiq-mp-vendedor-teste.json e ~/.physiq-mp-comprador-teste.json (600).
 Uso: python3 e2e/w2/api.py [--local] [--casos …] [--sinal ARQ] [--seco | --limpar] [--redirect-proprio] [--pagador-email E] [--com-tela]
+                            [--conexao-sql]
   --seco    NADA sai de 127.0.0.1: os autotestes das peças, a cifra e a x-signature conferidas com o Deno (o mesmo código das funções), o
             simulador e as 6 funções no Deno local contra um banco FECHADO (127.0.0.1:9, --allow-net=127.0.0.1) cutucadas no que responde antes
             do banco — nenhuma ação é chamada, nada é gravado, nenhum login
   --limpar  só desfaz uma rodada que caiu no meio (pelo arquivo de estado)
   --sinal   o arquivo-sinal da trava do banco do staging (dividido entre sessões): sem ele a rodada não começa; se ele sumir no meio, a rodada
             para ANTES do próximo caso, desfaz a massa e sai com 3
+  --conexao-sql  (só no padrão) a conexão simulada dos casos que passam pelo garantir_simulada vai por SQL do servidor SÓ no staging, com as
+            colunas e os valores do upsert do prof_mp_simular_conexao — o master de teste NÃO é master no Auth (hml-02/H-04: nunca) e a
+            pagamentos-aluno só aceita o master pelo app_metadata (a regra fica). O token de TESTE da aplicação vai CIFRADO com a MP_TOKENS_CHAVE
+            das funções, lida do cofre pelo scripts/segredos/mp_conta.py SÓ na memória (nunca no estado, na tela ou no log), depois de conferir
+            o digest das funções (a chave e o MP_ACCESS_TOKEN_TEST); o desfazer apaga a integração como sempre
 Saída sem dado pessoal nem segredo: ids de teste, códigos e status (os tokens do simulador são falsos e nunca são impressos).
 """
 from __future__ import annotations
@@ -433,6 +441,28 @@ def comando_dar_master(uid: str) -> str:
     """O master de teste é 'pessoa' fora das rodadas (hml-02/H-04): vira master SÓ no staging.profiles (nunca no Auth nem no public — o
     molde do e2e/w07b/api.py e do dar_master do e2e/w1/telas.py); a master-contas (ehMaster) e o sou_master() do banco aceitam esse perfil."""
     return f"update {S}.profiles set role = 'master' where id = {lit(uid)} and role is distinct from 'master'"
+
+
+# os casos do padrão que passam pelo garantir_simulada (a conexão simulada da conta do prof2)
+CASOS_SIMULADOS = {"simulada", "pix", "cartao", "automatica", "desconectar", "master", "erro", "webhook"}
+
+
+def comando_simular_sql(conta: str, mp_user_id: int, chave_publica: str | None, cifra: str, por: str | None) -> str:
+    """--conexao-sql: o upsert do prof_mp_simular_conexao (pagamentos-aluno, decisão 12) como SQL do servidor, SÓ no staging — as MESMAS
+    colunas e valores: ativa, o user id da credencial de TESTE da aplicação, "TESTE (simulada)", a chave pública de TESTE (o mesmo filtro da
+    função; fora dele, null), o token CIFRADO (MP_TOKENS_CHAVE + o AD da conta), sem refresh, 180 dias, mp_teste, teste_sem_oauth, sem erro,
+    0 tentativas, conectado agora, quem fez. O token em claro nunca entra (só a cifra, conferida pelo formato)."""
+    if not UUID_RX.fullmatch(conta or "") or not CIFRA_RX.fullmatch(cifra or "") or int(mp_user_id) <= 0:
+        raise ValueError("conta, cifra ou user id fora do formato")
+    if chave_publica is not None and not re.fullmatch(r"TEST-[A-Za-z0-9-]{8,72}", chave_publica):
+        chave_publica = None
+    return f"""insert into {S}.recebimento_integracoes (conta_id, provedor, status, mp_user_id, mp_apelido, mp_public_key, mp_access_token,
+              mp_refresh_token, mp_expira_em, mp_teste, mp_origem, mp_erro, mp_renovar_tentativas, conectado_em, desconectada_em, atualizado_por)
+            values ('{conta}', 'mercadopago', 'ativa', {int(mp_user_id)}, 'TESTE (simulada)', {lit(chave_publica)}, {lit(cifra)}, null, now() + interval '180 days', true, 'teste_sem_oauth', null, 0, now(), null, {lit(por)})
+            on conflict (conta_id, provedor) do update set status = excluded.status, mp_user_id = excluded.mp_user_id,
+              mp_apelido = excluded.mp_apelido, mp_public_key = excluded.mp_public_key, mp_access_token = excluded.mp_access_token,
+              mp_refresh_token = null, mp_expira_em = excluded.mp_expira_em, mp_teste = true, mp_origem = excluded.mp_origem, mp_erro = null,
+              mp_renovar_tentativas = 0, conectado_em = excluded.conectado_em, desconectada_em = null, atualizado_por = excluded.atualizado_por"""
 
 
 # ───────────────────────── o simulador ─────────────────────────
@@ -984,15 +1014,53 @@ def clientes_conhecidos() -> set[str]:
     return ids
 
 
+def chave_do_servico() -> str:
+    """--conexao-sql: a MP_TOKENS_CHAVE das funções, lida do COFRE pelo scripts/segredos/mp_conta.py (o MCP local por stdio) — SÓ na memória
+    desta rodada (nunca no estado, na tela ou no log); antes de usar, o digest das funções tem de ser o sha256 dela (é a chave com que as
+    funções publicadas abrem o token)."""
+    if CTX.get("_chave_servico"):
+        return CTX["_chave_servico"]
+    sys.path.insert(0, str(RAIZ / "scripts" / "segredos"))
+    import mp_conta as M  # noqa: PLC0415
+    import servidor as SS  # noqa: PLC0415
+
+    r = SS.Remoto()
+    try:
+        chave = M.chave_do_cofre(r)
+        digest = r.segredos("principal").get(M.SEGREDO_CHAVE)
+    finally:
+        r.fechar()
+    if not chave or not M.chave_valida(chave) or digest != sha256_hex(chave):
+        raise RuntimeError("a MP_TOKENS_CHAVE do cofre não confere com a das funções (rode  mp_conta.py chave conferir)")
+    CTX["_chave_servico"] = chave
+    return chave
+
+
+def simular_por_sql(chave_publica: str | None) -> None:
+    """--conexao-sql (o padrão sem master no Auth — hml-02/H-04: a pagamentos-aluno só aceita o master pelo app_metadata e essa regra NÃO
+    muda): a conexão como o prof_mp_simular_conexao a gravaria — o /users/me da credencial de TESTE da aplicação, o token dela cifrado com
+    a MP_TOKENS_CHAVE das funções e o AD da conta — SÓ no staging. O desfazer apaga a integração (comandos_do_desfazer)."""
+    st, eu = B.mp_teste("GET", "/users/me")
+    if st != 200 or not isinstance(eu, dict) or not eu.get("id"):
+        raise RuntimeError(f"/users/me da credencial de TESTE da aplicação: {st}")
+    token = (CASA / ".physiq-mp-test").read_text(encoding="utf-8").strip()
+    cifra = cifrar(token, dado_associado(CTX["conta"], "access"), chave_do_servico())
+    sql(comando_simular_sql(CTX["conta"], int(eu["id"]), chave_publica, cifra, (CTX.get("estado") or {}).get("master_uid")))
+
+
 def garantir_simulada(ligar: bool = True) -> dict:
-    """A conta do prof2 conectada pela credencial de TESTE da aplicação (prof_mp_simular_conexao, só master) e, com `ligar`, no MP da conta."""
+    """A conta do prof2 conectada pela credencial de TESTE da aplicação (prof_mp_simular_conexao, só master — ou, com --conexao-sql, o mesmo
+    gravado por SQL do servidor) e, com `ligar`, no MP da conta."""
     cancelar_vivas()
     chave = (CASA / ".physiq-mp-public-test").read_text(encoding="utf-8").strip() if (CASA / ".physiq-mp-public-test").exists() else None
     if not ligar:
         modo_conta("pix_manual")
-    st, r = pedir(MASTER, "prof_mp_simular_conexao", {"conta_id": CTX["conta"], **({"chave_publica": chave} if chave else {})})
-    if st != 200:
-        raise RuntimeError(f"prof_mp_simular_conexao {st} {r.get('erro')} {r.get('status_mp', '')}")
+    if CTX.get("conexao_sql"):
+        simular_por_sql(chave)
+    else:
+        st, r = pedir(MASTER, "prof_mp_simular_conexao", {"conta_id": CTX["conta"], **({"chave_publica": chave} if chave else {})})
+        if st != 200:
+            raise RuntimeError(f"prof_mp_simular_conexao {st} {r.get('erro')} {r.get('status_mp', '')}")
     if ligar:
         modo_conta("mercadopago_conta")
     return {"chave": chave, "integracao": linha_integracao()}
@@ -1066,10 +1134,18 @@ def caso_simulada() -> None:
     modo_conta("pix_manual")
     chave = (CASA / ".physiq-mp-public-test").read_text(encoding="utf-8").strip() if (CASA / ".physiq-mp-public-test").exists() else None
     st, r = pedir(MASTER, "prof_mp_simular_conexao", {"conta_id": conta, **({"chave_publica": chave} if chave else {})})
+    if CTX.get("conexao_sql"):
+        # o master de teste é master SÓ no staging.profiles (hml-02/H-04: nunca no Auth) e a função só aceita o master pelo app_metadata:
+        # a regra fica (403) e a MESMA conexão vai por SQL do servidor; o dono lê a vista dela pelo prof_recebimento
+        p.check(st == 403 and r.get("erro") == "so_master",
+                f"prof_mp_simular_conexao com o master de teste (não é master no Auth) → 403 so_master — a regra da função segue ({st} {r.get('erro')})")
+        simular_por_sql(chave)
+        st, r = pedir(DONO, "prof_recebimento", {"conta_id": conta})
     i = linha_integracao() or {}
     p.check(st == 200 and (r.get("mercadopago_conta") or {}).get("status") == "ativa" and i.get("mp_origem") == "teste_sem_oauth"
             and bool(CIFRA_RX.fullmatch(i.get("mp_access_token") or "")) and i.get("mp_refresh_token") is None and (i.get("mp_user_id") or 0) > 0,
-            f"prof_mp_simular_conexao: ativa, teste_sem_oauth, o token CIFRADO, sem refresh ({st} {r.get('erro')} {r.get('status_mp', '')})")
+            f"{'a conexão simulada por SQL (o upsert do prof_mp_simular_conexao)' if CTX.get('conexao_sql') else 'prof_mp_simular_conexao'}: "
+            f"ativa, teste_sem_oauth, o token CIFRADO, sem refresh ({st} {r.get('erro')} {r.get('status_mp', '')})")
     st, r = pedir(DONO, "prof_recebimento_salvar", {"conta_id": conta, "modo": "mercadopago_conta"})
     p.check(st == 200 and (r.get("conta") or {}).get("modo") == "mercadopago_conta", f"o dono salva mercadopago_conta ({st} {r.get('erro')})")
     st, r = pedir(ALUNO, "aluno_status")
@@ -2300,10 +2376,27 @@ def ambiente(casos: list[str]) -> bool:
                           {"Authorization": f"Bearer {B.ler('.pc-pat')}"})
         r = r if isinstance(r, dict) else {}
         p.check(st == 200 and r.get("verify_jwt") is jwt, f"função {slug} publicada com verify_jwt {str(jwt).lower()} (versão {r.get('version')})")
-    if set(casos) & {"simulada", "pix", "cartao", "automatica", "desconectar", "master", "erro", "webhook"}:
+    pronto = True
+    if set(casos) & CASOS_SIMULADOS:
         p.check((CASA / ".physiq-mp-test").exists() and (CASA / ".physiq-mp-public-test").exists(),
                 "a credencial de TESTE do MP (~/.physiq-mp-test e ~/.physiq-mp-public-test)")
-    return w2
+        if CTX.get("conexao_sql"):
+            # a conexão por SQL tem de abrir nas funções PUBLICADAS: a chave = a delas e o token de TESTE = o MP_ACCESS_TOKEN_TEST delas
+            try:
+                chave_do_servico()
+                chave_ok = True
+            except Exception as e:  # noqa: BLE001 — só o tipo na tela (nada do cofre)
+                print(f"   (a chave do cofre não carregou: {type(e).__name__})", flush=True)
+                chave_ok = False
+            p.check(chave_ok, "--conexao-sql: a MP_TOKENS_CHAVE do cofre (só na memória) = a das funções (pelo digest)")
+            st, lista, _ = B.http("GET", f"https://api.supabase.com/v1/projects/{B.PRINCIPAL_REF}/secrets", None,
+                                  {"Authorization": f"Bearer {B.ler('.pc-pat')}"})
+            digest = next((str(x.get("value") or "").lower() for x in (lista if isinstance(lista, list) else []) if x.get("name") == "MP_ACCESS_TOKEN_TEST"), "")
+            teste = (CASA / ".physiq-mp-test").read_text(encoding="utf-8").strip() if (CASA / ".physiq-mp-test").exists() else ""
+            token_ok = st == 200 and bool(teste) and digest == sha256_hex(teste)
+            p.check(token_ok, f"--conexao-sql: o ~/.physiq-mp-test = o MP_ACCESS_TOKEN_TEST das funções (pelo digest) ({st})")
+            pronto = chave_ok and token_ok
+    return w2 and pronto
 
 
 def autotestes() -> None:
@@ -2457,11 +2550,18 @@ def main() -> int:
     ap.add_argument("--pagador-email", default=None, help="oauth_real: o pagador esperado (padrão: o do COMPRADOR de teste — MENOR 21)")
     ap.add_argument("--canal", default="msedge", help="oauth_real: o navegador do Playwright")
     ap.add_argument("--com-tela", action="store_true", help="oauth_real: abre a janela")
+    ap.add_argument("--conexao-sql", action="store_true",
+                    help="padrão: a conexão simulada por SQL do servidor SÓ no staging (o upsert do prof_mp_simular_conexao), não pela função — o "
+                         "master de teste não é master no Auth (hml-02/H-04) e a função só o aceita pelo app_metadata; a MP_TOKENS_CHAVE vem "
+                         "do cofre (mp_conta.py) só na memória")
     modo_ = ap.add_mutually_exclusive_group()
     modo_.add_argument("--seco", action="store_true")
     modo_.add_argument("--limpar", action="store_true")
     a = ap.parse_args()
-    CTX.update(local=a.local, redirect_proprio=a.redirect_proprio, pagador_email=a.pagador_email, canal=a.canal, com_tela=a.com_tela)
+    if a.local and a.conexao_sql:
+        ap.error("--conexao-sql só vale no padrão (o --local grava a integração com os tokens do simulador e a chave da rodada)")
+    CTX.update(local=a.local, redirect_proprio=a.redirect_proprio, pagador_email=a.pagador_email, canal=a.canal, com_tela=a.com_tela,
+               conexao_sql=a.conexao_sql)
     validos = CASOS_LOCAL if a.local else CASOS_STAGING
     padrao = CASOS_LOCAL if a.local else tuple(c for c in CASOS_STAGING if c not in SO_PEDINDO)
     casos = [c.strip() for c in (a.casos or ",".join(padrao)).split(",") if c.strip()]

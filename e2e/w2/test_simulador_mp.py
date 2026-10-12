@@ -614,6 +614,38 @@ class ApiPecasPurasTest(unittest.TestCase):
         sem = {k: v for k, v in est.items() if k != "master_papel"}  # um estado de antes da correção: não mexe no perfil
         self.assertFalse([c for c in API.comandos_do_desfazer(sem) if "profiles" in c])
 
+    def test_conexao_simulada_por_sql_como_o_prof_mp_simular_conexao(self) -> None:
+        # o padrão sem master no Auth (hml-02/H-04; a pagamentos-aluno só aceita o master pelo app_metadata — a regra fica): a conexão
+        # simulada vai por SQL do servidor SÓ no staging, com as MESMAS colunas do upsert do prof_mp_simular_conexao — o token só CIFRADO
+        conta, chave = str(uuid.uuid4()), API.nova_chave()
+        token = "TEST-0000000000000000-000000-abcdef0123456789"
+        cifra = API.cifrar(token, API.dado_associado(conta, "access"), chave)
+        c = API.comando_simular_sql(conta, 494603793, "TEST-abcdef01-2345-6789-abcd-ef0123456789", cifra, "m1")
+        self.assertTrue(c.lstrip().startswith("insert into staging.recebimento_integracoes ("))
+        self.assertNotIn("public.", c)
+        self.assertNotIn(token, c)                                       # o token em claro nunca vai no SQL
+        self.assertIn(f"'{cifra}'", c)
+        for trecho in ("'mercadopago', 'ativa', 494603793, 'TESTE (simulada)', 'TEST-abcdef01-2345-6789-abcd-ef0123456789'",
+                       "null, now() + interval '180 days', true, 'teste_sem_oauth', null, 0, now(), null, 'm1'",
+                       "on conflict (conta_id, provedor) do update set", "mp_refresh_token = null", "mp_erro = null",
+                       "mp_renovar_tentativas = 0", "desconectada_em = null", "atualizado_por = excluded.atualizado_por"):
+            self.assertIn(trecho, c)
+        # a chave pública fora do filtro da função (só TEST-, 8 a 72) vira null; conta, cifra ou user id fora do formato → recusa
+        self.assertNotIn("APP_USR", API.comando_simular_sql(conta, 1, "APP_USR-abcdef01-2345", cifra, None))
+        self.assertIn("'TESTE (simulada)', null, ", API.comando_simular_sql(conta, 1, None, cifra, None))
+        for args in (("x", 1, None, cifra, None), (conta, 0, None, cifra, None), (conta, 1, None, "v1:curta", None),
+                     (conta, 1, None, token, None)):
+            with self.assertRaises(ValueError):
+                API.comando_simular_sql(*args)
+        self.assertEqual(API.CASOS_SIMULADOS, {"simulada", "pix", "cartao", "automatica", "desconectar", "master", "erro", "webhook"})
+
+    def test_conexao_sql_so_no_padrao(self) -> None:
+        with mock.patch.object(sys, "argv", ["api.py", "--local", "--conexao-sql", "--seco"]), \
+                mock.patch("sys.stderr", new_callable=__import__("io").StringIO) as erro, self.assertRaises(SystemExit) as e:
+            API.main()
+        self.assertEqual(e.exception.code, 2)
+        self.assertIn("--conexao-sql só vale no padrão", erro.getvalue())
+
     def test_importar_nao_abre_rede(self) -> None:
         self.assertIsNone(API.B)   # a base só carrega no main
         self.assertEqual(API.PORTAS["sim"], 8798)
