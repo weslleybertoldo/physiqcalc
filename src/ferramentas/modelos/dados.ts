@@ -75,9 +75,10 @@ export async function listarModelos(q: QuemListaModelos): Promise<ResultadoModel
       tipo: "plano",
       // hml-17 (H-38): os ★ vêm da planos_favoritos (o banco monta o plano com os alimentos de verdade — lidos direto, o RLS de
       // alimentos tirava o alimento de outra nutri e a kcal do ★ caía); aqui ficam só os da pessoa e os alunos da conta ativa,
-      // do mais recente para o mais antigo (o filtro de antes)
+      // do mais recente para o mais antigo (o filtro de antes). hml-20c (H-108): o filtro vai ao SERVIDOR (o dono do token e a conta) —
+      // os ★ das outras contas não descem; o filtro daqui fica como 2ª trava
       rodar: async () => {
-        const planos = (await listarPlanosFavoritos()).filter((p) => p.nutricionista_id === uid && p.paciente?.conta_id === contaId);
+        const planos = (await listarPlanosFavoritos({ conta: contaId })).filter((p) => p.nutricionista_id === uid && p.paciente?.conta_id === contaId);
         fontes.planos = planos.slice(0, MAX_PLANOS).map((p) => ({
           id: p.id,
           updated_at: p.updated_at,

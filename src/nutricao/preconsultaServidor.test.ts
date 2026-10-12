@@ -262,7 +262,10 @@ describe("hml-20c — o módulo da Pré-consulta (como a pessoa): o que vai ao b
     const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/preconsulta.ts"), "utf-8");
     expect(fonte).not.toMatch(/SERVICE_ROLE|service_role|createClient\(/);
     expect(fonte).toMatch(/c\.comoPessoa\.from\(g\.tabela\)/);
-    expect(fonte.match(/falha\(c, acao, error, ERROS_DA_PRECONSULTA\)/g)).toHaveLength(3);
+    expect(fonte.match(/return falha\(c, acao, error\);/g)).toHaveLength(3);
+    expect(fonte).toMatch(/const t = erroDaRpc\(e, ERROS_DA_PRECONSULTA\);/);
+    // não puxa a porta (o tsc do app não conhece o Deno nem o esm.sh): o contexto é estrutural, como o do leituras.ts
+    expect(fonte).not.toMatch(/^import[^;]*(porta-pessoa|\.\/comum\.ts)/m);
     expect(fonte).toMatch(/crypto\.getRandomValues\(new Uint8Array\(SLUG_PRECONSULTA_TAMANHO\)\)/);
   });
 });

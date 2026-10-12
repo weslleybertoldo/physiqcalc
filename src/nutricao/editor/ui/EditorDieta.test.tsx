@@ -9,17 +9,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn(), erro: vi.fn(), ok: vi.fn() }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-colega", email: "colega@teste.com" } }) }));
 vi.mock("sonner", () => ({ toast: { success: (...a: unknown[]) => h.ok(...a), error: (...a: unknown[]) => h.erro(...a), message: vi.fn() } }));
-vi.mock("@/integrations/principal/client", () => ({
-  PRINCIPAL_SCHEMA: "staging",
-  principalConfigurado: true,
-  principal: {
-    rpc: (...a: unknown[]) => h.rpc(...a),
-    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
-    from: (t: string) => {
-      throw new Error(`gravação/leitura direta na tabela ${t}`);
+// hml-20c (H-42): a LEITURA do plano vai pela nutricao (o `ler` da plano_alimentar) — o módulo de verdade do servidor roda sobre o MESMO
+// h.rpc (src/test/nutricaoFalsa.ts); o h.invoke segue vendo só as GRAVAÇÕES (o que estes testes contam).
+vi.mock("@/integrations/principal/client", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const rpc = (...a: unknown[]) => h.rpc(...a);
+  return {
+    PRINCIPAL_SCHEMA: "staging",
+    principalConfigurado: true,
+    principal: {
+      rpc,
+      functions: { invoke: (nome: string, o: { body?: unknown }) => (ehLer(o?.body) ? lerPeloModulo({ rpc })(o.body) : h.invoke(nome, o)) },
+      from: (t: string) => {
+        throw new Error(`gravação/leitura direta na tabela ${t}`);
+      },
     },
-  },
-}));
+  };
+});
 
 import { EditorDieta } from "./EditorDieta";
 

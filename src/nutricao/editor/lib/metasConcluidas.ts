@@ -1,10 +1,12 @@
 // Physiq H5 (N-40) — a nutricionista vê os ✓ que o aluno marca nas METAS do dia (NF4: "o aluno marca; a nutri vê"). Quem grava é só
 // o aluno, pela função aluno_marcar_meta (W11); a leitura é a política "metas_concluidas: responsavel le" da W2 (a nutricionista
 // responsável e o dono da conta). Aqui: a consulta e as regras PURAS da linha "Últimos 7 dias" de cada meta.
+// hml-20c (H-42 · jeito 2, etapa 2): a consulta vai pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa — a
+// metas_concluidas (as 2 colunas de hoje, o período, a mesma ordem); o erro chega como ErroLeitura com a frase fixa do código.
 import { useQuery } from "@tanstack/react-query";
 import { diaDaSemana } from "@/nutricao/app/metasUtil";
+import { lerNutricao } from "@/nutricao/leitura";
 import { normalizarDias } from "./metasUtil";
-import { supabase } from "./banco";
 
 export interface MetaConcluida {
   meta_id: string;
@@ -14,15 +16,8 @@ export interface MetaConcluida {
 
 /** Os ✓ das metas do aluno entre dois dias (yyyy-mm-dd, inclusive). */
 export async function listarMetasConcluidas(pacienteId: string, de: string, ate: string): Promise<MetaConcluida[]> {
-  const { data, error } = await supabase
-    .from("metas_concluidas")
-    .select("meta_id, data")
-    .eq("paciente_id", pacienteId)
-    .gte("data", de)
-    .lte("data", ate)
-    .order("data", { ascending: true });
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as { meta_id: string; data: string }[]).map((c) => ({ meta_id: c.meta_id, data: String(c.data).slice(0, 10) }));
+  const r = await lerNutricao("metas_concluidas", { aluno: pacienteId, de, ate });
+  return ((r.linhas ?? []) as { meta_id: string; data: string }[]).map((c) => ({ meta_id: c.meta_id, data: String(c.data).slice(0, 10) }));
 }
 
 export const chaveMetasConcluidas = (pacienteId: string, de: string, ate: string) => ["metas-concluidas", pacienteId, de, ate] as const;

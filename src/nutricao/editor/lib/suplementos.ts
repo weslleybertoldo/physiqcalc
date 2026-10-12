@@ -1,6 +1,6 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/suplementos.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao } from "@/nutricao/servidor";
 import { edicaoParaBanco, indicacaoParaBanco, produtoParaBanco, type FormIndicacao, type FormProduto } from "@/nutricao/editor/lib/suplementosUtil";
 
@@ -13,6 +13,8 @@ import { edicaoParaBanco, indicacaoParaBanco, produtoParaBanco, type FormIndicac
 // hml-19b (H-41 · jeito 2): as GRAVAÇÕES passam pela função nutricao (src/nutricao/servidor.ts), com a sessão de quem chama e as
 // mesmas assinaturas (o dono é quem chama: o servidor põe; a indicação nasce ativa lá). O ▲▼ grava as ordens que mudaram numa chamada só,
 // tudo ou nada (antes: N updates em paralelo).
+// hml-20c (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa — o
+// catálogo (produtos: o RLS decide, como hoje) e as indicações do aluno (indicacoes_do_aluno); o erro chega como ErroLeitura.
 
 export { nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
 export { dadosProfissionais } from "@/nutricao/editor/lib/profissional";
@@ -20,25 +22,12 @@ export { dadosProfissionais } from "@/nutricao/editor/lib/profissional";
 export type Produto = Database["public"]["Tables"]["produtos"]["Row"];
 export type Indicacao = Database["public"]["Tables"]["indicacoes_produto"]["Row"];
 
-const T_PRODUTOS = "produtos";
-const T_INDICACOES = "indicacoes_produto";
-
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
 // ---- Catálogo ----
 
 /** Produtos vivos da nutricionista (RLS), favoritos primeiro e depois por nome. */
 export async function listarProdutos(): Promise<Produto[]> {
-  const { data, error } = await supabase
-    .from(T_PRODUTOS)
-    .select("*")
-    .is("deleted_at", null)
-    .order("favorito", { ascending: false })
-    .order("nome", { ascending: true });
-  falhou(error);
-  return (data ?? []) as Produto[];
+  const r = await lerNutricao("produtos");
+  return (r.linhas ?? []) as Produto[];
 }
 
 export async function criarProduto(nutricionistaId: string, f: FormProduto): Promise<Produto> {
@@ -66,16 +55,8 @@ export async function excluirProduto(id: string): Promise<void> {
 
 /** Indicações vivas do paciente: ativas primeiro, na `ordem`, depois criação. */
 export async function listarIndicacoesDoPaciente(pacienteId: string): Promise<Indicacao[]> {
-  const { data, error } = await supabase
-    .from(T_INDICACOES)
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("ativa", { ascending: false })
-    .order("ordem", { ascending: true })
-    .order("created_at", { ascending: true });
-  falhou(error);
-  return (data ?? []) as Indicacao[];
+  const r = await lerNutricao("indicacoes_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as Indicacao[];
 }
 
 /** Cria a indicação copiando o produto escolhido (ou só o nome livre); `ordem` = próxima entre as ativas. Nasce ativa (o servidor põe). */

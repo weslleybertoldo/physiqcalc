@@ -1,7 +1,7 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/manipulados.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import { normalizarAtivos, type Ativo, type RegistroFormula } from "@/nutricao/editor/lib/manipuladosUtil";
+import { lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao } from "@/nutricao/servidor";
 
 // Acesso às tabelas `modelos_formula` e `formulas_manipuladas` (RLS: a nutricionista só vê os dela; master vê tudo; criar fórmula
@@ -12,28 +12,21 @@ import { acaoNutricao } from "@/nutricao/servidor";
 // hml-19b (H-41 · H-81 · jeito 2): as GRAVAÇÕES passam pela função nutricao (src/nutricao/servidor.ts), com a sessão de quem chama e
 // as mesmas assinaturas (o dono é quem chama: o servidor põe — o duplicar não leva mais o id da autora). Os 3 modelos padrão do 1º
 // acesso nascem no servidor (padroes_garantir { secao: "formula" }: 1 vez só, com trava), não mais aqui a cada abertura.
+// hml-20c (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa — os
+// modelos (modelos_formula: o RLS decide, como hoje) e as fórmulas do aluno (formulas_do_aluno); o nome sai do profissional.ts.
 
 export type ModeloFormula = Database["public"]["Tables"]["modelos_formula"]["Row"];
 export type ModeloFormulaUpdate = Database["public"]["Tables"]["modelos_formula"]["Update"];
 export type Formula = Database["public"]["Tables"]["formulas_manipuladas"]["Row"];
 export type FormulaUpdate = Database["public"]["Tables"]["formulas_manipuladas"]["Update"];
 
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
 /** Lista de ativos → jsonb (já normalizada: sem linha vazia, no máximo 30). */
 const ativosJson = (lista: Ativo[]): Ativo[] => normalizarAtivos(lista);
 
 // ---- Modelos ----
 export async function listarModelosFormula(): Promise<ModeloFormula[]> {
-  const { data, error } = await supabase
-    .from("modelos_formula")
-    .select("*")
-    .is("deleted_at", null)
-    .order("favorito", { ascending: false })
-    .order("titulo", { ascending: true });
-  falhou(error);
-  return (data ?? []) as ModeloFormula[];
+  const r = await lerNutricao("modelos_formula");
+  return (r.linhas ?? []) as ModeloFormula[];
 }
 
 /**
@@ -79,15 +72,8 @@ export async function salvarComoModelo(nutricionistaId: string, r: RegistroFormu
 // ---- Fórmulas do paciente ----
 /** Fórmulas vivas do paciente, prescrição mais recente primeiro. */
 export async function listarFormulasDoPaciente(pacienteId: string): Promise<Formula[]> {
-  const { data, error } = await supabase
-    .from("formulas_manipuladas")
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("prescrita_em", { ascending: false })
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as Formula[];
+  const r = await lerNutricao("formulas_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as Formula[];
 }
 
 export async function criarFormula(nutricionistaId: string, pacienteId: string, r: RegistroFormula): Promise<Formula> {
@@ -123,7 +109,7 @@ export async function excluirFormula(id: string): Promise<void> {
   await acaoNutricao("formula_excluir", { id });
 }
 
-/** Nome da nutricionista (assinatura do PDF) — mesma consulta das orientações (W10). */
-export { nomeDaNutricionista } from "@/nutricao/editor/lib/orientacoes";
+/** Nome da nutricionista (assinatura do PDF) — hml-20c: a fonte única (profissional.ts, a consulta `profissional` no lote da tela). */
+export { nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
 /** CRN/telefone/endereço no PDF quando já existirem (W15; preenchidos na W35). */
 export { dadosProfissionais } from "@/nutricao/editor/lib/profissional";

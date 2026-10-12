@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // hml-14b (B21): a aba Diário lê UMA página do período no banco — o aluno e o "só não reagidas" filtram lá, o total vem junto, o dia
 // partido pela página pede o total dele ao banco e as opções do filtro de aluno também vêm do banco.
+// hml-20c (H-42): as leituras vão pela nutricao (o `ler`) — o módulo de verdade do servidor roda sobre o MESMO banco falso daqui
+// (src/test/nutricaoFalsa.ts), como quem está logado ("u1"): o pedido que chega ao banco é o mesmo (o recorte com o id do TOKEN, os
+// filtros, a ordem, a página e o HEAD do dia cortado — agora na MESMA ida), com as colunas do tipo no lugar do "*" e o teto de 1000.
+import { MENSAGEM_ERRO_LEITURA } from "@/nutricao/leitura";
 const h = vi.hoisted(() => ({ consultas: [] as { tabela: string; chamadas: unknown[][] }[], respostas: [] as unknown[] }));
-vi.mock("@/integrations/principal/client", () => ({
-  PRINCIPAL_SCHEMA: "staging",
-  principal: {
+vi.mock("@/integrations/principal/client", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const banco = {
     // consulta falsa: guarda cada chamada (select, filtros, ordem, range…) e responde com a próxima resposta da fila
     from: (tabela: string) => {
       const registro = { tabela, chamadas: [] as unknown[][] };
@@ -22,8 +26,10 @@ vi.mock("@/integrations/principal/client", () => ({
       });
       return cadeia;
     },
-  },
-}));
+  };
+  const invoke = (_f: string, o: { body?: unknown }) => (ehLer(o?.body) ? lerPeloModulo(banco, { userId: "u1" })(o.body) : Promise.reject(new Error("só leitura aqui")));
+  return { PRINCIPAL_SCHEMA: "staging", principal: { ...banco, functions: { invoke } } };
+});
 
 import { alunoDoFiltro, diasQuePodemContinuar, listarAlunosDoDiario, listarDiarioPaginaComDias } from "./diario";
 
@@ -67,7 +73,9 @@ describe("Diário › página do banco (hml-14b)", () => {
     expect(chamou(0, "gte")).toEqual([["data_hora", DE]]);
     expect(chamou(0, "or")).toEqual([["conta_id.eq.c1,and(conta_id.is.null,nutricionista_id.eq.u1)", { referencedTable: "paciente" }]]);
     expect(chamou(0, "eq")).toEqual([["paciente_id", ZE]]);
-    expect(chamou(0, "is")).toEqual([["deleted_at", null], ["reacao_nutri", null]]);
+    // (hml-20c: a ordem dos 2 "is" no pedido mudou — o "só não reagidas" vem antes do da Lixeira; o filtro é o mesmo)
+    expect(chamou(0, "is")).toHaveLength(2);
+    expect(chamou(0, "is")).toEqual(expect.arrayContaining([["deleted_at", null], ["reacao_nutri", null]]));
     expect(chamou(0, "order").map((o) => o[0])).toEqual(["data_hora", "created_at", "id"]);
     expect(chamou(0, "range")).toEqual([[0, 19]]);
     // o total do dia 01/10 (HEAD), com os mesmos filtros
@@ -84,7 +92,7 @@ describe("Diário › página do banco (hml-14b)", () => {
     expect(h.consultas).toHaveLength(1);
     expect(chamou(0, "eq")).toEqual([]);
     h.respostas.push({ data: null, error: { message: "canceling statement due to statement timeout" }, count: null });
-    await expect(listarDiarioPaginaComDias("c1", "u1", { deIso: DE, alunoId: "", soNaoReagidas: false }, 1)).rejects.toMatchObject({ message: /statement timeout/ });
+    await expect(listarDiarioPaginaComDias("c1", "u1", { deIso: DE, alunoId: "", soNaoReagidas: false }, 1)).rejects.toMatchObject({ message: MENSAGEM_ERRO_LEITURA.erro_interno });
   });
 
   it("as opções do filtro de aluno: quem tem foto VIVA no período, da conta, por nome — do banco", async () => {
@@ -94,7 +102,7 @@ describe("Diário › página do banco (hml-14b)", () => {
     expect(String(chamou(0, "select")[0][0])).toContain("registros:diario_alimentar!inner(id)");
     expect(chamou(0, "is")).toEqual([["registros.deleted_at", null]]);
     expect(chamou(0, "gte")).toEqual([["registros.data_hora", DE]]);
-    expect(chamou(0, "limit")).toEqual([[1, { referencedTable: "registros" }]]);
+    expect(chamou(0, "limit")).toEqual([[1, { referencedTable: "registros" }], [1000]]); // hml-20c: + o teto de 1000 (o max_rows que já valia)
     expect(chamou(0, "order").map((o) => o[0])).toEqual(["nome", "id"]);
   });
 });

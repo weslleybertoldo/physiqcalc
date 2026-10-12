@@ -218,7 +218,9 @@ describe("hml-19b — as libs da Dieta e das Dietas gravam pela nutricao (mesma 
   it("as 72 funções de gravação estão aqui; toda outra função exportada das 11 libs é leitura ou regra pura (nenhuma gravação ficou de fora)", () => {
     expect(CASOS).toHaveLength(72);
     const modulos = { planos, receitas, alimentos, alimentosPainel, acompanhamento, calculos, suplementos, manipulados, metas, orientacoes, diario };
-    const LEITURA = /^(listar|buscar|contar|nomesPara|nomeDa|dadosProfissionais|lerPagina|montar|manter|recorte|alimentoEhMeu|urlAssinada|urlsAssinadas|alunoDoFiltro|diasQuePodem|chave|use)/;
+    // hml-20c: + as regras puras novas das leituras pelo servidor (paramsDaBusca — os params da busca de alimentos; diasDoPeriodo — os
+    // inícios de dia locais do diário)
+    const LEITURA = /^(listar|buscar|contar|nomesPara|nomeDa|dadosProfissionais|lerPagina|montar|manter|recorte|alimentoEhMeu|urlAssinada|urlsAssinadas|alunoDoFiltro|diasQuePodem|chave|use|paramsDaBusca|diasDoPeriodo)/;
     const noContrato = new Set(CASOS.map((c) => c.nome));
     const semDecisao: string[] = [];
     for (const [modulo, exportados] of Object.entries(modulos)) {

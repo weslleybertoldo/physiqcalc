@@ -17,7 +17,7 @@
 // com o CÓDIGO na mensagem, como o das gravações (a tela compara "sem_internet").
 // Online (9A): sem internet nada é gravado e a tela avisa.
 import { PRINCIPAL_URL, principal } from "@/integrations/principal/client";
-import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
+import { ErroLeitura, lerNutricao, urlAssinadaDoServidor } from "@/nutricao/leitura";
 import { ErroNutricao, acaoNutricao } from "@/nutricao/servidor";
 import { mimeDaFotoDiario, type Refeicao } from "./diarioUtil";
 import type { DadosDieta, MatriculaNutricao, RegistroDiario } from "./tipos";
@@ -160,15 +160,11 @@ export async function urlsDoDiario(registros: Pick<RegistroDiario, "id" | "path"
   const saida: Record<string, string> = {};
   for (const r of respostas) {
     for (const linha of (Array.isArray(r.linhas) ? r.linhas : []) as Array<{ id?: unknown; url?: unknown }>) {
-      const u = urlAssinadaDoServidor(linha.url);
+      // hml-20c (H-106): a montagem única da URL relativa (src/nutricao/leitura.ts), com a mesma base de antes (o cliente do principal)
+      const u = urlAssinadaDoServidor(linha.url, PRINCIPAL_URL);
       if (typeof linha.id === "string" && u) saida[linha.id] = u;
     }
   }
   return saida;
 }
 
-/** A URL assinada que o servidor devolve (relativa ao projeto) montada com o domínio do cliente do principal; fora do formato → null. */
-function urlAssinadaDoServidor(relativa: unknown): string | null {
-  if (typeof relativa !== "string" || !relativa.startsWith("/storage/v1/object/sign/") || !PRINCIPAL_URL) return null;
-  return `${PRINCIPAL_URL.replace(/\/+$/, "")}${relativa}`;
-}
