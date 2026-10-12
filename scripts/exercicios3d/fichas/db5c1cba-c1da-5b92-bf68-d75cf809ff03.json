@@ -1,0 +1,421 @@
+{
+  "uuid": "db5c1cba-c1da-5b92-bf68-d75cf809ff03",
+  "nome": "Elíptico",
+  "cena": "eliptico",
+  "grupo": "Cardio",
+  "subgrupo": "Cardiorrespiratório · membros inferiores e superiores",
+  "padrao_movimento": "cardio",
+  "equipamento": "cardio",
+  "variacao": "em pé",
+  "alvos": [
+    "quadriceps",
+    "gluteo"
+  ],
+  "auxiliares": [
+    "posterior",
+    "panturrilha",
+    "dorsal"
+  ],
+  "camera": {
+    "az": 66,
+    "el": 8,
+    "dist": 5.0,
+    "alvo": [
+      0,
+      -0.05,
+      1.0
+    ]
+  },
+  "camera_vistas": {
+    "dist": 5.0,
+    "alvo": [
+      0,
+      -0.1,
+      1.0
+    ]
+  },
+  "ida_s": 1.1,
+  "fps": 30,
+  "ciclo": true,
+  "ciclo_motivo": "Elíptico: o movimento é cíclico (a volta da manivela se repete) — t = 0 → 1 é UMA volta (t = 0 pedal direito no ponto mais à frente, t = 0,5 no mais atrás) e a pose em t = 1 é igual à de t = 0; o app repete o ciclo (LoopRepeat) em vez de ir e voltar, o que faria a elipse andar pra trás. ida_s = 1,10 s = 1 volta a 54,5 voltas/min (Prosser 2011: 109 passos/min no elíptico; Moreside & McGill 2012: 53 ± 7 ciclos/min no ritmo escolhido pra 30 min) e fps = 30 (33 quadros na volta): o pé anda numa elipse de ~1,1 m por volta e o calcanhar sobe e desce atrás; o maior salto entre 2 quadros foi medido em 67 mm com 24 quadros na volta (16 quadros/s dariam 18 na volta e ~89 mm, acima da regra de 80 mm); com 33 quadros fica em ~49 mm (a regra continua a mesma, só tem mais quadros no mesmo 1,10 s).",
+  "movimento": "Elíptico em ritmo moderado (54,5 voltas por minuto), em pé nos 2 pedais com a ponta dos pés na borda da frente deles e as mãos fechadas nos manetes móveis: os pés fazem a elipse sem sair dos pedais — vão pra trás por baixo, estendendo o quadril e o joelho (o joelho nunca estica de todo, fica em ~15°), e voltam pra frente por cima, dobrando o quadril (a coxa até ~45° à frente da vertical) e o joelho (até ~73°); na parte de trás da volta o calcanhar sobe um pouco do pedal (o pé gira na base dos dedos, que fica apoiada) e desce de novo quando o pé vem pra frente por cima. Os manetes vão e voltam ao contrário das pernas (a mão direita vai à frente quando o pé direito vai pra trás), com os cotovelos dobrados (~90° no meio do vaivém); o tronco fica em pé, um pouco à frente (~9°), girando um pouco junto com os braços, a pelve parada e a cabeça olhando pra frente.",
+  "cinesiologia": {
+    "plano": "sagital, cíclico, alternado (cadeia fechada: os 2 pés nos pedais o tempo todo), em pé, com os braços nos manetes",
+    "articulacoes": "quadril (extensão no apoio, quando o pedal vai pra trás por baixo; flexão na volta por cima), joelho (idem), tornozelo (dorsiflexão no apoio; o calcanhar sobe atrás e o tornozelo volta a fletir pra baixo na volta por cima), ombro (flexão quando o manete vai à frente, extensão quando volta) e cotovelo (estende indo à frente, dobra voltando); o tórax gira um pouco em relação à pelve, junto com os braços",
+    "agonistas": "quadríceps (extensão do joelho no apoio) e glúteo máximo (extensão do quadril)",
+    "sinergistas": "isquiotibiais (extensão do quadril), gastrocnêmio e sóleo (empurram o pedal na parte de trás), e nos manetes os músculos do ombro e do cotovelo (empurrar e puxar) com o grande dorsal (puxa o manete de volta)",
+    "estabilizadores": "abdominais, oblíquos e eretores da espinha (tronco em pé, girando pouco), glúteo médio (pelve parada nas 2 pernas), tibial anterior e os músculos do pé (o pé apoiado no pedal), antebraço e mão (fechada no manete)",
+    "fases": "apoio (do pedal mais à frente até o mais atrás: o pé vai pra trás por baixo, o quadril e o joelho estendem) e volta por cima (do mais atrás ao mais à frente: o quadril e o joelho dobram), uma perna a meia volta da outra; o manete do mesmo lado faz o contrário (vai à frente quando o pé vai pra trás)"
+  },
+  "referencias": [
+    "free-exercise-db (yuhonas, domínio público), \"Elliptical Trainer\" (o fonte_en do catálogo), lido em 11/10/2026: \"To begin, step onto the elliptical and select the desired option from the menu.\"; \"The handles can be used to monitor your heart rate to help you stay at an appropriate intensity.\"; \"primaryMuscles\": [\"quadriceps\"], \"secondaryMuscles\": [\"calves\", \"glutes\", \"hamstrings\"]; as 2 fotos: em pé no elíptico (Life Fitness), um pé à frente e mais alto, as mãos fechadas nos manetes móveis.",
+    "ACE — \"Best Cardio Machines to Meet Your Fitness Goals\" (Consumer Reports, 17/09/2022, com Sabrena Jo, da ACE): \"Check to make sure you are able to comfortably maintain an upright posture while holding on to the handgrips.\"; \"As the machine moves through its path, your wrists, arms, shoulders, and knees should be able to comfortably mimic a running motion.\"; \"One advantage to these machines is that they can often work both the upper and lower body at the same time.\" ACE, comunicado de 21/05/1998 (estudo de Kravitz): \"five of the seven women hit the Cyclone’s center control panel with their knees\" (a folga joelho × painel).",
+    "Knutzen KM, McLaughlin WL, Lawson AJ, Row BS, Martin LT. Influence of Ramp Position on Joint Biomechanics During Elliptical Trainer Exercise. Open Sports Sci J. 2010;3:165-177 (Precor EFX 546, sem manetes, 120 strides/min): \"all subjects placed their feet on the pedals with the front edge of their shoes up against the front edge of the pedal\"; \"The stance phase was defined as the phase of the elliptical that begins with the most anterior pedal position and ends at the most posterior pedal position.\"; Tabela 1 (rampa baixa): tornozelo \"Dorsiflexion -1.30 (5.11)\" / \"Plantarflexion 19.40 (6.44)\", joelho \"Flexion 69.14 (4.61)\" / \"Extension 14.91 (7.40)\", quadril \"Flexion 45.63 (2.89)\" / \"Extension 6.78 (3.73)\"; Fig. 1: θhip = coxa × vertical (sem marcador na pelve); \"The knee did not reach a fully extended position during the elliptical stride\"; \"Peak knee and hip extension occurred during the last quarter of the stance phase, while peak knee and hip flexion occurred during the final quarter of the closed-chain swing phase.\"; \"Peak ankle dorsiflexion occurred during the stance phase and peak plantarflexion occurred during the closed-chain swing phase.\"; \"These observations indicate that the motion of the elliptical stride is distinct from gait.\"",
+    "Burnfield JM, Shu Y, Buster T, Taylor A. Similarity of joint kinematics and muscle demands between elliptical training and walking: implications for practice. Phys Ther. 2010;90(2):289-305 (resumo): \"Significantly greater flexion was documented at the trunk, pelvis, hip, and knee during elliptical training than during walking.\"; \"During elliptical training, gluteus maximus and vastus lateralis muscle activation were increased; medial hamstring, gastrocnemius, soleus, and tibialis anterior muscle activation were decreased\".",
+    "Burnfield JM, Shu Y, Buster TW, Taylor AP, Nelson CA. Phys Ther. 2011;91(11):1604-1617 (PMC3367158): \"All of the devices have static handles. In addition, each device has a set of dynamic (nonfixed) handles that move reciprocally with leg motion (ie, if the right foot is posterior, then the right hand is anterior).\"",
+    "Burnfield JM, Cesar GM, Buster TW. Clin Biomech. 2020;80:105142 (resumo): \"sustained elliptical pedal contact time\"; \"Heel contact time on SportsArt and Octane exceeded walking, and SportsArt heel contact time exceeded Life Fitness.\" Cesar GM, Buster TW, Burnfield JM. Foot. 2020;45:101716 (resumo): \"its constant double-limb support diminishes recurring high-impact plantar forces while allowing exercise in a functional, upright posture.\"",
+    "Moreside JM, McGill SM. How do elliptical machines differ from walking: A study of torso motion and muscle activity. Clin Biomech. 2012;27:738-743 (Octane, 40 homens): \"self-selected speed ... varied from 40 to 70 cpm with a mean speed of 53(7) cpm\"; \"holding onto the moving handles (\\\"handles\\\")\"; \"In all variations of elliptical trainer use, participants adopted a posture of increased average forward flexion compared to walking: ranging from 8.8° (46/freehand/normal) to 12.3° (46/bars/fast) compared to 5.4° in walking\"; \"While walking averaged 14.8° of rotation, the elliptical elicited amounts varying from 16.6° (46/bars/normal) to 23.1° (66/handles/fast).\" (Fig. 2, lida na figura: com os manetes, 46 cm, ritmo normal, flexão lombar média ~10° e rotação lombar total ~20°); grande dorsal (LD) medido com os manetes: \"the IO and LD muscles became more active either to drive the elliptical velocity via the handles or stabilize the torso\".",
+    "Prosser LA et al. Gait Posture. 2011;33(2):244-250 (PMC3299003): \"The average self-selected W cadence was 107.9 steps per minute (SD 8.3), which was then used as the target pace for C and E trials. The actual cadence was 111.0 steps per minute (SD 15.5) for C, and 109.0 steps per minute for E (SD 12.6).\"; \"Elliptical training demonstrated greater quadriceps activity and greater quadriceps/hamstrings coactivation than all other conditions.\"",
+    "Mier CM, Feito Y. Res Q Exerc Sport. 2006;77(4):507-513 (resumo): \"higher (p <. 001) VO2, VE, and RPE, but not HR, during combined arm-leg versus leg-only exercise at any given intensity\"; \"The elliptical trainer offers (a) a variety of intensities appropriate for most individuals and (b) both arm and leg exercise.\"",
+    "Alazzawi S et al. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29 (PMC5241541), Tabela 5: \"Dorsiflexion 0-20 degrees\", \"Plantar flexion 0-50 degrees\" — o teto da dorsiflexão: o calcanhar sobe do pedal na parte de trás da volta pra o tornozelo não passar disso.",
+    "Life Fitness — Integrity Series Elliptical Cross-Trainer (página do produto e fichas de venda PM-37-17 e PM-11-21): \"Stride Length | 20\\\" (51cm)\", \"Step-Up Height | 9.5\\\" (24cm)\", \"Oversized 15\\\" FlexForm Pedals\", \"Minimum Space between Foot Pedals | 3\\\" (7.6cm)\", \"Dimensions (L” x W” x H”) | 86\\\" x 29\\\" x 64\\\" (218 x 73 x 163 cm)\", \"Handlebars | Moving Multi-grip, Stationary\", \"Rear wheels for easy mobility\" — as medidas do elíptico (equip3d.eliptico).",
+    "Miller L. Stationary exercise device. US 5,383,829 A (1995): \"Each arm link 64, 66 is pivotally supported by the frame 12 at support point 68.\"; \"the arm links 64,66 also include handle portions 64a, 66a associated therewith.\" — a ligação (manivela atrás, braço do pedal, balancim com o manete). Precor EFX 835 (folheto): \"upper body moving handlebars deliver a total body workout\", \"Exercisers easily target glutes, quadriceps, and calves\"."
+  ],
+  "checagens": {
+    "pes_no_chao": false,
+    "pes_no_chao_fonte": "Os pés ficam nos pedais, não no chão: em pé nos 2 pedais o tempo todo (Cesar 2020: \"its constant double-limb support\"; Burnfield 2020: \"sustained elliptical pedal contact time\"), a ponta do pé na borda da frente do pedal (Knutzen 2010). As zonas medem o pé encostando no pedal em todo quadro (a bola e os dedos sempre apoiados); na parte de trás da volta o calcanhar sobe do pedal (o pé gira na base dos dedos) — o info da cena mostra a altura do calcanhar em cada quadro.",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "As regras padrão são de base parada com os 2 pés no chão (pés paralelos, um não à frente do outro); no elíptico os pés estão nos pedais, um meia volta à frente do outro. As regras do elíptico estão nos ângulos abaixo (joelho na linha do pé, coluna neutra, pelve parada).",
+    "zonas": [
+      {
+        "nome": "pé esquerdo no pedal",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "equipamento": "eliptico_pedal_E",
+        "mm": [
+          -3,
+          3
+        ],
+        "t": "todos"
+      },
+      {
+        "nome": "pé direito no pedal",
+        "partes": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "equipamento": "eliptico_pedal_D",
+        "mm": [
+          -3,
+          3
+        ],
+        "t": "todos"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "joelho nunca estica de todo",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          10,
+          80
+        ],
+        "fonte": "Knutzen 2010 (\"The knee did not reach a fully extended position during the elliptical stride\"; \"the range for peak extension was 0 to 30 degrees of flexion\" e \"The range of peak knee flexion was 61 to 90 degrees\", todas as rampas)"
+      },
+      {
+        "nome": "joelho mais esticado no fim do apoio, pedal atrás e embaixo (direito)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": [
+          0.26,
+          0.34
+        ],
+        "graus": [
+          10,
+          22
+        ],
+        "fonte": "Knutzen et al. 2010 (Tabela 1, rampa baixa: joelho \"Extension 14.91 (7.40)\")"
+      },
+      {
+        "nome": "joelho mais esticado no fim do apoio, pedal atrás e embaixo (esquerdo)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": [
+          0.76,
+          0.84
+        ],
+        "graus": [
+          10,
+          22
+        ],
+        "fonte": "Knutzen et al. 2010 (Tabela 1, rampa baixa: joelho \"Extension 14.91 (7.40)\")"
+      },
+      {
+        "nome": "joelho bem dobrado na volta por cima (direito)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": [
+          0.7,
+          0.88
+        ],
+        "graus": [
+          62,
+          78
+        ],
+        "fonte": "Knutzen et al. 2010 (Tabela 1, rampa baixa: joelho \"Flexion 69.14 (4.61)\")"
+      },
+      {
+        "nome": "joelho bem dobrado na volta por cima (esquerdo)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": [
+          0.2,
+          0.38
+        ],
+        "graus": [
+          62,
+          78
+        ],
+        "fonte": "Knutzen et al. 2010 (Tabela 1, rampa baixa: joelho \"Flexion 69.14 (4.61)\")"
+      },
+      {
+        "nome": "coxa à frente no fim da volta por cima (direito)",
+        "medida": "coxa_em_pe",
+        "lado": "D",
+        "t": [
+          0.88,
+          0.97
+        ],
+        "graus": [
+          38,
+          52
+        ],
+        "fonte": "Knutzen et al. 2010 (Tabela 1, rampa baixa: quadril (θhip, coxa × vertical) \"Flexion 45.63 (2.89)\"; \"peak knee and hip flexion occurred during the final quarter of the closed-chain swing phase\")"
+      },
+      {
+        "nome": "coxa à frente no fim da volta por cima (esquerdo)",
+        "medida": "coxa_em_pe",
+        "lado": "E",
+        "t": [
+          0.38,
+          0.47
+        ],
+        "graus": [
+          38,
+          52
+        ],
+        "fonte": "Knutzen et al. 2010 (Tabela 1, rampa baixa: quadril (θhip, coxa × vertical) \"Flexion 45.63 (2.89)\")"
+      },
+      {
+        "nome": "coxa um pouco atrás da vertical no fim do apoio (direito)",
+        "medida": "coxa_em_pe",
+        "lado": "D",
+        "t": [
+          0.3,
+          0.42
+        ],
+        "graus": [
+          -12,
+          0
+        ],
+        "fonte": "Knutzen et al. 2010 (Tabela 1, rampa baixa: quadril \"Extension 6.78 (3.73)\"; \"Peak knee and hip extension occurred during the last quarter of the stance phase\")"
+      },
+      {
+        "nome": "coxa um pouco atrás da vertical no fim do apoio (esquerdo)",
+        "medida": "coxa_em_pe",
+        "lado": "E",
+        "t": [
+          0.8,
+          0.92
+        ],
+        "graus": [
+          -12,
+          0
+        ],
+        "fonte": "Knutzen et al. 2010 (Tabela 1, rampa baixa: quadril \"Extension 6.78 (3.73)\")"
+      },
+      {
+        "nome": "tornozelo de ~6° a 20° de dorsiflexão (o calcanhar sobe atrás)",
+        "medida": "tornozelo",
+        "t": "todos",
+        "graus": [
+          78,
+          98
+        ],
+        "fonte": "Alazzawi 2017, Tabela 5 (\"Dorsiflexion 0-20 degrees\"): o teto; Knutzen 2010 (amplitude de ~18° na rampa baixa: \"Dorsiflexion -1.30\" a \"Plantarflexion 19.40\", no segmento calcâneo → 5º metatarso; \"Peak ankle dorsiflexion occurred during the stance phase\"). O boneco em pé (neutro) mede 76°: +2° a +22° = 78° a 98°"
+      },
+      {
+        "nome": "joelho na linha do pé (sem entrar nem abrir)",
+        "medida": "joelho_valgo",
+        "t": "todos",
+        "mm": [
+          -15,
+          15
+        ],
+        "fonte": "ACE/CR (\"your wrists, arms, shoulders, and knees should be able to comfortably mimic a running motion\"): o joelho anda no plano quadril–tornozelo"
+      },
+      {
+        "nome": "tronco em pé, um pouco à frente",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          5,
+          14
+        ],
+        "fonte": "ACE/CR (\"Check to make sure you are able to comfortably maintain an upright posture while holding on to the handgrips.\"); Burnfield 2010 (\"Significantly greater flexion was documented at the trunk, pelvis, hip, and knee during elliptical training than during walking.\"); Moreside & McGill 2012 (flexão média no elíptico de 8.8° a 12.3°)"
+      },
+      {
+        "nome": "coluna neutra (um pouco fletida, sem curvar)",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          14
+        ],
+        "fonte": "Moreside & McGill 2012 (flexão lombar média \"ranging from 8.8° (46/freehand/normal) to 12.3° (46/bars/fast) compared to 5.4° in walking\")"
+      },
+      {
+        "nome": "cabeça olhando pra frente",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -16,
+          4
+        ],
+        "fonte": "ACE/CR (\"upright posture\"); free-exercise-db, foto (cabeça olhando pra frente — observação, não frase). O boneco em pé, no repouso, mede ~−11°"
+      },
+      {
+        "nome": "tórax gira pouco, junto com os braços",
+        "medida": "tronco_giro",
+        "t": "todos",
+        "graus": [
+          -11,
+          11
+        ],
+        "fonte": "Moreside & McGill 2012 (rotação lombar total de 16.6° a 23.1° no elíptico; ~20° com os manetes, Fig. 2b)"
+      },
+      {
+        "nome": "tórax virado pra direita com a mão direita atrás (pé direito na frente)",
+        "medida": "tronco_giro",
+        "t": 0.0,
+        "graus": [
+          -11,
+          -4
+        ],
+        "fonte": "Burnfield 2011 (\"if the right foot is posterior, then the right hand is anterior\"): o ombro vai com a mão"
+      },
+      {
+        "nome": "tórax virado pra esquerda com a mão direita à frente (pé direito atrás)",
+        "medida": "tronco_giro",
+        "t": [
+          0.48,
+          0.52
+        ],
+        "graus": [
+          4,
+          11
+        ],
+        "fonte": "Burnfield 2011 (\"if the right foot is posterior, then the right hand is anterior\")"
+      },
+      {
+        "nome": "braço direito à frente com o pé direito atrás",
+        "medida": "braco_frente",
+        "lado": "D",
+        "t": [
+          0.48,
+          0.52
+        ],
+        "graus": [
+          12,
+          25
+        ],
+        "fonte": "Burnfield 2011 (\"dynamic (nonfixed) handles that move reciprocally with leg motion (ie, if the right foot is posterior, then the right hand is anterior)\")"
+      },
+      {
+        "nome": "braço esquerdo atrás com o pé esquerdo na frente",
+        "medida": "braco_frente",
+        "lado": "E",
+        "t": [
+          0.48,
+          0.52
+        ],
+        "graus": [
+          0,
+          11
+        ],
+        "fonte": "Burnfield 2011 (\"if the right foot is posterior, then the right hand is anterior\")"
+      },
+      {
+        "nome": "braço direito atrás com o pé direito na frente",
+        "medida": "braco_frente",
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          0,
+          11
+        ],
+        "fonte": "Burnfield 2011 (\"if the right foot is posterior, then the right hand is anterior\")"
+      },
+      {
+        "nome": "braço esquerdo à frente com o pé esquerdo atrás",
+        "medida": "braco_frente",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          12,
+          25
+        ],
+        "fonte": "Burnfield 2011 (\"if the right foot is posterior, then the right hand is anterior\")"
+      },
+      {
+        "nome": "cotovelos dobrados (~90° no meio do vaivém)",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          70,
+          110
+        ],
+        "fonte": "ACE/CR (\"your wrists, arms, shoulders, and knees should be able to comfortably mimic a running motion\"); free-exercise-db, foto 1 (cotovelo ~90° — observação, não frase)"
+      },
+      {
+        "nome": "cotovelos perto do corpo",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          25
+        ],
+        "fonte": "ACE/CR (\"mimic a running motion\"); free-exercise-db, fotos (cotovelos perto do tronco — observação)"
+      },
+      {
+        "nome": "punho sem dobrar de lado demais",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -25,
+          20
+        ],
+        "fonte": "limites.py/tecnica3d.punho_desvio (Norkin & White, valores da AAOS): desvio radial normal até 20° e ulnar até 30°"
+      },
+      {
+        "nome": "pelve parada: nivelada",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -1,
+          1
+        ],
+        "fonte": "Cesar 2020 (\"constant double-limb support\"): os 2 pés apoiados, a pelve fica parada"
+      },
+      {
+        "nome": "pelve parada: sem girar",
+        "medida": "pelve_giro",
+        "t": "todos",
+        "graus": [
+          -1,
+          1
+        ],
+        "fonte": "Cesar 2020 (\"constant double-limb support\")"
+      },
+      {
+        "nome": "ombros nivelados",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -4,
+          4
+        ],
+        "fonte": "ACE/CR (\"upright posture\")"
+      }
+    ]
+  }
+}

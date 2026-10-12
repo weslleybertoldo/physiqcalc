@@ -6976,3 +6976,307 @@ def flexora_em_pe(nome="flexora", eixo=(-0.09, 0.57), lado=1, rolo=(0.04, -0.04,
                    x_torre=round(x_t, 3), rolo=(round(xr0, 3), round(xr1, 3)))
     return FlexoraEmPe(raizes, P, pegs, raio_g, comp_g / 2, medidas)
 # ===== fim: Flexora em pé ===========================================================================================================
+
+
+# ===== Elíptico =====================================================================================================================
+# ── ELÍPTICO DE ACADEMIA COM MANETES MÓVEIS, TRAÇÃO ATRÁS (Elíptico, lote 14, 12/10/2026) ───────────────────────────────────────────────
+# O "elliptical cross-trainer" de academia: a pessoa fica EM PÉ nos 2 PEDAIS (APOIO) e segura os 2 MANETES MÓVEIS. Atrás, a CAIXA DA
+# TRAÇÃO (a carenagem do volante e do gerador, parada) com o EIXO da manivela e as 2 MANIVELAS a 180° uma da outra, do lado de fora
+# dela; de cada manivela sai pra frente um BRAÇO DO PEDAL (preso no pino da manivela) com o PEDAL do lado de dentro, e a ponta da
+# frente de cada braço fica presa na ponta de baixo de um BALANCIM, que gira num CUBO no alto da coluna da frente e continua pra cima
+# até o PEGADOR — é o MANETE MÓVEL. É a ligação de 4 barras da patente de Miller (US 5,383,829 A, FIG. 4: "the guide member function
+# is provided by a pair of arm links 64 and 66. Each arm link 64, 66 is pivotally supported by the frame 12 at support point 68";
+# "the arm links 64,66 also include handle portions 64a, 66a associated therewith ... they also reciprocate, thereby providing upper
+# body exercise"): a elipse do pedal e o vaivém do manete SAEM da ligação (a manivela gira; o braço do pedal, o pedal e o balancim
+# seguem), não de um caminho desenhado. O pé vai pra trás por baixo e volta pra frente por cima, e o manete vai pra frente quando o
+# pé do mesmo lado vai pra trás (Burnfield et al. 2011: "if the right foot is posterior, then the right hand is anterior"). Na
+# frente, a COLUNA (2 pernas em A) com o cubo, o PAINEL num pescoço em cima do cubo e o PEGADOR FIXO embaixo do painel; embaixo, a
+# BASE (viga do meio e 2 travessas, com os pés reguladores e as rodinhas atrás).
+# Medidas de fabricante (Life Fitness Integrity Series Elliptical Cross-Trainer: página do produto e fichas de venda PM-37-17 e
+# PM-11-21): "Stride Length | 20" (51cm)" — a passada (o comprimento da elipse do pedal); "Step-Up Height | 9.5" (24cm)" — o topo do
+# pedal no ponto mais baixo; "Oversized 15" FlexForm Pedals" (38 cm de comprimento); "Minimum Space between Foot Pedals | 3" (7.6cm)";
+# "Dimensions (L” x W” x H”) | 86" x 29" x 64" (218 x 73 x 163 cm)" (o alto do painel a 1,63 m); "Handlebars | Moving Multi-grip,
+# Stationary"; "Rear wheels for easy mobility". A página não diz onde fica a tração: a foto do fabricante mostra a caixa grande
+# atrás e os balancins descendo do alto da coluna da frente até a ponta dos braços dos pedais (a mesma ligação). O quanto o pedal
+# sobe e desce não vem do Integrity (o Life Fitness X7 do Burnfield 2011, Tabela 2, vai de 31 a 49 cm de altura): aqui sai da
+# ligação (~15 cm). Escolha da fábrica (nenhum fabricante dá): a manivela, o cubo, os comprimentos do balancim e do braço do pedal e
+# onde o pedal fica nele (a cena acha os que dão a passada de 51 cm e o pedal a 24 cm embaixo), a largura do pedal (16 cm), o
+# ângulo da chapa do pedal no braço, os braços dos pedais e os balancins por fora das pernas, a forma da caixa da tração, da coluna,
+# do painel e dos pegadores e os tubos.
+# O que mexe POR QUADRO (girar(graus)): a manivela gira; cada braço do pedal anda com o pino da manivela e gira; cada pedal vai junto
+# com o seu braço; cada balancim (com o manete) gira em volta do cubo.
+# Uso numa cena (a pessoa olha pra −Y; x = 0 no meio):
+#   lig = e3.LigacaoEliptico(manivela=(y, z, r), cubo=(y, z), balancim=Ls, braco=Lf, pedal_no_braco=d, ...)   # só a conta, sem malha
+#   lig.pedal(s, graus)      # matriz 4x4 (mundo) do topo do pedal do lado s (+1 esquerdo) com a manivela DIREITA em `graus`
+#   el = e3.eliptico("eliptico", lig, manete=(centro, eixo, graus))   # o pegador do manete ESQUERDO onde a mão fecha nesse quadro
+#   no pose(t): el.girar(graus)
+#               el.manete(s)           # (centro, eixo) do pegador do lado s agora
+#   Cena(pose, el.equipamentos, pegadas=[(L, ck.Barra(el.manoplas[s], el.raio_manopla, el.meia_manopla, eixo=(0, 0, 1)))],
+#        apoios=el.apoios)
+# As raízes (cada uma um equipamento da cena; a rigidez é por raiz): "<nome>_estrutura" (parada: base, caixa da tração, coluna, cubo,
+# painel e pegador fixo; não encosta no corpo), "<nome>_manivela" (gira em volta do eixo; origem no eixo, X ao longo dele),
+# "<nome>_braco_E"/"_D" (os braços dos pedais: origem no pino da manivela; o braço aponta pra −Y na montagem), "<nome>_pedal_E"/"_D"
+# (APOIO dos pés: chapa, borracha e as bordas da frente e de fora, com as quinas chanfradas; origem no meio do topo da borracha, com
+# os eixos do mundo quando o pedal está deitado) e "<nome>_manete_E"/"_D" (o balancim com o manete: origem no cubo, o braço de baixo
+# apontando pra −Z na montagem; as mãos fecham no pegador "<nome>_manopla_E"/"_D", filho dele, com a origem no meio e o Z local ao
+# longo dele). Peças compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+class LigacaoEliptico:
+    """A ligação de 4 barras do elíptico (só a conta, sem malha), no plano YZ do mundo, com a pessoa olhando pra −Y. Em cada lado s
+    (+1 esquerdo, −1 direito): a manivela (eixo O, raio r) leva o pino C; o braço do pedal vai de C até J (comprimento Lf); o balancim
+    vai do cubo P até J (comprimento Ls). A manivela DIREITA fica em `graus` (0 = pino na frente do eixo, 90 = embaixo, 180 = atrás,
+    270 = em cima: crescendo, o pino passa por baixo indo pra trás) e a esquerda a 180° dela. O topo do pedal fica no braço a d m de C
+    e h m acima dele, com a chapa girada beta0 graus em relação ao braço (+ = a frente mais alta)."""
+
+    def __init__(self, manivela, cubo, balancim, braco, pedal_no_braco, altura_pedal=0.055, beta0=0.0, x_braco=0.24,
+                 x_manete=0.29, x_pedal=0.118):
+        self.O = Vector((0.0, manivela[0], manivela[1]))
+        self.r = manivela[2]
+        self.P = Vector((0.0, cubo[0], cubo[1]))
+        self.Ls, self.Lf = balancim, braco
+        self.d, self.h, self.beta0 = pedal_no_braco, altura_pedal, beta0
+        self.x_braco, self.x_manete, self.x_pedal = x_braco, x_manete, x_pedal
+
+    def angulo(self, s, graus):
+        return graus + (180.0 if s > 0 else 0.0)
+
+    def pontos(self, s, graus):
+        """C (pino da manivela), J (ponta da frente do braço do pedal = ponta de baixo do balancim), alfa (giro do braço em volta do X,
+        rad: o braço apontava pra −Y na montagem) e fi (giro do balancim, rad: o braço de baixo apontava pra −Z), no plano YZ."""
+        th = math.radians(self.angulo(s, graus))
+        C = self.O + Vector((0.0, -math.cos(th), -math.sin(th))) * self.r
+        D = self.P - C
+        dist = D.length
+        a = (self.Lf ** 2 - self.Ls ** 2 + dist ** 2) / (2 * dist)
+        hh = math.sqrt(max(self.Lf ** 2 - a * a, 0.0))
+        n = Vector((0.0, -D.z, D.y)) / dist                      # normal de CP pra baixo e pra frente: o balancim fica pendurado
+        J = C + D * (a / dist) + n * hh
+        u = (J - C) / self.Lf
+        w = (J - self.P) / self.Ls
+        return C, J, math.atan2(-u.z, -u.y), math.atan2(w.y, -w.z)
+
+    def braco(self, s, graus):
+        """Matriz 4x4 (mundo) do braço do pedal do lado s: origem no pino da manivela (x = s·x_braco)."""
+        C, J, alfa, fi = self.pontos(s, graus)
+        return Matrix.Translation(Vector((s * self.x_braco, C.y, C.z))) @ Matrix.Rotation(alfa, 4, "X")
+
+    def no_braco(self, s):
+        """Matriz 4x4 do topo do pedal no referencial do braço."""
+        return (Matrix.Translation(Vector((s * (self.x_pedal - self.x_braco), -self.d, self.h)))
+                @ Matrix.Rotation(math.radians(-self.beta0), 4, "X"))
+
+    def pedal(self, s, graus):
+        """Matriz 4x4 (mundo) do topo do pedal do lado s (origem no meio do topo da borracha; X de lado a lado, −Y pra ponta)."""
+        return self.braco(s, graus) @ self.no_braco(s)
+
+    def balancim(self, s, graus):
+        """Matriz 4x4 (mundo) do balancim do lado s: origem no cubo (x = s·x_manete)."""
+        C, J, alfa, fi = self.pontos(s, graus)
+        return Matrix.Translation(Vector((s * self.x_manete, self.P.y, self.P.z))) @ Matrix.Rotation(fi, 4, "X")
+
+    def inclinacao(self, s, graus):
+        """Inclinação do topo do pedal (graus, + = a frente mais alta)."""
+        return -math.degrees(self.pontos(s, graus)[2]) + self.beta0
+
+
+class Eliptico:
+    """Elíptico pronto na cena (eliptico())."""
+
+    def __init__(self, raizes, lig, medidas):
+        self.raizes = raizes                  # {"estrutura", "manivela", "braco_E", "braco_D", "pedal_E", "pedal_D", "manete_E", "manete_D"}
+        self.lig = lig
+        self.equipamentos = [raizes[k] for k in ("estrutura", "manivela", "braco_E", "braco_D", "manete_E", "manete_D")]
+        self.apoios = [raizes["pedal_E"], raizes["pedal_D"]]
+        self.pedais = {1: raizes["pedal_E"], -1: raizes["pedal_D"]}
+        self.bracos = {1: raizes["braco_E"], -1: raizes["braco_D"]}
+        self.manetes = {1: raizes["manete_E"], -1: raizes["manete_D"]}
+        self.medidas = medidas
+        self.manoplas = medidas["manoplas"]   # {1: pegador do manete esquerdo, -1: direito}
+        self.raio_manopla, self.meia_manopla = medidas["raio_manopla"], medidas["meia_manopla"]
+        self.graus = 0.0
+
+    def girar(self, graus):
+        """A manivela DIREITA em `graus` (ver LigacaoEliptico): a manivela, os braços dos pedais, os pedais e os balancins juntos."""
+        self.graus = graus
+        lig = self.lig
+        self.raizes["manivela"].matrix_world = Matrix.Translation(lig.O) @ Matrix.Rotation(math.radians(graus), 4, "X")
+        for s in (1, -1):
+            self.bracos[s].matrix_world = lig.braco(s, graus)
+            self.pedais[s].matrix_world = lig.pedal(s, graus)
+            self.manetes[s].matrix_world = lig.balancim(s, graus)
+        bpy.context.view_layer.update()
+
+    def pedal(self, s, graus=None):
+        """Matriz 4x4 (mundo) do topo do pedal do lado s agora (ou com a manivela direita em `graus`)."""
+        return self.lig.pedal(s, self.graus if graus is None else graus)
+
+    def manete(self, s, graus=None):
+        """(centro, eixo) do pegador do manete do lado s (mundo) agora (ou com a manivela direita em `graus`)."""
+        M = self.lig.balancim(s, self.graus if graus is None else graus)
+        c0, a0 = self.medidas["manopla_local"][s]
+        return M @ c0, (M.to_3x3() @ a0).normalized()
+
+
+def _local(o, M):
+    """Põe o objeto (criado na origem, filho de uma raiz ainda na origem) no lugar M do referencial da raiz."""
+    o.matrix_basis = M @ o.matrix_basis
+    return o
+
+
+def _disco(nome, raio, esp, centro, mat, pai, passo=0.03, lados=48):
+    """Disco fino (eixo ao longo do X) feito em anéis de `passo` m (_revolucao): o cilindro de tampa grande vira um leque de
+    triângulos compridos que deixa a checagem lenta."""
+    n = max(1, int(math.ceil(raio / passo)))
+    rs = [raio * k / n for k in range(1, n + 1)]
+    perfil = [(0.0, -esp / 2)] + [(r_, -esp / 2) for r_ in rs] + [(r_, esp / 2) for r_ in reversed(rs)] + [(0.0, esp / 2)]
+    o = _revolucao(nome, perfil, mat, pai=pai, lados=lados)
+    o.matrix_basis = Matrix.Translation(Vector(centro)) @ Matrix.Rotation(math.radians(90), 4, "Y")
+    return o
+
+
+def eliptico(nome, lig, manete, raio_manopla=0.0175, compr_manopla=0.20, pedal=(0.38, 0.16, 0.026), painel=None,
+             alto_painel=1.63, largura=0.73, frente=None, tras=None, pegador_fixo=None):
+    """Elíptico (ver o bloco acima). lig = LigacaoEliptico (a ligação já resolvida pela cena). Medidas no mundo, em m:
+      manete       = (centro, eixo, graus): o pegador do manete ESQUERDO (centro e eixo, apontando pra ponta de cima) com a manivela
+                     direita em `graus` (a cena dá onde a mão fecha); o direito é o espelho;
+      raio_manopla, compr_manopla = a espuma do pegador do manete;
+      pedal        = (comprimento, largura, espessura da chapa) do pedal;
+      painel       = (y da face, z do meio) do painel (padrão: 0,20 m à frente do cubo, no meio entre o cubo e o alto);
+      alto_painel  = z do alto do painel; largura = largura total (as travessas da base);
+      frente, tras = y da travessa da frente e da de trás da base (padrão: 0,42 m à frente do cubo; 0,27 m atrás do eixo);
+      pegador_fixo = (y da frente do U, y da ponta das pernas, z, |x|) do pegador fixo embaixo do painel (padrão: em volta do pescoço).
+    Devolve um Eliptico (raizes, equipamentos, apoios, girar(), pedal(), manete(), manoplas)."""
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, man = raiz_nova("estrutura"), raiz_nova("manivela")
+    bracos = {1: raiz_nova("braco_E"), -1: raiz_nova("braco_D")}
+    pedais = {1: raiz_nova("pedal_E"), -1: raiz_nova("pedal_D")}
+    manetes = {1: raiz_nova("manete_E"), -1: raiz_nova("manete_D")}
+    bpy.context.view_layer.update()
+    rot_x90 = (0, math.radians(90), 0)
+    O, P, r = lig.O, lig.P, lig.r
+    xb, xm, xp = lig.x_braco, lig.x_manete, lig.x_pedal
+    y_frente = P.y - 0.42 if frente is None else frente
+    y_tras = O.y + 0.27 if tras is None else tras
+    meia = largura / 2
+    # ── base: viga do meio, travessa da frente (pés reguladores) e a de trás (pés e rodinhas) ───────────────────────────────────────
+    _viga(nome + "_viga", (0.0, y_frente, 0.045), (0.0, y_tras, 0.045), 0.10, 0.07, mat_estrutura(), pai=estr)
+    for yb, nm, m_ in ((y_frente, "frente", meia), (y_tras, "tras", meia - 0.04)):
+        _viga(nome + "_travessa_" + nm, (-m_ + 0.012, yb, 0.045), (m_ - 0.012, yb, 0.045), 0.08, 0.06, mat_estrutura(), pai=estr)
+        for s in (1, -1):
+            caixa(nome + "_ponteira_%s%+d" % (nm, s), (s * (m_ - 0.006), yb, 0.045), (0.012, 0.075, 0.055), mat_borracha(), pai=estr,
+                  chanfro=0.004)
+            _cilindro(nome + "_pe_%s%+d" % (nm, s), 0.022, 0.015, (s * (m_ - 0.05), yb, 0.0075), (0, 0, 0), mat_borracha(),
+                      vertices=20, pai=estr)
+    for s in (1, -1):                                         # rodinhas de trás (só encostam no chão com o elíptico inclinado)
+        _cilindro(nome + "_rodinha%+d" % s, 0.034, 0.026, (s * (meia - 0.075), y_tras + 0.05, 0.040), rot_x90, mat_borracha(),
+                  vertices=24, pai=estr)
+    # ── caixa da tração (atrás, em volta do eixo da manivela) e a tampa redonda dos 2 lados ──────────────────────────────────────────
+    R_c, x_c = r + 0.03, xb - 0.06
+    perfil = [(O.y - R_c * math.cos(math.radians(a)), O.z + R_c * math.sin(math.radians(a))) for a in range(-10, 191, 10)]
+    perfil += [(O.y + R_c * 0.98, 0.085), (O.y - R_c * 0.98, 0.085)]
+    _em_aneis(_convexo(nome + "_caixa_tracao", [(sx * x_c, yy, zz) for yy, zz in perfil for sx in (1, -1)], mat_carenagem(),
+                       pai=estr, chanfro=0.025), passo=0.04)
+    for s in (1, -1):
+        _disco(nome + "_tampa%+d" % s, r - 0.02, 0.004, Vector((s * (x_c + 0.002), O.y, O.z)), mat_estrutura(), estr)
+    # ── coluna da frente (2 pernas em A, da travessa até o cubo), cubo, pescoço, painel e pegador fixo ───────────────────────────────
+    for s in (1, -1):
+        _viga(nome + "_coluna%+d" % s, (s * 0.15, y_frente + 0.03, 0.07), (s * 0.10, P.y - 0.045, P.z - 0.03), 0.065, 0.05,
+              mat_estrutura(), pai=estr)                     # presa na frente do cubo: o joelho passa longe dela
+    _em_aneis(_cilindro(nome + "_cubo", 0.048, 2 * (xm - 0.028), (0.0, P.y, P.z), rot_x90, mat_estrutura(), vertices=40, pai=estr),
+              passo=0.03)
+    a_p = math.radians(30)                                    # painel virado pra quem está nos pedais (topo pra frente)
+    u_p = Vector((0.0, -math.sin(a_p), math.cos(a_p)))        # ao longo do painel, pra cima
+    n_p = Vector((0.0, math.cos(a_p), math.sin(a_p)))         # normal da tela (pra pessoa)
+    alto_p, larg_p, esp_p = 0.27, 0.40, 0.07
+    if painel is None:
+        painel = (P.y - 0.20, (P.z + alto_painel) / 2 + 0.06)
+    centro_p = Vector((0.0, painel[0] - n_p.y * esp_p / 2, painel[1]))
+    centro_p.z = min(centro_p.z, alto_painel - u_p.z * alto_p / 2 - n_p.z * esp_p / 2)
+    _em_aneis(_reto(caixa(nome + "_painel", centro_p, (larg_p, esp_p, alto_p), mat_carenagem(), rot=(a_p, 0, 0), pai=estr,
+                          chanfro=0)), passo=0.05)
+    _em_aneis(_reto(caixa(nome + "_painel_tela", centro_p + n_p * (esp_p / 2 + 0.001) + u_p * 0.02, (0.30, 0.004, 0.16),
+                          mat_borracha(), rot=(a_p, 0, 0), pai=estr, chanfro=0)), passo=0.05)
+    base_painel = centro_p - u_p * (alto_p / 2 - 0.04) - n_p * 0.005
+    _viga(nome + "_pescoco", (0.0, P.y - 0.01, P.z + 0.03), base_painel, 0.08, 0.06, mat_estrutura(), pai=estr)
+    if pegador_fixo is None:
+        pegador_fixo = (base_painel.y - 0.02, base_painel.y + 0.12, base_painel.z - 0.10, 0.15)
+    y_u, y_pt, z_u, x_u = pegador_fixo
+    pts = [(-x_u, y_pt, z_u - 0.06), (-x_u, y_u + 0.03, z_u), (x_u, y_u + 0.03, z_u), (x_u, y_pt, z_u - 0.06)]
+    _em_aneis(_tubo_caminho(nome + "_pegador_fixo", _dobrar(pts, 0.06, n=6), 0.016, mat_borracha(), pai=estr, lados=16), passo=0.03)
+    for s in (1, -1):                                         # 2 hastes do U até o pescoço
+        a_ = Vector((s * x_u * 0.6, y_u + 0.03, z_u))
+        b_ = Vector((s * 0.03, base_painel.y + 0.01, base_painel.z - 0.04))
+        _em_aneis(tubo(nome + "_haste_fixo%+d" % s, a_, b_, 0.013, mat_estrutura(), pai=estr, vertices=16), passo=0.03)
+    # ── manivela (raiz na origem: o eixo, os 2 braços da manivela — o direito pra −Y na montagem — e os pinos) ──────────────────────────
+    x_mv = xb - 0.036                                         # meio do braço da manivela (por dentro do braço do pedal)
+    _em_aneis(_cilindro(nome + "_eixo", 0.022, 2 * x_mv, (0, 0, 0), rot_x90, mat_aco(), vertices=24, pai=man), passo=0.03)
+    for s in (1, -1):
+        k = 1.0 if s > 0 else -1.0                            # esquerdo pra +Y (180°), direito pra −Y (0°)
+        pts_m = []
+        for yy, rr in ((0.0, 0.05), (k * r, 0.034)):
+            for a in range(0, 360, 20):
+                for dx in (-0.011, 0.011):
+                    pts_m.append((s * x_mv + dx, yy + rr * math.cos(math.radians(a)), rr * math.sin(math.radians(a))))
+        _em_aneis(_convexo(nome + "_manivela%+d" % s, pts_m, mat_aco(), pai=man, chanfro=0.003), passo=0.03)
+        _cilindro(nome + "_pino%+d" % s, 0.013, 0.075, (s * (xb - 0.01), k * r, 0.0), rot_x90, mat_aco(), vertices=16, pai=man)
+    # ── braços dos pedais (raiz no pino da manivela, o braço pra −Y) com o suporte do pedal e a carenagem de trás ──────────────────────
+    comp_p, larg_pd, esp_ch = pedal
+    for s, rb in bracos.items():
+        _viga(nome + "_braco_viga%+d" % s, (0.0, -0.02, 0.0), (0.0, -lig.Lf + 0.02, 0.0), 0.04, 0.06, mat_estrutura(), pai=rb)
+        _cilindro(nome + "_braco_olho_tras%+d" % s, 0.036, 0.048, (0, 0, 0), rot_x90, mat_estrutura(), vertices=24, pai=rb)
+        _cilindro(nome + "_braco_olho_frente%+d" % s, 0.030, 0.046, (0, -lig.Lf, 0), rot_x90, mat_estrutura(), vertices=24, pai=rb)
+        _em_aneis(_reto(caixa(nome + "_braco_carenagem%+d" % s, (0.0, -0.33, 0.0), (0.062, 0.42, 0.10), mat_carenagem(), pai=rb,
+                              chanfro=0)), passo=0.05)
+        M_pl = lig.no_braco(s)                                # topo do pedal no referencial do braço
+        dx_p = xp + larg_pd / 2 - xb                          # borda de fora do pedal, em relação ao braço (< 0: por dentro dele)
+        sup = caixa(nome + "_suporte_pedal%+d" % s, (0, 0, 0), (abs(dx_p) + 0.03, comp_p * 0.55, 0.012), mat_estrutura(), chanfro=0)
+        sup.parent = rb
+        _local(sup, M_pl @ Matrix.Translation(Vector((s * (larg_pd / 2 + (abs(dx_p) + 0.03) / 2 - 0.02), 0.0,
+                                                      -0.004 - esp_ch - 0.006))))
+        _reto(sup)
+    # ── pedais (APOIO: raiz no meio do topo da borracha) ─────────────────────────────────────────────────────────────────────────────
+    for s, rp in pedais.items():
+        caixa(nome + "_pedal_chapa%+d" % s, (0, 0, -0.004 - esp_ch / 2), (larg_pd, comp_p, esp_ch), mat_estrutura(), pai=rp,
+              chanfro=0.003)
+        caixa(nome + "_pedal_borracha%+d" % s, (0, 0, -0.002), (larg_pd - 0.012, comp_p - 0.03, 0.004), mat_borracha(), pai=rp,
+              chanfro=0.0015)
+        caixa(nome + "_pedal_borda_frente%+d" % s, (0, -comp_p / 2 + 0.008, 0.008), (larg_pd, 0.016, 0.024), mat_estrutura(), pai=rp,
+              chanfro=0.003)
+        caixa(nome + "_pedal_borda_fora%+d" % s, (s * (larg_pd / 2 - 0.007), -0.03, 0.008), (0.014, comp_p - 0.10, 0.024),
+              mat_estrutura(), pai=rp, chanfro=0.003)
+    # ── balancins com os manetes (raiz no cubo, o braço de baixo pra −Z): bucha, braço de baixo até J, o olho de J e o manete até o
+    #    pegador (espuma) ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    G_e, a_e, graus_ref = manete
+    Minv = lig.balancim(1, graus_ref).inverted()
+    c0 = Minv @ Vector(G_e)                                   # o pegador no referencial do balancim esquerdo
+    a0 = (Minv.to_3x3() @ Vector(a_e)).normalized()
+    locais = {1: (c0, a0), -1: (Vector((-c0.x, c0.y, c0.z)), Vector((-a0.x, a0.y, a0.z)))}
+    manoplas = {}
+    for s, rm in manetes.items():
+        c_, a_ = locais[s]
+        _cilindro(nome + "_bucha%+d" % s, 0.045, 0.05, (0, 0, 0), rot_x90, mat_estrutura(), vertices=32, pai=rm)
+        _em_aneis(tubo(nome + "_balancim%+d" % s, (0, 0, -0.03), (0, 0, -lig.Ls + 0.02), 0.022, mat_estrutura(), pai=rm, vertices=20),
+                  passo=0.04)
+        _cilindro(nome + "_balancim_olho%+d" % s, 0.028, xm - xb + 0.03, (-s * (xm - xb) / 2, 0, -lig.Ls), rot_x90, mat_estrutura(),
+                  vertices=24, pai=rm)
+        baixo = c_ - a_ * (compr_manopla / 2 + 0.03)
+        cima = c_ + a_ * (compr_manopla / 2 + 0.025)
+        sobe = Vector((0.0, 0.0, 0.10))
+        pts = [Vector((0, 0, 0.03)), sobe, baixo, cima]
+        _em_aneis(_tubo_caminho(nome + "_manete_tubo%+d" % s, _dobrar(pts, 0.07, n=6), 0.016, mat_estrutura(), pai=rm, lados=16),
+                  passo=0.03)
+        _cilindro(nome + "_manete_ponta%+d" % s, 0.019, 0.012, cima + a_ * 0.004, a_.to_track_quat("Z", "Y").to_euler(),
+                  mat_borracha(), vertices=24, pai=rm)
+        manoplas[s] = _em_aneis(tubo(nome + "_manopla_" + ("E" if s > 0 else "D"), c_ - a_ * compr_manopla / 2,
+                                     c_ + a_ * compr_manopla / 2, raio_manopla, mat_borracha(), pai=rm, vertices=32), passo=0.03)
+    medidas = dict(manoplas=manoplas, raio_manopla=raio_manopla, meia_manopla=compr_manopla / 2, manopla_local=locais,
+                   pedal=pedal, painel=centro_p, base_painel=base_painel, pegador_fixo=pegador_fixo, y_frente=y_frente,
+                   y_tras=y_tras)
+    el = Eliptico({"estrutura": estr, "manivela": man, "braco_E": bracos[1], "braco_D": bracos[-1], "pedal_E": pedais[1],
+                   "pedal_D": pedais[-1], "manete_E": manetes[1], "manete_D": manetes[-1]}, lig, medidas)
+    el.girar(0.0)
+    return el
+# ===== fim: Elíptico ================================================================================================================

@@ -763,3 +763,23 @@ def test_joelho_frente_do_pe_na_linha_de_prumo_da_bola_do_pe():
     assert tc.joelho_frente_do_pe(alto) == pytest.approx([20, 20], abs=1e-6)
     assert tc.joelho_frente_do_pe(girar(joelho_em(j, 0.02), 35, (0, 0, 1))) == pytest.approx([20, 20], abs=1e-6)
     assert "joelho_frente_do_pe" in tc.MEDIDAS
+
+
+def test_coxa_em_pe_contra_a_vertical_com_sinal():
+    """Elíptico (lote 14): a coxa em pé mede ~0, 30° à frente +30 e 10° atrás −10, nos 2 lados; abrir a coxa pro lado não muda; o boneco
+    inteiro virado no chão (em volta da vertical) dá o mesmo número."""
+    def coxa(j, graus, abre=0.0):
+        j = dict(j)
+        for L, s in (("Left", 1), ("Right", -1)):
+            a = math.radians(graus)
+            j[L + "Leg"] = j[L + "UpLeg"] + 0.45 * np.array((s * math.sin(math.radians(abre)), -math.sin(a), -math.cos(a)))
+        return j
+
+    j = em_pe()
+    assert tc.coxa_em_pe(coxa(j, 0)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.coxa_em_pe(coxa(j, 30)) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.coxa_em_pe(coxa(j, -10)) == pytest.approx([-10, -10], abs=1e-6)
+    assert tc.coxa_em_pe(coxa(j, 45, abre=12)) == pytest.approx([45, 45], abs=1e-6)
+    assert tc.coxa_em_pe(girar(coxa(j, 30), 40, (0, 0, 1))) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.coxa_em_pe(j)[0] == pytest.approx(math.degrees(math.atan2(0.02, 0.45)), abs=1e-6)   # em_pe: joelho 2 cm à frente
+    assert "coxa_em_pe" in tc.MEDIDAS

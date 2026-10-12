@@ -767,3 +767,23 @@ def joelho_frente_do_pe(j):
 
 MEDIDAS.update({"joelho_frente_do_pe": joelho_frente_do_pe})
 UNIDADE.update({"joelho_frente_do_pe": "mm"})
+
+
+# ── elíptico (lote 14, 12/10/2026): em pé nos pedais, o "quadril" do estudo de cinemática do elíptico (Knutzen et al. 2010, Open Sports
+# Sci J 3:165-177, Fig. 1: θhip, a coxa — trocânter → côndilo lateral — contra a VERTICAL; o modelo não tem marcador na pelve) vai de
+# 6,78° de extensão a 45,63° de flexão (Tabela 1, rampa baixa). O quadril_sinal mede a coxa contra o tronco (muda com o tronco inclinado)
+# e a "inclinacao" da ficha não diz se o joelho está à frente ou atrás do quadril.
+def coxa_em_pe(j):
+    """Coxa (articulação do quadril → centro do joelho) × a vertical do mundo, no plano sagital da pelve (vista de lado), graus [E, D]:
+    0 = coxa em pé (o joelho bem embaixo do quadril), + = o joelho à frente do quadril (flexão), − = atrás (extensão). O lado vem da
+    linha dos quadris no chão (eixos_pelve): abrir a coxa pro lado não muda o número; vale em pé, virado pra qualquer lado."""
+    lado, frente = eixos_pelve(j)
+    out = []
+    for L, _ in LADOS:
+        c = j[L + "Leg"] - j[L + "UpLeg"]
+        c = c - lado * (c @ lado)
+        out.append(math.degrees(math.atan2(float(c @ frente), float(-c[2]))))
+    return out
+
+
+MEDIDAS.update({"coxa_em_pe": coxa_em_pe})
