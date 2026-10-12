@@ -3,10 +3,13 @@
 // supabase-principal/migrations/20261006190000_w2l_exclusao_profissional.sql), o Banco do Treino (delete-my-account em modo
 // servidor, ações conferir_profissional / excluir_profissional), o Mercado Pago e o Auth.
 //
-// Cobrança: o plano do profissional (conta_assinaturas) e os alunos → profissional (aluno_assinaturas) estão no MESMO Mercado Pago
-// (a credencial do schema — cobranca-mp.ts). Cancelar é o PUT /preapproval/{id} { status: "cancelled" } que a cobranca-conta
-// (cancelar_assinatura), a pagamentos-aluno (aluno_mp_cancelar/prof_cancelar_assinatura) e cancelarAssinaturasDasMatriculas
-// (_shared/app-sem-profissional.ts) já usam; a simulada do staging (sim-… ou payload.simulada) cancela só no banco. Sem reembolso.
+// Cobrança: o plano do profissional (conta_assinaturas) está no Mercado Pago do Physiq (a credencial do schema — cobranca-mp.ts); os
+// alunos → profissional (aluno_assinaturas) também, ou — W2 — no Mercado Pago DA CONTA do personal (o mp_collector_id da assinatura):
+// cancelarAssinaturasPorCredencial (_shared/mp-conta.ts) cancela cada uma com a credencial DELA. Cancelar é o PUT /preapproval/{id}
+// { status: "cancelled" } que a cobranca-conta (cancelar_assinatura), a pagamentos-aluno (aluno_mp_cancelar/prof_cancelar_assinatura) e
+// cancelarAssinaturasDasMatriculas (_shared/app-sem-profissional.ts) já usam; a simulada do staging (sim-… ou payload.simulada) cancela só
+// no banco. Sem reembolso. Sem acesso ao MP da conta (revogado, em erro, vencido, desconectado, outra conta do MP ou sem a MP_TOKENS_CHAVE)
+// = a falha de sempre: 502 cobranca_nao_cancelada e nada é apagado (o personal reconecta ou fala com o suporte — Risco 7 do plano da W2).
 //
 // Login: SOFT DELETE (auth.admin.deleteUser(id, true)) — o hard delete do aluno apagaria em cascata (nutricionista_id → auth.users
 // ON DELETE CASCADE em ~50 tabelas, inclusive pacientes e registros_prontuario) as matrículas e os prontuários que ficam guardados.
@@ -21,13 +24,14 @@
 // lança para a ordem no passo 2, antes de apagar qualquer coisa: erro do banco → 500; MP sem resposta → o 502
 // cobranca_nao_cancelada de sempre.
 import { createClient, type SupabaseClient, type User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { cancelarAssinaturasDasMatriculas } from "./app-sem-profissional.ts";
 import { assinaturaSoNoBanco } from "./app-sem-profissional-regras.ts";
+import { chaveDoAmbiente } from "./cifra-mp.ts";
 import { MpIndisponivel, credencialDoSchema, espelhoAssinatura, mpFetch, type Credencial, type OpcoesMp, type Schema } from "./cobranca-mp.ts";
 import { codigosDoMp, type AssinaturaMp } from "./cobranca-regras.ts";
 import { excluirContaProfissional, type AssinaturaDoPlano, type DepsExclusao, type Resposta } from "./exclusao-profissional-regras.ts";
 import { schemaDaCredencial } from "./financeiro-mp.ts";
 import type { Log } from "./log.ts";
+import { MpContaSemAcesso, cancelarAssinaturasPorCredencial, oauthDoAmbiente, type ContextoMpConta } from "./mp-conta.ts";
 import { todasAsPaginas } from "./paginas.ts";
 import { ORCAMENTO_MS, prazo as novoPrazo, type Prazo } from "./tempo.ts";
 import { chamarTreino } from "./treino-servidor.ts";
@@ -128,6 +132,13 @@ export async function excluirContaProfissionalNaBorda(p: PedidoExclusao): Promis
   const uid = p.user.id;
   // hml-14 (H-32): todas as idas ao MP deste pedido no prazo de usuário (MP fora ou lento → 502 em até 20 s, nada apagado)
   const mp: OpcoesMp = { prazo: novoPrazo(ORCAMENTO_MS.usuario) };
+  // W2: o contexto do MP DA CONTA (a chave dos tokens e o client do OAuth) — GETTER: as automáticas do MP do Physiq nunca o chamam; sem a
+  // chave, as da conta contam como "sem acesso" (a falha → 502 e nada apagado)
+  const chaveMp = await chaveDoAmbiente();
+  const ctxMp = (): ContextoMpConta => {
+    if (!chaveMp) throw new MpContaSemAcesso("-", "nao_configurado");
+    return { schema: p.schema, log: p.log, prazo: mp.prazo!, chave: chaveMp, oauth: oauthDoAmbiente(p.schema) };
+  };
   // a foto do Perfil: uma vez só — o apagarArquivos conta o que saiu; o apagarLogin espera ela e, se o Storage falhou, para ali
   let fotos: Promise<number> | null = null;
   const apagarFotos = () => (fotos ??= apagarFotosDoPerfil(p.authAdmin, p.schema, uid));
@@ -138,9 +149,15 @@ export async function excluirContaProfissionalNaBorda(p: PedidoExclusao): Promis
     cancelarPlano: (a) => cancelarPlano(db, credencial, a, uid, p.log, mp),
     // hml-14: o cancelamento agora LANÇA — erro do banco → a ordem para aqui com 500, antes de apagar qualquer coisa; o MP que não
     // decide (MpIndisponivel) é a falha de sempre → o mesmo 502 cobranca_nao_cancelada (nada mais muda)
+    // W2: cada automática com a credencial DELA (a do Physiq ou a da conta do personal); o MP sem resposta vira `falhas` e a conta sem
+    // acesso vira `semAcesso` — as 2 somam como falha (502, nada apagado). A função nova não lança por causa do MP (MENOR 11): o catch do
+    // MpIndisponivel abaixo fica de rede
     cancelarDosAlunos: async (ids) => {
       try {
-        return await cancelarAssinaturasDasMatriculas(db, credencial, ids, "profissional_excluiu_a_conta", p.log, mp);
+        const r = await cancelarAssinaturasPorCredencial(db, { schema: p.schema, log: p.log, prazo: mp.prazo! }, ctxMp, credencial, ids,
+          "profissional_excluiu_a_conta");
+        if (r.semAcesso) p.log.aviso({ codigo: "exclusao_mp_conta_sem_acesso", schema: p.schema, acao: "exclusao_profissional", n: r.semAcesso });
+        return { canceladas: r.canceladas, falhas: r.falhas + r.semAcesso };
       } catch (e) {
         if (!(e instanceof MpIndisponivel)) throw e;
         p.log.excecao(e, { codigo: "mp_cancelar_falhou", schema: p.schema, acao: "exclusao_profissional", status: e.status });

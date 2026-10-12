@@ -1,7 +1,10 @@
 // Physiq W-P (Task 8b, ponto 2 — decisão do Weslley 10/10/2026) — automaticas-fila (banco principal). Esvazia a fila
 // {schema}.automaticas_fila (migrations/20261011030000_wp_fila_automaticas.sql): para cada aluno pendente, a cobrança automática no
 // Mercado Pago passa a cobrar o mensalidade_valor ATUAL dele (o valor não fica na fila: o último ganha) — o MESMO PUT /preapproval da
-// pagamentos-aluno (_shared/planos-automatica-mp.ts), com a mesma credencial do schema (_shared/cobranca-mp.ts › credencialDoSchema).
+// pagamentos-aluno (_shared/planos-automatica-mp.ts), com a credencial DA AUTOMÁTICA: a do schema (_shared/cobranca-mp.ts ›
+// credencialDoSchema) para a do MP do Physiq e, W2, a da conta do personal para a que nasceu nela (o mp_collector_id —
+// ./credencial.ts; a regra da coluna nova — revisão C2). Sem acesso ao MP da conta (desconectada, em erro, vencida, outra conta do MP ou
+// sem a MP_TOKENS_CHAVE): falhou com erro mp_conta_sem_acesso (a fila tenta de hora em hora; na 24ª desiste e avisa — o de sempre).
 //   feito     atualizada | igual | sem_automatica → feito_em + resultado
 //   de_novo   falhou antes da 24ª → tentativas + 1, proxima_em + 1 hora, erro (só o código: mp_<status>[:<error do MP>])
 //   desistiu  a 24ª falha seguida (1 dia) → feito_em, resultado 'desistiu', log.erro e o aviso ao dono no sino — 1 por conta por
@@ -18,13 +21,15 @@
 // Segredo (S9): RECEBE o do Vault physiq_automaticas_fila_segredo; aqui fica só o hash, em SEGREDO_AUTOMATICAS_FILA_ACEITOS
 // (_shared/segredo-servidor.ts). Sem ou errado → 401 (o log não leva o recebido). Gerar/trocar: scripts/segredos/servidor.py
 // automaticas_fila. + MP_ACCESS_TOKEN_PROD (public) / MP_ACCESS_TOKEN_TEST (staging): sem o do schema → 500 nao_configurada, antes de
-// mexer na fila.
+// mexer na fila. W2: MP_TOKENS_CHAVE (os tokens da conta do personal; sem ela, só as automáticas da conta falham — as do Physiq seguem) e
+// MP_CLIENT_ID/MP_CLIENT_SECRET (a renovação na hora do uso, quando o acesso vence em < 1 dia).
 // verify_jwt = false. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions automaticas-fila false
 // Log: _shared/log.ts — sem nome, valor ou corpo do MP (do MP, só o status e os códigos); o catch final avisa (log.excecao) e devolve
 // 500; a resposta leva só ids e destinos.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
+import { chaveDoAmbiente } from "../_shared/cifra-mp.ts";
 import { credencialDoSchema, tokenMp, type Credencial } from "../_shared/cobranca-mp.ts";
 import { avisar, carregarMatricula, linkDoAlunoNoPainel, recebedor, type Matricula } from "../_shared/financeiro-mp.ts";
 import type { Schema } from "../_shared/financeiro-regras.ts";
@@ -36,9 +41,11 @@ import {
   textoDoAvisoDaFila,
   type ResultadoValor,
 } from "../_shared/planos-automatica.ts";
-import { assinaturaComoNoMp, trocarValorDaAutomatica, type AssinaturaDoAluno, type TrocaDoValor } from "../_shared/planos-automatica-mp.ts";
+import { MpContaSemAcesso, oauthDoAmbiente, type ContextoMpConta } from "../_shared/mp-conta.ts";
+import { assinaturaComoNoMp, trocarValorDaAutomatica, type TrocaDoValor } from "../_shared/planos-automatica-mp.ts";
 import { segredoAceito } from "../_shared/segredo-servidor.ts";
 import { ORCAMENTO_MS, prazo, type Prazo } from "../_shared/tempo.ts";
+import { assinaturaDoAluno, credencialDaPendencia } from "./credencial.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -77,16 +84,11 @@ interface Saida {
 interface Rodada {
   db: SupabaseClient;
   schema: Schema;
+  /** a do MP do Physiq neste schema */
   credencial: Credencial;
   prazo: Prazo;
-}
-
-/** A assinatura mais recente do aluno (a mesma leitura do assinaturaDe da pagamentos-aluno). Erro do banco lança. */
-async function assinaturaDoAluno(db: SupabaseClient, pacienteId: string): Promise<AssinaturaDoAluno | null> {
-  const { data, error } = await db.from("aluno_assinaturas").select("id, mp_preapproval_id, status, valor, payload")
-    .eq("paciente_id", pacienteId).order("criado_em", { ascending: false }).limit(1);
-  if (error) throw error;
-  return ((data ?? []) as AssinaturaDoAluno[])[0] ?? null;
+  /** W2: a MP_TOKENS_CHAVE importada (null = sem ela: as automáticas da conta do personal falham com mp_conta_sem_acesso) */
+  chaveMp: CryptoKey | null;
 }
 
 /** O valor do aluno agora (o que o gatilho do plano deixou). Erro do banco lança. */
@@ -109,23 +111,36 @@ async function processar(r: Rodada, p: Pendencia): Promise<{ saida: Saida; aluno
   let erro: string | null = null;
   let aluno: Matricula | null = null;
   let mp: Pick<TrocaDoValor, "status" | "externo"> = { status: null, externo: {} };
+  // W2: o contexto do MP DA CONTA (a chave dos tokens e o client do OAuth) — GETTER: a automática do MP do Physiq nunca o chama
+  const ctxMp = (): ContextoMpConta => {
+    if (!r.chaveMp) throw new MpContaSemAcesso("-", "nao_configurado");
+    return { schema: r.schema, log, prazo: ctx.prazo, chave: r.chaveMp, oauth: oauthDoAmbiente(r.schema) };
+  };
   try {
     aluno = await carregarMatricula(r.db, p.paciente_id);
     if (!aluno || aluno.deleted_at) {
       resultado = "sem_automatica";
     } else {
-      const a = await assinaturaComoNoMp(r.db, r.credencial, await assinaturaDoAluno(r.db, p.paciente_id), ctx);
-      const t = await trocarValorDaAutomatica(r.db, r.credencial, a, Number(aluno.mensalidade_valor), ctx);
-      resultado = t.resultado;
-      mp = t;
-      if (t.resultado === "falhou") {
-        erro = erroDoMp(t.status, t.externo.mp_erro);
-        log.aviso({ codigo: "fila_valor_falhou", schema: r.schema, ref: p.id, status: t.status, n: p.tentativas + 1, externo: t.externo });
-      } else if (t.resultado !== "sem_automatica" && !mesmoValor(await valorAgora(r.db, p.paciente_id), aluno.mensalidade_valor)) {
-        // o dono salvou de novo enquanto a rodada trabalhava: volta para a fila (pronta) e a próxima rodada leva o valor novo ao MP
-        const { error: erroFila } = await r.db.rpc("automaticas_enfileirar", { p_pacientes: [p.paciente_id], p_motivo: p.motivo });
-        if (erroFila) throw erroFila;
-        return { saida: { id: p.id, destino: "voltou", resultado }, aluno };
+      const atual = await assinaturaDoAluno(r.db, r.schema, p.paciente_id);
+      // W2: a credencial DESTA automática (o PUT vai à conta do MP que recebe — a do Physiq ou a do personal)
+      const escolha = await credencialDaPendencia(r.db, ctxMp, atual, r.credencial);
+      if (!escolha.cred) {
+        erro = "mp_conta_sem_acesso";
+        log.aviso({ codigo: "fila_conta_sem_acesso", schema: r.schema, ref: p.id, n: p.tentativas + 1, resultado: escolha.semAcesso });
+      } else {
+        const a = await assinaturaComoNoMp(r.db, escolha.cred, atual, ctx);
+        const t = await trocarValorDaAutomatica(r.db, escolha.cred, a, Number(aluno.mensalidade_valor), ctx);
+        resultado = t.resultado;
+        mp = t;
+        if (t.resultado === "falhou") {
+          erro = erroDoMp(t.status, t.externo.mp_erro);
+          log.aviso({ codigo: "fila_valor_falhou", schema: r.schema, ref: p.id, status: t.status, n: p.tentativas + 1, externo: t.externo });
+        } else if (t.resultado !== "sem_automatica" && !mesmoValor(await valorAgora(r.db, p.paciente_id), aluno.mensalidade_valor)) {
+          // o dono salvou de novo enquanto a rodada trabalhava: volta para a fila (pronta) e a próxima rodada leva o valor novo ao MP
+          const { error: erroFila } = await r.db.rpc("automaticas_enfileirar", { p_pacientes: [p.paciente_id], p_motivo: p.motivo });
+          if (erroFila) throw erroFila;
+          return { saida: { id: p.id, destino: "voltou", resultado }, aluno };
+        }
       }
     }
   } catch (e) {
@@ -199,7 +214,9 @@ Deno.serve(async (req) => {
     return json({ error: "nao_configurada" }, 500);
   }
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
-  const r: Rodada = { db, schema, credencial, prazo: orcamento };
+  // W2: a chave dos tokens do MP da conta do personal — sem ela, só as automáticas da conta falham (mp_conta_sem_acesso)
+  const chaveMp = await chaveDoAmbiente();
+  const r: Rodada = { db, schema, credencial, prazo: orcamento, chaveMp };
 
   try {
     const { data: fila, error: erroFila } = await db.from("automaticas_fila").select("id, paciente_id, conta_id, motivo, tentativas, proxima_em")
