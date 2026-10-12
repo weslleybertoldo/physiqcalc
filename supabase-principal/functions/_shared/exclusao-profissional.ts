@@ -31,7 +31,7 @@ import { codigosDoMp, type AssinaturaMp } from "./cobranca-regras.ts";
 import { excluirContaProfissional, type AssinaturaDoPlano, type DepsExclusao, type Resposta } from "./exclusao-profissional-regras.ts";
 import { schemaDaCredencial } from "./financeiro-mp.ts";
 import type { Log } from "./log.ts";
-import { MpContaSemAcesso, cancelarAssinaturasPorCredencial, oauthDoAmbiente, type ContextoMpConta } from "./mp-conta.ts";
+import { MpContaSemAcesso, cancelarAssinaturasPorCredencial, oauthDoAmbiente, schemaTemW2, type ContextoMpConta } from "./mp-conta.ts";
 import { todasAsPaginas } from "./paginas.ts";
 import { ORCAMENTO_MS, prazo as novoPrazo, type Prazo } from "./tempo.ts";
 import { chamarTreino } from "./treino-servidor.ts";
@@ -196,6 +196,23 @@ export async function excluirContaProfissionalNaBorda(p: PedidoExclusao): Promis
       }
       const { error: ed } = await p.authAdmin.auth.admin.deleteUser(uid, true);
       if (ed) throw ed;
+    },
+    // W2 (revisão I-2): a conta encerrada não deixa o MP DELA ligado — a integração vira "desconectada" (a data de agora e a trava solta): o
+    // job (mp-contas-renovar) deixa de girar o refresh e de chamar o /users/me de quem saiu. Os tokens ficam para a faxina de 7 dias (a
+    // leitura do Pix ainda aberto segue — decisão 10). O gatilho da W1 (contas_encerrada_sem_integracao) já APAGA a integração quando a conta
+    // PASSA a cancelada; isto cobre a conta que já estava cancelada (o gatilho não roda de novo). Só com a W2 no schema; a ordem chama só
+    // depois do SQL de verdade (nunca ao simular) e o erro só vai ao log (a conta já foi excluída).
+    desligarMpDasContas: async (contaIds) => {
+      try {
+        if (!(await schemaTemW2(db, p.schema))) return;
+        const { data, error } = await db.from("recebimento_integracoes").update({ status: "desconectada", desconectada_em: new Date().toISOString(),
+          mp_renovando_ate: null }).in("conta_id", contaIds).eq("provedor", "mercadopago").neq("status", "desconectada").select("conta_id");
+        if (error) throw error;
+        const n = ((data ?? []) as unknown[]).length;
+        if (n) p.log.info({ codigo: "exclusao_mp_desconectado", schema: p.schema, acao: "exclusao_profissional", n });
+      } catch (e) {
+        p.log.excecao(e, { codigo: "exclusao_mp_desconectar_falhou", schema: p.schema, acao: "exclusao_profissional" });
+      }
     },
     // o que a ordem pura avisa (espelho, arquivos ou o erro que parou a exclusão): o texto entra limpo e com até 200 caracteres
     registrar: (msg) => p.log.erro({ codigo: "exclusao_profissional_falhou", schema: p.schema, msg }),
