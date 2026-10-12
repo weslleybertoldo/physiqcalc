@@ -6175,3 +6175,224 @@ def step(nome="step", y_borda=0.0, topo=0.15, profundidade=0.385, comprimento=1.
     bpy.context.view_layer.update()
     return raiz
 # ===== fim: Step ====================================================================================================================
+
+
+# ===== Suporte de canto (landmine) ==================================================================================================
+# ── SUPORTE DE CANTO (LANDMINE) DE CHÃO, COM A BARRA OLÍMPICA PRESA NELE (Remada Cavalinho com Barra, lote 13, 12/10/2026) ────────────
+# Base de chão que prende UMA ponta da barra olímpica; a outra ponta, com as anilhas, sobe e desce num arco em volta do pivô (a remada
+# T, "cavalinho", com a barra livre; a mesma peça serve ao desenvolvimento e às rotações com a barra no landmine). É o que as fontes da
+# técnica chamam de landmine ou canto (free-exercise-db, T-Bar Row with Handle: "Position a bar into a landmine or in a corner to keep
+# it from moving."; Bent Over Two-Arm Long Bar Row: "place the other end of the barbell in the corner of two walls; or put a heavy
+# object on the ground so the barbell cannot slide backward"). Peças, no desenho da Body-Solid TBR50 T-Bar Row / Landmine Base (fotos
+# do fabricante): a CHAPA de aço no chão em forma de "casinha" (pentágono), com a ÂNCORA da corda (alça em U) perto da ponta; perto do
+# meio da chapa, o TOCO de tubo quadrado soldado nela com o GIRO vertical em cima (a barra vira pros lados: "Free-flowing 360-degree
+# pivot sleeve") e o GARFO com o EIXO horizontal (a barra sobe e desce) — o PIVÔ —; presa no eixo do garfo, a LUVA: a lingueta com o
+# olhal do eixo e o tubo de aço de fundo fechado onde entra a luva da barra.
+# Medidas de fabricante: chapa de 584 × 381 mm (Body-Solid TBR50: "Assembled Dimensions: Length Width Height 23.00in / 584.20mm
+# 15.00in / 381.00mm 5.00in/127.00mm"); tubo da luva de 250 mm com 51 mm de furo (Origin Elite Series Fixed Landmine: "Length of
+# Landmine Sleeve: 250mm", "Inner Diameter of Landmine: 51mm", "Pin Diameter: 18mm"; Rogue Post Landmine: "Pivot-Sleeve Length: 10”";
+# REP Free Standing Landmine: "Insert Sleeve Length" 10.3") e 57 mm por fora (Titan Rack Mounted Landmine: "Outside Sleeve Diameter"
+# 2.25-in., "Inside Sleeve Diameter" 50mm), pra barra com luva de 2" (REP: "any standard barbell with 2” diameter sleeves"); chapa de
+# 3/8" (9,5 mm: ficha do Titan Base Landmine na Garage Gym Reviews, "Plate Thickness: 3/8”"; a SMAI dá "Base unit thickness: 0.3
+# inches") e âncora de 1" (Titan Base Landmine na GGR: "1” thick rope anchor"). Nenhum fabricante dá a altura do pivô: com a luva
+# deitada a Body-Solid tem 127 mm de altura, então, com o tubo de 57 mm por fora e o eixo dele passando pelo eixo do garfo, o pivô fica
+# a ~10 cm do chão (padrão 9,5 cm). O toco, o prato do giro, o garfo, a lingueta e o comprimento dela são escolha da fábrica (pelas
+# fotos da Body-Solid), com o tubo começando longe o bastante do eixo pra não bater no garfo em nenhuma subida (de 0 a 85°).
+# A BARRA vem junto, presa na luva (a ponta 1 mm antes do fundo): barra olímpica de 2,2 m, 1,314 m entre as faces dos colares, eixo de 29
+# mm e luvas de 50 mm (IPF Technical Rules 2026: "Total overall length not to exceed 2.2 m.", "Distance between the collar faces is not
+# to exceed 1.32 m or be less than 1.31 m.", "Diameter of the bar is not to exceed 29 mm or be less than 28 mm.", "Diameter of the
+# sleeve not to exceed 52 mm or be less than 50 mm.") — a barra() da fábrica tem o eixo de 29 mm de ponta a ponta e não tem a luva de 50
+# mm que entra no suporte; aqui as 2 luvas aparecem — e as anilhas só na ponta de fora, encostadas no colar, com a presilha depois
+# delas (ACE, Barbell Jammers: "place a weight on one end of the barbell with a collar so that the weight can not fall off"). Anilha
+# padrão: a de 25 lb de ferro fundido (Rogue Olympic Plates: "25LB" com "Diameter" 10.9" e "Thickness" 1.4" = 277 × 35,6 mm; Rogue Deep
+# Dish Plates: "25LB: 10.87" (276mm) diameter, 1.35” (34.5mm) width", "Collar Opening 50MM"), a que a remada pede (free-exercise-db,
+# Bent Over Two-Arm Long Bar Row: "I recommend using small plates (25-lb ones)"). O colar (64 mm) e a presilha são escolha da fábrica.
+# Peças compridas em anéis (_em_aneis): a checagem fica rápida.
+# Uso numa cena (a pessoa olha pra −Y; o suporte fica atrás dela, a luva apontando pra ela):
+#   lm = e3.landmine("landmine", pivo=(0.0, y), frente=(0.0, -1.0, 0.0))
+#   lm.levar((0.0, y2))               # (se precisar) leva o suporte inteiro pra outro pivô no chão — ex.: depois de achar onde a pessoa fica
+#   no pose(t): lm.apontar(d)         # a luva e a barra apontam pra d (do pivô pras anilhas; gira no giro e no eixo do garfo)
+#               lm.ponto(s)           # ponto do eixo da barra a s m do pivô (lm.medidas: onde ficam colares, anilhas e pontas)
+#   Cena(pose, lm.equipamentos + ..., ...)
+# As raízes (a rigidez é por raiz): "<nome>_base" (parada: chapa, âncora e toco), "<nome>_garfo" (gira em volta da vertical do pivô: o
+# prato do giro, as 2 orelhas do garfo e o eixo com as porcas), "<nome>_luva" (gira junto com o garfo e em volta do eixo dele: o olhal,
+# a lingueta, o fundo e o tubo) e "<nome>_barra" (a barra com as anilhas e a presilha; a mesma matriz da luva). A luva e a barra têm a
+# origem NO PIVÔ, o X local ao longo da luva (pras anilhas), o Y local ao longo do eixo do garfo e o Z local pra cima na montagem. Nada
+# disso encosta no corpo (a barra passa entre as pernas). Peça × peça (folga de verdade, a cena mede com checagens.folgas): o eixo passa
+# pelo olhal com 0,5 mm de folga em volta, as orelhas ficam a 3 mm da lingueta, a luva da barra fica a 0,5 mm do tubo e a ponta dela a
+# 1 mm do fundo.
+class Landmine:
+    """Suporte de canto (landmine) com a barra presa, pronto na cena (landmine())."""
+
+    def __init__(self, raizes, pivo, frente, medidas):
+        self.raizes = raizes                  # {"base", "garfo", "luva", "barra"}
+        self.equipamentos = [raizes[k] for k in ("base", "garfo", "luva", "barra")]
+        self.barra = raizes["barra"]
+        self.pivo = Vector(pivo)              # onde o giro (vertical) cruza o eixo do garfo (horizontal), no mundo
+        self.frente = Vector(frente)          # pra onde a luva aponta na montagem (no chão, unitário)
+        self.medidas = medidas                # distâncias (m) ao longo da barra a partir do pivô e raios: ver landmine()
+        self.direcao = Vector(frente)         # pra onde a luva aponta agora (unitário)
+        self.giro = 0.0                       # graus em volta da vertical, a partir da montagem
+        self.subida = 0.0                     # graus da luva acima do chão
+        self._M0 = {k: r.matrix_world.copy() for k, r in raizes.items()}
+
+    def apontar(self, direcao):
+        """Luva e barra apontando pra `direcao` (do pivô pras anilhas): o garfo gira em volta da vertical do pivô e a luva (com a
+        barra) sobe em volta do eixo do garfo. A subida fica de 0 a 85° (abaixo disso o tubo desce pra chapa)."""
+        d = Vector(direcao).normalized()
+        h = Vector((d.x, d.y, 0.0))
+        if h.length < 1e-6:
+            raise ValueError("landmine: a luva não fica em pé (direção %s)" % (tuple(d),))
+        giro = math.atan2(self.frente.cross(h).z, self.frente.dot(h))
+        subida = math.atan2(d.z, h.length)
+        if not -1e-6 <= subida <= math.radians(85.0) + 1e-6:
+            raise ValueError("landmine: subida de %.1f° fora de 0–85°" % math.degrees(subida))
+        a = self.frente.cross(Vector((0.0, 0.0, 1.0)))         # eixo do garfo na montagem: girar +subida em volta dele levanta a luva
+        P, Pi = Matrix.Translation(self.pivo), Matrix.Translation(-self.pivo)
+        Rg = Matrix.Rotation(giro, 4, "Z")
+        Rs = Matrix.Rotation(subida, 4, a)
+        self.raizes["garfo"].matrix_world = P @ Rg @ Pi @ self._M0["garfo"]
+        for k in ("luva", "barra"):
+            self.raizes[k].matrix_world = P @ Rg @ Rs @ Pi @ self._M0[k]
+        self.direcao = ((Rg @ Rs).to_3x3() @ self.frente).normalized()
+        self.giro, self.subida = math.degrees(giro), math.degrees(subida)
+        bpy.context.view_layer.update()
+
+    def ponto(self, s):
+        """Ponto do eixo da barra (e da luva) a `s` m do pivô, com a luva onde ela está agora."""
+        return self.pivo + self.direcao * s
+
+    def levar(self, pivo):
+        """Leva o suporte inteiro (com a barra, sem girar) pro pivô em (x, y) no chão; a altura do pivô não muda. A cena acha onde a
+        pessoa fica em relação ao suporte depois de montar a peça (a distância do pivô às mãos sai das medidas da barra)."""
+        novo = Vector((pivo[0], pivo[1], self.pivo.z))
+        T = Matrix.Translation(novo - self.pivo)
+        for k, r in self.raizes.items():
+            r.matrix_world = T @ r.matrix_world
+            self._M0[k] = T @ self._M0[k]
+        self.pivo = novo
+        bpy.context.view_layer.update()
+
+
+def landmine(nome="landmine", pivo=(0.0, 0.0), frente=(0.0, -1.0, 0.0), altura=0.095, chapa=(0.584, 0.381, 0.0095),
+             ponta_chapa=0.194, frente_chapa=0.20, luva=(0.25, 0.051, 0.0572, 0.006), lingueta=(0.055, 0.03, 0.03), eixo=0.018,
+             barra=(2.2, 1.314, 0.029, 0.050), colar=(0.064, 0.03), anilhas=1, anilha=(0.277, 0.0356), presilha=(0.068, 0.02),
+             ancora=(0.0254, 0.12, 0.075)):
+    """Suporte de canto (landmine) com a barra presa (ver o bloco acima). Medidas em m, no mundo:
+      pivo        = (x, y) do pivô no chão — ele fica a `altura` m do chão;  frente = pra onde a luva aponta na montagem (no chão);
+      chapa       = (comprimento ao longo da frente, largura, espessura) da casinha; ponta_chapa = comprimento da ponta (o triângulo, do
+                    lado de trás); frente_chapa = do pivô até a borda da frente;
+      luva        = (comprimento do tubo, furo, diâmetro de fora, espessura do fundo);
+      lingueta    = (do eixo até o começo do tubo, largura, altura): a parte da luva que entra no garfo; eixo = diâmetro do eixo;
+      barra       = (comprimento total, entre as faces dos colares, diâmetro do eixo, diâmetro das luvas);
+      colar       = (diâmetro, comprimento) de cada colar de dentro; anilhas = quantas, na ponta de fora; anilha = (diâmetro,
+                    espessura); presilha = (diâmetro, comprimento) da presilha depois das anilhas;
+      ancora      = (diâmetro do tubo, largura por fora, altura) da alça em U da corda, perto da ponta da chapa.
+    Devolve um Landmine (raizes, equipamentos, barra, pivo, frente, medidas, apontar(), ponto()). A barra monta deitada (subida 0)."""
+    f = Vector(frente)
+    f = Vector((f.x, f.y, 0.0)).normalized()
+    y_ = Vector((0.0, 0.0, 1.0)).cross(f)                     # Y local (ao longo do eixo do garfo)
+    comp, larg, esp = chapa
+    c_tubo, furo, d_fora, fundo = luva
+    l_ling, w_ling, h_ling = lingueta
+    L_b, L_c, d_eixo, d_luva = barra
+    rot_x = (0, math.radians(90), 0)                          # cilindro deitado ao longo do X local
+    rot_y = (math.radians(90), 0, 0)                          # cilindro deitado ao longo do Y local
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    base, garfo, luv, bar = raiz_nova("base"), raiz_nova("garfo"), raiz_nova("luva"), raiz_nova("barra")
+    # tudo é montado no referencial do pivô (origem no pivô, X = frente, Z pra cima) com as raízes na origem; no fim as raízes vão pro lugar
+    # ── base (parada): chapa em casinha no chão, âncora em U perto da ponta e o toco do giro ──────────────────────────────────────────
+    z0 = -altura                                              # o chão
+    x_f, x_r, x_b = frente_chapa, frente_chapa - comp + ponta_chapa, frente_chapa - comp
+    import bmesh
+    bm = bmesh.new()
+    contorno = ((x_f, -larg / 2), (x_f, larg / 2), (x_r, larg / 2), (x_b, 0.0), (x_r, -larg / 2))
+    baixo = [bm.verts.new((x, y, z0)) for x, y in contorno]
+    cima = [bm.verts.new((x, y, z0 + esp)) for x, y in contorno]
+    bm.faces.new(list(reversed(baixo)))
+    bm.faces.new(cima)
+    for i in range(len(contorno)):
+        j = (i + 1) % len(contorno)
+        bm.faces.new((baixo[i], baixo[j], cima[j], cima[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    me = bpy.data.meshes.new(nome + "_chapa")
+    bm.to_mesh(me)
+    bm.free()
+    o_chapa = bpy.data.objects.new(nome + "_chapa", me)
+    bpy.context.scene.collection.objects.link(o_chapa)
+    m_ = o_chapa.modifiers.new("chanfro", "BEVEL")
+    m_.width = 0.002
+    m_.segments = 2
+    o_chapa.data.materials.append(mat_estrutura())
+    o_chapa.parent = base
+    r_a, w_a, h_a = ancora
+    x_a = (x_r + x_b) / 2 + 0.02                              # no meio da ponta, um pouco pra dentro
+    zc = z0 + esp
+    caminho_a = _dobrar([(x_a, -w_a / 2 + r_a / 2, zc - 0.002), (x_a, -w_a / 2 + r_a / 2, zc + h_a - r_a / 2),
+                         (x_a, w_a / 2 - r_a / 2, zc + h_a - r_a / 2), (x_a, w_a / 2 - r_a / 2, zc - 0.002)], 0.03, n=6)
+    _tubo_caminho(nome + "_ancora", caminho_a, r_a / 2, mat_estrutura(), pai=base, lados=16)
+    z_prato = -0.045                                          # o prato do giro (embaixo dele, o toco; em cima, o garfo)
+    z_t0, z_t1 = zc - 0.001, z_prato - 0.0005                 # o toco sai da chapa e para 0,5 mm antes do prato (o giro)
+    caixa(nome + "_toco", (0.0, 0.0, (z_t0 + z_t1) / 2), (0.06, 0.06, z_t1 - z_t0), mat_estrutura(), pai=base, chanfro=0.003)
+    # ── garfo (gira em volta da vertical): prato do giro, 2 orelhas e o eixo com as porcas ─────────────────────────────────────────
+    _cilindro(nome + "_prato", 0.035, 0.008, (0.0, 0.0, z_prato + 0.004), (0, 0, 0), mat_estrutura(), vertices=32, pai=garfo)
+    folga_o, esp_o = 0.003, 0.006                             # orelha a 3 mm da lingueta, chapa de 6 mm
+    y_o = w_ling / 2 + folga_o + esp_o / 2
+    z_o1 = 0.022                                              # alto das orelhas (acima do eixo)
+    for s in (1, -1):
+        caixa(nome + "_orelha%+d" % s, (0.0, s * y_o, (z_prato + 0.008 + z_o1) / 2), (0.05, esp_o, z_o1 - z_prato - 0.008 + 0.002),
+              mat_estrutura(), pai=garfo, chanfro=0.002)
+        _cilindro(nome + "_porca%+d" % s, 0.0135, 0.008, (0.0, s * (y_o + esp_o / 2 + 0.004), 0.0), rot_y, mat_aco(), vertices=6,
+                  pai=garfo)
+    r_pino = eixo / 2
+    _cilindro(nome + "_eixo", r_pino, 2 * (y_o + esp_o / 2 + 0.010), (0.0, 0.0, 0.0), rot_y, mat_aco(), vertices=24, pai=garfo)
+    # ── luva (sobe e desce no eixo do garfo): olhal em volta do eixo, lingueta, fundo e tubo ──────────────────────────────────────
+    olhal = _tubo_oco(nome + "_olhal", (0.0, 0.0, 0.0), h_ling / 2 + 0.004, r_pino + 0.0005, w_ling, mat_estrutura(),
+                      vertices=32, pai=luv)
+    olhal.rotation_euler = rot_y
+    x_l0 = h_ling / 2 + 0.004 - 0.006                         # a lingueta sai do olhal (sem chegar no eixo) até o fundo do tubo
+    caixa(nome + "_lingueta", ((x_l0 + l_ling + 0.003) / 2, 0.0, 0.0), (l_ling + 0.003 - x_l0, w_ling, h_ling), mat_estrutura(),
+          pai=luv, chanfro=0.002)
+    _cilindro(nome + "_fundo", d_fora / 2, fundo, (l_ling + fundo / 2, 0.0, 0.0), rot_x, mat_estrutura(), vertices=32, pai=luv)
+    tubo_l = _tubo_oco(nome + "_tubo", (l_ling + fundo + (c_tubo - fundo) / 2, 0.0, 0.0), d_fora / 2, furo / 2, c_tubo - fundo,
+                       mat_estrutura(), vertices=32, pai=luv)
+    tubo_l.rotation_euler = rot_x
+    _em_aneis(tubo_l, passo=0.04)
+    # ── barra (mesma matriz da luva): luva de dentro, colar, eixo, colar, luva de fora, anilhas e presilha ──────────────────────────
+    s_p = l_ling + fundo + 0.001                              # ponta da barra: 1 mm antes do fundo da luva
+    s_luva = (L_b - L_c) / 2 - colar[1]                       # cada luva da barra (do colar até a ponta)
+    s_c1 = s_p + s_luva                                       # colar de dentro (do lado do suporte)
+    s_e0, s_e1 = s_c1 + colar[1], s_c1 + colar[1] + L_c       # eixo entre as faces dos colares
+    s_c2 = s_e1                                               # colar de dentro do lado das anilhas
+    s_l2 = s_c2 + colar[1]                                    # começo da luva de fora
+    s_f = s_p + L_b                                           # ponta de fora
+    for nome_, s0, s1, r in ((nome + "_barra_luva1", s_p, s_c1, d_luva / 2), (nome + "_barra_eixo", s_e0, s_e1, d_eixo / 2),
+                             (nome + "_barra_luva2", s_l2, s_f, d_luva / 2)):
+        _em_aneis(_cilindro(nome_, r, s1 - s0, ((s0 + s1) / 2, 0.0, 0.0), rot_x, mat_aco(), vertices=32, pai=bar), passo=0.04)
+    for k, s0 in ((1, s_c1), (2, s_c2)):
+        _cilindro(nome + "_barra_colar%d" % k, colar[0] / 2, colar[1], (s0 + colar[1] / 2, 0.0, 0.0), rot_x, mat_aco(), vertices=32,
+                  pai=bar)
+    d_an, e_an = anilha
+    s_a0 = s_l2 + 0.001                                       # a 1ª anilha encosta no colar
+    for k in range(anilhas):
+        _cilindro(nome + "_anilha%d" % (k + 1), d_an / 2, e_an, (s_a0 + e_an * (k + 0.5), 0.0, 0.0), rot_x, mat_ferro_fundido(),
+                  vertices=48, pai=bar)
+    s_a1 = s_a0 + e_an * anilhas
+    _cilindro(nome + "_presilha", presilha[0] / 2, presilha[1], (s_a1 + 0.001 + presilha[1] / 2, 0.0, 0.0), rot_x, mat_aco(),
+              vertices=32, pai=bar)
+    # ── as raízes no lugar: pivô em (x, y, altura), X local = frente ─────────────────────────────────────────────────────────────
+    P = Vector((pivo[0], pivo[1], altura))
+    M = Matrix.Translation(P) @ Matrix((f, y_, Vector((0.0, 0.0, 1.0)))).transposed().to_4x4()
+    for r in (base, garfo, luv, bar):
+        r.matrix_world = M
+    bpy.context.view_layer.update()
+    medidas = dict(ponta=s_p, colar1=(s_c1, s_e0), eixo=(s_e0, s_e1), colar2=(s_c2, s_l2), anilhas=(s_a0, s_a1), fim=s_f,
+                   raio_eixo=d_eixo / 2, raio_luva=d_luva / 2, raio_colar=colar[0] / 2, raio_anilha=d_an / 2,
+                   raio_presilha=presilha[0] / 2, tubo=(l_ling + fundo, l_ling + c_tubo), raio_tubo=d_fora / 2)
+    return Landmine({"base": base, "garfo": garfo, "luva": luv, "barra": bar}, P, f, medidas)
+# ===== fim: Suporte de canto (landmine) =============================================================================================
