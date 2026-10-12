@@ -2,7 +2,13 @@
 // Financeiro do aluno) saem do navegador e passam por aqui, com a SESSÃO de quem chama (_shared/porta-pessoa.ts: cliente "como a pessoa",
 // nenhuma chave secreta). O RLS de hoje continua decidindo quem grava (2ª camada); a função confere a FORMA
 // (_shared/financeiro-gravar-regras.ts): a ação numa lista fechada, as colunas de cada ação com tipo e tamanho, o dono
-// (nutricionista_id = quem chama, nunca do corpo) e a tradução do erro do banco. As leituras seguem pela tela (H-42 = etapa 2).
+// (nutricionista_id = quem chama, nunca do corpo) e a tradução do erro do banco.
+// hml-20d (H-42 · jeito 2, etapa 2, parte 4): as LEITURAS do Financeiro (as 6 abas, o Financeiro do aluno, a parte do Financeiro do
+// Dashboard e o resumo leve do app do aluno) também passam por aqui, pela ação `ler` (em lote: { acao: "ler", itens: [{ q, ...params }] }
+// → { ok: true, itens: [...] } na mesma ordem; até 16 itens, erro POR ITEM), com o catálogo fechado (_shared/financeiro-leituras.ts) e o
+// motor puro da nutricao (_shared/leitura-lote.ts) — módulo leituras.ts, como a pessoa. O `ler` é despachado ANTES do acaoDoFinanceiro
+// (que só conhece as gravações): as 14 ações de antes não mudam. Quem chama pode ser qualquer pessoa logada (a aluna lê o resumo leve do
+// app pela fin_do_aluno), como na nutricao.
 //   CRUD          transacao_criar|editar|estornar|excluir, categoria_criar|renomear|excluir, modelo_recibo_criar|editar|excluir:
 //                 inserir (.select(volta).single()) · editar (0 linha → 404) · excluir (a Lixeira: deleted_at; 0 linha → 404 — antes a
 //                 tela dizia "excluído" quando o RLS recusava calado). O que volta é o MESMO select das libs de hoje (as telas não mudam).
@@ -19,12 +25,14 @@
 // verify_jwt = true. Publicar (vale nos 2 schemas: o schema vem do x-schema):
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions financeiro true
 // Precisa no banco, no schema do pedido: a migration 20261011120000_hml19d_financeiro_atomicas.sql (as 3 RPCs; sem ela só as sementes e
-// o emitir/excluir recibo falham — o CRUD usa as tabelas e as policies de hoje).
+// o emitir/excluir recibo falham — o CRUD usa as tabelas e as policies de hoje). As leituras (hml-20d) não precisam de migration: as RPCs
+// de leitura (hml-14b/14d, W6), as policies de leitura e os grants de hoje — cada pessoa lê o que já lia, agora pela função.
 import { json, servirComoPessoa, type ContextoPessoa } from "../_shared/porta-pessoa.ts";
 import {
   CATEGORIAS_PADRAO, VOLTA_RECIBO, acaoDoFinanceiro, erroDoFinanceiro, lerPadroes, lerReciboEmitir, lerReciboExcluir, lerTags, modeloPadraoDoRecibo,
   montarGravacaoFinanceiro, statusDoErroFinanceiro, type AcaoFinanceiroGravar,
 } from "../_shared/financeiro-gravar-regras.ts";
+import { atenderLeitura } from "./leituras.ts";
 
 type Resposta = { ok: true; [chave: string]: unknown } | { ok: false; erro: string };
 
@@ -145,6 +153,12 @@ async function salvarTags(c: ContextoPessoa): Promise<Resposta> {
 }
 
 servirComoPessoa("financeiro", { freio: 240 }, async (c) => {
+  // hml-20d: o `ler` vai ao módulo das leituras ANTES da lista das gravações (o acaoDoFinanceiro não o conhece; as 14 de antes seguem o
+  // caminho de antes)
+  if (c.corpo.acao === "ler") {
+    const r = await atenderLeitura(c);
+    return json(r, r.ok ? 200 : statusDoErroFinanceiro(r.erro), c.origin);
+  }
   const acao = acaoDoFinanceiro(c.corpo.acao);
   if (!acao) {
     c.log.aviso({ codigo: "acao_invalida", schema: c.schema });
