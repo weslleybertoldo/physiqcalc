@@ -111,7 +111,7 @@ describe("hml-20c — as 5 gravações da Pré-consulta vão pela nutricao (mesm
     // o leitor do servidor descarta o que não é da ação (o dono do corpo, um slug escolhido)
     const g = noServidor({ acao: c.acao, corpo: { ...c.corpo, nutricionista_id: "outra", slug: "escolhido" } });
     expect(g.valores).not.toHaveProperty("slug");
-    expect(g.valores.nutricionista_id).toBe(EU);
+    expect((g.valores as Record<string, unknown>).nutricionista_id).toBe(EU);
   });
 
   it("os códigos dos gatilhos da W21 e o RLS viram a MESMA frase de antes; o conflito do slug, a frase dele; o resto, a frase fixa do código", async () => {

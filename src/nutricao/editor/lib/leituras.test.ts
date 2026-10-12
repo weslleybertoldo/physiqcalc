@@ -191,9 +191,10 @@ function projetar(tabela: string, l: Linha, partes: string[], q: Ida, caminho = 
       saida[chave] = valor.map((x) => projetar(filho, x, partesDoSelect(dentro), q, aqui));
     } else {
       // o .or() do recorte no embutido (referencedTable)
-      for (const [op, f, o] of q.passos) if (op === "or" && (o as { referencedTable?: string } | undefined)?.referencedTable === aqui && !casaOu(f as string, valor)) valor = null;
-      if (interno && !valor) return null;
-      saida[chave] = valor ? projetar(filho, valor, partesDoSelect(dentro), q, aqui) : null;
+      let um: Linha | null = valor;
+      for (const [op, f, o] of q.passos) if (op === "or" && (o as { referencedTable?: string } | undefined)?.referencedTable === aqui && !casaOu(f as string, um)) um = null;
+      if (interno && !um) return null;
+      saida[chave] = um ? projetar(filho, um, partesDoSelect(dentro), q, aqui) : null;
     }
   }
   return saida;
