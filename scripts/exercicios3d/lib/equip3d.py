@@ -7528,3 +7528,216 @@ def elevacao_lateral_maquina(nome="elevacao_lateral", eixos=None, y_cubo=None, r
                    z_eixo=round(z_trav, 3))
     return ElevacaoLateralMaquina(raizes, cubos, pegs, raio_p, comp_p / 2, rols, medidas)
 # ===== fim: Elevação lateral na máquina =============================================================================================
+
+
+# ===== Simulador de escada ==========================================================================================================
+# ── STEPPER DE PEDAIS INDEPENDENTES (Simulador de Escada, lote 14, 12/10/2026) ───────────────────────────────────────────────────────
+# O "stair climber"/stepper de academia de 2 PEDAIS (o "Stairmaster" do free-exercise-db: "driving the pedals down but not all the way
+# to the floor"), NÃO a escada que gira (StepMill/Gauntlet). Como o StairMaster FreeClimber (manual do 4200 PT/4400 PT/4600 PT,
+# figuras 1, 5 e 11; patente US 4,708,338 A): na FRENTE, embaixo, a CARENAGEM do mecanismo (corrente, mola de volta e o freio, aqui
+# simplificados numa caixa parada); dela saem pra trás os 2 BRAÇOS DOS PEDAIS, cada um girando no seu EIXO perto do chão ("a right pedal
+# arm is pivotally mounted at one end to the right pedal and pivotally mounted at the other end to the base tubular member"), com um
+# BRAÇO NIVELADOR paralelo e do mesmo comprimento logo acima ("Given that the pedal arm and support arm are parallel and equal to each
+# other, the pad 44 will remain parallel to the floor"; 8FC: "four-bar linkage keeps pedals level"): o PEDAL (APOIO dos pés) fica na
+# ponta de trás e anda num arco pra baixo e pra trás SEM inclinar ("The right pedal oscillates between an upper position at rest and a
+# lower, rearward position under the weight of the user"). Da carenagem sobe a COLUNA até o PAINEL; ao lado do painel, os 2 PEGADORES
+# da frente (postes em pé com a espuma, onde a mão fecha — os "Handles" da figura 1); dos 2 lados, os CORRIMÃOS laterais em U (descem do
+# alto da coluna até atrás de quem sobe e voltam pra frente até a base); embaixo, a BASE (2 vigas de lado, travessas, rodinhas na frente).
+# Medidas de fabricante (StairMaster 8FC FreeClimber, página e ficha técnica da Core Health & Fitness): "Product Dimensions: 43 x 27 x
+# 68" (110 x 69 x 173cm)" (comprimento, largura e o alto do painel); "Step Height: 1 - 14" (2.5 - 36cm)" (o curso do pedal é regulável:
+# a cena escolhe o dela); manual do 4600: "Floors - Displays the equivalent number of floors climbed with an 8-inch step" (o degrau de
+# ~20 cm que a cena usa). Da figura 11 do manual do 4600 (lida na figura, escala pelos 104 cm de comprimento): braço do pedal de ~42 cm
+# com o eixo bem perto do chão e o nivelador ~6 cm acima. Escolha da fábrica (nenhum documento dá): o comprimento do braço (0,45 m), o
+# tamanho do pedal (21 × 16 cm: 3/4 do pé em cima, como manda o manual — "Place 3/4 of each foot on the pedals, heels slightly off the
+# edge"), a altura do pedal em cima do eixo dele, a altura e a posição dos pegadores (a cena dá onde a mão fecha), o desenho da
+# carenagem, da coluna, do painel e dos corrimãos (tubo de 32 mm, como os da esteira()).
+# O que mexe POR QUADRO (pedais(z_esq, z_dir)): cada braço do pedal e o seu nivelador giram juntos (o mesmo ângulo) em volta dos seus
+# eixos e o pedal vai junto na ponta, sempre nivelado. Os 2 lados são independentes: a cena dá a altura de cada pedal.
+# Uso numa cena (a pessoa olha pra −Y; x = 0 no meio; s = +1 é o lado +X, o ESQUERDO dela):
+#   st = e3.stepper("stepper", pivo=(y, z), braco=0.45, pegadores=(centro, eixo))   # o pegador ESQUERDO onde a mão fecha
+#   st.angulo(z)                 # ângulo do braço (graus, + = a ponta de trás pra cima) que põe o topo do pedal na altura z
+#   no pose(t): st.pedais(z_esq, z_dir)    # a altura do topo de cada pedal (o meio do topo da borracha)
+#               st.pedal(s)                # matriz 4x4 (mundo) do meio do topo da borracha do pedal do lado s agora
+#   Cena(pose, st.equipamentos, pegadas=[(L, ck.Barra(st.manoplas[s], st.raio_pegador, st.meia_pegador, eixo=(0, 0, 1)))],
+#        apoios=st.apoios)
+# As raízes (cada uma um equipamento da cena; a rigidez é por raiz): "<nome>_estrutura" (parada: base, carenagem, coluna, painel,
+# pegadores — as espumas "<nome>_manopla_E"/"_D" são filhas dela, com a origem no meio e o Z local ao longo delas — e corrimãos; não
+# encosta no corpo, fora as mãos nas espumas), "<nome>_braco_E"/"_D" (o braço do pedal: origem no eixo dele, apontando pra +Y na
+# montagem), "<nome>_nivelador_E"/"_D" (o braço nivelador: origem no eixo dele, nivelador m acima do eixo do braço) e "<nome>_pedal_E"/
+# "_D" (APOIO dos pés: a borracha — a almofada "SoftTrac® cushion" do 8FC — em cima da chapa de aço, as 2 com as quinas chanfradas, como o
+# degrau da degrau_panturrilha(), e o suporte com os 2 pinos; origem no meio do topo da borracha, com os eixos do mundo — o pedal não
+# inclina). Peças compridas em anéis (_em_aneis / _viga): a checagem fica rápida.
+class Stepper:
+    """Stepper de pedais pronto na cena (stepper())."""
+
+    def __init__(self, raizes, medidas):
+        self.raizes = raizes                  # {"estrutura", "braco_E", "braco_D", "nivelador_E", "nivelador_D", "pedal_E", "pedal_D"}
+        self.equipamentos = [raizes[k] for k in ("estrutura", "braco_E", "braco_D", "nivelador_E", "nivelador_D")]
+        self.apoios = [raizes["pedal_E"], raizes["pedal_D"]]
+        self.bracos = {1: raizes["braco_E"], -1: raizes["braco_D"]}
+        self.niveladores = {1: raizes["nivelador_E"], -1: raizes["nivelador_D"]}
+        self.pedais_r = {1: raizes["pedal_E"], -1: raizes["pedal_D"]}
+        self.medidas = medidas
+        self.manoplas = medidas["manoplas"]   # {1: espuma do pegador esquerdo, -1: direito}
+        self.raio_pegador, self.meia_pegador = medidas["raio_pegador"], medidas["meia_pegador"]
+        self.y_pivo, self.z_pivo = medidas["pivo"]
+        self.braco, self.nivelador = medidas["braco"], medidas["nivelador"]
+        self.x_braco, self.x_pedal, self.altura_pedal = medidas["x_braco"], medidas["x_pedal"], medidas["altura_pedal"]
+        self.z = {1: None, -1: None}
+
+    def angulo(self, z):
+        """Ângulo do braço do pedal (graus, + = a ponta de trás acima do eixo) que põe o topo da borracha na altura z."""
+        return math.degrees(math.asin((z - self.z_pivo - self.altura_pedal) / self.braco))
+
+    def pedal(self, s, z=None):
+        """Matriz 4x4 (mundo) do meio do topo da borracha do pedal do lado s (agora, ou com o topo na altura z): só translação."""
+        z = self.z[s] if z is None else z
+        th = math.radians(self.angulo(z))
+        return Matrix.Translation(Vector((s * self.x_pedal, self.y_pivo + self.braco * math.cos(th), z)))
+
+    def pedais(self, z_esq, z_dir):
+        """Põe o topo de cada pedal na altura pedida: o braço e o nivelador do lado giram o mesmo ângulo e o pedal vai nivelado."""
+        for s, z in ((1, z_esq), (-1, z_dir)):
+            self.z[s] = z
+            R = Matrix.Rotation(math.radians(self.angulo(z)), 4, "X")
+            self.bracos[s].matrix_world = Matrix.Translation(Vector((s * self.x_braco, self.y_pivo, self.z_pivo))) @ R
+            self.niveladores[s].matrix_world = Matrix.Translation(Vector((s * self.x_braco, self.y_pivo,
+                                                                         self.z_pivo + self.nivelador))) @ R
+            self.pedais_r[s].matrix_world = self.pedal(s)
+        bpy.context.view_layer.update()
+
+
+def stepper(nome="stepper", pivo=(-0.566, 0.043), braco=0.45, nivelador=0.055, x_braco=0.07, x_pedal=0.115, pedal=(0.21, 0.16, 0.020),
+            altura_pedal=0.11, pegadores=None, raio_pegador=0.016, compr_pegador=0.14, alto=1.73, largura=0.69, frente=None, tras=None,
+            carenagem=None, coluna=None, painel=None, corrimao=None):
+    """Stepper de pedais independentes (ver o bloco acima). Medidas no mundo, em m, com a pessoa olhando pra −Y:
+      pivo         = (y, z) do eixo do braço do pedal (na frente, perto do chão); o do nivelador fica `nivelador` m acima dele;
+      braco        = do eixo até o pino do pedal (o nivelador tem o mesmo comprimento: paralelogramo, o pedal não inclina);
+      x_braco      = |x| do plano dos 2 braços de cada lado (embaixo da metade de dentro do pedal);
+      x_pedal      = |x| do meio de cada pedal; pedal = (comprimento, largura, espessura da borracha);
+      altura_pedal = o topo da borracha fica esse tanto acima do pino do pedal (a ponta do braço);
+      pegadores    = (centro, eixo) da espuma do pegador ESQUERDO (o eixo aponta pra ponta de cima; a cena dá onde a mão fecha); o
+                     direito é o espelho; raio_pegador, compr_pegador = a espuma;
+      alto         = z do alto do painel; largura = largura da base (as travessas);
+      frente, tras = y da frente e do fim da base (padrão: 0,26 m à frente do eixo do pedal; 0,30 m atrás do pedal mais atrás);
+      carenagem    = (y de trás embaixo, y de trás em cima, z do alto, |x|) da caixa do mecanismo (padrão: em volta dos eixos);
+      coluna       = (y, z) do alto da coluna (padrão: logo à frente dos pegadores, 0,12 m abaixo do meio deles);
+      painel       = (y da face, z do meio) do painel (padrão: em cima da coluna, virado pra quem sobe);
+      corrimao     = (|x|, y de trás, z de cima do U, z de baixo do U) dos corrimãos laterais.
+    Devolve um Stepper (raizes, equipamentos, apoios, pedais(), pedal(), angulo(), manoplas)."""
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr = raiz_nova("estrutura")
+    bracos = {1: raiz_nova("braco_E"), -1: raiz_nova("braco_D")}
+    nivs = {1: raiz_nova("nivelador_E"), -1: raiz_nova("nivelador_D")}
+    pedais = {1: raiz_nova("pedal_E"), -1: raiz_nova("pedal_D")}
+    bpy.context.view_layer.update()
+    rot_x90 = (0, math.radians(90), 0)
+    y_p, z_p = pivo
+    comp_p, larg_p, esp_p = pedal
+    y_frente = y_p - 0.26 if frente is None else frente
+    y_tras = y_p + braco + comp_p / 2 + 0.30 if tras is None else tras
+    meia = largura / 2
+    if pegadores is None:
+        pegadores = (Vector((0.18, y_p + 0.06, 1.42)), Vector((0.0, 0.0, 1.0)))
+    G_e, a_e = Vector(pegadores[0]), Vector(pegadores[1]).normalized()
+    # ── base: 2 vigas de lado no chão, travessa da frente (rodinhas) e a de trás (pés de borracha) ──────────────────────────────────────
+    x_v = meia - 0.035
+    for s in (1, -1):
+        _viga(nome + "_base_viga%+d" % s, (s * x_v, y_frente + 0.03, 0.03), (s * x_v, y_tras - 0.03, 0.03), 0.05, 0.05, mat_estrutura(),
+              pai=estr)
+        _cilindro(nome + "_rodinha%+d" % s, 0.034, 0.03, (s * (meia - 0.02), y_frente + 0.005, 0.034), rot_x90, mat_borracha(),
+                  vertices=24, pai=estr)
+        for yb in (y_frente + 0.10, y_tras - 0.04):
+            _cilindro(nome + "_pe%+d_%d" % (s, int(yb > y_p)), 0.024, 0.008, (s * x_v, yb, 0.004), (0, 0, 0), mat_borracha(), vertices=20,
+                      pai=estr)
+    for yb, nm in ((y_frente + 0.04, "frente"), (y_tras - 0.04, "tras")):
+        _viga(nome + "_travessa_" + nm, (-x_v - 0.02, yb, 0.035), (x_v + 0.02, yb, 0.035), 0.06, 0.05, mat_estrutura(), pai=estr)
+    # ── carenagem do mecanismo (na frente, em volta dos eixos dos braços) e o suporte dos eixos ─────────────────────────────────────────
+    if carenagem is None:
+        carenagem = (y_p + 0.07, y_frente + 0.20, 0.62, 0.15)
+    y_c0, y_c1, z_c, x_c = carenagem
+    perfil = [(y_frente + 0.06, 0.012), (y_c0, 0.012), (y_c0 - 0.03, 0.20), (y_c1, z_c), (y_frente + 0.10, z_c), (y_frente + 0.06, z_c - 0.04)]
+    _em_aneis(_convexo(nome + "_carenagem", [(sx * x_c, yy, zz) for yy, zz in perfil for sx in (1, -1)], mat_carenagem(), pai=estr),
+              passo=0.05)
+    # ── coluna (da carenagem até embaixo do painel, inclinada pra trás), painel, pegadores da frente e a travessa deles ───────────────
+    if coluna is None:
+        coluna = (G_e.y - 0.07, G_e.z - 0.12)
+    y_col, z_col = coluna
+    _viga(nome + "_coluna", (0.0, y_frente + 0.13, z_c - 0.06), (0.0, y_col, z_col), 0.11, 0.08, mat_estrutura(), pai=estr)
+    a_p = math.radians(32)                                    # painel virado pra quem sobe (topo pra frente)
+    u_p = Vector((0.0, -math.sin(a_p), math.cos(a_p)))        # ao longo do painel, pra cima
+    n_p = Vector((0.0, math.cos(a_p), math.sin(a_p)))         # normal da tela (pra pessoa)
+    alto_p, larg_pn, esp_pn = 0.26, 0.40, 0.06
+    if painel is None:
+        painel = (y_col - 0.06, alto - u_p.z * alto_p / 2 - n_p.z * esp_pn / 2 - 0.004)
+    centro_p = Vector((0.0, painel[0] - n_p.y * esp_pn / 2, painel[1]))
+    _em_aneis(_reto(caixa(nome + "_painel", centro_p, (larg_pn, esp_pn, alto_p), mat_carenagem(), rot=(a_p, 0, 0), pai=estr,
+                          chanfro=0)), passo=0.05)
+    _em_aneis(_reto(caixa(nome + "_painel_tela", centro_p + n_p * (esp_pn / 2 + 0.001) + u_p * 0.02, (0.30, 0.004, 0.15),
+                          mat_borracha(), rot=(a_p, 0, 0), pai=estr, chanfro=0)), passo=0.05)
+    base_painel = centro_p - u_p * (alto_p / 2 - 0.03) - n_p * 0.01
+    _viga(nome + "_pescoco", (0.0, y_col + 0.01, z_col - 0.03), base_painel, 0.09, 0.06, mat_estrutura(), pai=estr)
+    # pegadores: espuma onde a mão fecha (G, eixo a), o poste por baixo dela até a travessa (no alto da coluna) e a ponteira em cima
+    locais = {1: (G_e, a_e), -1: (Vector((-G_e.x, G_e.y, G_e.z)), Vector((-a_e.x, a_e.y, a_e.z)))}
+    x_trav = abs(G_e.x)
+    y_trav = y_col + 0.005
+    _em_aneis(tubo(nome + "_pegador_travessa", (-x_trav, y_trav, z_col), (x_trav, y_trav, z_col), raio_pegador, mat_estrutura(),
+                   pai=estr, vertices=20), passo=0.04)
+    manoplas = {}
+    for s, (c_, a_) in locais.items():
+        baixo = c_ - a_ * (compr_pegador / 2 + 0.02)
+        pts = [Vector((s * x_trav, y_trav, z_col)), Vector((s * x_trav, y_trav, z_col + 0.04)), baixo,
+               c_ + a_ * (compr_pegador / 2 + 0.004)]
+        _em_aneis(_tubo_caminho(nome + "_pegador_poste%+d" % s, _dobrar(pts, 0.04, n=6), raio_pegador - 0.002, mat_estrutura(), pai=estr,
+                                lados=16), passo=0.03)
+        _cilindro(nome + "_pegador_ponta%+d" % s, raio_pegador + 0.003, 0.016, c_ + a_ * (compr_pegador / 2 + 0.008),
+                  a_.to_track_quat("Z", "Y").to_euler(), mat_borracha(), vertices=24, pai=estr)
+        manoplas[s] = _em_aneis(tubo(nome + "_manopla_" + ("E" if s > 0 else "D"), c_ - a_ * compr_pegador / 2,
+                                     c_ + a_ * compr_pegador / 2, raio_pegador, mat_borracha(), pai=estr, vertices=32), passo=0.03)
+    # ── corrimãos laterais em U: do alto da coluna pra trás e pra baixo, a volta atrás de quem sobe e de volta até a carenagem ─────────
+    if corrimao is None:
+        corrimao = (meia - 0.035, y_tras - 0.14, 1.02, 0.80)
+    x_cr, y_cr, z_hi, z_lo = corrimao
+    for s in (1, -1):
+        pts = [(0.0, y_col + 0.01, z_col - 0.02), (s * 0.12, y_col + 0.03, z_col - 0.02), (s * x_cr, y_col + 0.12, z_col - 0.06),
+               (s * x_cr, y_cr, z_hi), (s * x_cr, y_cr + 0.06, (z_hi + z_lo) / 2), (s * x_cr, y_cr, z_lo),
+               (s * x_cr, y_c0 + 0.02, 0.52), (s * x_cr, y_c0 + 0.02, 0.05)]
+        _em_aneis(_tubo_caminho(nome + "_corrimao%+d" % s, _dobrar(pts, 0.09, n=8), 0.016, mat_estrutura(), pai=estr, lados=16),
+                  passo=0.04)
+    for s in (1, -1):                                         # suporte dos eixos dos braços (dentro da carenagem)
+        _cilindro(nome + "_eixo_braco%+d" % s, 0.012, 0.06, (s * x_braco, y_p, z_p), rot_x90, mat_aco(), vertices=16, pai=estr)
+        _cilindro(nome + "_eixo_nivelador%+d" % s, 0.010, 0.06, (s * x_braco, y_p, z_p + nivelador), rot_x90, mat_aco(), vertices=16,
+                  pai=estr)
+    # ── braços dos pedais e niveladores (raiz no eixo de cada um, apontando pra +Y na montagem) ─────────────────────────────────────────
+    for s in (1, -1):
+        rb, rn = bracos[s], nivs[s]
+        _viga(nome + "_braco_viga%+d" % s, (0.0, 0.025, 0.0), (0.0, braco - 0.02, 0.0), 0.03, 0.04, mat_estrutura(), pai=rb)
+        _cilindro(nome + "_braco_olho%+d" % s, 0.026, 0.044, (0, 0, 0), rot_x90, mat_estrutura(), vertices=24, pai=rb)
+        _cilindro(nome + "_braco_pino%+d" % s, 0.020, 0.040, (0, braco, 0), rot_x90, mat_estrutura(), vertices=24, pai=rb)
+        _viga(nome + "_nivelador_viga%+d" % s, (0.0, 0.02, 0.0), (0.0, braco - 0.016, 0.0), 0.022, 0.022, mat_aco(), pai=rn)
+        _cilindro(nome + "_nivelador_olho%+d" % s, 0.016, 0.034, (0, 0, 0), rot_x90, mat_aco(), vertices=20, pai=rn)
+        _cilindro(nome + "_nivelador_pino%+d" % s, 0.014, 0.034, (0, braco, 0), rot_x90, mat_aco(), vertices=20, pai=rn)
+    # ── pedais (APOIO: raiz no meio do topo da borracha; o suporte desce até os 2 pinos, no plano dos braços) ───────────────────────────
+    for s, rp in pedais.items():
+        dx = s * (x_braco - x_pedal)                          # o plano dos braços, em relação ao meio do pedal (por dentro dele)
+        caixa(nome + "_pedal_borracha%+d" % s, (0, 0, -esp_p / 2), (larg_p, comp_p, esp_p), mat_borracha(), pai=rp, chanfro=0.003)
+        caixa(nome + "_pedal_chapa%+d" % s, (0, 0, -esp_p - 0.005), (larg_p + 0.008, comp_p + 0.008, 0.010), mat_aco(), pai=rp,
+              chanfro=0.003)
+        z_sup0, z_sup1 = -esp_p - 0.010, -altura_pedal - 0.024
+        caixa(nome + "_pedal_suporte%+d" % s, (dx, 0.0, (z_sup0 + z_sup1) / 2), (0.012, 0.07, z_sup0 - z_sup1), mat_estrutura(),
+              pai=rp, chanfro=0.002)
+        for zz, rr in ((-altura_pedal, 0.016), (-altura_pedal + nivelador, 0.012)):
+            _cilindro(nome + "_pedal_pino%+d_%d" % (s, int(rr * 1000)), rr, 0.05, (dx, 0.0, zz), rot_x90, mat_aco(), vertices=16, pai=rp)
+    medidas = dict(manoplas=manoplas, raio_pegador=raio_pegador, meia_pegador=compr_pegador / 2, pegador_local=locais, pivo=(y_p, z_p),
+                   braco=braco, nivelador=nivelador, x_braco=x_braco, x_pedal=x_pedal, altura_pedal=altura_pedal, pedal=pedal,
+                   painel=centro_p, coluna=coluna, carenagem=carenagem, corrimao=corrimao, y_frente=y_frente, y_tras=y_tras)
+    st = Stepper({"estrutura": estr, "braco_E": bracos[1], "braco_D": bracos[-1], "nivelador_E": nivs[1], "nivelador_D": nivs[-1],
+                  "pedal_E": pedais[1], "pedal_D": pedais[-1]}, medidas)
+    z0 = z_p + altura_pedal + braco * math.sin(math.radians(20.0))
+    st.pedais(z0, z0)
+    return st
+# ===== fim: Simulador de escada =====================================================================================================
