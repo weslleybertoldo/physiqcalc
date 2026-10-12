@@ -234,7 +234,7 @@ describe("hml-20c — o módulo da Pré-consulta (como a pessoa): o que vai ao b
     }
   });
 
-  it("excluir (formulário e resposta): o update do deleted_at pelo id, só o id de volta; 0 linha (outra conta ou já excluído) → nao_encontrado", async () => {
+  it("excluir (formulário e resposta): o update do deleted_at pelo id, SEM o filtro da Lixeira (como a lib de hoje: o já excluído volta ok e segue lá), só o id de volta; 0 linha (o id que não existe ou a outra conta — o RLS) → nao_encontrado", async () => {
     for (const [acao, tabela] of [["preconsulta_formulario_excluir", "formularios_preconsulta"], ["preconsulta_resposta_excluir", "respostas_preconsulta"]] as const) {
       const ok = contexto(acao, { id: ID }, () => ({ data: [{ id: ID }], error: null }));
       expect(await atenderPreconsulta(ok.c, acao), acao).toEqual({ ok: true });

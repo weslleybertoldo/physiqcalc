@@ -73,7 +73,8 @@ function recusa(c: ContextoPreconsulta, acao: string, erro: string, campo?: stri
   return { ok: false, erro };
 }
 
-/** 0 linha: não existe, está na Lixeira ou o RLS não deixa (a mesma resposta nos 3 casos — o naoEncontrado do comum.ts). */
+/** 0 linha: o id não existe ou o RLS não deixa (a outra conta) — a mesma resposta nos 2 casos (o naoEncontrado do comum.ts). O que já está
+ *  na Lixeira NÃO é 0 linha: o update é pelo id, sem o filtro da Lixeira, como a lib de hoje — o excluir de novo volta ok e segue lá. */
 function naoEncontrado(c: ContextoPreconsulta, acao: string, ref: string | null): RespostaPreconsulta {
   c.log.aviso({ codigo: "nao_encontrado", schema: c.schema, acao, ref });
   return { ok: false, erro: "nao_encontrado" };
