@@ -21,9 +21,20 @@ Uso:  python3 scripts/segredos/mp_conta.py <grupo> <subcomando> [--dry-run] [--s
                           --papel integrador: SÓ o integrador de teste (plano B do I6 — quem entra no painel de desenvolvedores e cria a
                           aplicação de TESTE); no mesmo item (extras integrador_*) → ~/.physiq-mp-integrador-teste.json (600). Já no
                           cofre → só o arquivo (1 integrador só); sem o item do par → para antes de qualquer POST.
-  (A Task 11 acrescenta  chave gerar|conferir  — a MP_TOKENS_CHAVE, gerada SÓ quando não existe em lugar nenhum (I10) — e
-   assinatura copiar|conferir  — a MP_WEBHOOK_ASSINATURA do item "… — assinatura dos avisos (W2)".)
---dry-run (ou --seco): lê o cofre (só na memória), mas não grava nada — nem cofre, nem funções, nem arquivo — e não chama o MP.
+  chave gerar             (Task 11; roda na Task 14) a MP_TOKENS_CHAVE (a chave AES-256-GCM dos tokens; 32 bytes, base64url) — gerada SÓ
+                          quando não existe em lugar nenhum (revisão I10): PRIMEIRO no cofre ("Physiq — chave dos tokens do MP do personal
+                          (W2)", lida de volta), DEPOIS nas funções do principal, conferida pelo digest. Já existe igual nas 2 pontas → ✅
+                          "nada a fazer" (sai 0, sem gerar); só num lado, diferente ou fora do formato → ❌ e PARA, sem gravar nada (gerar
+                          por cima apagaria o acesso de TODOS os personais: as funções valem para o staging e o public juntos).
+  chave copiar            termina um "gerar" que parou entre o cofre e as funções: a chave do COFRE vai para as funções SÓ quando as funções
+                          ainda não têm nenhuma (nunca gera; nunca troca a que existe).
+  chave conferir          o digest da MP_TOKENS_CHAVE nas funções = sha256 da do cofre (e o formato: 32 bytes) — sai 1 se não bate.
+                          (Trocar a chave é outro comando — chave trocar —, fora da W2: exige ler a v1 e a v2 lado a lado e recifrar.)
+  assinatura copiar|conferir  (Task 11; roda na Task 23) a MP_WEBHOOK_ASSINATURA (a assinatura secreta do painel do MP — W2-a, passo 6) do
+                          item "Mercado Pago — PhysiqCalc — assinatura dos avisos (W2)" (campo valor) para as funções do principal / o
+                          digest das funções = sha256 do cofre. Sem o item → sai 2 (é dele, no FIM).
+--dry-run (ou --seco): lê o cofre (só na memória), mas não grava nada — nem cofre, nem funções, nem arquivo — e não chama o MP (o
+chave gerar --seco nem gera a chave).
 Na tela só ✅/❌, nomes de campo, tipo, tamanho e sha8: nunca um valor, o sha256 inteiro, o id ou o código de um usuário de teste.
 Saída: 0 ok · 1 erro ou não confere · 2 falta no cofre algo que é DELE (o Client Secret ou o token de produção — W2-a, no FIM).
 O item dos usuários: extras vendedor_id|usuario|email|senha|codigo_verificacao, comprador_… e integrador_… (o login de topo = o vendedor).
@@ -35,6 +46,7 @@ Testes: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts/segredos/test_mp_c
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import re
 import secrets
@@ -51,6 +63,18 @@ import servidor as S  # noqa: E402  (Remoto, Falha, guardar, ok, nota, depois, o
 ITEM = "Mercado Pago — PhysiqCalc"
 ITEM_TESTE_APP = "Mercado Pago — PhysiqCalc — aplicação de teste do integrador (W2, plano B)"  # o nome que a sessão principal deu (11/10)
 ITEM_USUARIOS = "Mercado Pago — PhysiqCalc — usuários de teste (W2)"
+ITEM_CHAVE = "Physiq — chave dos tokens do MP do personal (W2)"  # Task 11: a MP_TOKENS_CHAVE (o cofre é a cópia: as funções não devolvem valor)
+ITEM_ASSINATURA = "Mercado Pago — PhysiqCalc — assinatura dos avisos (W2)"  # W2-a, passo 6 (FIM): a assinatura secreta do painel
+SEGREDO_CHAVE = "MP_TOKENS_CHAVE"
+SEGREDO_ASSINATURA = "MP_WEBHOOK_ASSINATURA"
+CHAVE_FORMATO = re.compile(r"[A-Za-z0-9_-]{43}=?")  # 32 bytes em base64url (o que o importarChave do _shared/cifra-mp.ts aceita)
+ASSINATURA_FORMATO = re.compile(r"[A-Za-z0-9_-]{16,256}")  # sem espaço, sem endereço: um texto colado errado não vai para as funções
+NOTA_CHAVE = ("W2 (Mercado Pago do personal): a chave AES-256-GCM (v1) dos tokens do MP de cada personal — a MP_TOKENS_CHAVE das funções do "
+              "principal (vale para o staging e o public juntos). Perder ou trocar = todos os personais reconectam. Gerada pelo "
+              "scripts/segredos/mp_conta.py chave gerar (só quando não existia em lugar nenhum); conferir: mp_conta.py chave conferir. "
+              "Trocar é outro comando (chave trocar, fora da W2).")
+PUBLICAR_CHAVE = ("publicar de novo as funções que leem a chave (o segredo é lido no boot do isolate): pagamentos-aluno, mp-conectar-retorno, "
+                  "mp-contas-renovar, mp-webhook-aluno, automaticas-fila, master-contas e excluir-minha-conta (Task 14, Step 3)")
 ARQ_OAUTH = ".physiq-mp-oauth.json"
 ARQ_OAUTH_STAGING = ".physiq-mp-oauth-staging.json"  # o client da aplicação de TESTE do integrador (plano B do I6) — a prova --client staging
 PAPEIS = ("vendedor", "comprador")  # o par padrão do usuarios-teste criar (Task 1)
@@ -551,11 +575,154 @@ def usuarios_criar(r: S.Remoto, a: argparse.Namespace) -> int:
     return 0 if all([gravar_arquivo_do_papel(p, dados[p], a) for p in papeis]) else 1
 
 
+# ───────────────────────── Task 11: a chave dos tokens (MP_TOKENS_CHAVE) e a assinatura dos avisos ─────────────────────────
+
+
+def chave_valida(valor: str | None) -> bool:
+    """32 bytes em base64url = 43 caracteres de [A-Za-z0-9_-] (o "=" do fim é tolerado) — o que o importarChave do _shared/cifra-mp.ts
+    aceita. Fora disso as funções leem "sem chave" (chaveDoAmbiente → null → nao_configurada)."""
+    return bool(valor) and bool(CHAVE_FORMATO.fullmatch(valor or ""))
+
+
+def chave_do_cofre(r: S.Remoto) -> str | None:
+    """A chave do item do cofre (só na memória; o ler_campos já a pôs no limpo()). Item de outro tipo → Falha (ninguém escolhe por ele)."""
+    lido = ler_campos(r, ITEM_CHAVE)
+    if lido is None:
+        return None
+    if lido[0] != "token":
+        raise S.Falha(f"\"{ITEM_CHAVE}\" existe com o tipo {lido[0]}, não token: ajuste no cofre — nada gerado nem gravado")
+    return dict(pares_de(lido[1])).get("valor") or None
+
+
+def resumo_da_chave(valor: str) -> str:
+    return f"{len(valor)} caracteres, sha8 {S.sha8(valor)}"
+
+
+def chave_gerar(r: S.Remoto, a: argparse.Namespace) -> int:
+    """Revisão I10: SÓ cria quando a MP_TOKENS_CHAVE não existe em lugar nenhum. Existindo igual nas 2 pontas → ✅ "já existe" e sai 0, sem
+    gerar; só num lado, diferente ou fora do formato → ❌ e PARA, sem gravar nada. Gerar de novo por cima apagaria o acesso de TODOS os
+    personais (o código só conhece a v1, e os segredos das funções valem para o staging e o public juntos). Trocar a chave é outro comando
+    (chave trocar), fora da W2."""
+    no_cofre = chave_do_cofre(r)
+    nas_funcoes = r.segredos("principal").get(SEGREDO_CHAVE)
+    if no_cofre and nas_funcoes:
+        if not chave_valida(no_cofre):
+            S.ok(False, f"a MP_TOKENS_CHAVE do cofre está fora do formato ({len(no_cofre)} caracteres; são 32 bytes em base64url): as "
+                        "funções não conseguem usá-la — PARAR e conferir à mão (não gerar)")
+            return 1
+        igual = nas_funcoes == S.sha256_hex(no_cofre)
+        S.ok(igual, "a MP_TOKENS_CHAVE já existe" + (" e as funções = o cofre: nada a fazer" if igual else
+                                                      " e as funções ≠ o cofre — PARAR (não gerar): investigue com  mp_conta.py chave conferir")
+             + f" (cofre: {resumo_da_chave(no_cofre)})")
+        return 0 if igual else 1
+    if no_cofre:
+        S.ok(False, f"a MP_TOKENS_CHAVE existe só no cofre ({resumo_da_chave(no_cofre)}) — PARAR: gerar de novo trocaria a do cofre. Se "
+                    "as funções nunca tiveram a chave (um gerar que parou entre o cofre e as funções), copie a do cofre:  "
+                    "python3 scripts/segredos/mp_conta.py chave copiar")
+        return 1
+    if nas_funcoes:
+        S.ok(False, "a MP_TOKENS_CHAVE existe só nas funções do principal — PARAR: o valor delas não volta (a API devolve só o digest) "
+                    "e gerar outra apagaria o acesso de TODOS os personais. Conferir à mão (não gerar, não apagar)")
+        return 1
+    if a.dry_run:
+        S.nota(f"--dry-run: geraria a chave (32 bytes aleatórios, base64url de 43 caracteres) → cofre \"{ITEM_CHAVE}\" (tipo token, lida "
+               f"de volta) → {SEGREDO_CHAVE} nas funções do {S.onde('principal')} → conferir pelo digest. Nada gerado.")
+        return 0
+    nova = S.guardar(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip("=")) or ""
+    erro, texto = r._mcp().ferramenta("salvar_segredo", {"projeto": S.PROJETO_COFRE, "nome": ITEM_CHAVE, "tipo": "token",
+                                                         "campos": {"valor": nova, "notas": NOTA_CHAVE}})
+    if erro:
+        raise S.Falha(f"cofre: salvar \"{ITEM_CHAVE}\" falhou — {texto[:200]} — nada foi para as funções")
+    if chave_do_cofre(r) != nova:
+        S.ok(False, "o cofre não devolveu a chave igual — nada foi para as funções (confira o item à mão antes de qualquer coisa)")
+        return 1
+    S.ok(True, f"cofre {S.PROJETO_COFRE} › \"{ITEM_CHAVE}\": chave nova ({resumo_da_chave(nova)}) gravada e lida de volta igual")
+    r.gravar_segredo("principal", SEGREDO_CHAVE, nova)  # PRIMEIRO no cofre, DEPOIS nas funções
+    rc = chave_conferir(r, a)
+    S.depois(PUBLICAR_CHAVE)
+    return rc
+
+
+def chave_copiar(r: S.Remoto, a: argparse.Namespace) -> int:
+    """Termina um `chave gerar` que parou entre o cofre e as funções: a chave do COFRE vai para as funções SÓ quando as funções ainda não
+    têm nenhuma. Nunca gera; nunca troca a que as funções têm (essa pode ser a que cifrou os tokens de hoje)."""
+    no_cofre = chave_do_cofre(r)
+    nas_funcoes = r.segredos("principal").get(SEGREDO_CHAVE)
+    if not no_cofre:
+        if nas_funcoes:
+            S.ok(False, "a MP_TOKENS_CHAVE existe só nas funções do principal — PARAR: o valor delas não volta (só o digest); conferir à mão")
+        else:
+            S.ok(False, "sem a MP_TOKENS_CHAVE no cofre (nem nas funções): é a 1ª vez —  python3 scripts/segredos/mp_conta.py chave gerar")
+        return 1
+    if not chave_valida(no_cofre):
+        S.ok(False, f"a MP_TOKENS_CHAVE do cofre está fora do formato ({len(no_cofre)} caracteres; são 32 bytes em base64url) — nada copiado")
+        return 1
+    if nas_funcoes is not None:
+        igual = nas_funcoes == S.sha256_hex(no_cofre)
+        S.ok(igual, "a MP_TOKENS_CHAVE já está nas funções e = o cofre: nada a copiar" if igual else
+             "as funções já têm OUTRA MP_TOKENS_CHAVE — PARAR: copiar trocaria a chave que cifrou os tokens de hoje (conferir à mão)")
+        return 0 if igual else 1
+    if a.dry_run:
+        S.nota(f"--dry-run: copiaria a chave do cofre ({resumo_da_chave(no_cofre)}) para {SEGREDO_CHAVE} nas funções do {S.onde('principal')}")
+        return 0
+    r.gravar_segredo("principal", SEGREDO_CHAVE, no_cofre)
+    rc = chave_conferir(r, a)
+    S.depois(PUBLICAR_CHAVE)
+    return rc
+
+
+def chave_conferir(r: S.Remoto, a: argparse.Namespace) -> int:
+    no_cofre = chave_do_cofre(r)
+    nas_funcoes = r.segredos("principal").get(SEGREDO_CHAVE)
+    if not no_cofre and nas_funcoes is None:
+        S.ok(False, "a MP_TOKENS_CHAVE não existe em lugar nenhum (nem no cofre nem nas funções): é a Task 14 —  "
+                    "python3 scripts/segredos/mp_conta.py chave gerar")
+        return 1
+    if not no_cofre:
+        S.ok(False, f"sem a MP_TOKENS_CHAVE no cofre (\"{ITEM_CHAVE}\"), mas as funções do principal têm uma — conferir à mão (não gerar)")
+        return 1
+    formato = chave_valida(no_cofre)
+    igual = nas_funcoes == S.sha256_hex(no_cofre)
+    estado = "= o cofre" if igual else ("não existe" if nas_funcoes is None else "DIFERENTE do cofre")
+    certo = S.ok(formato and igual, f"{SEGREDO_CHAVE} nas funções do principal {estado} ({resumo_da_chave(no_cofre)})"
+                 + ("" if formato else " — a do cofre está fora do formato (são 32 bytes em base64url)"))
+    return 0 if certo else 1
+
+
+def assinatura_do_cofre(r: S.Remoto) -> str:
+    """A assinatura secreta do painel (W2-a, passo 6) — só na memória. Sem o item (ou sem o campo valor) → FaltaDele (sai 2: é do FIM)."""
+    valor = dict(ler_item(r, ITEM_ASSINATURA) or []).get("valor")
+    if not valor:
+        raise FaltaDele(f"sem \"{ITEM_ASSINATURA}\" (campo valor) no cofre: é o passo 6 da W2-a (FIM, dele) — nada gravado")
+    if not ASSINATURA_FORMATO.fullmatch(valor):
+        raise S.Falha(f"a assinatura do cofre está fora do formato ({len(valor)} caracteres; sem espaço, sem endereço) — confira o item "
+                      f"\"{ITEM_ASSINATURA}\" — nada gravado")
+    return valor
+
+
+def assinatura_copiar(r: S.Remoto, a: argparse.Namespace) -> int:
+    valor = assinatura_do_cofre(r)
+    if a.dry_run:
+        S.nota(f"--dry-run: gravaria {SEGREDO_ASSINATURA} ({len(valor)} caracteres, sha8 {S.sha8(valor)}) nas funções do {S.onde('principal')}")
+        return 0
+    r.gravar_segredo("principal", SEGREDO_ASSINATURA, valor)
+    rc = conferir_nas_funcoes(r, {SEGREDO_ASSINATURA: valor})
+    S.depois("publicar de novo a mp-webhook-aluno (o segredo é lido no boot do isolate) — Task 23")
+    return rc
+
+
+def assinatura_conferir(r: S.Remoto, a: argparse.Namespace) -> int:
+    return conferir_nas_funcoes(r, {SEGREDO_ASSINATURA: assinatura_do_cofre(r)})
+
+
 # ───────────────────────── linha de comando ─────────────────────────
 
 
 COMANDOS = {("cofre", "campos"): cofre_campos, ("oauth", "local"): oauth_local, ("oauth", "testar"): oauth_testar,
             ("oauth", "copiar"): oauth_copiar, ("oauth", "conferir"): oauth_conferir, ("usuarios-teste", "criar"): usuarios_criar}
+# Task 11: a chave dos tokens (só nasce uma vez — I10) e a assinatura dos avisos (a Task 23 roda)
+COMANDOS |= {("chave", "gerar"): chave_gerar, ("chave", "copiar"): chave_copiar, ("chave", "conferir"): chave_conferir,
+             ("assinatura", "copiar"): assinatura_copiar, ("assinatura", "conferir"): assinatura_conferir}
 COM_STAGING = {("oauth", "local"), ("oauth", "testar")}
 COM_PAPEL = {("usuarios-teste", "criar")}
 

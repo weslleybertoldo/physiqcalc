@@ -337,6 +337,49 @@ class Fluxos(Base):
         self.assertIn("o banco, {public,staging}.automaticas_disparar() pelo pg_net", buf.getvalue())
         self.assertIn('"Physiq — fila das automáticas (W-P)"', buf.getvalue())
 
+    def test_s10_renovacao_do_mp_no_molde_do_s9(self):
+        """W2 Task 11: a renovação do MP do personal — o banco manda (mp_contas_renovar_disparar, Vault physiq_mp_renovar_segredo) e a
+        mp-contas-renovar confere pela lista; o S8 e o S9 não mudam."""
+        f = S.FINALIDADES["mp_renovar"]
+        self.assertEqual((f.numero, f.segredo, f.lista, f.vault, f.confere, f.manda, f.emissor, f.receptor, f.arquivo, f.disparo),
+                         ("S10", "SEGREDO_MP_RENOVAR", "SEGREDO_MP_RENOVAR_ACEITOS", "physiq_mp_renovar_segredo", ("mp-contas-renovar",),
+                          (), "principal", "principal", ".physiq-segredo-mp-renovar", "mp_contas_renovar_disparar"))
+        self.assertEqual(f.item, "Physiq — renovação do MP do personal (W2)")
+        self.assertEqual(S.FINALIDADES["automaticas_fila"].item, "Physiq — fila das automáticas (W-P)")  # o S9 não mudou
+        self.assertEqual(len({x.vault for x in S.FINALIDADES.values() if x.vault}), 3)  # S8, S9 e S10: um Vault para cada
+        s10 = S.sql_vault_criar(S.valor_novo(), "physiq_mp_renovar_segredo")  # a descrição dele, não a do S8 nem a do S9
+        self.assertIn("mp-contas-renovar", s10)
+        self.assertNotIn("automaticas-fila", s10)
+        self.assertNotIn("espelho-enviar", s10)
+        self.assertEqual(self.rodar("mp_renovar", "gerar")[0], 0)
+        atual = self.valor(f)
+        self.assertIn("W2 (Mercado Pago do personal) S10 mp_renovar", self.r.itens[f.item]["notas"])
+        arq = Path(self.casa.name) / ".physiq-segredo-mp-renovar"
+        self.assertEqual(arq.read_text(encoding="utf-8"), atual)
+        self.assertEqual(arq.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.rodar("mp_renovar", "trocar")[0], 1)  # sem a lista
+        self.assertNotIn(f.vault, self.r.vault)
+        self.assertEqual(self.rodar("mp_renovar", "aceitar")[0], 0)
+        self.assertEqual(self.r.funcoes["principal"][f.lista], S.sha256_hex(atual))
+        rc, saida = self.rodar("mp_renovar", "trocar")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("pg_cron de hora em hora, no minuto 41", saida)
+        self.assertIn("log da mp-contas-renovar com via=lista", saida)
+        self.assertEqual(self.r.vault[f.vault], atual)
+        rc, saida = self.rodar("mp_renovar", "conferir")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("igual ao cofre", saida)
+        self.assertEqual(self.rodar("mp_renovar", "tirar-lista")[0], 1)  # o Vault ainda manda: o canal pararia
+        self.assertIn(f.lista, self.r.funcoes["principal"])
+        self.assertEqual(self.r.vault, {f.vault: atual})  # só o Vault da renovação (o do S8 e o do S9 nem foram tocados)
+        self.assertNotIn(S.FINALIDADES["automaticas_fila"].item, self.r.itens)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(S.main(["mp_renovar", "gerar", "--dry-run"]), 0)
+        self.assertIn("o banco, {public,staging}.mp_contas_renovar_disparar() pelo pg_net", buf.getvalue())
+        self.assertIn('"Physiq — renovação do MP do personal (W2)"', buf.getvalue())
+        self.assertIn("S10 mp_renovar", S.__doc__ or "")  # a tabela do cabeçalho
+
     def test_erro_da_api_que_ecoa_o_valor_sai_limpo(self):
         self.rodar("aviso_erro", "gerar")
         self.rodar("aviso_erro", "aceitar")

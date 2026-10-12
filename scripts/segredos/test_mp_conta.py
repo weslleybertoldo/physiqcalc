@@ -5,6 +5,7 @@ falso. Valores falsos feitos na hora; nenhum deles (nem o sha256 inteiro) pode a
 Rodar:  PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts/segredos/test_mp_conta.py"""
 from __future__ import annotations
 
+import base64
 import contextlib
 import copy
 import inspect
@@ -51,6 +52,11 @@ def token_teste(app_id: str) -> str:
 
 def chave_publica(prefixo: str = "TEST") -> str:
     return f"{prefixo}-{uuid.uuid4()}"
+
+
+def chave_dos_tokens() -> str:
+    """Uma MP_TOKENS_CHAVE de teste no formato que as funções importam (32 bytes, base64url sem o "=")."""
+    return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip("=")
 
 
 def modo(caminho: Path) -> int:
@@ -762,6 +768,266 @@ class AplicacaoDeTeste(Base):
         self.assertIn("--dry-run: chamaria o POST /oauth/token 2 vezes", saida)
 
 
+class ChaveDosTokens(Base):
+    """Task 11 (revisão I10): a MP_TOKENS_CHAVE só nasce quando não existe em lugar nenhum — PRIMEIRO no cofre (lida de volta), DEPOIS
+    nas funções, conferida pelo digest. A 2ª vez não gera; só num lado ou diferente → para sem gravar nada. O `chave copiar` só termina
+    um `gerar` que parou entre o cofre e as funções (nunca troca a chave que as funções já têm)."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.por_item_mp({"client_secret": self.sec})  # o cofre de verdade tem o item do MP (e o sem_valor tem o que procurar)
+
+    def ordem_das_gravacoes(self) -> list[str]:
+        """Liga a anotação das gravações (cofre e funções) na ordem em que acontecem."""
+        ordem: list[str] = []
+        ferramenta, gravar = self.r.cofre.ferramenta, self.r.gravar_segredo
+
+        def f(nome: str, argumentos: dict) -> tuple[bool, str]:
+            if nome == "salvar_segredo":
+                ordem.append(f"cofre:{argumentos.get('nome')}")
+            return ferramenta(nome, argumentos)
+
+        def g(lado: str, nome: str, valor: str) -> None:
+            ordem.append(f"funcoes:{lado}:{nome}")
+            gravar(lado, nome, valor)
+
+        self.r.cofre.ferramenta = f  # type: ignore[method-assign]
+        self.r.gravar_segredo = g  # type: ignore[method-assign]
+        return ordem
+
+    def por_chave_no_cofre(self, valor: str) -> None:
+        self.r.cofre.itens[M.ITEM_CHAVE] = {"tipo": "token", "campos": {"valor": valor, "notas": "W2"}}
+
+    def test_a_1a_vez_grava_o_cofre_antes_das_funcoes_e_confere(self):
+        ordem = self.ordem_das_gravacoes()
+        rc, saida = self.rodar("chave", "gerar")  # o sem_valor do rodar(): nem a chave nem o sha256 inteiro dela na saída
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual(ordem, [f"cofre:{M.ITEM_CHAVE}", "funcoes:principal:MP_TOKENS_CHAVE"])
+        item = self.r.cofre.itens[M.ITEM_CHAVE]
+        self.assertEqual(item["tipo"], "token")
+        chave = item["campos"]["valor"]
+        self.assertRegex(chave, r"^[A-Za-z0-9_-]{43}$")
+        self.assertEqual(len(base64.urlsafe_b64decode(chave + "=")), 32)  # o que o importarChave do cifra-mp.ts aceita
+        self.assertIn("todos os personais reconectam", item["campos"]["notas"])
+        self.assertNotIn(chave, item["campos"]["notas"])  # a chave só no campo valor (a nota aparece aberta na tela do cofre)
+        self.assertEqual(self.r.funcoes, {"principal": {"MP_TOKENS_CHAVE": chave}, "treino": {}})
+        self.assertIn("gravada e lida de volta igual", saida)
+        self.assertIn(f"MP_TOKENS_CHAVE nas funções do principal = o cofre (43 caracteres, sha8 {S.sha8(chave)})", saida)
+        self.assertIn("publicar de novo", saida)
+
+    def test_a_2a_vez_nao_gera(self):
+        self.assertEqual(self.rodar("chave", "gerar")[0], 0)
+        chave = self.r.cofre.itens[M.ITEM_CHAVE]["campos"]["valor"]
+        ordem = self.ordem_das_gravacoes()
+        with mock.patch.object(M.secrets, "token_bytes", side_effect=AssertionError("gerou de novo")):
+            rc, saida = self.rodar("chave", "gerar")
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual(ordem, [])  # nenhum salvar_segredo nem gravar_segredo
+        self.assertIn("a MP_TOKENS_CHAVE já existe e as funções = o cofre: nada a fazer", saida)
+        self.assertEqual((self.r.cofre.itens[M.ITEM_CHAVE]["campos"]["valor"], self.r.funcoes["principal"]["MP_TOKENS_CHAVE"]),
+                         (chave, chave))
+
+    def test_so_no_cofre_para_e_nada_grava(self):
+        self.por_chave_no_cofre(chave_dos_tokens())
+        ordem = self.ordem_das_gravacoes()
+        rc, saida = self.rodar("chave", "gerar")
+        self.assertEqual(rc, 1, saida)
+        self.assertEqual(ordem, [])
+        self.assertIn("existe só no cofre", saida)
+        self.assertIn("mp_conta.py chave copiar", saida)  # o caminho de volta de um gerar que parou no meio
+        self.assertEqual(self.r.funcoes["principal"], {})
+
+    def test_so_nas_funcoes_para_e_nada_grava(self):
+        self.r.funcoes["principal"]["MP_TOKENS_CHAVE"] = chave_dos_tokens()
+        ordem = self.ordem_das_gravacoes()
+        rc, saida = self.rodar("chave", "gerar")
+        self.assertEqual(rc, 1, saida)
+        self.assertEqual(ordem, [])
+        self.assertIn("existe só nas funções", saida)
+        self.assertNotIn(M.ITEM_CHAVE, self.r.cofre.itens)
+        rc, saida = self.rodar("chave", "copiar")  # o copiar também não resolve: o valor das funções não volta (só o digest)
+        self.assertEqual(rc, 1, saida)
+        self.assertEqual(ordem, [])
+
+    def test_diferentes_param_e_nada_grava(self):
+        cofre, funcoes = chave_dos_tokens(), chave_dos_tokens()
+        self.por_chave_no_cofre(cofre)
+        self.r.funcoes["principal"]["MP_TOKENS_CHAVE"] = funcoes
+        ordem = self.ordem_das_gravacoes()
+        for sub in ("gerar", "copiar", "conferir"):
+            rc, saida = self.rodar("chave", sub)
+            self.assertEqual(rc, 1, f"{sub}:\n{saida}")
+        self.assertEqual(ordem, [])
+        self.assertEqual((self.r.cofre.itens[M.ITEM_CHAVE]["campos"]["valor"], self.r.funcoes["principal"]["MP_TOKENS_CHAVE"]),
+                         (cofre, funcoes))
+        self.assertIn("DIFERENTE do cofre", saida)
+        self.assertIn("as funções ≠ o cofre — PARAR", self.rodar("chave", "gerar")[1])
+
+    def test_dry_run_nao_gera_nem_grava(self):
+        ordem = self.ordem_das_gravacoes()
+        with mock.patch.object(M.secrets, "token_bytes", side_effect=AssertionError("o --seco gerou")):
+            rc, saida = self.rodar("chave", "gerar", "--seco")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("--dry-run: geraria a chave", saida)
+        self.assertEqual(ordem, [])
+        self.assertNotIn(M.ITEM_CHAVE, self.r.cofre.itens)
+        self.assertEqual(self.r.funcoes["principal"], {})
+
+    def test_conferir(self):
+        rc, saida = self.rodar("chave", "conferir")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("não existe em lugar nenhum", saida)
+        self.assertIn("chave gerar", saida)
+        self.assertEqual(self.rodar("chave", "gerar")[0], 0)
+        ordem = self.ordem_das_gravacoes()
+        rc, saida = self.rodar("chave", "conferir")
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual(ordem, [])  # o conferir não grava
+        self.r.funcoes["principal"]["MP_TOKENS_CHAVE"] = chave_dos_tokens()
+        rc, saida = self.rodar("chave", "conferir")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("MP_TOKENS_CHAVE nas funções do principal DIFERENTE do cofre", saida)
+        del self.r.funcoes["principal"]["MP_TOKENS_CHAVE"]
+        rc, saida = self.rodar("chave", "conferir")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("MP_TOKENS_CHAVE nas funções do principal não existe", saida)
+
+    def test_copiar_so_quando_as_funcoes_nao_tem(self):
+        rc, saida = self.rodar("chave", "copiar")  # sem a chave no cofre
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("chave gerar", saida)
+        chave = chave_dos_tokens()
+        self.por_chave_no_cofre(chave)  # o gerar que parou entre o cofre e as funções
+        rc, saida = self.rodar("chave", "copiar", "--seco")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("--dry-run: copiaria", saida)
+        self.assertEqual(self.r.funcoes["principal"], {})
+        rc, saida = self.rodar("chave", "copiar")
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual(self.r.funcoes["principal"], {"MP_TOKENS_CHAVE": chave})
+        self.assertIn("MP_TOKENS_CHAVE nas funções do principal = o cofre", saida)
+        ordem = self.ordem_das_gravacoes()
+        rc, saida = self.rodar("chave", "copiar")  # de novo: nada a copiar
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("nada a copiar", saida)
+        self.assertEqual(ordem, [])
+        self.assertEqual(self.r.cofre.itens[M.ITEM_CHAVE]["campos"]["valor"], chave)  # o copiar nunca gera nem mexe no cofre
+
+    def test_item_de_outro_tipo_ou_chave_fora_do_formato_para(self):
+        self.r.cofre.itens[M.ITEM_CHAVE] = {"tipo": "nota", "campos": {"texto": "a chave anotada à mão"}}
+        ordem = self.ordem_das_gravacoes()
+        rc, saida = self.rodar("chave", "gerar")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("tipo nota, não token", saida)
+        ruim = letras(40)  # não é base64url de 32 bytes: as funções não importariam (chaveDoAmbiente → null)
+        self.por_chave_no_cofre(ruim)
+        self.r.funcoes["principal"]["MP_TOKENS_CHAVE"] = ruim
+        for sub in ("gerar", "conferir", "copiar"):
+            rc, saida = self.rodar("chave", sub)
+            self.assertEqual(rc, 1, f"{sub}:\n{saida}")
+            self.assertIn("fora do formato", saida)
+        self.assertEqual(ordem, [])
+
+    def test_o_cofre_recusa_ou_nao_devolve_igual_e_nada_vai_para_as_funcoes(self):
+        def recusa(nome: str, argumentos: dict) -> tuple[bool, str]:
+            if nome == "salvar_segredo":
+                return True, "VALIDACAO: o cofre recusou"
+            return aplicar_no_cofre(self.r.cofre.itens, nome, argumentos)
+
+        self.r.cofre.ferramenta = recusa  # type: ignore[method-assign]
+        rc, saida = self.rodar("chave", "gerar")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn(f"cofre: salvar \"{M.ITEM_CHAVE}\" falhou", saida)
+        self.assertEqual(self.r.funcoes["principal"], {})
+
+        def outra_na_leitura(nome: str, argumentos: dict) -> tuple[bool, str]:
+            erro, texto = aplicar_no_cofre(self.r.cofre.itens, nome, argumentos)
+            if nome == "ler_segredo" and not erro and argumentos.get("nome") == M.ITEM_CHAVE:
+                dados = json.loads(texto)
+                dados["campos"]["valor"] = chave_dos_tokens()
+                texto = json.dumps(dados)
+            return erro, texto
+
+        self.r.cofre.ferramenta = outra_na_leitura  # type: ignore[method-assign]
+        rc, saida = self.rodar("chave", "gerar")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("o cofre não devolveu a chave igual — nada foi para as funções", saida)
+        self.assertEqual(self.r.funcoes["principal"], {})
+
+    def test_erro_que_ecoa_a_chave_sai_limpo(self):
+        """A chave nova vai para o limpo() ANTES da 1ª ida ao cofre: um erro do MCP que repete o pedido não mostra o valor."""
+        ecoada: list[str] = []
+
+        def eco(nome: str, argumentos: dict) -> tuple[bool, str]:
+            if nome == "salvar_segredo":
+                ecoada.append(argumentos["campos"]["valor"])
+                return True, f"VALIDACAO: recusado {json.dumps(argumentos['campos'])}"
+            return aplicar_no_cofre(self.r.cofre.itens, nome, argumentos)
+
+        self.r.cofre.ferramenta = eco  # type: ignore[method-assign]
+        rc, saida = self.rodar("chave", "gerar")
+        self.assertEqual(rc, 1, saida)
+        self.assertEqual(len(ecoada), 1)
+        self.assertNotIn(ecoada[0], saida)
+        self.assertIn("‹oculto›", saida)
+        self.assertEqual(self.r.funcoes["principal"], {})
+
+
+class AssinaturaDosAvisos(Base):
+    """Task 11 (usada na 23): a MP_WEBHOOK_ASSINATURA (a assinatura secreta do painel — W2-a, passo 6) do cofre para as funções, conferida
+    pelo digest. Sem o item → sai 2 (é coisa DELE, no FIM)."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.por_item_mp({"client_secret": self.sec})
+        self.assinatura = secrets.token_hex(32)
+
+    def por_assinatura(self, valor: str | None = None) -> None:
+        self.r.cofre.itens[M.ITEM_ASSINATURA] = {"tipo": "token", "campos": {"valor": valor or self.assinatura}}
+
+    def test_copiar_e_conferir(self):
+        self.por_assinatura()
+        rc, saida = self.rodar("assinatura", "copiar")
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual(self.r.funcoes["principal"], {"MP_WEBHOOK_ASSINATURA": self.assinatura})
+        self.assertEqual(self.r.gravacoes, [("POST", "principal", "MP_WEBHOOK_ASSINATURA")])
+        self.assertIn("MP_WEBHOOK_ASSINATURA nas funções do principal = o cofre", saida)
+        self.assertIn("mp-webhook-aluno", saida)  # quem lê: publicar de novo
+        rc, saida = self.rodar("assinatura", "conferir")
+        self.assertEqual(rc, 0, saida)
+        self.assertEqual(len(self.r.gravacoes), 1)  # o conferir não grava
+
+    def test_sem_o_item_sai_2_e_nada_grava(self):
+        for sub in ("copiar", "conferir"):
+            rc, saida = self.rodar("assinatura", sub)
+            self.assertEqual(rc, 2, f"{sub}:\n{saida}")
+            self.assertIn("passo 6 da W2-a", saida)
+        self.assertEqual(self.r.gravacoes, [])
+
+    def test_dry_run_nao_grava(self):
+        self.por_assinatura()
+        rc, saida = self.rodar("assinatura", "copiar", "--seco")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn(f"--dry-run: gravaria MP_WEBHOOK_ASSINATURA (64 caracteres, sha8 {S.sha8(self.assinatura)})", saida)
+        self.assertEqual(self.r.gravacoes, [])
+
+    def test_conferir_acusa_o_que_nao_bate(self):
+        self.por_assinatura()
+        self.r.funcoes["principal"]["MP_WEBHOOK_ASSINATURA"] = secrets.token_hex(32)
+        rc, saida = self.rodar("assinatura", "conferir")
+        self.assertEqual(rc, 1, saida)
+        self.assertIn("MP_WEBHOOK_ASSINATURA nas funções do principal DIFERENTE do cofre", saida)
+
+    def test_valor_fora_do_formato_nao_grava(self):
+        for ruim in ("https://www.mercadopago.com.br/developers/panel/app", f"com espaço {letras(24)}", "curta"):
+            with self.subTest(tamanho=len(ruim)):
+                self.por_assinatura(ruim)
+                rc, saida = self.rodar("assinatura", "copiar")
+                self.assertEqual(rc, 1, saida)
+                self.assertIn("fora do formato", saida)
+        self.assertEqual(self.r.gravacoes, [])
+
+
 class DryRun(Base):
     def test_nada_gravado(self):
         self.por_item_mp({"client_secret": self.sec})
@@ -784,7 +1050,8 @@ class DryRun(Base):
         self.assertNotIn("salvar_segredo", {n for n, _ in self.r.cofre.chamadas})
 
     def test_comando_desconhecido(self):
-        for args in (["chave", "gerar"], ["oauth", "apagar"], ["cofre"], ["usuarios-teste", "apagar"]):
+        # o "chave trocar" é outro comando, fora da W2 (exige ler a v1 e a v2 lado a lado e recifrar as linhas)
+        for args in (["chave", "trocar"], ["assinatura", "gerar"], ["oauth", "apagar"], ["cofre"], ["usuarios-teste", "apagar"]):
             erro = io.StringIO()
             with self.subTest(args=args), contextlib.redirect_stderr(erro), self.assertRaises(SystemExit) as fim:
                 M.argumentos(args)
@@ -792,7 +1059,8 @@ class DryRun(Base):
 
     def test_staging_e_papel_so_onde_valem(self):
         for args in (["oauth", "copiar", "--staging"], ["cofre", "campos", "--staging"], ["usuarios-teste", "criar", "--staging"],
-                     ["oauth", "local", "--papel", "integrador"], ["usuarios-teste", "criar", "--papel", "outro"]):
+                     ["oauth", "local", "--papel", "integrador"], ["usuarios-teste", "criar", "--papel", "outro"],
+                     ["chave", "gerar", "--staging"], ["assinatura", "copiar", "--papel", "integrador"]):
             with self.subTest(args=args), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as fim:
                 M.argumentos(args)
             self.assertEqual(fim.exception.code, 2)
@@ -886,6 +1154,17 @@ class CofrePorStdio(Base):
         self.assertEqual(rc, 0, saida)
         self.assertEqual(json.loads(self.arquivo(".physiq-mp-oauth.json").read_text(encoding="utf-8")),
                          {"client_id": self.app_id, "client_secret": self.sec})
+
+    def test_chave_gerar_pelo_mcp(self):
+        """Task 11: o salvar_segredo da chave passa pelas regras do MCP (token pede valor) e a leitura de volta é a do cliente de verdade."""
+        self.itens.write_text(json.dumps({M.ITEM: {"tipo": "token", "campos": {"valor": self.tok, "extras": [
+            {"nome": "client_secret", "valor": self.sec, "oculto": True}]}}}), encoding="utf-8")
+        rc, saida = self.rodar_stdio("chave", "gerar")
+        self.assertEqual(rc, 0, saida)
+        item = json.loads(self.itens.read_text(encoding="utf-8"))[M.ITEM_CHAVE]
+        self.assertEqual(item["tipo"], "token")
+        self.assertRegex(item["campos"]["valor"], r"^[A-Za-z0-9_-]{43}$")
+        self.assertIn("MP_TOKENS_CHAVE nas funções do principal = o cofre (43 caracteres", saida)
 
 
 if __name__ == "__main__":
