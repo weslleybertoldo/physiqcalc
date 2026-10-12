@@ -195,6 +195,8 @@ export function planoDaTabela(
 }
 
 // ───────────────────────── hml-20b: página, contagem, laço, 1 linha (os campos opcionais da FonteTabela) ─────────────────────────
+/** O código do PostgREST para a página além do fim (HTTP 416: o offset passou do total) — na consulta com página, dados_invalidos. */
+export const PAGINA_ALEM_DO_FIM = "PGRST103";
 /** O teto de leituras de um laço (as 50 de 1000 da lib de hoje: listarResultadosDoPaciente). */
 export const LACO_LEITURAS_MAX = 50;
 /** O erro do laço que passou do teto de leituras (a lib de hoje lançava "… demais para ler de uma vez"). */
@@ -326,15 +328,20 @@ export async function rodarLote(
  * erro_interno). `inesperado` = a função avisa (log.excecao). Aqui também o erro que chega pelo name (o TimeoutError lançado).
  * hml-20b: `conhecidos` = os códigos que a RPC levanta de propósito (FonteRpc.erros): a mensagem que é um deles volta como ele, não
  * inesperado (o erroDaRpc de nutricao-regras.ts); sem a lista (a 20a), a tabela de sempre.
+ * hml-20b (revisão): `pagina` = a consulta COM página (FonteTabela.pagina): a página além do fim (o PostgREST responde 416, PGRST103 —
+ * o offset passou do total) é o pedido fora da forma → dados_invalidos, NÃO inesperado (sem log.excecao: não é defeito do servidor). Sem
+ * a página (as outras consultas e as 3 da 20a), o PGRST103 segue a tabela de sempre (erro_interno).
  */
 export function erroDaLeitura(
   e: { code?: unknown; message?: unknown; name?: unknown } | null | undefined,
   conhecidos: readonly string[] = [],
+  opcoes: { pagina?: boolean } = {},
 ): { erro: string; inesperado: boolean } {
   const code = typeof e?.code === "string" ? e.code : "";
   const msg = typeof e?.message === "string" ? e.message : "";
   const nome = typeof e?.name === "string" ? e.name : "";
   if (msg.trim() && conhecidos.includes(msg.trim())) return { erro: msg.trim(), inesperado: false };
+  if (opcoes.pagina === true && code === PAGINA_ALEM_DO_FIM) return { erro: "dados_invalidos", inesperado: false };
   if (code === "42501") return { erro: "sem_acesso", inesperado: false };
   if (code === "23505") return { erro: "conflito", inesperado: false };
   if (code.startsWith("22") || code === "23502" || code === "23503" || code === "23514") return { erro: "dados_invalidos", inesperado: false };

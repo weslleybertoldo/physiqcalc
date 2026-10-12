@@ -117,7 +117,8 @@ async function lerTabela(c: ContextoLeitura, item: ItemValido, consulta: Consult
   };
   if (extras.laco) return await lerEmLaco(c, item.q, montar, extras.laco);
   const { data, error, count } = await (extras.intervalo ? montar().range(extras.intervalo[0], extras.intervalo[1]) : montar().limit(plano.teto));
-  if (error) return falhou(c, item.q, error);
+  // hml-20b (revisão): na consulta COM página, a página além do fim (PGRST103) = dados_invalidos, sem log.excecao; nas outras, como sempre
+  if (error) return falhou(c, item.q, error, [], { pagina: extras.intervalo !== null });
   const linhas: unknown[] = Array.isArray(data) ? data : [];
   // hml-20b: a consulta de 1 linha que não achou (outra conta, ou já excluída) → nao_encontrado, como hoje (a tela tratava o vazio)
   if (extras.uma && linhas.length === 0) return { ok: false, erro: "nao_encontrado" };
@@ -203,11 +204,12 @@ async function assinar(c: ContextoLeitura, q: string, a: AssinarLeitura, caminho
 
 /**
  * O erro do banco (ou o que lançou) vira o código do item; o inesperado avisa o Weslley (log.excecao: só nome, código e mensagem limpa).
- * hml-20b: `conhecidos` = os códigos que a RPC levanta de propósito (FonteRpc.erros) — voltam como eles, com o log.aviso (não o excecao).
+ * hml-20b: `conhecidos` = os códigos que a RPC levanta de propósito (FonteRpc.erros) — voltam como eles, com o log.aviso (não o excecao);
+ * `opcoes.pagina` = a consulta com página (a página além do fim → dados_invalidos, com o log.aviso).
  */
-function falhou(c: ContextoLeitura, q: string, e: unknown, conhecidos: readonly string[] = []): RespostaDeItem {
+function falhou(c: ContextoLeitura, q: string, e: unknown, conhecidos: readonly string[] = [], opcoes: { pagina?: boolean } = {}): RespostaDeItem {
   const o = (e ?? {}) as { code?: unknown; message?: unknown; name?: unknown };
-  const t = erroDaLeitura(o, conhecidos);
+  const t = erroDaLeitura(o, conhecidos, opcoes);
   if (t.inesperado) c.log.excecao(e, { codigo: t.erro === "tempo_esgotado" ? "tempo_esgotado" : "banco_falhou", acao: q, schema: c.schema });
   else c.log.aviso({ codigo: t.erro, schema: c.schema, acao: q, pg: typeof o.code === "string" ? o.code : null });
   return { ok: false, erro: t.erro };

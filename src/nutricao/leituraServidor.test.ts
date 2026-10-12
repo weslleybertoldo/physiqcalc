@@ -289,11 +289,41 @@ describe("hml-20a — o catálogo da nutricao (as 3 consultas do app do aluno; a
         expect(c.params[f.param], f.param).toBeDefined();
         expect(f.coluna).not.toBe(c.dono); // o dono nunca vem de param
       }
+      // hml-20b (revisão): os campos opcionais, na forma — a página com o param declarado (inteiro ≥ 1) e o tamanho no teto; o laço sem
+      // assinatura nem contagem (todas as linhas, uma leitura atrás da outra) e no teto de leituras; a de 1 linha com teto 1
+      const f = c.fonte;
+      if (f.pagina) {
+        expect(c.params[f.pagina.param], f.pagina.param).toMatchObject({ tipo: "inteiro", min: 1 });
+        expect(f.pagina.tamanho).toBeGreaterThan(0);
+        expect(f.pagina.tamanho).toBeLessThanOrEqual(TETO_MAX);
+        expect(f.laco).toBeUndefined();
+      }
+      if (f.laco) {
+        expect(c.assinar).toBeUndefined();
+        expect(f.contar).not.toBe(true);
+        expect(f.laco.tamanho).toBeGreaterThan(0);
+        expect(f.laco.tamanho).toBeLessThanOrEqual(TETO_MAX);
+        expect(f.laco.leituras).toBeGreaterThan(0);
+        expect(f.laco.leituras).toBeLessThanOrEqual(LACO_LEITURAS_MAX);
+      }
+      if (f.uma) expect(f.teto).toBe(1);
     }
+    if (ehRpc(c.fonte)) for (const e of c.fonte.erros ?? []) expect(e, e).toMatch(/^[a-z_]+$/); // os códigos de propósito: só códigos
     if (c.assinar) {
       expect(c.assinar.validade).toBeLessThanOrEqual(VALIDADE_MAX_S);
       expect(BUCKETS_DE_LEITURA).toContain(c.assinar.bucket); // a lista fechada (20a: diario, evolucao; 20b: + anexos)
       if (!ehRpc(c.fonte)) expect(c.fonte.colunas).toContain(c.assinar.coluna);
+      // hml-20b (revisão): o "baixar com o nome" — só em tabela (1 URL por linha), o nome numa coluna que a PRÓPRIA consulta lê, o param
+      // dele declarado como booleano e o prazo dele no teto de 1 h
+      const d = c.assinar.download;
+      if (d) {
+        expect(ehRpc(c.fonte)).toBe(false);
+        expect(c.assinar.lista).toBeUndefined();
+        if (!ehRpc(c.fonte)) expect(c.fonte.colunas).toContain(d.nome);
+        expect(c.params[d.param], d.param).toEqual({ tipo: "booleano" });
+        expect(d.validade).toBeGreaterThan(0);
+        expect(d.validade).toBeLessThanOrEqual(VALIDADE_MAX_S);
+      }
     }
   });
 
@@ -964,6 +994,38 @@ describe("hml-20b — cada consulta nova no módulo (como a pessoa, com o RLS si
     expect(itensDa(await atenderLeitura(n1.c))).toEqual([{ ok: false, erro: "nao_encontrado" }]);
   });
 
+  it("antropometria/antropometrias_pdf: id/paciente ruim ou faltando (ou o param com outro nome) → dados_invalidos (nada roda)", async () => {
+    const { c, consultas } = contexto20b([
+      { q: "antropometria", id: "abc" }, { q: "antropometria" }, { q: "antropometria", id: 7 }, { q: "antropometria", aluno: D1 },
+      { q: "antropometrias_pdf", paciente: "x" }, { q: "antropometrias_pdf" }, { q: "antropometrias_pdf", aluno: ALUNO },
+    ], { tabela: () => ({ data: [{ id: D1 }], error: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual(Array(7).fill({ ok: false, erro: "dados_invalidos" }));
+    expect(consultas).toEqual([]);
+  });
+
+  it("revisão — a página além do fim (PGRST103) na consulta COM página → dados_invalidos, com o aviso e SEM o log.excecao", async () => {
+    const alem = { data: null, error: { code: "PGRST103", message: "Requested range not satisfiable", details: "An offset of 9980 was requested, but there are only 41 rows." } };
+    const { c, log } = contexto20b([{ q: "pedidos_exame_do_aluno", aluno: ALUNO, pagina: 500 }], { tabela: () => ({ ...alem, count: null }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: false, erro: "dados_invalidos" }]);
+    expect(log.excecao).not.toHaveBeenCalled();
+    expect(log.aviso).toHaveBeenCalledWith({ codigo: "dados_invalidos", schema: "staging", acao: "pedidos_exame_do_aluno", pg: "PGRST103" });
+    expect(erroDaLeitura(alem.error, [], { pagina: true })).toEqual({ erro: "dados_invalidos", inesperado: false });
+  });
+
+  it("revisão — o PGRST103 SEM página (as outras consultas, as 3 da 20a, o laço e as RPCs) segue a tabela de sempre: erro_interno + log.excecao", async () => {
+    const alem = { code: "PGRST103", message: "Requested range not satisfiable" };
+    expect(erroDaLeitura(alem)).toEqual(erroDoBanco(alem)); // a 20a: igual ao erroDoBanco
+    expect(erroDaLeitura(alem, [], {})).toEqual({ erro: "erro_interno", inesperado: true });
+    expect(erroDaLeitura(alem, ERROS_DA_ROTA, { pagina: false })).toEqual({ erro: "erro_interno", inesperado: true });
+    const { c, log } = contexto20b([
+      { q: "consultas_do_aluno", aluno: ALUNO }, { q: "aluno_diario_urls", ids: [D1] }, { q: "resultados_exame_do_aluno", aluno: ALUNO },
+    ], { tabela: () => ({ data: null, error: alem }) });
+    expect(itensDa(await atenderLeitura(c))).toEqual(Array(3).fill({ ok: false, erro: "erro_interno" }));
+    expect(log.excecao).toHaveBeenCalledTimes(3);
+    const rpc = contexto20b([{ q: "anotacoes", aluno: ALUNO, limite: 3 }], { rpc: () => ({ data: null, error: alem }) });
+    expect(itensDa(await atenderLeitura(rpc.c))).toEqual([{ ok: false, erro: "erro_interno" }]);
+  });
+
   it("antropometrias_pdf: as 12 colunas do PDF, o paciente do corpo, as vivas, da mais antiga para a mais nova", async () => {
     const { c, consultas } = contexto20b([{ q: "antropometrias_pdf", paciente: ALUNO, aluno: OUTRA }], { tabela: () => ({ data: [], error: null }) });
     expect(itensDa(await atenderLeitura(c))).toEqual([{ ok: true, linhas: [] }]);
@@ -1010,6 +1072,8 @@ describe("hml-20b — o módulo lê como a pessoa (fonte): a página, o laço e 
     expect(fonte).toMatch(/const \[caminho\] = caminhosParaAssinar\(\[linha\], a\.coluna\);/);
     expect(fonte).toMatch(/const nome = nomeDoDownload\(a, item\.params, linha\);/);
     expect(fonte).toMatch(/c\.comoPessoa\.storage\.from\(bucket\)\.createSignedUrl\(caminho, validade, /);
+    // revisão: só o select com página passa a opção da página ao falhou (a página além do fim → dados_invalidos)
+    expect(fonte.match(/\{ pagina: extras\.intervalo !== null \}/g)).toHaveLength(1);
     expect(fonte).not.toMatch(/SERVICE_ROLE|service_role|createClient\(/);
   });
 });
