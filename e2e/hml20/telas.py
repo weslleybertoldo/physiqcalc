@@ -26,6 +26,9 @@ Avaliação pela parte do principal) — em painel_tela.py (o docstring de lá);
 hml-20c: --area dieta = as telas da Dieta ×8, das Dietas ×3, da Pré-consulta ×2 e do Dashboard: os prints c_* (prints/hml20/c), a foto do
 diário, o fluxo da Pré-consulta pela tela, o c_dieta_erro e o tempo antes × depois (decisão M; o Dashboard pela parte da 20c) — em
 dieta_tela.py; os casos: prints,tempo; o antes com --prefixo antes_staging.
+hml-20d: --area financeiro = as 6 abas do Financeiro, o Financeiro do aluno, o Dashboard da personal (a parte do Financeiro) e o Início/Perfil
+da aluna: os prints d_* (prints/hml20/d) e o tempo antes × depois (decisão M) — em financeiro_tela.py; os casos: prints,tempo; o antes com
+--prefixo antes_staging.
 """
 from __future__ import annotations
 
@@ -258,8 +261,8 @@ def rodar(o, base: str, canal: str | None, casos: list[str], prefixo: str | None
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20 — as telas: o app do aluno (20a: prints a_*, tempo, gate J), o Painel › Aluno (20b: prints b_*, tempo) e a Dieta/Dietas/Pré-consulta/Dashboard (20c: prints c_*, tempo)")
-    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta"))
+    ap = argparse.ArgumentParser(description="hml-20 — as telas: o app do aluno (20a: prints a_*, tempo, gate J), o Painel › Aluno (20b: prints b_*, tempo), a Dieta/Dietas/Pré-consulta/Dashboard (20c: prints c_*, tempo) e o Financeiro (20d: prints d_*, tempo)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta", "financeiro"))
     ap.add_argument("--base", default="local", choices=("local", "staging"))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--casos", default=None, help="aluno: prints,tempo,gate · painel-aluno e dieta: prints,tempo")
@@ -275,6 +278,9 @@ def main() -> int:
         validos = ("prints", "tempo")
     if a.area == "dieta":  # hml-20c: a Dieta, as Dietas, a Pré-consulta e o Dashboard (dieta_tela.py)
         import dieta_tela as painel  # noqa: PLC0415
+        validos = ("prints", "tempo")
+    if a.area == "financeiro":  # hml-20d: as 6 abas, o Financeiro do aluno, o Dashboard e o gate do app (financeiro_tela.py)
+        import financeiro_tela as painel  # noqa: PLC0415
         validos = ("prints", "tempo")
     casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
     if any(c not in validos for c in casos):

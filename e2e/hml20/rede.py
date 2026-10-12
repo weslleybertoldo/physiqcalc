@@ -25,6 +25,8 @@ hml-20c: --area dieta = a rede do Dashboard, da Dieta ×8, das Dietas ×3 e da P
 leitura direta da área, o `ler` por tela, as de fora da área (H-43, 20d) à parte, 0 gravação nova ao abrir e a Pré-consulta PELA TELA (as 5
 gravações pela função, 0 direta); em dieta_tela.py
 (o docstring de lá), planilha hml20/medicao/rede_hml20b.tsv.
+hml-20d: --area financeiro = as 6 abas do Financeiro, o Financeiro do aluno, o Dashboard da personal (a parte do Financeiro) e o Início/
+Perfil da aluna (o gate) — em financeiro_tela.py (o docstring de lá).
 """
 from __future__ import annotations
 
@@ -191,8 +193,8 @@ def rodar(o, base: str, canal: str | None) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20 — a rede das telas (antes × depois): o app do aluno (20a), o Painel › Aluno (20b) e a Dieta/Dietas/Pré-consulta/Dashboard (20c)")
-    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta"))
+    ap = argparse.ArgumentParser(description="hml-20 — a rede das telas (antes × depois): o app do aluno (20a), o Painel › Aluno (20b), a Dieta/Dietas/Pré-consulta/Dashboard (20c) e o Financeiro (20d)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta", "financeiro"))
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--seco", action="store_true")
@@ -203,6 +205,8 @@ def main() -> int:
         import painel_tela as painel  # noqa: PLC0415
     if a.area == "dieta":  # hml-20c: a Dieta, as Dietas, a Pré-consulta e o Dashboard (dieta_tela.py)
         import dieta_tela as painel  # noqa: PLC0415
+    if a.area == "financeiro":  # hml-20d: as 6 abas, o Financeiro do aluno, o Dashboard (a parte do Financeiro) e o gate do app (financeiro_tela.py)
+        import financeiro_tela as painel  # noqa: PLC0415
     if a.seco:
         o = C.Saida(f"rede20_{a.area}_seco")
         painel.seco(o, "rede") if painel else seco(o)

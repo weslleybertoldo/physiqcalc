@@ -33,6 +33,8 @@ hml-20b: --area painel-aluno = os casos de servidor do Painel › Aluno (as 27 c
 --so-leitura do smoke depois de publicar) — em painel_api.py (o docstring de lá); os casos da 20a seguem aqui, iguais.
 hml-20c: --area dieta = os casos de servidor da Dieta do aluno, das Dietas, da Pré-consulta e do Dashboard (as 34 consultas da 20c: P, G —
 as 5 gravações da Pré-consulta pela função —, N1–N9, o --limpar, o --seco e o --so-leitura do smoke) — em dieta_api.py (o docstring de lá).
+hml-20d: --area financeiro = os casos de servidor do Financeiro (as 12 consultas da 20d na função financeiro: P, N1–N9 — o N8 não se aplica:
+sem Storage —, o --limpar, o --seco e o --so-leitura do smoke) — em financeiro_api.py (o docstring de lá).
 Da saída só saem status, códigos, contagens e tempos.
 """
 from __future__ import annotations
@@ -191,7 +193,7 @@ def seco(o) -> None:
     o.ok(jpg[:3] == b"\xff\xd8\xff" and png[:4] == b"\x89PNG" and len(jpg) < 2000 and len(png) < 2000,
          f"as imagens de teste são sintéticas e pequenas (JPEG {len(jpg)} B, PNG {len(png)} B)")
     o.ok((B.REG_LOGINS.name == "logins_etapa2_20a.txt" and B.B19.MAX_LOGINS == 10)
-         or (B.REG_LOGINS.name in ("logins_etapa2_20b.txt", "logins_etapa2_20c.txt") and B.B19.MAX_LOGINS in (6, 10)),
+         or (B.REG_LOGINS.name in ("logins_etapa2_20b.txt", "logins_etapa2_20c.txt", "logins_etapa2_20d.txt") and B.B19.MAX_LOGINS in (6, 10)),
          f"o registro de logins da W (decisão G; hml-20b/20c: o da W, 6 na etapa 2 — 10 no F6): {B.REG_LOGINS.name} (até {B.B19.MAX_LOGINS})")
     # o teto conta só o staging: o login do smoke da produção (o motivo termina em "prod)") não come os 6 da etapa 2 (num registro de mentira)
     real = B.B19.REG_LOGINS
@@ -613,9 +615,9 @@ def rodar(o, L, estado, rodada: str, casos: list[str]) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20 — E2E de servidor das leituras: o app do aluno (20a), o Painel › Aluno (20b, --area painel-aluno) "
-                                             "e a Dieta, as Dietas, a Pré-consulta e o Dashboard (20c, --area dieta)")
-    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta"))
+    ap = argparse.ArgumentParser(description="hml-20 — E2E de servidor das leituras: o app do aluno (20a), o Painel › Aluno (20b, --area painel-aluno), "
+                                             "a Dieta, as Dietas, a Pré-consulta e o Dashboard (20c, --area dieta) e o Financeiro (20d, --area financeiro)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta", "financeiro"))
     ap.add_argument("--base", default="staging", choices=("local", "staging", "prod"))
     ap.add_argument("--casos", default=None, help="padrão: todos (" + ",".join(CASOS) + ")")
     modo = ap.add_mutually_exclusive_group()
@@ -637,6 +639,12 @@ def main() -> int:
         if any(c not in dieta_api.CASOS for c in casos_d):
             raise SystemExit(f"caso desconhecido (os casos da dieta: {', '.join(dieta_api.CASOS)})")
         return dieta_api.main(a, casos_d)
+    if a.area == "financeiro":  # hml-20d: o Financeiro (financeiro_api.py)
+        import financeiro_api  # noqa: PLC0415
+        casos_f = [c.strip() for c in (a.casos or ",".join(financeiro_api.CASOS)).split(",") if c.strip()]
+        if any(c not in financeiro_api.CASOS for c in casos_f):
+            raise SystemExit(f"caso desconhecido (os casos do financeiro: {', '.join(financeiro_api.CASOS)})")
+        return financeiro_api.main(a, casos_f)
     casos = [c.strip() for c in (a.casos or ",".join(CASOS)).split(",") if c.strip()]
     if any(c not in CASOS for c in casos):
         raise SystemExit(f"caso desconhecido (os casos: {', '.join(CASOS)})")

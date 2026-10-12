@@ -444,7 +444,7 @@ def seco(o) -> None:  # noqa: PLR0915
     cont = D.sql_contar_marca("staging", "seco-0000")
     o.ok("'%hml20 e2e%seco-0000%'" in cont and all(f"staging.{t}" in cont for t in D.TABELAS_DA_MASSA) and cont.count(" as ") == 3,
          "a conferência final: a marca no diário, nos formulários e nas respostas (só contagem)")
-    o.ok(B.REG_LOGINS.name == "logins_etapa2_20c.txt" and B.B19.MAX_LOGINS in (6, 10),
+    o.ok(B.REG_LOGINS.name in ("logins_etapa2_20c.txt", "logins_etapa2_20d.txt") and B.B19.MAX_LOGINS in (6, 10),
          f"o registro de logins da 20c (decisão J): {B.REG_LOGINS.name}, teto {B.B19.MAX_LOGINS} (6 na etapa 2; a sessão principal sobe para 10 no F6)")
 
 

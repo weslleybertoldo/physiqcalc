@@ -183,6 +183,28 @@ O Supabase dá `EXECUTE` a `anon` e a `authenticated` em toda função nova. Por
 - Nenhuma migration; os grants e as policies de LEITURA e de ESCRITA **ficam** (decisão 12 da spec hml-20: a função lê e grava com a
   sessão da pessoa, que precisa deles; os APKs antigos e o AAB ainda falam direto — desvio 2).
 
+## Principal: o Financeiro pela função `financeiro` — as leituras (hml-20d, H-42 · jeito 2, etapa 2, parte 4)
+- **Leituras (H-42, a última parte):** as 6 abas do Financeiro (Resumo, Mensalidades, Planos, Lançamentos, Recibos, Categorias), o
+  Financeiro do aluno (Painel › Aluno), a parte do Financeiro do Dashboard e o resumo leve do app do aluno (a faixa do Início, a trava do
+  inadimplente e o chip do Perfil) não leem mais as tabelas e as RPCs do principal no navegador: as libs mandam a ação **`ler`** da
+  `financeiro` (o MESMO motor da `nutricao` — `_shared/leitura-lote.ts`, sem mudança — com o catálogo novo `_shared/financeiro-leituras.ts`,
+  12 consultas, e o módulo `functions/financeiro/leituras.ts`), que roda cada consulta **como a pessoa** (o mesmo token; nenhuma chave
+  secreta), no lote da tela (as comuns e as da aba aberta numa ida): o select das tabelas com as colunas do select de hoje (`categorias_
+  financeiras`, `modelos_recibo`, `recibos`, `profiles`, `cobrancas` com o nome do aluno, `transacoes` com a categoria), as vivas, a
+  ordem, a página com o count exato do Financeiro do aluno e as RPCs de leitura de hoje (`financeiro_resumo_periodo`,
+  `financeiro_lancamentos`, `financeiro_recibos`, `financeiro_totais_do_aluno`, `financeiro_do_aluno`), com o EXECUTE de hoje — os
+  `{ ok: false, erro }` de propósito das 3 da conta voltam como o erro do item. "Minhas" (o dono = o token, nunca o corpo): as categorias,
+  os modelos, o último nº do recibo (sem o filtro das vivas — os da Lixeira contam, o número não volta) e o nome do profissional; as
+  cobranças do Resumo/Dashboard com o recorte da conta ativa (`conta_id = a conta do corpo` ou sem conta e do próprio — o `.or()` de hoje,
+  montado no servidor com o `userId` do token) e o "em aberto OU vence no mês", em leituras de 1000 até 20 no servidor (passou → a frase
+  de hoje). O aluno e a conta vêm do corpo e o RLS/a RPC decide (outra conta → lista vazia / `sem_acesso`, como hoje). A aluna também
+  chama a `financeiro` (a porta aceita qualquer pessoa logada, como a `nutricao`).
+- **Gravações:** as 14 de antes (hml-19d) seguem iguais — o `ler` é despachado antes da lista delas. O comprovante do Pix (o PUT no link
+  que o servidor assinou) é gravação e fica; a cobrança, o Pix e o Mercado Pago seguem pela `pagamentos-aluno`. Sem Storage nas leituras.
+- Ficam no navegador (de OUTRA W): a equipe da conta das telas do Financeiro (`equipe_da_conta`, H-43).
+- Nenhuma migration; os grants e as policies de LEITURA **ficam** (decisão 12 da spec hml-20: a função lê com a sessão da pessoa, que
+  precisa deles; os APKs antigos e o AAB ainda leem direto — desvio 2).
+
 ## Treino: quem lê os treinos montados
 - `tb_grupos_treino` e `tb_grupos_exercicios` (`physiq_pode_ler_grupo`): o master; o professor dono; qualquer profissional,
   se o grupo é do catálogo global do master (`professor_id` vazio); e o aluno que recebe o grupo (`tb_grupos_treino_perfis`).
