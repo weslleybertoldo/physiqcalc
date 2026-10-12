@@ -114,12 +114,16 @@ def contar_dieta(pedidos: list[dict]) -> dict:
 # (nome, rota (com {pac} = a matrícula), a marca de que a tela abriu, o teto de chamadas `ler` ao abrir — HIPÓTESE da etapa 1, a etapa 2
 # mede e ajusta com o porquê): o Dashboard (o resumo, as respostas, o diário de hoje e o contador num lote; as miniaturas depois — a série
 # listar → assinar) — teto 3; a Dieta ×8 (as 7 seções + o "Editar treino e dieta", o editor do plano em página própria); a 1ª tela da Dieta
-# paga a casca do aluno (o perfil e a série: 1 lote desde o ec101ce) — teto 2; as Dietas ×3 (o Diário: a página e, depois, as miniaturas —
+# paga a casca do aluno — teto 3 (etapa 2, 14:08, medido: na aba Dieta a casca faz 2 `ler` EM SÉRIE — o aluno_perfil e, depois dele, a série
+# dos KPIs do cabeçalho (aluno_evolucao_painel), que só monta com o perfil — e a seção, 1 `ler` (os planos, os cálculos e o profissional
+# juntos); o ANTES no staging (f5c8202, com a casca da 20b) também fez 3 `ler` + 3 leituras diretas: a 20c não pôs ida nova, juntou a
+# seção no lote do profissional; a série da casca esperar o perfil fora da Avaliação é da 20b, igual ao antes); as Dietas ×3 (o Diário: a
+# página e, depois, as miniaturas —
 # teto 2); a Pré-consulta ×2. O contador do menu (preconsulta_novas, a casca) pode cair num `ler` a mais em qualquer tela quando vence.
 # A ENTRADA é a lista de alunos (/painel/alunos — H-43, fora da área): o Dashboard é a 1ª tela medida, sem cache (pela navegação do app).
 ENTRADA = "/painel/alunos"
 SECOES_DIETA = (
-    ("planejamento", "", "[data-secao-planejamento]", 2), ("acompanhamento", "?secao=acompanhamento", "[data-secao-acompanhamento]", 1),
+    ("planejamento", "", "[data-secao-planejamento]", 3), ("acompanhamento", "?secao=acompanhamento", "[data-secao-acompanhamento]", 1),
     ("calculo-energetico", "?secao=calculo-energetico", "[data-secao-calculo-energetico]", 1), ("suplementos", "?secao=suplementos", "[data-secao-suplementos]", 1),
     ("manipulados", "?secao=manipulados", "[data-secao-manipulados]", 1), ("orientacoes", "?secao=orientacoes", "[data-secao-orientacoes]", 1),
     ("metas", "?secao=metas", "[data-secao-metas]", 1),
