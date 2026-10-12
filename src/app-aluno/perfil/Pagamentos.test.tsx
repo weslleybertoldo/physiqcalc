@@ -8,6 +8,10 @@
 // W1: na conta InfinitePay o Pagar abre a folha dela; a tentativa viva vira "Continuar o pagamento" e o cartão "em andamento" (fora do
 // histórico); a volta da página (?order_nsu=…) confere na hora; a paga mostra "Pix (InfinitePay)" e o recibo; com a folha fechada, a tela
 // confere de novo a cada 30 s. A função, a abertura da página e o recibo são falsos.
+// W2: no Mercado Pago DO PERSONAL (mercadopago_conta) o Pagar abre o Mercado Pago com o cartão na chave pública dele (o ensureMpInit de
+// verdade sobre o initMercadoPago falso: a chave da matrícula e, depois, a do Physiq no plano do personal — PlanoContaNova); a conexão
+// caída → só o aviso (e a linha da mensalidade "pagamento pelo app indisponível", sem Pix nem cartão); sem a chave → só o Pix (decisão
+// 14: nunca o Brick com a chave do Physiq para pagar o personal).
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -20,6 +24,7 @@ type BrickFalso = { customization: { paymentMethods: { maxInstallments: number }
 const h = vi.hoisted(() => ({
   status: vi.fn(), historico: vi.fn(), acao: vi.fn(), brick: [] as BrickFalso[],
   volta: vi.fn(), conferir: vi.fn(), link: vi.fn(), abrir: vi.fn(), recibo: vi.fn(),
+  init: vi.fn(), statusPlano: vi.fn(),
 }));
 vi.mock("@/lib/distribuicao", () => ({ ehLoja: false, DISTRIBUICAO: "site" }));
 vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: () => false, getPlatform: () => "web" }, registerPlugin: () => ({}) }));
@@ -41,9 +46,18 @@ vi.mock("@/financeiro/abrirPagamento", () => ({
   abrirLinkExterno: (...a: unknown[]) => h.recibo(...a),
   fecharPagina: async () => {},
 }));
-vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: (p: BrickFalso) => { h.brick.push(p); return null; }, initMercadoPago: () => {} }));
-vi.mock("@/components/pagamentos/mpInit", () => ({ MP_PUBLIC_KEY: "TEST-chave", ensureMpInit: () => {} }));
+vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: (p: BrickFalso) => { h.brick.push(p); return null; }, initMercadoPago: (...a: unknown[]) => h.init(...a) }));
+// W2: o ensureMpInit de verdade (por chave) sobre o initMercadoPago falso; a chave do Physiq do build fica fixa
+vi.mock("@/components/pagamentos/mpInit", async (orig) => ({ ...(await orig<typeof import("@/components/pagamentos/mpInit")>()), MP_PUBLIC_KEY: "TEST-chave" }));
+// W2: o plano do personal (Configurações › Plano, a assinatura do Physiq) — o status da cobrança da conta é falso
+vi.mock("@/painel/configuracoes/plano/api", async (orig) => ({
+  ...(await orig<typeof import("@/painel/configuracoes/plano/api")>()),
+  buscarStatusCobranca: (...a: unknown[]) => h.statusPlano(...a),
+  acaoCobranca: async () => ({}),
+}));
 
+import { PRECOS_PADRAO } from "@/nucleo/cobranca/regras";
+import { PlanoContaNova } from "@/painel/configuracoes/plano/PlanoContaNova";
 import Pagamentos from "./Pagamentos";
 
 const DIA = 86_400_000;
@@ -91,6 +105,8 @@ beforeEach(() => {
   for (const f of [h.volta, h.conferir, h.link, h.abrir, h.recibo]) f.mockReset();
   h.conferir.mockResolvedValue({ ok: true, paga: false, resultado: "em_andamento", cobranca: { status: "aguardando_confirmacao" } });
   h.brick.length = 0;
+  h.init.mockReset();
+  h.statusPlano.mockReset();
   h.status.mockResolvedValue(status([matricula()]));
   h.historico.mockImplementation(async (_p: string, tipo: "cobrancas" | "recibos", pagina: number) => {
     const todas = tipo === "cobrancas" ? COBRANCAS : RECIBOS;
@@ -413,5 +429,102 @@ describe("Perfil › Pagamentos — InfinitePay (W1)", () => {
       sucesso.mockRestore();
       vi.useRealTimers();
     }
+  });
+});
+
+describe("Perfil › Pagamentos — o Mercado Pago do personal (W2: o cartão com a chave pública do vendedor)", () => {
+  const CHAVE_DO_LUCAS = "APP_USR-chave-publica-do-lucas";
+  const MES_A_MES = { valor: 83.33, modalidade: "mensal" as const, automatica: true, parcela: { num: 4, total: 12 } };
+  /** O plano numa conta que recebe no Mercado Pago DO PERSONAL (sem chave Pix: Pix e cartão do MP dele). */
+  const MP_CONTA = (mp: MatriculaPagamentos["mp"]) =>
+    ({ ...PLANO(MES_A_MES), conta: { id: "c1", nome: "Consultoria", modo: "mercadopago_conta" as const, bloquear: false, profissional: "Lucas Ferreira" }, chave: null, mp });
+  /** O plano do próprio personal (Configurações › Plano): no teste grátis, com o Pagar. */
+  const STATUS_PLANO = {
+    ok: true, ambiente: "staging", simulacao: true, hoje: "2026-10-12",
+    conta: { id: "c9", nome: "Consultoria Ferreira", origem: "nova", plano: "treino_nutricao", faixa: "f10", periodicidade: "mensal", situacao: "teste",
+      teste_ate: "2026-10-20", vence_em: null, tolerancia_dias: 0, valor_travado: null, regra_pix: "mes", isenta_motivo: null, efetiva: "teste" },
+    alunos_ativos: 3, limite_alunos: 10, precos: PRECOS_PADRAO, valor_mensal: 59.9, valor_anual: 599, faturas: [], pix_aberto: null, assinatura: null,
+  };
+  /** Pagar da mensalidade → o painel de pagar abre. */
+  async function abrirPagar() {
+    const r = montar();
+    await waitFor(() => expect(document.querySelector("[data-pagar-mensalidade]")).not.toBeNull());
+    fireEvent.click(document.querySelector("[data-pagar-mensalidade]")!);
+    await waitFor(() => expect(document.body.querySelector("[data-pagar-mp]")).not.toBeNull());
+    return r;
+  }
+  const brickChave = () => document.body.querySelector("[data-brick-mp]")?.getAttribute("data-brick-chave") ?? null;
+
+  it("com a chave do personal: o Brick nasce com a chave DELE (o initMercadoPago com a da matrícula) e, depois, o plano do personal com a do Physiq", async () => {
+    h.status.mockResolvedValue(status([MP_CONTA({ disponivel: true, chave_publica: CHAVE_DO_LUCAS })]));
+    const r = await abrirPagar();
+    expect(document.querySelector("[data-linha-mensalidade]")!.textContent).toMatch(/· Pix ou cartão$/);
+    // não cai no Pix com comprovante (o modo de antes da W2 ia para o PagarPixManual)
+    expect(document.body.querySelector("[data-pagar-pix-manual]")).toBeNull();
+    expect(document.body.querySelector("[data-mp-gerar-pix]")).not.toBeNull();
+    expect(document.body.querySelector("[data-mp-assinar]")).not.toBeNull();
+    fireEvent.click(document.body.querySelector("[data-mp-cartao]")!);
+    await waitFor(() => expect(brickChave()).toBe("conta"));
+    await waitFor(() => expect(h.init).toHaveBeenCalledWith(CHAVE_DO_LUCAS, expect.objectContaining({ locale: "pt-BR" })));
+    // o pagamento vai à mesma ação (o servidor escolhe a credencial da conta) com o token que o Brick do personal gerou
+    await act(() => h.brick.at(-1)!.onSubmit({ token: "tok-conta", payment_method_id: "visa", issuer_id: "25", installments: 1 }));
+    expect(h.acao).toHaveBeenCalledWith("aluno_mp_cartao", { paciente_id: "p1", card_token: "tok-conta", payment_method_id: "visa", issuer_id: "25", installments: 1 });
+    expect(document.body.innerHTML).not.toContain(CHAVE_DO_LUCAS);
+    r.unmount();
+
+    // a assinatura do próprio personal (Configurações › Plano) segue na chave do Physiq
+    h.statusPlano.mockResolvedValue(STATUS_PLANO);
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter useTransitions={false} initialEntries={["/painel/configuracoes/plano"]}>
+          <PlanoContaNova contaId="c9" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(document.querySelector("[data-botao-cartao]")).not.toBeNull());
+    fireEvent.click(document.querySelector("[data-botao-cartao]")!);
+    await waitFor(() => expect(brickChave()).toBe("physiq"));
+    await waitFor(() => expect(h.init.mock.calls.map((c) => c[0])).toEqual([CHAVE_DO_LUCAS, "TEST-chave"]));
+    expect(h.statusPlano).toHaveBeenCalledWith("c9");
+  });
+
+  it("a conexão do personal caída (mp.disponivel false): só o aviso — sem Pix, sem cartão, sem automática", async () => {
+    h.status.mockResolvedValue(status([MP_CONTA({ disponivel: false, chave_publica: null })]));
+    await abrirPagar();
+    // a linha do cartão da mensalidade diz o mesmo que a folha: não promete Pix nem cartão (o E2E de tela, passo 7, achou "· Pix")
+    const linha = document.querySelector("[data-linha-mensalidade]")!.textContent!;
+    expect(linha).toMatch(/· parcela 4 de 12 · pagamento pelo app indisponível$/);
+    expect(linha).not.toMatch(/Pix|cartão/);
+    const aviso = document.body.querySelector("[data-mp-indisponivel]");
+    expect(aviso?.textContent).toBe("O pagamento pelo app está indisponível agora. Avise o seu profissional.");
+    for (const sel of ["[data-mp-gerar-pix]", "[data-mp-cartao]", "[data-mp-assinar]", "[data-brick-mp]", "[data-pagar-pix-manual]"]) {
+      expect(document.body.querySelector(sel), sel).toBeNull();
+    }
+    expect(h.acao).not.toHaveBeenCalled();
+    expect(h.init).not.toHaveBeenCalled();
+  });
+
+  it("sem a chave pública do personal: só o Pix — sem cartão nem automática, e o Brick nunca abre com a chave do Physiq (decisão 14)", async () => {
+    h.status.mockResolvedValue(status([MP_CONTA({ disponivel: true, chave_publica: null })]));
+    await abrirPagar();
+    expect(document.querySelector("[data-linha-mensalidade]")!.textContent).toMatch(/· Pix$/);
+    expect(document.body.querySelector("[data-mp-indisponivel]")).toBeNull();
+    for (const sel of ["[data-mp-cartao]", "[data-mp-assinar]", "[data-brick-mp]", "[data-cartao-mp]"]) {
+      expect(document.body.querySelector(sel), sel).toBeNull();
+    }
+    // o Pix do MP do personal funciona
+    h.acao.mockResolvedValueOnce({ cobranca: { ...cobranca(0), id: "px1", status: "aguardando_confirmacao", forma: "mp", pix_copia_cola: "000201", pix_expira_em: dia(3) } });
+    fireEvent.click(document.body.querySelector("[data-mp-gerar-pix]")!);
+    await waitFor(() => expect(document.body.querySelector('[data-mp-pix-aberto="px1"]')).not.toBeNull());
+    expect(h.acao).toHaveBeenCalledWith("aluno_mp_pix", { paciente_id: "p1" });
+    expect(h.init).not.toHaveBeenCalled();
+  });
+
+  it("o Mercado Pago do Physiq (o modo de hoje) segue com a chave do Physiq", async () => {
+    h.status.mockResolvedValue(status([PLANO_MP(MES_A_MES)]));
+    const cartao = await abrirPagarMp();
+    fireEvent.click(cartao);
+    await waitFor(() => expect(brickChave()).toBe("physiq"));
+    expect(h.init.mock.calls.every((c) => c[0] === "TEST-chave")).toBe(true);
   });
 });

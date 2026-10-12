@@ -48,7 +48,9 @@ SIMULADOR — e2e/w1/simulador_ip.py — no lugar da API):
 Desfazer: ANTES de mexer, a foto (a matrícula do aluno2, a conta do prof2 — forma, bloqueio, chaves, integração — e a flag do staging) vai para
 ~/projetos/physiqcalc-scratch/w1/api-estado.json; no fim (ou na próxima rodada / --limpar, se esta cair no meio) sai tudo o que a rodada
 criou (cobranças e os avisos da caixa delas, avisos do sino, chaves "w1e2e…", assinaturas e planos "W1 e2e …") e o resto volta à foto — o
-último ✅ confere campo a campo.
+último ✅ confere campo a campo. A guarda da W2 (sair de um Mercado Pago com automática viva → P0001, também para o postgres): as
+automáticas da RODADA saem ANTES de a forma voltar; com automática viva de FORA da rodada num Mercado Pago (ou a conta no MP do personal)
+a rodada não começa e o caso trocar não liga o MP; só a integração da InfinitePay é desfeita (a do MP do personal não é desta rodada).
 Precisa:
   · a W1 no staging (a migration 20261011200000; a flag é ligada e devolvida pela rodada) e, no padrão, as 2 funções publicadas;
   · ~/.pc-pat e as senhas das contas de TESTE;
@@ -95,6 +97,10 @@ RAIZ = Path(__file__).resolve().parent.parent.parent
 PORTA_PAG, PORTA_WEB, PORTA_SIM = 8790, 8791, 8799
 # o permitido(`ip-link:<uid>`, 10, 600_000) do aluno_ip_link (pagamentos-aluno): 10 links em 10 min por pessoa, na memória da instância
 LINKS_POR_JANELA, JANELA_LINKS_S = 10, 600
+# A guarda da W2 (contas_guard_mp, migration 20261011210000) vale para TODO MUNDO, inclusive o postgres deste script: sair de um Mercado
+# Pago com cobrança automática viva na conta → P0001 automaticas_ativas:<n>. O E2E só mexe no que criou (o limpar e o caso trocar).
+MODOS_MP = ("mercadopago", "mercadopago_conta")
+VIVAS = "('authorized', 'pending', 'paused')"
 HOST_IP = re.compile(r"^https://([a-z0-9-]+\.)*(infinitepay\.io|infinitepay\.com\.br)(/|$)", re.I)
 ATIVAR = "https://app.infinitepay.io/external-checkout#configuracoes?enabled=true"
 # a resposta de verdade do /links (e do payment_check) com o checkout externo desligado — ou a InfiniteTag que não existe (sondado 11/10)
@@ -153,6 +159,33 @@ def um(q: str) -> dict | None:
 
 def lit(v) -> str:
     return "null" if v is None else "'" + str(v).replace("'", "''") + "'"
+
+
+def arr_uuid(ids) -> str:
+    return f"array[{', '.join(lit(x) for x in ids or [])}]::uuid[]"
+
+
+def sql_vivas_de_fora(conta: str, pac: str, antes) -> str:
+    """Quantas automáticas vivas da conta NÃO são massa desta rodada: as dos outros alunos e as do aluno de teste que já estavam na foto.
+    A guarda da W2 conta todas; o E2E não cancela nenhuma delas."""
+    return (f"select count(*)::int as n from {S}.aluno_assinaturas a join {S}.pacientes p on p.id = a.paciente_id "
+            f"where p.conta_id = '{conta}' and a.status in {VIVAS} "
+            f"and not (a.paciente_id = '{pac}' and not (a.id = any({arr_uuid(antes)})))")
+
+
+def motivo_para_nao_comecar(conta: str, pac: str, modo: str | None, antes) -> str | None:
+    """O ponto de partida põe a conta no Pix na chave. A guarda da W2 recusa (também para o postgres) se ela estiver num Mercado Pago com
+    automática viva — todas de fora da rodada —, e sair do Mercado Pago do personal desconecta a integração de quem a ligou. → o motivo
+    (a rodada não começa e nada é gravado) ou None."""
+    if modo == "mercadopago_conta":
+        return (f"a conta do {DONO} está no Mercado Pago do personal (W2): sair dele desconecta a integração — a rodada não começa (nada "
+                "foi gravado); confira à mão (o desfazer do e2e/w2 não terminou?)")
+    if modo in MODOS_MP:
+        n = um(sql_vivas_de_fora(conta, pac, antes))["n"]
+        if n:
+            return (f"a conta do {DONO} está no Mercado Pago com {n} cobrança(s) automática(s) viva(s) de fora da rodada: a guarda da W2 "
+                    "recusa a troca para o Pix — a rodada não começa (nada foi gravado); confira à mão")
+    return None
 
 
 def tag_de_teste() -> str | None:
@@ -328,8 +361,12 @@ def preparar() -> None:
     pac, conta = m["id"], m["conta"]
     sql(f"select {S}.mensalidade_recalcular('{pac}')")
     t0 = um("select clock_timestamp()::text as t0")["t0"]
+    f = foto(pac, conta)
+    motivo = motivo_para_nao_comecar(conta, pac, (f["conta"] or {}).get("modo"), f["assinaturas"])
+    if motivo:
+        raise RuntimeError(motivo)
     # o id da conta vai em "conta_id": a foto tem a chave "conta" (forma e bloqueio) e cobriria o id
-    est = {"t0": t0, "paciente": pac, "conta_id": conta, "aluno_uid": m["aluno_uid"], "dono_uid": m["dono_uid"], **foto(pac, conta)}
+    est = {"t0": t0, "paciente": pac, "conta_id": conta, "aluno_uid": m["aluno_uid"], "dono_uid": m["dono_uid"], **f}
     ESTADO_ARQ.parent.mkdir(parents=True, exist_ok=True)
     ESTADO_ARQ.write_text(json.dumps(est, ensure_ascii=False, indent=1), encoding="utf-8")
     ESTADO_ARQ.chmod(0o600)
@@ -365,16 +402,18 @@ def limpar(est: dict) -> None:
     for ch in est["chaves"]:
         if ch["ativa"]:
             sql(f"update {S}.recebimento_chaves set ativa = true where id = '{ch['id']}'")
-    sql(f"delete from {S}.recebimento_integracoes where conta_id = '{conta}'")
+    # só a InfinitePay (a foto é dela; a integração do Mercado Pago do personal — W2 — não é desta rodada)
+    sql(f"delete from {S}.recebimento_integracoes where conta_id = '{conta}' and provedor = 'infinitepay'")
     if est["integracao"]:
         sql(f"""insert into {S}.recebimento_integracoes (conta_id, provedor, infinitepay_handle, status)
                 values ('{conta}', 'infinitepay', {lit(est['integracao']['handle'])}, {lit(est['integracao']['status'])})""")
+    # as automáticas da rodada saem ANTES de a conta voltar à forma de antes: a guarda da W2 recusa sair de um Mercado Pago com uma viva
+    # (a do caso trocar que caiu no meio, por exemplo); as de antes da rodada ficam
+    sql(f"delete from {S}.aluno_assinaturas where paciente_id = '{pac}' and not (id = any({arr_uuid(est['assinaturas'])}))")
     c = est["conta"]
     sql(f"update {S}.contas set recebimento_modo = {lit(c['modo'])}, bloquear_app_inadimplente = {str(bool(c['bloquear'])).lower()} where id = '{conta}'")
     if est["flag"]:
         sql(f"update {S}.app_config set valor = {lit(est['flag'])}::jsonb where chave = 'infinitepay'")
-    sql(f"""delete from {S}.aluno_assinaturas where paciente_id = '{pac}'
-              and not (id = any(array[{', '.join(lit(x) for x in est['assinaturas']) or ''}]::uuid[]))""")
     a = est["pacientes"]
     sql(f"""update {S}.pacientes set plano_aluno_id = {lit(a['plano_aluno_id'])}, plano_modalidade = {lit(a['plano_modalidade'])},
                    plano_valor_negociado = {lit(a['plano_valor_negociado'])}, mensalidade_valor = {lit(a['mensalidade_valor'])},
@@ -651,6 +690,11 @@ def caso_avulsa() -> None:
 def caso_trocar() -> None:
     print("\n── trocar: sair do Mercado Pago com cobrança automática viva pede o OK e cancela")
     conta = CTX["conta"]
+    fora = um(sql_vivas_de_fora(conta, CTX["pac"], CTX["estado"]["assinaturas"]))["n"]
+    if fora:  # o OK cancelaria também essas (e a volta à forma de antes esbarraria na guarda da W2): o E2E não mexe no que não criou
+        p.check(False, f"a conta do {DONO} tem {fora} cobrança(s) automática(s) viva(s) de fora da rodada: o caso trocar não liga o Mercado "
+                       "Pago — pulei")
+        return
     garantir_integracao()
     sql(f"update {S}.contas set recebimento_modo = 'mercadopago' where id = '{conta}'")   # como o master liga
     a = um(f"""insert into {S}.aluno_assinaturas (paciente_id, conta_id, mp_preapproval_id, status, valor, payload)

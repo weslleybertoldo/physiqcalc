@@ -74,9 +74,10 @@ export function retratoDoPlano(m: { plano_modalidade?: Modalidade | null; plano?
 }
 
 /** Modalidades que a forma de receber da conta consegue cobrar (desenho 3.6). W1 (P-B "1"): na InfinitePay o período todo (Pix ou
- *  cartão — as parcelas, a página dela escolhe) e o mês a mês; o "cartão parcelado" não é oferecido (é o mesmo período todo). */
+ *  cartão — as parcelas, a página dela escolhe) e o mês a mês; o "cartão parcelado" não é oferecido (é o mesmo período todo). W2: o
+ *  Mercado Pago da conta do personal cobra igual ao do Physiq (D5: Pix, cartão e a automática) — as 3. */
 export function modalidadesDaConta(modo: string | null | undefined): Modalidade[] {
-  if (modo === "mercadopago") return ["avista", "cartao_parcelado", "mensal"];
+  if (modo === "mercadopago" || modo === "mercadopago_conta") return ["avista", "cartao_parcelado", "mensal"];
   if (modo === "pix_manual" || modo === "nenhum" || modo === "infinitepay") return ["avista", "mensal"];
   return [];
 }

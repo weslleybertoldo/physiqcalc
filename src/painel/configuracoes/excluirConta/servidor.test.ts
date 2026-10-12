@@ -236,6 +236,61 @@ describe("a exclusão do profissional: a ordem e as recusas", () => {
   });
 });
 
+describe("W2 (revisão I-2): o Mercado Pago DA CONTA de quem excluiu sai do ar (o job deixa de renovar o acesso de quem saiu)", () => {
+  const comMp = (chamadas: string[], o: Partial<DepsExclusao> = {}) => falsos({
+    desligarMpDasContas: async (ids) => { chamadas.push(`mp:${ids.join(",")}`); },
+    ...o,
+  }, chamadas);
+  it("o passo vem DEPOIS do SQL de verdade (excluir) e antes do espelho, com as contas de que ele era dono", async () => {
+    const chamadas: string[] = [];
+    const r = await excluirContaProfissional({ simular: false, confirmacao: "EXCLUIR", papelAuth: "" }, comMp(chamadas));
+    expect(r.status).toBe(200);
+    expect(chamadas).toEqual([
+      "conferir", "treino:conferir_profissional", "plano:a1", "alunos:p1", "solta:pre-calc-velha", "treino:excluir_profissional", "excluir",
+      "mp:c1", "espelho", "arquivos:1", "login",
+    ]);
+  });
+  it("nunca na conferência (simular), nem quando o SQL recusou ou o MP não cancelou a cobrança (nada foi excluído)", async () => {
+    for (const [nome, entrada, sobre] of [
+      ["simular", { simular: true, confirmacao: null, papelAuth: "" }, {}],
+      ["o SQL recusou", { simular: false, confirmacao: "EXCLUIR", papelAuth: "" }, { excluir: async () => ({ ok: false, erro: "cobranca_ativa" }) }],
+      ["o MP não cancelou", { simular: false, confirmacao: "EXCLUIR", papelAuth: "" }, { cancelarPlano: async () => false }],
+    ] as const) {
+      const chamadas: string[] = [];
+      await excluirContaProfissional(entrada, comMp(chamadas, sobre as Partial<DepsExclusao>));
+      expect(chamadas.some((c) => c.startsWith("mp:")), nome).toBe(false);
+    }
+  });
+  it("o passo que falha não volta a exclusão (a conta já foi excluída): só o registro, e o espelho, os arquivos e o login seguem", async () => {
+    const chamadas: string[] = [];
+    const registros: string[] = [];
+    const r = await excluirContaProfissional({ simular: false, confirmacao: "EXCLUIR", papelAuth: "" }, comMp(chamadas, {
+      desligarMpDasContas: async () => { chamadas.push("mp"); throw new Error("banco"); },
+      registrar: (m) => registros.push(m),
+    }));
+    expect(r.status).toBe(200);
+    expect(chamadas.slice(chamadas.indexOf("excluir"))).toEqual(["excluir", "mp", "espelho", "arquivos:1", "login"]);
+    expect(registros).toEqual(["mp: Error: banco"]);
+  });
+  it("na borda (exclusao-profissional.ts): só com a W2 no schema; a integração vira desconectada (data e trava), SEM apagar os tokens; o erro vai ao log.excecao", () => {
+    const fonte = readFileSync(resolve(__dirname, "../../../../supabase-principal/functions/_shared/exclusao-profissional.ts"), "utf8");
+    const i = fonte.indexOf("desligarMpDasContas: async (contaIds) => {");
+    expect(i).toBeGreaterThan(fonte.indexOf("const deps: DepsExclusao = {"));
+    const passo = fonte.slice(i, fonte.indexOf("\n    },", i));
+    const ordem = ["try {", "if (!(await schemaTemW2(db, p.schema))) return;", '.from("recebimento_integracoes").update({ status: "desconectada", desconectada_em: ',
+      "mp_renovando_ate: null", '.in("conta_id", contaIds).eq("provedor", "mercadopago").neq("status", "desconectada")', "if (error) throw error;",
+      "} catch (e) {", 'p.log.excecao(e, { codigo: "exclusao_mp_desconectar_falhou"'];
+    let de = -1;
+    for (const t of ordem) {
+      const pos = passo.indexOf(t, de + 1);
+      expect(pos, t).toBeGreaterThan(de);
+      de = pos;
+    }
+    expect(passo).not.toMatch(/mp_access_token|mp_refresh_token|\.delete\(/);   // os tokens ficam para a faxina de 7 dias (decisão 10)
+    expect(passo).not.toMatch(/\bthrow\b(?! error;)/);                           // nunca lança para a ordem
+  });
+});
+
 describe("o que precisa parar de cobrar", () => {
   it("plano + alunos do núcleo + as antigas do Calc que só o Treino conhece (sem repetir as do núcleo)", () => {
     const c = cobrancasACancelar(CONFERENCIA, TREINO);

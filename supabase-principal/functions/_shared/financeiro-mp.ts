@@ -4,6 +4,9 @@
 // O aviso do MP nunca é a verdade: quem chama sempre busca o recurso de novo na API.
 // hml-10 (H-24): quem grava o aviso do sino recebe o log de quem chama + o schema do pedido (o aviso de erro diz a função de
 // verdade e o [staging] certo) — o db não diz o schema.
+// W2 (Mercado Pago do personal — a regra da coluna nova, revisão C2): a mp_collector_id (QUAL conta do MP recebeu; nula = o MP do Physiq) só
+// entra pelo COLUNAS_COBRANCA_W2 e pelo `colunasW2` que quem chama monta com o comCollector do _shared/mp-conta.ts (vazio no schema sem a
+// migration da W2). Este arquivo nunca escreve a coluna por conta própria (e não importa o mp-conta.ts: nada de import circular).
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import type { AssinaturaMp, PagamentoMp } from "./cobranca-regras.ts";
 import { cobrancaDoStatusMp, descricaoMensalidade, diaSP, mesRefDe, mpEmAberto, type Schema } from "./financeiro-regras.ts";
@@ -19,6 +22,9 @@ export const COLUNAS_COBRANCA =
 /** W1: + as colunas da InfinitePay — só no schema que já tem a 20261011200000 (a pagamentos-aluno escolhe pelo schemaTemW1). */
 export const COLUNAS_COBRANCA_IP = COLUNAS_COBRANCA + ", ip_handle, ip_link_url, ip_expira_em, ip_transaction_nsu, ip_slug, ip_recibo_url, " +
   "ip_valor_pago, ip_parcelas, ip_meio, ip_conferido_em";
+
+/** W2: + qual conta do MP recebeu — só no schema que já tem a 20261011210000 (quem chama escolhe pelo schemaTemW2 do mp-conta.ts). */
+export const COLUNAS_COBRANCA_W2 = COLUNAS_COBRANCA_IP + ", mp_collector_id";
 
 export interface Cobranca {
   id: string;
@@ -67,6 +73,8 @@ export interface Cobranca {
   ip_parcelas?: number | null;
   ip_meio?: "pix" | "credit_card" | null;
   ip_conferido_em?: string | null;
+  /** W2 — qual conta do MP recebeu (nula = o MP do Physiq; ausente no schema sem a migration 20261011210000) */
+  mp_collector_id?: number | string | null;
 }
 
 export interface Matricula {
@@ -230,12 +238,13 @@ export async function aplicarPagamentoMp(
  * Pagamento que o MP fez fora de uma cobrança nossa (a mensal de uma assinatura, ou um Pix/cartão avulso criado pelo Calc
  * antigo): vira uma cobrança de mensalidade da matrícula (mp_payment_id único — o aviso e a conferência podem chegar juntos)
  * e aplica o status como as demais.
+ * W2: `extra.colunasW2` = o comCollector de quem chama (o mp-conta.ts) — a linha nova leva a conta do MP que recebeu; vazio = como antes.
  */
 export async function registrarPagamentoAvulsoDoMp(
   db: SupabaseClient,
   m: Matricula,
   pay: PagamentoMp,
-  extra: { preapprovalId?: string | null; origem: string; mesRef?: string | null },
+  extra: { preapprovalId?: string | null; origem: string; mesRef?: string | null; colunasW2?: { mp_collector_id?: number } },
   log: Log,
   schema: Schema,
 ): Promise<ResultadoMp | null> {
@@ -258,7 +267,7 @@ export async function registrarPagamentoAvulsoDoMp(
       descricao: descricaoMensalidade(m.plano?.nome ?? null, mes), valor, vencimento: dia, mes_ref: mes,
       status: "aguardando_confirmacao", forma: "mp", metodo: pay.payment_method_id === "pix" ? "pix" : "cartao",
       mp_payment_id: mpId, mp_status: "pending", mp_preapproval_id: extra.preapprovalId ?? null,
-      plano_aluno_id: m.plano_aluno_id, origem: extra.origem, ...retratoDoPlano(m),
+      plano_aluno_id: m.plano_aluno_id, origem: extra.origem, ...retratoDoPlano(m), ...(extra.colunasW2 ?? {}),
     }).select(colunas).maybeSingle();
     if (error && !String(error.message || "").includes("duplicate")) throw error;
     linha = nova;

@@ -8,7 +8,9 @@ VM Nano). Casos (positivo e negativo):
   nutri    paciente do Nutri vê a cobrança avulsa (vencida = inadimplente, bloqueio ligado na conta) e paga por Pix com
            comprovante (R16); recusa volta a "aberta"; confirma → paga; o site antigo continua lendo as cobranças
   mp       conta liberada no Mercado Pago (sandbox): Pix gerado e reaproveitado, aviso do webhook novo, aprovação simulada,
-           cartão de teste APRO numa cobrança avulsa + reembolso, assinatura (pendente no sandbox) e cancelamento
+           cartão de teste APRO numa cobrança avulsa + reembolso, assinatura (pendente no sandbox) e cancelamento. A guarda da W2
+           (sair de um MP com automática viva → P0001): a automática do caso que o sandbox não cancelou vira cancelada no banco antes de
+           sair; o caso que cai no meio devolve a conta ao Pix; com automática viva de outro aluno (ou no MP do personal) não liga o MP
   antigo   assinatura ANTIGA do Calc: o pagamento dela avisa o mp-webhook do Treino → grava lá e é repassado → aparece no
            principal (idempotente: o 2º aviso não duplica)
 Uso: python3 e2e/w06/api.py [--casos pix,porfora,acesso,nutri,mp,antigo]
@@ -27,6 +29,9 @@ import _base as B  # noqa: E402
 p = B.p
 B.ESTADO["schema"] = "staging"
 S = "staging"
+# A guarda da W2 (contas_guard_mp, migration 20261011210000) vale para TODO MUNDO, inclusive o postgres deste script: sair de um Mercado
+# Pago com cobrança automática viva na conta → P0001 automaticas_ativas:<n>. O caso mp só mexe no que criou.
+VIVAS = "('authorized', 'pending', 'paused')"
 
 
 def limpar_testes(pac_id: str) -> None:
@@ -187,13 +192,58 @@ def caso_nutri() -> None:
     p.check(st == 200 and isinstance(r, dict), f"a trava antiga do Nutri recalcula sem erro ({st} {r})")
 
 
+def sql_cancelar_vivas_do_caso(pac: str, t0: str) -> str:
+    """As automáticas VIVAS que o caso criou no aluno de teste (depois do t0) viram canceladas no banco — a do sandbox que o MP não deixou
+    cancelar fica 'pending'. Só elas: nada de antes, nada de outro aluno."""
+    return (f"update {S}.aluno_assinaturas set status = 'cancelled' where paciente_id = '{pac}' and criado_em >= '{t0}'::timestamptz "
+            f"and status in {VIVAS} returning id::text as id")
+
+
+def cancelar_vivas_do_caso(pac: str, t0: str) -> None:
+    canceladas = B.sql_principal(sql_cancelar_vivas_do_caso(pac, t0))
+    if canceladas:
+        print(f"   {len(canceladas)} automática(s) do caso ainda viva(s) (o MP não cancelou): cancelada(s) só no banco antes de sair do "
+              "Mercado Pago", flush=True)
+
+
+def ponto_de_partida_mp(conta: str, pac: str) -> dict:
+    """A forma da conta, o t0 do caso e as automáticas vivas de OUTROS alunos da conta (as do aluno de teste o caso já cancelou)."""
+    return B.sql_principal(f"""select c.recebimento_modo as modo, clock_timestamp()::text as t0,
+                                      (select count(*) from {S}.aluno_assinaturas a join {S}.pacientes p on p.id = a.paciente_id
+                                        where p.conta_id = c.id and a.paciente_id <> '{pac}' and a.status in {VIVAS})::int as fora
+                                 from {S}.contas c where c.id = '{conta}'""")[0]
+
+
+def sair_do_mp_se_preso(conta: str, pac: str, t0: str) -> None:
+    """O caso caiu no meio (o sandbox recusou o Pix, por exemplo) com a conta ainda no Mercado Pago: as automáticas DO CASO viram
+    canceladas no banco e a conta volta ao Pix — o fim de sempre do caso."""
+    if B.sql_principal(f"select recebimento_modo as m from {S}.contas where id = '{conta}'")[0]["m"] != "mercadopago":
+        return
+    cancelar_vivas_do_caso(pac, t0)
+    B.sql_principal(f"update {S}.contas set recebimento_modo = 'pix_manual' where id = '{conta}' and recebimento_modo = 'mercadopago'")
+    print("   o caso caiu com a conta no Mercado Pago: ela voltou ao Pix (o fim de sempre do caso)", flush=True)
+
+
 def caso_mp() -> None:
     print("\n── mp: conta liberada no Mercado Pago (sandbox) — aluno-calc · master")
     m = B.matricula("aluno-calc")
     limpar_testes(m["id"])
     B.sql_principal(f"update {S}.aluno_assinaturas set status = 'cancelled' where paciente_id = '{m['id']}' and status <> 'cancelled'")
+    pre = ponto_de_partida_mp(m["conta_id"], m["id"])
+    if pre["modo"] == "mercadopago_conta" or pre["fora"]:
+        p.check(False, f"a conta do aluno-calc está no Mercado Pago do personal ({pre['modo']}) ou tem {pre['fora']} cobrança(s) automática(s) "
+                       "viva(s) de outro aluno: o caso mp não liga o MP (a volta ao Pix dependeria de mexer no que ele não criou — a guarda da "
+                       "W2) — pulei")
+        return
     # liberar o Mercado Pago é do master (a tela dele é a W27; no principal só o Weslley é master): aqui, pelo banco
     B.sql_principal(f"update {S}.contas set recebimento_modo = 'mercadopago' where id = '{m['conta_id']}'")
+    try:
+        _caso_mp_no_mp(m, pre["t0"])
+    finally:
+        sair_do_mp_se_preso(m["conta_id"], m["id"], pre["t0"])
+
+
+def _caso_mp_no_mp(m: dict, t0: str) -> None:
     st, r = B.rest("master", "GET", f"contas?id=eq.{m['conta_id']}&select=recebimento_modo")
     p.check(st == 200 and r and r[0]["recebimento_modo"] == "mercadopago", f"conta liberada no Mercado Pago ({st} {r})")
     st, r = B.rest("prof2", "PATCH", f"contas?id=eq.{B.matricula('aluno2')['conta_id']}", {"recebimento_modo": "mercadopago"})
@@ -228,6 +278,7 @@ def caso_mp() -> None:
     st, r = B.pag("master", "prof_cancelar_assinatura", {"aluno": m["id"]})
     fim = B.sql_principal(f"select status from {S}.aluno_assinaturas where paciente_id = '{m['id']}' order by criado_em desc limit 1")[0]["status"]
     p.check(st == 200 and fim == "cancelled", f"o professor cancela a assinatura do aluno ({st} {fim})")
+    cancelar_vivas_do_caso(m["id"], t0)  # a que o sandbox não cancelou não segura a saída (a guarda da W2); o ❌ de cima já contou
     st, r = B.rest("master", "PATCH", f"contas?id=eq.{m['conta_id']}", {"recebimento_modo": "pix_manual"})
     p.check(st == 200 and r and r[0]["recebimento_modo"] == "pix_manual", "o dono pode sair do Mercado Pago (voltar é com o master)")
 

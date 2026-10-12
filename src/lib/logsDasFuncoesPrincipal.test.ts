@@ -17,7 +17,8 @@ const FUNCOES_DIR = resolve(__dirname, "../../supabase-principal/functions");
 const ler = (rel: string) => readFileSync(resolve(FUNCOES_DIR, rel), "utf-8");
 
 /** As publicadas desta W no principal: as 20, as 2 master que vão pela master-porta e a erro-avisar (nova) — e a automaticas-fila
- *  (W-P, Task 8b) e a infinitepay-webhook-aluno (W1), que seguem o mesmo contrato; e as 2 do jeito 2 (nutricao, financeiro). */
+ *  (W-P, Task 8b) e a infinitepay-webhook-aluno (W1), que seguem o mesmo contrato; e as 2 do jeito 2 (nutricao, financeiro); + a
+ *  mp-conectar-retorno e a mp-contas-renovar (W2). */
 const FUNCOES = [
   "agenda-avisar", "aluno-enviar", "alunos", "convites", "cobranca-conta", "entrar-senha", "espelho-enviar", "espelho-resumo",
   "excluir-minha-conta", "exportar-meus-dados", "master-contas", "mp-webhook", "mp-webhook-aluno", "mp-webhook-conta",
@@ -25,6 +26,8 @@ const FUNCOES = [
   "master-financeiro", "master-planos", "erro-avisar", "automaticas-fila", "infinitepay-webhook-aluno",
   "nutricao", // hml-19a: o jeito 2 da nutrição, pela porta-pessoa (o log e o catch final moram lá, como nas master-*)
   "financeiro", // hml-19d: o jeito 2 do Financeiro, pela mesma porta-pessoa
+  "mp-conectar-retorno", // W2 Task 8: a volta do OAuth do Mercado Pago
+  "mp-contas-renovar", // W2 Task 11: a renovação do MP do personal + a conferência diária (pg_cron → pg_net, S10)
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
 /** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro). */

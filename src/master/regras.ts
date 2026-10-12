@@ -5,7 +5,7 @@
  */
 import { comparacaoDoMes, variacao } from "@/painel/financeiro/resumo";
 import type { TomChip } from "@/ui/premium/Chip";
-import type { ContaLinha, Faixa, ModuloConta, Origem, PlanoConta, Situacao, VisaoGeral } from "./tipos";
+import type { ContaLinha, Faixa, ModuloConta, MpDaContaMaster, Origem, PedidoRecebimentoMaster, PlanoConta, Situacao, VisaoGeral } from "./tipos";
 
 export const ROTULO_PLANO: Record<PlanoConta, string> = { treino: "Só Treino", nutricao: "Só Nutrição", treino_nutricao: "Treino + Nutrição" };
 export const ROTULO_FAIXA: Record<Faixa, string> = { f10: "1–10 alunos", f30: "11–30 alunos", f100: "31–100 alunos", livre: "Sem limite" };
@@ -16,9 +16,13 @@ export const ROTULO_SITUACAO: Record<Situacao, string> = {
 export const TOM_SITUACAO: Record<Situacao, TomChip> = { teste: "c", ativa: "n", vencida: "r", isenta: "g", suspensa: "a", cancelada: "g" };
 export const ROTULO_MODULO: Record<ModuloConta, string> = { treino: "Treino", nutricao: "Nutrição" };
 export const TOM_MODULO: Record<ModuloConta, TomChip> = { treino: "t", nutricao: "n" };
-/** W1: + a InfinitePay (o master vê e desliga; quem liga é o dono, em Configurações › Recebimento). */
+/**
+ * W1: + a InfinitePay (o master vê e desliga; quem liga é o dono, em Configurações › Recebimento). W2: agora são 2 Mercados Pagos — o do
+ * Physiq (só o master liga) e o do personal (o dono conecta o dele; o master vê e desliga). A ordem é a das opções do select.
+ */
 export const ROTULO_RECEBIMENTO: Record<string, string> = {
-  pix_manual: "Pix manual", nenhum: "Não cobra pelo app", mercadopago: "Mercado Pago", infinitepay: "InfinitePay",
+  pix_manual: "Pix manual", nenhum: "Não cobra pelo app", mercadopago: "Mercado Pago do Physiq", mercadopago_conta: "Mercado Pago do personal",
+  infinitepay: "InfinitePay",
 };
 export const PLANOS: PlanoConta[] = ["treino", "nutricao", "treino_nutricao"];
 export const FAIXAS: Faixa[] = ["f10", "f30", "f100", "livre"];
@@ -148,6 +152,108 @@ export function faixaCabe(faixa: Faixa, alunosAtivos: number): boolean {
   return m === null || alunosAtivos <= m;
 }
 
+// ───────────────────────── W2 — o Mercado Pago do personal em Integrações (vê e desliga com o OK) ─────────────────────────
+
+/** Um número inteiro positivo que veio do servidor (a contagem de uma resposta); qualquer outra coisa = 0. */
+function contagem(v: unknown): number {
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : 0;
+}
+const alunos = (n: number) => (n === 1 ? "1 aluno" : `${n} alunos`);
+
+/** A marca da situação (o data-mp-conta-situacao do E2E): as mesmas palavras do chip da tela do dono (chipDaConexaoMp). */
+export type MarcaMpDaConta = "conectado" | "renove" | "caiu" | "desconectado";
+
+/**
+ * W2 — a situação do Mercado Pago do personal na linha da conta: a marca, o tom e o texto curto com o apelido ("RAFAEL.TREINOS ·
+ * Conectado"). "Renovar" = o acesso vale, mas o Mercado Pago não renova sozinho (o dono conecta de novo até a data — a de São Paulo).
+ */
+export function situacaoDoMpDaConta(mp: MpDaContaMaster | null | undefined): { marca: MarcaMpDaConta; tom: TomChip; texto: string } {
+  const apelido = (mp?.apelido ?? "").trim();
+  const com = (s: string) => (apelido ? `${apelido} · ${s}` : s);
+  if (!mp?.status || mp.status === "desconectada") return { marca: "desconectado", tom: "g", texto: com("Desconectado") };
+  if (mp.status === "erro") return { marca: "caiu", tom: "r", texto: com("Conexão caída") };
+  if (mp.erro === "renovacao_recusada" || mp.erro === "sem_renovacao") {
+    const d = mp.expira_em ? new Date(mp.expira_em) : null;
+    const ate = d && !Number.isNaN(d.getTime())
+      ? ` até ${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Sao_Paulo" })}` : "";
+    return { marca: "renove", tom: "a", texto: com(`Conectado · renovar${ate}`) };
+  }
+  return { marca: "conectado", tom: "n", texto: com("Conectado") };
+}
+
+/** Uma confirmação do master (as opções do useConfirmar, com o texto puro — a tela põe a marca do passo na descrição). */
+export interface PerguntaDoMaster {
+  titulo: string;
+  descricao: string;
+  rotuloConfirmar: string;
+  rotuloCancelar: string;
+  perigo: true;
+}
+
+/**
+ * W2 — o 1º OK: sair do Mercado Pago do personal (o "Desligar" da linha ou outra forma escolhida no select). A conexão dele sai junto
+ * (contas_saiu_do_mp_conta): voltar a ela só pelo dono, conectando de novo.
+ */
+export function perguntaDeSairDoMpConta(nome: string, modo: string, temChave: boolean): PerguntaDoMaster {
+  const destino = modo === "mercadopago" ? "Os alunos passam a pagar pelo Mercado Pago do Physiq."
+    : modo === "pix_manual"
+      ? (temChave ? "Os alunos voltam a pagar por Pix na chave ligada." : "Os alunos passam ao Pix manual, mas a conta não tem chave Pix ligada.")
+      : (temChave ? "A conta passa a não cobrar pelo app." : "Sem chave Pix ligada: a conta passa a não cobrar pelo app.");
+  return {
+    titulo: `Desligar o Mercado Pago do personal de ${nome}?`, rotuloConfirmar: "Desligar", rotuloCancelar: "Voltar", perigo: true,
+    descricao: `${destino} A conexão com o Mercado Pago dele sai: para voltar a ele, o dono conecta de novo em Configurações › Recebimento.`,
+  };
+}
+
+/**
+ * W2 (MENOR 7 da W1 + decisão 11) — a pergunta seguinte quando a troca volta recusada por causa das cobranças automáticas (o servidor não
+ * muda nada sem o OK — master-contas/recebimento.ts):
+ * - automaticas_ativas { alunos } → a 2ª: desligar as cobranças no Mercado Pago e avisar os alunos → { modo, cancelar_automaticas: true }.
+ *   Também na corrida (uma nasceu entre a conferência e a troca) — e sem o forçar de antes: forçar pede o OK de novo;
+ * - automaticas_sem_acesso { alunos, canceladas } (só depois do OK das automáticas) → a 3ª, com perigo: forçar → { …, forcar_sem_acesso: true };
+ * - qualquer outro código (o 502 automaticas_nao_canceladas, o sem acesso que voltasse mesmo forçando) → null: a tela mostra o textoErro.
+ */
+export function perguntaDasAutomaticas(codigo: string | null | undefined, extra: Record<string, unknown>, pedido: PedidoRecebimentoMaster):
+  (PerguntaDoMaster & { passo: "automaticas" | "forcar"; pedido: PedidoRecebimentoMaster }) | null {
+  if (codigo === "automaticas_ativas") {
+    const n = contagem(extra.alunos);
+    return {
+      passo: "automaticas", pedido: { modo: pedido.modo, cancelar_automaticas: true },
+      titulo: n ? `Desligar as cobranças automáticas de ${alunos(n)}?` : "Desligar as cobranças automáticas?",
+      descricao: `${n ? alunos(n) : "Há alunos"} com cobrança automática no cartão: desligar cancela essas cobranças no Mercado Pago e avisa os alunos. Sem isso, a forma de receber não muda.`,
+      rotuloConfirmar: "Desligar as cobranças", rotuloCancelar: "Voltar", perigo: true,
+    };
+  }
+  if (codigo === "automaticas_sem_acesso" && pedido.cancelar_automaticas === true && pedido.forcar_sem_acesso !== true) {
+    const s = contagem(extra.alunos);
+    const c = contagem(extra.canceladas);
+    return {
+      passo: "forcar", pedido: { modo: pedido.modo, cancelar_automaticas: true, forcar_sem_acesso: true },
+      titulo: "Forçar sem o Mercado Pago do personal?",
+      descricao: `O Physiq não alcança o Mercado Pago do personal para desligar as cobranças automáticas de ${s ? alunos(s) : "alguns alunos"}. `
+        + "Forçar marca como desligadas no Physiq e avisa o personal (para desligar no app do Mercado Pago) e os alunos — a cobrança pode continuar "
+        + `no cartão até ele desligar.${c ? ` Já desligadas no Mercado Pago: ${c}.` : ""}`,
+      rotuloConfirmar: "Forçar", rotuloCancelar: "Voltar", perigo: true,
+    };
+  }
+  return null;
+}
+
+/**
+ * W2 — o que a troca com o OK fez nas cobranças automáticas (o 200 { automaticas: { canceladas, forcadas } } — canceladas = desligadas no
+ * Mercado Pago; forcadas = ALUNOS marcados à força): a 2ª linha do aviso. Nada (ou sem o campo) → null.
+ */
+export function textoDasAutomaticas(resposta: unknown): string | null {
+  const a = (resposta as { automaticas?: Record<string, unknown> | null } | null)?.automaticas;
+  const c = contagem(a?.canceladas);
+  const f = contagem(a?.forcadas);
+  const partes: string[] = [];
+  if (c) partes.push(`${c === 1 ? "1 cobrança automática desligada" : `${c} cobranças automáticas desligadas`} no Mercado Pago — cada aluno recebeu um aviso.`);
+  if (f) partes.push(`${f === 1 ? "1 aluno marcado" : `${f} alunos marcados`} sem a cobrança automática à força: o personal e os alunos foram avisados.`);
+  return partes.length ? partes.join(" ") : null;
+}
+
 const ERROS: Record<string, string> = {
   so_master: "Só o master pode fazer isto.",
   sem_login: "Sua sessão acabou. Entre de novo.",
@@ -163,7 +269,8 @@ const ERROS: Record<string, string> = {
   nao_isenta: "A conta não está isenta.",
   tem_alunos: "Só dá para excluir uma conta sem nenhum aluno (nem na lixeira).",
   assinatura_ativa: "Cancele a cobrança automática no cartão antes de excluir.",
-  modo_invalido: "Forma de recebimento inválida.",
+  // W2: o master liga o Pix, o "não cobrar" e o MP do Physiq; o MP do personal e a InfinitePay, só o dono (o OAuth / a InfiniteTag)
+  modo_invalido: "O Mercado Pago do personal e a InfinitePay só o dono liga.",
   acao_invalida: "Ação inválida.",
   email_invalido: "E-mail inválido.",
   conta_real_no_staging: "O staging só aceita e-mails de teste.",
@@ -198,8 +305,17 @@ const ERROS: Record<string, string> = {
   // hml-14d (B21): a página do banco
   pagina_invalida: "Página inválida. Volte para a primeira página.",
   formato_inesperado: "A lista veio num formato inesperado. Atualize a página.",
+  // W2 (Task 12): trocar a forma saindo de um Mercado Pago com cobrança automática viva (master-contas › recebimento)
+  automaticas_ativas: "A conta tem alunos com cobrança automática no cartão. Confirme para desligar essas cobranças antes de trocar a forma de receber.",
+  automaticas_nao_canceladas: "Algumas cobranças automáticas não desligaram no Mercado Pago. A forma de receber não mudou. Tente de novo.",
+  automaticas_sem_acesso: "O Physiq não consegue desligar no Mercado Pago do personal algumas cobranças automáticas. Você pode forçar: o personal e os alunos são avisados.",
 };
 
-export function textoErro(codigo: string | null | undefined): string {
+/** A frase do erro de uma função do master. W2: o `extra` (o corpo do erro) dá a contagem ao 502 automaticas_nao_canceladas { falhas }. */
+export function textoErro(codigo: string | null | undefined, extra: Record<string, unknown> = {}): string {
+  const falhas = codigo === "automaticas_nao_canceladas" ? contagem(extra.falhas) : 0;
+  if (falhas) {
+    return `${falhas === 1 ? "1 cobrança automática não desligou" : `${falhas} cobranças automáticas não desligaram`} no Mercado Pago. A forma de receber não mudou. Tente de novo.`;
+  }
   return (codigo && ERROS[codigo]) || "Não deu certo agora. Tente de novo.";
 }

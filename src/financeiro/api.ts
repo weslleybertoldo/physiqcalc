@@ -6,8 +6,9 @@ import type { Pagina } from "@/lib/paginacao";
 import type { PixTipo } from "@/lib/pixChave";
 import type { PlanoSalvar } from "./planos";
 import type {
-  AlunoResumo, ChaveRecebimento, CobrancaVista, FinanceiroProfissional, MensalidadesDaConta, ModoRecebimento, PlanoSalvo, PlanosDaConta,
-  RecebimentoDaConta, ReciboVista, ResumoConta, ResumoMatricula, StatusAluno, TotaisDoAluno,
+  AlunoResumo, ChaveRecebimento, CobrancaVista, ConexaoMpConfirmada, ConexaoMpIniciada, DetalheDoPagamentoMp, FinanceiroProfissional,
+  MensalidadesDaConta, ModoRecebimento, PerguntaDaConexaoMp, PlanoSalvo, PlanosDaConta, RecebimentoDaConta, ReciboVista, ResumoConta,
+  ResumoMatricula, StatusAluno, TotaisDoAluno,
 } from "./tipos";
 
 export class ErroFinanceiro extends Error {
@@ -211,6 +212,24 @@ export const salvarChavePix = (contaId: string, c: { id?: string; tipo: PixTipo;
   acaoFinanceiro<{ ok: true; chave: ChaveRecebimento }>("prof_chave_salvar", { conta_id: contaId, ...c });
 export const ligarChavePix = (contaId: string, id: string, ligar: boolean) => acaoFinanceiro<{ ok: true }>("prof_chave_ligar", { conta_id: contaId, id, ligar });
 export const excluirChavePix = (contaId: string, id: string) => acaoFinanceiro<{ ok: true }>("prof_chave_excluir", { conta_id: contaId, id });
+
+// ───────────────────────── W2 — o Mercado Pago DA CONTA (o personal conecta o dele) ─────────────────────────
+// Nenhum token passa pela tela: o servidor guarda tudo cifrado e a tela só vê a situação (RecebimentoDaConta.mercadopago_conta).
+
+/** Começa a conexão: no site, a autorização do Mercado Pago; no APK, o SITE (`no_site` — o fluxo inteiro no navegador, decisão 6 — I8). */
+export const conectarMercadoPago = (contaId: string, origem: "site" | "apk") =>
+  acaoFinanceiro<ConexaoMpIniciada>("prof_mp_conectar", { conta_id: contaId, origem });
+/** A pergunta da volta (I8): a conta do Mercado Pago que voltou (o apelido), só para quem começou — nada é gravado. */
+export const conexaoMercadoPago = (conexaoId: string) => acaoFinanceiro<PerguntaDaConexaoMp>("prof_mp_confirmar", { conexao_id: conexaoId });
+/** A confirmação: grava a conexão COMO A PESSOA (só quem começou, dono, em até 15 min) e liga a forma quando é seguro. */
+export const confirmarMercadoPago = (conexaoId: string) =>
+  acaoFinanceiro<ConexaoMpConfirmada>("prof_mp_confirmar", { conexao_id: conexaoId, confirmar: true });
+/** Desconecta: as automáticas vivas são desligadas antes, com o OK (sem ele, 409 automaticas_ativas { alunos }). */
+export const desconectarMercadoPago = (contaId: string, cancelar?: boolean) =>
+  acaoFinanceiro<RecebimentoDaConta>("prof_mp_desconectar", { conta_id: contaId, ...(cancelar ? { cancelar_automaticas: true } : {}) });
+/** O comprovante do aluno: os dados do Mercado Pago da cobrança paga (detalhe_mp). W2 — `mp` null com `motivo: "outra_conta_mp"` = o
+ *  pagamento foi para outra conta do Mercado Pago (o Physiq não alcança); `mp` null sem motivo = a conexão caída ou o MP fora (I3). */
+export const detalheDoPagamentoMp = (cobrancaId: string) => acaoFinanceiro<DetalheDoPagamentoMp>("detalhe_mp", { cobranca_id: cobrancaId });
 
 /** O aluno: o link da página da InfinitePay (o mesmo enquanto a tentativa vale), a volta da página e a conferência. */
 export const abrirLinkDaInfinitePay = (pacienteId: string, cobrancaId?: string) =>

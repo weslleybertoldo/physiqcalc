@@ -4,6 +4,31 @@ export type Origem = "nova" | "legado_calc" | "legado_nutri" | "app";
 export type PlanoConta = "treino" | "nutricao" | "treino_nutricao";
 export type Faixa = "f10" | "f30" | "f100" | "livre";
 export type ModuloConta = "treino" | "nutricao";
+/** W2: 'mercadopago' = o Mercado Pago do Physiq (só o master liga); 'mercadopago_conta' = o Mercado Pago DO PERSONAL (o dono conecta o dele). */
+export type ModoRecebimentoConta = "pix_manual" | "nenhum" | "mercadopago" | "infinitepay" | "mercadopago_conta";
+
+/** W2 — o Mercado Pago do personal na linha da conta (w27_conta_linha): a situação da conexão, sem nenhum token (nem cifrado). */
+export interface MpDaContaMaster {
+  status: "ativa" | "erro" | "desconectada" | null;
+  /** o apelido da conta no Mercado Pago (pode faltar: o servidor pergunta por melhor esforço) */
+  apelido: string | null;
+  /** o collector (a conta do personal no Mercado Pago) */
+  mp_user_id: number | null;
+  expira_em: string | null;
+  /** renovacao_recusada · sem_renovacao (o acesso vale, mas o Mercado Pago não renova sozinho) · … */
+  erro: string | null;
+  /** a conexão trouxe a chave do cartão (sem ela, o aluno paga só por Pix) */
+  chave_publica: boolean;
+  conectado_em: string | null;
+  /** conta de teste do Mercado Pago (o staging) */
+  teste: boolean | null;
+}
+
+/**
+ * W2 — o pedido da troca da forma de receber pelo master (master-contas › acao › recebimento). Só o literal `true` vale nos 2 sinais: o
+ * cancelar_automaticas é o OK da 2ª confirmação e o forcar_sem_acesso o da 3ª (o servidor só força junto com o cancelar).
+ */
+export type PedidoRecebimentoMaster = { modo: string; cancelar_automaticas?: true; forcar_sem_acesso?: true };
 
 export interface ContaLinha {
   id: string;
@@ -28,7 +53,7 @@ export interface ContaLinha {
    */
   regras_legadas?: boolean;
   isenta_motivo: string | null;
-  recebimento_modo: "pix_manual" | "nenhum" | "mercadopago" | "infinitepay";
+  recebimento_modo: ModoRecebimentoConta;
   bloquear_app_inadimplente: boolean;
   alunos_bloqueados_em: string | null;
   alunos_bloqueados_msg: string | null;
@@ -46,6 +71,8 @@ export interface ContaLinha {
   chave_pix: { tipo: string; chave: string; favorecido: string | null; banco: string | null } | null;
   /** W1: a InfinitePay da conta (a InfiniteTag) — pode não vir (servidor antigo) */
   infinitepay?: { handle: string | null; status: string | null; testado_em: string | null } | null;
+  /** W2: o Mercado Pago do personal (null = a conta nunca conectou) — pode não vir (servidor antigo) */
+  mercadopago_conta?: MpDaContaMaster | null;
 }
 
 export interface Membro {

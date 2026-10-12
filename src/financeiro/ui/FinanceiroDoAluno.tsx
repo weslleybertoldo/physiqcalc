@@ -34,7 +34,7 @@ import { chaveFinanceiroDoAluno, useFinanceiroDoAluno, usePaginaDoAluno } from "
 const COBRANCAS_NO_CARTAO = 8;
 const RECIBOS_NO_CARTAO = 12;
 
-const MODO_TEXTO: Record<string, string> = { pix_manual: "Pix na chave da conta, com comprovante", mercadopago: "Mercado Pago (Pix e cartão, automático)", infinitepay: "InfinitePay (Pix e cartão, confirmação automática)", nenhum: "Não cobra pelo app (por fora)" };
+const MODO_TEXTO: Record<string, string> = { pix_manual: "Pix na chave da conta, com comprovante", mercadopago: "Mercado Pago (Pix e cartão, automático)", infinitepay: "InfinitePay (Pix e cartão, confirmação automática)", mercadopago_conta: "Mercado Pago do personal (Pix e cartão, confirmação automática)", nenhum: "Não cobra pelo app (por fora)" };
 
 function IconeAcao({ icone: Icone, rotulo, onClick, perigo, marca }: { icone: typeof Eye; rotulo: string; onClick: () => void; perigo?: boolean; marca?: string }) {
   return (

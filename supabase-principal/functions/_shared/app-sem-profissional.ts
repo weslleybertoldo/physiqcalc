@@ -10,11 +10,13 @@
 // null, nenhuma matrícula, nenhuma assinatura) e o cancelamento saía {0, 0} sem log, com a assinatura do app cobrando; e o
 // cancelamento também lança quando o MP não deixa decidir (MpIndisponivel). Quem chama decide (a exclusão para antes de apagar;
 // login, vínculo e Pagamentos registram e tentam de novo na próxima vez). As idas ao MP usam o prazo do pedido (`opcoes`).
+// W2 (Mercado Pago do personal): o cancelamento das matrículas aceita a credencial DA CONTA (CredencialMp) e um filtro opcional pelo
+// collector — só o _shared/mp-conta.ts o passa (cancelarAssinaturasPorCredencial), depois de conferir que o schema tem a coluna (a regra da
+// coluna nova, revisão C2). Sem o filtro, a leitura é a de sempre. O schema do log sai da credencial (schemaDaCredencialMp).
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { assinaturaSoNoBanco, encerradaPeloVinculo } from "./app-sem-profissional-regras.ts";
 import { codigosDoMp, mpTransitorio, type AssinaturaMp } from "./cobranca-regras.ts";
-import { MpIndisponivel, mpFetch, type Credencial, type OpcoesMp } from "./cobranca-mp.ts";
-import { schemaDaCredencial } from "./financeiro-mp.ts";
+import { MpIndisponivel, mpFetch, schemaDaCredencialMp, type Credencial, type CredencialMp, type OpcoesMp } from "./cobranca-mp.ts";
 import type { Log } from "./log.ts";
 import { emLotes, todasAsPaginas } from "./paginas.ts";
 
@@ -104,21 +106,28 @@ async function marcarCancelada(db: SupabaseClient, id: string, payload: Record<s
  * Cancela as assinaturas vivas destas matrículas (no MP e no banco). Lança no erro do banco e quando o MP não deixa decidir
  * (o PUT não cancelou e a conferência também não respondeu: fora do ar, limite ou tempo esgotado → MpIndisponivel); o MP que
  * responde e recusa conta como falha (log mp_cancelar_falhou), como sempre.
+ * W2: `credencial` pode ser a da conta do personal; com `filtro`, só as assinaturas daquele collector (null = as do MP do Physiq).
  */
 export async function cancelarAssinaturasDasMatriculas(
   db: SupabaseClient,
-  credencial: Credencial,
+  credencial: CredencialMp,
   pacienteIds: string[],
   motivo: string,
   log: Log,
   opcoes: OpcoesMp = {},
+  filtro?: { collector: number | null },
 ): Promise<{ canceladas: number; falhas: number }> {
   // hml-14 (H-32): em lotes de 150 (a exclusão do profissional passa todos os alunos dele: o .in() com centenas de uuid estoura
   // a URL) e com todas as páginas (sem o corte calado de 1000 linhas)
   const linhas = await emLotes(pacienteIds, 150, (lote) =>
-    todasAsPaginas<LinhaAssinatura>((de, ate) =>
-      db.from("aluno_assinaturas").select("id, paciente_id, mp_preapproval_id, status, payload")
-        .in("paciente_id", lote).in("status", ["authorized", "pending", "paused"]).order("id").range(de, ate)));
+    todasAsPaginas<LinhaAssinatura>((de, ate) => {
+      let q = db.from("aluno_assinaturas").select("id, paciente_id, mp_preapproval_id, status, payload")
+        .in("paciente_id", lote).in("status", ["authorized", "pending", "paused"]);
+      // o filtro só vem do mp-conta.ts (cancelarAssinaturasPorCredencial), que já conferiu a coluna no schema
+      if (filtro?.collector === null) q = q.is("mp_collector_id", null); // W2: depois do schemaTemW2
+      else if (filtro) q = q.eq("mp_collector_id", filtro.collector); // W2: depois do schemaTemW2
+      return q.order("id").range(de, ate);
+    }));
   let canceladas = 0;
   let falhas = 0;
   for (const a of linhas) {
@@ -141,7 +150,7 @@ export async function cancelarAssinaturasDasMatriculas(
       } else {
         // hml-10 (H-24): só os códigos do MP (o corpo da resposta pode trazer dado de quem paga)
         log.erro({
-          codigo: "mp_cancelar_falhou", schema: schemaDaCredencial(credencial), acao: "assinatura_do_app", ref: a.id, status,
+          codigo: "mp_cancelar_falhou", schema: schemaDaCredencialMp(credencial), acao: "assinatura_do_app", ref: a.id, status,
           externo: codigosDoMp(body),
         });
         falhas++;

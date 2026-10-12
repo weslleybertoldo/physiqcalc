@@ -7,6 +7,8 @@
 //   aluno_status                     mensalidade, chave Pix ativa, assinatura, cobranças e recibos (confere no MP o que ainda muda)
 //                                    hml-14d: + total_cobrancas e total_recibos por matrícula (o "Ver todos (N)"; só chaves novas)
 //                                    W-P: a mensalidade + modalidade, meses, negociado, max_parcelas, automatica e parcela (n de N)
+//                                    W2: + mp { disponivel, chave_publica } na matrícula do MP do personal (disponivel = a conexão ativa;
+//                                    a chave pública do vendedor para o cartão — sem ela, só Pix); nas outras, mp null
 //   aluno_historico   { paciente_id, tipo: "cobrancas"|"recibos", pagina }   hml-14d: o "Ver todos" — 20 por página + o total
 //   aluno_upload      { paciente_id, tipo }                 URL assinada para subir o comprovante (o servidor escolhe o caminho)
 //   aluno_avisar_pix  { paciente_id, comprovante_path, cobranca_id? }   "Já paguei": Pix na chave da conta com comprovante
@@ -21,6 +23,7 @@
 //                                                            Treino + Alimentação): vale a partir do próximo pagamento e a
 //                                                            cobrança automática no cartão passa para o valor novo
 //   detalhe_mp        { cobranca_id }                        dados reais da transação no MP (comprovante em PDF) — aluno ou profissional
+//                                                            W2: a cobrança de outra conta do MP → { mp: null, motivo: "outra_conta_mp" }
 //   simular_aprovacao { cobranca_id }                        SÓ STAGING (o Pix do sandbox não se paga)
 //   aluno_ip_link     { paciente_id, cobranca_id? }         W1: o link da InfinitePay da mensalidade (ou da avulsa): reaproveita o da
 //                                                            tentativa viva (72 h, o mesmo valor e a mesma InfiniteTag); order_nsu = um
@@ -61,15 +64,38 @@
 //   prof_recebimento_salvar { conta_id, modo?, bloquear?, handle?, cancelar_automaticas? }   W1: grava COMO A PESSOA (o RLS e a
 //                                                            contas_guard valem); InfiniteTag nova → um link de R$ 1,00 (a InfinitePay diz
 //                                                            se ela existe); sair do MP com automática viva → 409 automaticas_ativas
+//                                                            W2: 'mercadopago_conta' só com a conexão ativa (409 mp_nao_conectado) e a flag
+//                                                            (403 mp_conta_em_teste); sair de QUALQUER MP pede o OK e desliga cada automática
+//                                                            pela credencial dela (sem acesso → 409 mp_sem_acesso; o MP recusou/caiu → 502
+//                                                            automaticas_nao_canceladas — nada muda); a guarda do modo → 409, nunca 500
 //   prof_ip_testar          { conta_id, handle? }           W1: o "Testar" — link de R$ 1,00 sem webhook (não salva)
 //   prof_chave_salvar       { conta_id, id?, tipo, chave, favorecido?, banco? }   W1: a chave Pix pela função (antes, direto do navegador)
 //   prof_chave_ligar        { conta_id, id, ligar }         W1: 1 ligada por conta, numa transação (recebimento_chave_ligar)
 //   prof_chave_excluir      { conta_id, id }
+//   prof_mp_conectar        { conta_id, origem?: "site"|"apk", redirect_teste?: true }   W2: SÓ o dono de verdade (MENOR 19 — o master
+//                                                            só na conta em que é dono) → { url } da autorização do MP: o state de uso único
+//                                                            (10 min; só o sha256 em mp_conexoes) + o PKCE S256 (o verifier cifrado). Sem o
+//                                                            id da conexão (I8). "apk" → { url do SITE, no_site } e nada criado (decisão 6:
+//                                                            o fluxo inteiro no navegador). redirect_teste: só no staging (decisão 3)
+//   prof_mp_confirmar       { conexao_id, confirmar? }      W2 (I8): sem confirmar → { apelido, teste } só para QUEM COMEÇOU (a pergunta
+//                                                            da tela); com confirmar → recebimento_mp_confirmar COMO A PESSOA → { resultado:
+//                                                            ok | conectado_sem_trocar, apelido, recebimento } (recusa: mp_<erro> 403/409)
+//   prof_mp_desconectar     { conta_id, cancelar_automaticas? }   W2: as automáticas vivas (sem o OK → 409 automaticas_ativas) são
+//                                                            desligadas ANTES (a recusa → 409/502 e nada muda) → o modo vira Pix (com chave
+//                                                            ligada) ou "não cobrar" → a integração fica desconectada (o acesso fica 7 dias
+//                                                            só para LER); fora do modo do MP da conta (MENOR 10) só marca desconectada
+//   prof_mp_simular_conexao { conta_id, chave_publica? }    W2 — SÓ STAGING, só master (decisão 12): conecta com a credencial de TESTE da
+//                                                            aplicação (teste_sem_oauth): prova a GRAVAÇÃO e os caminhos da conta — não o
+//                                                            token de cada chamada (MENOR 16: quem prova é o --local)
 // Referência externa: physiq:<schema>:aluno:<paciente_id>:<mensalidade|avulsa|recorrente>[:<cobranca_id>]; notification_url por
-// cobrança → mp-webhook-aluno?schema=<schema> (a configuração global do app do MP, dos apps antigos, não muda).
+// cobrança → mp-webhook-aluno?schema=<schema> (a configuração global do app do MP, dos apps antigos, não muda); W2: no MP do personal, a do
+// domínio próprio com &conta=<id> (mp-conta-regras.ts › notificacaoDaConta).
 // verify_jwt = true. Publicar: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions pagamentos-aluno true
 // Segredos: MP_ACCESS_TOKEN_PROD (produção), MP_ACCESS_TOKEN_TEST (staging), MP_TEST_PAYER_EMAIL (+ os automáticos)
 // + SUPABASE_ANON_KEY (automático: o cliente com a sessão de quem chama — W1); INFINITEPAY_API só no Deno local (o simulador).
+// W2: MP_TOKENS_CHAVE (a cifra dos tokens do MP da conta — fora do banco), MP_CLIENT_ID + MP_CLIENT_SECRET (o OAuth; no staging, o par
+// MP_CLIENT_ID_STAGING/MP_CLIENT_SECRET_STAGING quando existe — plano B do I6), MP_OAUTH_PKCE (opcional: "0" desliga o PKCE);
+// MP_AUTH_BASE e MP_API_BASE só no Deno local (o simulador do MP em http://127.0.0.1:<porta>; publicado, qualquer outro valor é ignorado).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts — do Mercado Pago, só o status e os códigos (error, cause, status_detail),
 // nunca o corpo; o título do aviso do sino (nome, valor) não vai para o log; o catch final avisa (log.excecao) e devolve o
 // mesmo 500.
@@ -86,12 +112,33 @@
 // automática da matrícula). O de outra coisa: prof_reembolsar, prof_cobranca_cancelar, detalhe_mp e simular_aprovacao → 409
 // cobranca_de_outro_pagamento, sem ir ao MP; a conferência e o Pix antigo do aluno_mp_pix só vão ao log (o aluno_status não cai). A 1ª
 // camada é a guarda do banco (20261011220000: o app não grava mais o MP da cobrança). Só lê o que já existe: vale com e sem a migration.
+// W2 Task 7 (Mercado Pago do personal — plano 2026-10-11-w2-mp-personal.md): Configurações › Recebimento ganha o modo 'mercadopago_conta'
+// e as 4 ações prof_mp_* acima. Cada caminho novo só liga com a migration 20261011210000 no schema (schemaTemW2 — a função é uma só para
+// public e staging): sem ela, 409 w2_indisponivel e a vista com mercadopago_conta.disponivel false. A conexão grava COMO A PESSOA (a RPC
+// recebimento_mp_confirmar — I8); o service_role só no que é do servidor (o state em mp_conexoes, a integração simulada, a marca da
+// desconectada fora do modo). O token da conta em TODAS as chamadas do MP é a Task 9.
+// W2 Task 9 — o token da conta em TODAS as chamadas do MP: cada ação escolhe a credencial e toda ida ao MP passa pelo `mp` (a do MP do Physiq
+// pelo mpFetch de sempre; a da conta pelo mpContaFetch: 401 → /users/me com o MESMO token → renova → 1 nova tentativa — I2). O que CRIA (Pix,
+// cartão, automática) usa a de pagar (credencialParaPagar: o MP do Physiq no 'mercadopago'; o da conta — só a conexão ativa — no
+// 'mercadopago_conta'); o que JÁ existe usa a DELE, pelo collector (credencialDaCobranca/credencialDaAssinatura: escrita × leitura). As
+// conferências de LEITURA (aluno_status, prof_aluno, aluno_mp_conferir, detalhe_mp) nunca derrubam a resposta (lerSemDerrubar — I3: a conexão
+// caída ou o MP fora → log.aviso e a linha do banco); nas ações que criam/alteram, a conexão caída é 409 mp_conta_indisponivel (o catch final)
+// e o MP sem decisão, 502 mp_error. A W1b fica: o pagamentoDaLinha confere também o recebedor na conta (o collector). A automática antiga viva
+// é cancelada com a credencial DELA e conferida antes da nova (I11 — 409 assinatura_antiga_viva); a cobrança de cada mês tem a rede da busca
+// (I1 — registrarCobrancasDaAutomatica no conferirAssinatura, os 2 MPs); o Pix aberto só se reaproveita na MESMA conta do MP; a conta sem chave
+// Pix no MP → 400 mp_conta_sem_chave_pix + aviso ao dono (decisão 16); o cartão de outro mundo (sandbox no public) não é aplicado (MENOR 20); a
+// coluna nova só pela regra (C2: colunasAssinatura, COLUNAS_COBRANCA_W2, collectorDaLinha); o I5 da W1 também na mensalidade do MP aguardando
+// (decisão 15). Ficam no MP do Physiq: o aluno_app_plano e o cancelarAssinaturasDoAppEncerrado (a conta do app). Peças: ./mp-credencial.ts.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog, emSegundoPlano } from "../_shared/log.ts";
 import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
-import { codigosDoMp, erroDeCartao, hojeSP, preapprovalDoPagamento, recusaDoSandbox, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
-import { credencialDoSchema, mpFetch, tokenMp } from "../_shared/cobranca-mp.ts";
+import {
+  codigosDoMp, erroDeCartao, hojeSP, modoConfere, preapprovalDoPagamento, recusaDoSandbox, type AssinaturaMp, type PagamentoMp,
+} from "../_shared/cobranca-regras.ts";
+import {
+  MpIndisponivel, credencialDoSchema, mpFetch, schemaDaCredencialMp, tokenMp, type CredencialMp, type RespostaMp,
+} from "../_shared/cobranca-mp.ts";
 import {
   COMPROVANTE_MAX_BYTES,
   bucketComprovantes,
@@ -120,6 +167,7 @@ import {
 import {
   COLUNAS_COBRANCA,
   COLUNAS_COBRANCA_IP,
+  COLUNAS_COBRANCA_W2,
   COLUNAS_PLANO,
   aplicarPagamentoMp,
   avisar,
@@ -137,13 +185,25 @@ import {
   type Parcela, type PlanoDoAluno,
 } from "../_shared/planos-regras.ts";
 import { textoDoAvisoDaFila, type ResultadoValor } from "../_shared/planos-automatica.ts";
-import { trocarValorDaAutomatica } from "../_shared/planos-automatica-mp.ts";
-import { cancelarAssinaturasDasMatriculas, cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
+import { trocarValorDaAutomatica, type TrocaDoValor } from "../_shared/planos-automatica-mp.ts";
+import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 import { POR_PAGINA, PaginaInvalida, lerPagina, paginaDasMensalidades, type AlunoDoResumo } from "./mensalidades.ts";
 import { COLUNAS_CHAVE, chaveDoPedido } from "../_shared/pix-chave-regras.ts";
-import { lerPedidoDoRecebimento } from "../_shared/recebimento-regras.ts";
+import {
+  ehModoMp, erroDaConfirmacao, erroDaGuardaDoModo, lerPedidoDoRecebimento, modoDepoisDeDesconectar, recusaDoCancelamento,
+} from "../_shared/recebimento-regras.ts";
+import { chaveDoAmbiente, cifrar, dadoAssociado } from "../_shared/cifra-mp.ts";
+import {
+  ESTADO_MS, REDIRECT_TESTE_MP, desafioPkce, ehUuidMp, erroPixSemChave, novoSegredoUrl, redirectDoSchema, sha256Hex, urlDeAutorizacao,
+} from "../_shared/mp-conta-regras.ts";
+import {
+  MpContaSemAcesso, avisarDonoDaConexao, cancelarAssinaturasPorCredencial, collectorDe, colunasAssinatura, comCollector, credencialDaAssinatura,
+  credencialDaCobranca, credencialDaConta, integracaoMp, mpContaFetch, oauthDoAmbiente, pacientesComAutomaticaViva, pkceLigado,
+  registrarCobrancasDaAutomatica, schemaTemW2, type ContextoMpConta,
+} from "../_shared/mp-conta.ts";
+import { collectorDaLinha, desligarAntiga, notificacaoDe, recebedorConfere, semDerrubar } from "./mp-credencial.ts";
 import { centavos, descricaoDoLink, expiraEm, lerVolta, normalizarHandle, podeReaproveitar, urlDeVolta, urlDoWebhook } from "../_shared/infinitepay-regras.ts";
 import { criarLink, pedidoDeTeste } from "../_shared/infinitepay.ts";
 import {
@@ -156,6 +216,9 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 /** W1: só no Deno local (e2e/w1/servir_local.ts) — o simulador; publicado, a API de verdade (_shared/infinitepay.ts › baseDaApi). */
 const IP_BASE = Deno.env.get("INFINITEPAY_API") ?? null;
+/** W2: só no Deno local (o simulador do MP — e2e/w2/simulador_mp.py); publicado, a autorização da doc (mp-conta-regras › urlDeAutorizacao
+ *  ignora qualquer valor que não seja http://127.0.0.1:<porta>). */
+const MP_AUTH_BASE = Deno.env.get("MP_AUTH_BASE") ?? null;
 const SCHEMAS: Schema[] = ["public", "staging"];
 const SITE: Record<Schema, string> = { public: "https://physiqcalc.com.br", staging: "https://physiqcalc-staging.vercel.app" };
 const PIX_HORAS = 72;
@@ -294,16 +357,55 @@ Deno.serve(async (req) => {
     db: { schema: schema as "public" }, global: { headers: { Authorization: auth } }, auth: { persistSession: false },
   });
   const ctxIp = (): ContextoIp => ({ schema, log, prazo: prazoDoPedido, ip: { base: IP_BASE } });
+  // W2: o contexto do MP DA CONTA — a chave da cifra (MP_TOKENS_CHAVE) e o client do OAuth vêm do ambiente. É um GETTER: só o caminho da
+  // conta o chama (o MP do Physiq não precisa da chave). Sem a chave → MpContaSemAcesso("nao_configurado"), e não um falhar(503): dentro
+  // do cancelarAssinaturasPorCredencial o 503 subiria DEPOIS de o grupo do MP do Physiq já cancelado; assim a conta conta como semAcesso
+  // (409 mp_sem_acesso) e a leitura da Task 9 não derruba a tela (lerSemDerrubar). A ação que PRECISA da chave (conectar, simular)
+  // responde 503 antes, pelo nome. O log.erro avisa o Weslley (1× por pedido): é configuração faltando.
+  const chaveMp = await chaveDoAmbiente();
+  let avisouSemChave = false;
+  const ctxMp = (): ContextoMpConta => {
+    if (!chaveMp) {
+      if (!avisouSemChave) log.erro({ codigo: "mp_tokens_chave_ausente", schema, acao });
+      avisouSemChave = true;
+      throw new MpContaSemAcesso("-", "nao_configurado");
+    }
+    return { schema, log, prazo: prazoDoPedido, chave: chaveMp, oauth: oauthDoAmbiente(schema) };   // no staging, o client de teste se houver (I6)
+  };
+  /** W2 (Task 9): TODA ida ao MP desta função com uma credencial já escolhida passa por aqui — a do MP do Physiq pelo mpFetch de sempre (o
+   *  prazo do pedido); a da conta do personal pelo mpContaFetch (o 401 confere no /users/me com o MESMO token antes de renovar — I2 — e o token
+   *  novo passa para a `cred`: o MESMO objeto em todas as idas de uma ação). O ctxMp() (que exige a MP_TOKENS_CHAVE) só no caminho da conta: o
+   *  MP do Physiq segue sem ela. De fora, de propósito: o aluno_app_plano (a conta do app = o MP do Physiq) e o /users/me do
+   *  prof_mp_simular_conexao (a credencial de teste da aplicação). */
+  const mp = <T = Record<string, unknown>>(cred: CredencialMp, caminho: string, init: RequestInit = {}): Promise<RespostaMp<T>> =>
+    typeof cred === "string" ? mpFetch<T>(cred, caminho, init, { prazo: prazoDoPedido }) : mpContaFetch<T>(db, ctxMp(), cred, caminho, init);
+  /** I3 (revisão da W2): a ida ao MP que NÃO derruba a resposta — as conferências de LEITURA (aluno_status, prof_aluno, aluno_mp_conferir,
+   *  detalhe_mp) e o melhor esforço (o Pix antigo do aluno_mp_pix, o I5 do prof_registrar): a conexão do personal caída (MpContaSemAcesso —
+   *  inclusive sem a MP_TOKENS_CHAVE) ou o MP fora (MpIndisponivel) → log.aviso e `doBanco` (a linha do banco). Erro do banco lança (o 500 de
+   *  sempre). O 409 mp_conta_indisponivel fica só nas ações que criam/alteram (o catch final). */
+  const lerSemDerrubar = <T>(ref: string, ler: () => Promise<T>, doBanco: T, codigo = "mp_conferir_sem_mp"): Promise<T> =>
+    semDerrubar(ler, doBanco, (resultado) => log.aviso({ codigo, schema, acao, ref, resultado }));
+  /** W2: a flag do MP da conta (app_config 'mercadopago_conta' {liberada}): o personal só vê a opção com ela ligada; o master sempre. */
+  const mpContaLiberada = async (): Promise<boolean> => {
+    if (ehMaster) return true;
+    const { data, error } = await db.from("app_config").select("valor").eq("chave", "mercadopago_conta").maybeSingle();
+    if (error) throw error;
+    return (data as { valor: { liberada?: unknown } | null } | null)?.valor?.liberada === true;
+  };
   const storage = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
   const bucket = bucketComprovantes(schema);
   const hoje = hojeSP();
-  const notificacao = `${SUPABASE_URL}/functions/v1/mp-webhook-aluno?schema=${schema}`;
-  const pagador = credencial === "test" ? (Deno.env.get("MP_TEST_PAYER_EMAIL") || email) : email;
+  /** Quem paga no MP: no staging (o MP de teste — o do Physiq ou a conta de teste do personal) o comprador de teste; na produção, o aluno.
+   *  W2 (MENOR 28): pela credencial da ação, não pelo "test" do Physiq. (A notification_url sai do notificacaoDe — ./mp-credencial.ts.) */
+  const pagadorDe = (cred: CredencialMp) => (schemaDaCredencialMp(cred) === "staging" ? (Deno.env.get("MP_TEST_PAYER_EMAIL") || email) : email);
 
   // ───────────────────────── ajudantes (com o db do schema) ─────────────────────────
 
-  /** W1: as colunas da cobrança + as da InfinitePay no schema que já tem a migration (o public antes dela lê as de sempre). */
-  const colunasCobranca = async () => ((await schemaTemW1(db, schema)) ? COLUNAS_COBRANCA_IP : COLUNAS_COBRANCA);
+  /** W1: as colunas da cobrança + as da InfinitePay no schema que já tem a migration (o public antes dela lê as de sempre). W2 (C2): + a
+   *  mp_collector_id no schema com a migration da W2 (a credencialDaCobranca escolhe o token pelo collector da linha; sem ele, tudo seria o MP
+   *  do Physiq). A W2 vem depois da W1 nos 2 schemas (a migration dela muda a recebimento_integracoes da W1). */
+  const colunasCobranca = async () =>
+    (await schemaTemW2(db, schema)) ? COLUNAS_COBRANCA_W2 : (await schemaTemW1(db, schema)) ? COLUNAS_COBRANCA_IP : COLUNAS_COBRANCA;
 
   const buscarCobranca = async (id: unknown): Promise<Cobranca> => {
     if (!ehUuidFin(id)) falhar("cobranca_invalida");
@@ -432,7 +534,18 @@ Deno.serve(async (req) => {
    *  fila (ou a fila que não gravou) → o aviso ao dono de antes. */
   const sincronizarAutomatica = async (m: Matricula): Promise<ResultadoValor | "na_fila"> => {
     const a = await assinaturaDe(m.id);
-    const t = await trocarValorDaAutomatica(db, credencial, a, Number(m.mensalidade_valor), { prazo: prazoDoPedido, log, schema, acao });
+    // W2: o PUT do valor com a credencial DESTA automática (escrita — o collector), só quando ela vai ao MP (viva e de verdade: o corte do
+    // novoValorDaAutomatica). Sem acesso a ela (outra conta do MP, a desconectada, a conexão caída) = o "falhou" de sempre: a fila tenta de hora
+    // em hora com a credencial certa (automaticas-fila) e, no fim, avisa o dono — a gravação do plano do aluno já aconteceu, não vira 409
+    const vaiAoMp = a?.status === "authorized" && !!a.mp_preapproval_id && !simulado(a.mp_preapproval_id) && a.payload?.simulada !== true;
+    const cred = vaiAoMp
+      ? await credencialDaAssinatura(db, ctxMp, a!, credencial, { escrita: true }).catch((e) => {
+        if (e instanceof MpContaSemAcesso) return null;
+        throw e;
+      })
+      : credencial;
+    const t: TrocaDoValor = cred ? await trocarValorDaAutomatica(db, cred, a, Number(m.mensalidade_valor), { prazo: prazoDoPedido, log, schema, acao })
+      : { resultado: "falhou", status: null, externo: {} };
     if (t.resultado !== "falhou") return t.resultado;
     let naFila: number | null = null;
     try {
@@ -481,9 +594,13 @@ Deno.serve(async (req) => {
   /** Trocar para o período todo desliga a automática (§4.4) — com o OK de quem troca; o aluno é avisado. */
   const cancelarAutomatica = async (m: Matricula, a: NonNullable<Awaited<ReturnType<typeof assinaturaDe>>>) => {
     if (a.mp_preapproval_id && !simulado(a.mp_preapproval_id)) {
-      const { status: sc, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`, {
+      // W2: com a credencial DESTA automática (escrita — o collector): outra conta do MP ou a desconectada → 409 mp_outra_conta (o Physiq não
+      // alcança; nada muda: quem chama ainda não trocou o plano); a conexão caída → 409 mp_conta_indisponivel (o catch final)
+      const cred = await credencialDaAssinatura(db, ctxMp, a, credencial, { escrita: true });
+      if (!cred) falhar("mp_outra_conta", 409);
+      const { status: sc, body: pre } = await mp<AssinaturaMp>(cred!, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`, {
         method: "PUT", body: JSON.stringify({ status: "cancelled" }),
-      }, { prazo: prazoDoPedido });
+      });
       if (sc >= 300 || !pre?.id) {
         log.erro({ codigo: "mp_cancelar_assinatura_falhou", schema, acao, ref: a.id, status: sc, externo: codigosDoMp(pre) });
         falhar("mp_error", 502, { status_mp: sc });
@@ -530,11 +647,15 @@ Deno.serve(async (req) => {
     return (data as { infinitepay_handle: string; status: string; testado_em: string | null } | null) ?? null;
   };
 
-  /** O que a tela mostra, numa chamada: a conta, as chaves Pix (COMO A PESSOA) e a InfinitePay. */
+  /** O que a tela mostra, numa chamada: a conta, as chaves Pix (COMO A PESSOA), a InfinitePay e o MP da conta (W2). */
   const recebimentoVista = async (c: ContaDoRecebimento) => {
     const { data: chaves, error } = await dbPessoa.from("recebimento_chaves").select(COLUNAS_CHAVE).eq("conta_id", c.id).order("criado_em");
     if (error) throw error;
     const ip = await integracaoIp(c.id);
+    // W2: a integração SEM token (integracaoMp) e só os campos da tela; sem a migration no schema, indisponível. A conta do app é o MP do
+    // Physiq: o MP da conta nunca é oferecido nela (o prof_mp_conectar recusa conta_do_app)
+    const w2 = await schemaTemW2(db, schema);
+    const mp = w2 ? await integracaoMp(db, c.id) : null;
     return {
       ok: true, master: ehMaster, pode_editar: ehMaster || c.origem !== "app",
       conta: { id: c.id, nome: c.nome, origem: c.origem, modo: c.modo, bloquear: c.bloquear },
@@ -543,6 +664,11 @@ Deno.serve(async (req) => {
       infinitepay: {
         disponivel: (await schemaTemW1(db, schema)) && (await infinitepayLiberada()),
         handle: ip?.infinitepay_handle ?? null, status: ip?.status ?? null, testado_em: ip?.testado_em ?? null,
+      },
+      mercadopago_conta: {
+        disponivel: w2 && c.origem !== "app" && (await mpContaLiberada()),
+        status: mp?.status ?? null, apelido: mp?.mp_apelido ?? null, expira_em: mp?.mp_expira_em ?? null, erro: mp?.mp_erro ?? null,
+        conectado_em: mp?.conectado_em ?? null, chave_publica: !!mp?.mp_public_key, teste: mp?.mp_teste ?? null,
       },
     };
   };
@@ -554,13 +680,54 @@ Deno.serve(async (req) => {
     return (data as { id: string } | null)?.id ?? null;
   };
 
-  /** As matrículas com cobrança automática viva na conta (sair do MP cancela — a regra cruzada do spec-review). Busca pelos PACIENTES da
-   *  conta: a aluno_assinaturas antiga pode ter conta_id nulo (MENOR 6 da revisão). */
-  const automaticasVivasDaConta = async (contaId: string): Promise<string[]> => {
+  // W2: as matrículas com cobrança automática viva na conta vêm do pacientesComAutomaticaViva (_shared/mp-conta.ts — o ajudante da W1,
+  // movido para lá na Task 4: pelos PACIENTES da conta, MENOR 6 da revisão da W1).
+
+  /** W2 (MENOR 10): as automáticas vivas NESTA conta do MP (o collector da integração), dos alunos da conta — o desconectar fora do modo do
+   *  MP da conta só desliga estas (as do MP do Physiq seguem com o modo). Só depois do schemaTemW2 (a regra da coluna nova — C2). */
+  const automaticasNaContaDoMp = async (contaId: string, collector: number): Promise<string[]> => {
     const linhas = await todasAsPaginas<{ paciente_id: string }>((de, ate) =>
       db.from("aluno_assinaturas").select("paciente_id, pacientes!inner(conta_id)").eq("pacientes.conta_id", contaId)
+        .eq("mp_collector_id", collector) // W2: depois do schemaTemW2
         .in("status", ["authorized", "pending", "paused"]).order("paciente_id").range(de, ate));
     return [...new Set(linhas.map((l) => l.paciente_id))];
+  };
+
+  /** W2: desliga as automáticas vivas, cada uma com a credencial DELA (cancelarAssinaturasPorCredencial — nunca lança por causa do MP:
+   *  { canceladas, falhas, semAcesso }) e avisa SÓ quem de fato ficou sem a automática: com recusa, um 2º olhar no banco tira do aviso quem
+   *  segue com ela viva (o que o MP recusou ou não alcançou). Quem chama decide pela recusaDoCancelamento (409/502 — nada mais muda). */
+  const desligarAutomaticas = async (contaId: string, ids: string[], motivo: string) => {
+    const r = await cancelarAssinaturasPorCredencial(db, { schema, log, prazo: prazoDoPedido }, ctxMp, credencial, ids, motivo);
+    const vivas = new Set(r.falhas || r.semAcesso ? await pacientesComAutomaticaViva(db, contaId) : []);
+    if (r.falhas) log.erro({ codigo: "automaticas_nao_canceladas", schema, acao, ref: contaId, n: r.falhas });
+    if (r.semAcesso) log.aviso({ codigo: "automaticas_sem_acesso", schema, acao, ref: contaId, n: r.semAcesso });
+    const alunos = await emLotes(ids.filter((id) => !vivas.has(id)), 150, async (lote) => {
+      const { data, error } = await db.from("pacientes").select("user_id").in("id", lote);
+      if (error) throw error;
+      return (data ?? []) as Array<{ user_id: string | null }>;
+    });
+    for (const a of alunos) {
+      await avisar(db, a.user_id, "geral", "Seu profissional mudou a forma de receber: a cobrança automática no cartão foi desligada. Veja em Pagamentos.",
+        "/perfil/pagamentos", log, schema);
+    }
+    return r;
+  };
+
+  /** MENOR 19: o dono DE VERDADE (o sou_dono do banco: membro ativo com o papel dono) — SEM o atalho do master do papelNaConta. O MP da conta
+   *  só o dono liga: o master só na conta em que é dono (senão ligaria o MP DELE na conta de um personal). */
+  const donoDeVerdade = async (contaId: string): Promise<boolean> => {
+    const { data, error } = await db.from("conta_membros").select("papeis").eq("conta_id", contaId).eq("user_id", user.id).eq("status", "ativo").maybeSingle();
+    if (error) throw error;
+    return (((data as { papeis: string[] } | null)?.papeis ?? []) as string[]).includes("dono");
+  };
+
+  /** W2: a conta de uma conexão do OAuth (mp_conexoes — só o servidor lê), para a vista depois da confirmação. */
+  const contaDaConexao = async (conexaoId: string): Promise<string> => {
+    const { data, error } = await db.from("mp_conexoes").select("conta_id").eq("id", conexaoId).maybeSingle();
+    if (error) throw error;
+    const contaId = (data as { conta_id: string } | null)?.conta_id;
+    if (!contaId) return falhar("mp_invalido", 409);
+    return contaId;
   };
 
   const statusDoErroDaRpc = (codigo: string) =>
@@ -595,12 +762,15 @@ Deno.serve(async (req) => {
 
   // hml-06 (H-20): sem ler a assinatura atual não se segue — o erro de banco virava "não tem" e o aluno_mp_assinar criava OUTRA
   // sem cancelar a atual (o aluno pagava 2×); agora vira 500 erro_interno ANTES de qualquer POST ao MP
+  // W2 (C2): as colunas pelo colunasAssinatura — a do collector (QUAL conta do MP: a credencialDaAssinatura escolhe o token por ela) só com a
+  // W2 no schema (sem ela, o select com a coluna dava 42703: todo aluno_status do public em 500 entre a Task 14 e a 22)
   const assinaturaDe = async (pacienteId: string) => {
-    const { data, error } = await db.from("aluno_assinaturas").select("id, paciente_id, conta_id, mp_preapproval_id, status, valor, proximo_vencimento, payload, criado_em")
+    const { data, error } = await db.from("aluno_assinaturas").select(await colunasAssinatura(db, schema))
       .eq("paciente_id", pacienteId).order("criado_em", { ascending: false }).limit(1);
     if (error) throw error;
-    return ((data ?? []) as Array<{ id: string; paciente_id: string; conta_id: string | null; mp_preapproval_id: string | null; status: string;
-      valor: number | null; proximo_vencimento: string | null; payload: Record<string, unknown> | null; criado_em: string }>)[0] ?? null;
+    return ((data ?? []) as unknown as Array<{ id: string; paciente_id: string; conta_id: string | null; mp_preapproval_id: string | null; status: string;
+      valor: number | null; proximo_vencimento: string | null; payload: Record<string, unknown> | null; criado_em: string;
+      mp_collector_id?: number | string | null }>)[0] ?? null; // W2: depois do schemaTemW2
   };
 
   const nomeDe = async (uid: string | null | undefined): Promise<string | null> => {
@@ -618,17 +788,22 @@ Deno.serve(async (req) => {
     return ((data ?? []) as Array<{ mp_preapproval_id: string | null }>).map((a) => a.mp_preapproval_id).filter((x): x is string => !!x);
   };
 
-  // ── W1b (C1): TODA ida ao MP com o id do pagamento da linha passa por aqui (servidor.test.ts confere na fonte) ──
+  // ── W1b (C1): TODA ida ao MP com o id do pagamento da linha passa por aqui (servidor.test.ts confere na fonte). W2 (Task 9): com a
+  // credencial ESCOLHIDA por quem chama (credencialDaCobranca — o collector da linha; a MESMA em todas as idas da ação) e, na conta do
+  // personal, o recebedor também confere ──
 
-  /** O pagamento desta linha no MP (GET com a credencial do schema) e se ele é DESTA cobrança (pagamentoEDaCobranca). pay null = o MP
-   *  não respondeu 200 (fora do ar, ou 404 de um pagamento de outra conta do MP): quem chama decide. */
-  const pagamentoDaLinha = async <T extends PagamentoMp = PagamentoMp>(c: Cobranca, m: Matricula): Promise<{ status: number; pay: T | null; daCobranca: boolean }> => {
-    const { status, body: pay } = await mpFetch<T>(credencial, `/v1/payments/${encodeURIComponent(String(c.mp_payment_id))}`, {}, { prazo: prazoDoPedido });
+  /** O pagamento desta linha no MP (GET com a credencial escolhida) e se ele é DESTA cobrança (pagamentoEDaCobranca; na conta do personal,
+   *  também o collector_id = o da credencial — recebedorConfere: o token de OUTRO personal também lê o que é dele). pay null = o MP não
+   *  respondeu 200 (fora do ar, ou 404 de um pagamento de outra conta do MP): quem chama decide. */
+  const pagamentoDaLinha = async <T extends PagamentoMp = PagamentoMp>(c: Cobranca, m: Matricula, cred: CredencialMp):
+    Promise<{ status: number; pay: T | null; daCobranca: boolean }> => {
+    const { status, body: pay } = await mp<T & { collector_id?: number | string | null }>(cred, `/v1/payments/${encodeURIComponent(String(c.mp_payment_id))}`);
     if (status !== 200 || !pay?.id) return { status, pay: null, daCobranca: false };
     const preapproval = preapprovalDoPagamento(pay);
     // a automática da matrícula só pesa sem a referência nova (essa decide sozinha)
     const preapprovals = preapproval && !lerReferenciaAluno(pay.external_reference) ? await preapprovalsDe(c.paciente_id) : [];
-    return { status, pay, daCobranca: pagamentoEDaCobranca(pay, c, { schema, treinoUserId: m.treino_user_id, preapproval, preapprovals }) };
+    return { status, pay, daCobranca: recebedorConfere(cred, pay)
+      && pagamentoEDaCobranca(pay, c, { schema, treinoUserId: m.treino_user_id, preapproval, preapprovals }) };
   };
 
   /** O pagamento da linha é de outra coisa: o rastro do C1 (ou um erro do master) vai ao log e avisa — só o id da cobrança. */
@@ -641,44 +816,75 @@ Deno.serve(async (req) => {
     falhar("cobranca_de_outro_pagamento", 409);
   };
 
-  /** Fecha no MP o pagamento pendente desta linha — só o DESTA cobrança (o PUT de sempre; a resposta dele não muda nada aqui). "outro":
-   *  nada foi ao MP (quem chama decide); "sem_resposta": o MP não respondeu ao GET (segue só com a linha, como quando o PUT falhava). */
-  const cancelarNoMp = async (c: Cobranca, m: Matricula): Promise<"cancelado" | "outro" | "sem_resposta"> => {
-    const r = await pagamentoDaLinha(c, m);
+  /** Fecha no MP o pagamento pendente desta linha — só o DESTA cobrança (o PUT de sempre, com a MESMA credencial do GET; a resposta dele não
+   *  muda nada aqui). "outro": nada foi ao MP (quem chama decide); "sem_resposta": o MP não respondeu ao GET (segue só com a linha, como
+   *  quando o PUT falhava). */
+  const cancelarNoMp = async (c: Cobranca, m: Matricula, cred: CredencialMp): Promise<"cancelado" | "outro" | "sem_resposta"> => {
+    const r = await pagamentoDaLinha(c, m, cred);
     if (!r.pay) return "sem_resposta";
     if (!r.daCobranca) {
       outroPagamento(c);
       return "outro";
     }
-    await mpFetch(credencial, `/v1/payments/${encodeURIComponent(String(c.mp_payment_id))}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: prazoDoPedido });
+    await mp(cred, `/v1/payments/${encodeURIComponent(String(c.mp_payment_id))}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
     return "cancelado";
   };
 
+  type Fechamento = "fechado" | "sem_escrita" | "falhou";
+  /** W2 (o Pix antigo do aluno_mp_pix/cartão, o I5 do prof_registrar): fecha no MP, por melhor esforço, o pagamento aberto desta linha com a
+   *  credencial DELA (escrita). Revisão I-3: diz o que houve — "fechado" (o PUT foi; ou o pagamento é de outra coisa e nada foi ao MP — W1b);
+   *  "sem_escrita" (outra conta do MP ou a desconectada: decisão 10, depois de desligar só leitura — a credencial dos 7 dias NÃO faz o PUT; o
+   *  Pix segue pagável); "falhou" (a conexão caída ou o MP fora — só ao log). Quem chama decide o que fazer com a linha. */
+  const fecharNoMp = async (c: Cobranca, m: Matricula): Promise<Fechamento> =>
+    await lerSemDerrubar(c.id, async (): Promise<Fechamento> => {
+      const cred = await credencialDaCobranca(db, ctxMp, c, credencial, { escrita: true });
+      if (!cred) return "sem_escrita";
+      await cancelarNoMp(c, m, cred);
+      return "fechado";
+    }, "falhou", "mp_fechar_sem_mp");
+
   /** confere no MP uma cobrança que ainda pode mudar (webhook atrasado/perdido). W1b: o pagamento de outra coisa não é aplicado — só
-   *  vai ao log (sem lançar: o aluno_status e o prof_aluno não caem). */
+   *  vai ao log (sem lançar: o aluno_status e o prof_aluno não caem). W2: com a credencial DESTA linha (o collector — leitura, I3): a de outra
+   *  conta do MP, a conexão em erro, a sem acesso guardado ou o MP fora → a linha do banco, como está. */
   const conferir = async (c: Cobranca, m: Matricula): Promise<Cobranca> => {
     if (!c.mp_payment_id || simulado(c.mp_payment_id) || c.forma !== "mp" || !mpEmAberto(c.mp_status) || c.status !== "aguardando_confirmacao") return c;
-    const r = await pagamentoDaLinha(c, m);
-    if (!r.pay) return c;
-    if (!r.daCobranca) {
-      outroPagamento(c);
-      return c;
-    }
-    await aplicarPagamentoMp(db, c, r.pay, m, log, schema);
-    return await buscarCobranca(c.id);
+    return await lerSemDerrubar(c.id, async () => {
+      const cred = await credencialDaCobranca(db, ctxMp, c, credencial, { leitura: true });
+      if (!cred) return c;
+      const r = await pagamentoDaLinha(c, m, cred);
+      if (!r.pay) return c;
+      if (!r.daCobranca) {
+        outroPagamento(c);
+        return c;
+      }
+      await aplicarPagamentoMp(db, c, r.pay, m, log, schema);
+      return await buscarCobranca(c.id);
+    }, c);
   };
 
-  /** assinatura ao vivo no MP (status e próxima cobrança) */
-  const conferirAssinatura = async (pacienteId: string) => {
-    const a = await assinaturaDe(pacienteId);
+  /** assinatura ao vivo no MP (status e próxima cobrança). W2: com a credencial DESTA assinatura (o collector — leitura, I3: a de outra conta
+   *  do MP, a conexão caída ou o MP fora → a linha do banco) e a REDE da cobrança de cada mês (I1 — o aviso dela pode nunca vir): a busca das
+   *  cobranças da automática registra as aprovadas que faltam, com a MESMA credencial (os 2 MPs; idempotente: mp_payment_id único). */
+  const conferirAssinatura = async (m: Matricula) => {
+    const a = await assinaturaDe(m.id);
     if (!a?.mp_preapproval_id || simulado(a.mp_preapproval_id) || a.payload?.simulada === true || a.status === "cancelled") return a;
-    const { status: st, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(a.mp_preapproval_id)}`, {}, { prazo: prazoDoPedido });
-    if (st === 200 && pre?.id) {
+    const preId = a.mp_preapproval_id;
+    return await lerSemDerrubar(a.id, async () => {
+      const cred = await credencialDaAssinatura(db, ctxMp, a, credencial, { leitura: true });
+      if (!cred) return a;
+      const { status: st, body: pre } = await mp<AssinaturaMp>(cred, `/preapproval/${encodeURIComponent(preId)}`);
+      if (st !== 200 || !pre?.id) return a;
       const { error: erroEspelho } = await db.from("aluno_assinaturas").update(espelhoAssinaturaAluno(pre, { ...(a.payload ?? {}) })).eq("id", a.id);
       if (erroEspelho) throw erroEspelho;
-      return await assinaturaDe(pacienteId);
-    }
-    return a;
+      const depois = await assinaturaDe(m.id);
+      if (depois) {
+        const colunasW2 = await comCollector(db, schema, collectorDe(cred));
+        const chamar = <T,>(caminho: string) => mp<T>(cred, caminho);
+        // a rede também não derruba: o MP fora na busca só vai ao log (a próxima conferência ou o diário tentam de novo)
+        await lerSemDerrubar(a.id, () => registrarCobrancasDaAutomatica(db, schema, log, chamar, m, depois, colunasW2), 0, "mp_rede_sem_mp");
+      }
+      return depois;
+    }, a);
   };
 
   const cobrancasDe = async (pacienteId: string, limite = 48): Promise<Cobranca[]> => {
@@ -811,9 +1017,17 @@ Deno.serve(async (req) => {
     return { avulsa: null as Cobranca | null, valor: Number(m.mensalidade_valor), vencimento: venc, mesRef: mesRefDe(venc) };
   };
 
-  const exigirMp = (m: Matricula) => {
-    if (m.conta?.recebimento_modo !== "mercadopago") falhar("modo_nao_mercadopago");
-    if (!tokenMp(credencial)) falhar("mp_nao_configurado", 500);
+  /** W2 (Task 9): a credencial com que o aluno PAGA agora (Pix, cartão, automática) — a MESMA em todas as idas ao MP da ação: o MP do Physiq
+   *  no "mercadopago" (com o token no ambiente); o da conta do personal no "mercadopago_conta" — só a integração ATIVA (credencialDaConta;
+   *  renova antes se vence em < 1 dia): sem acesso → MpContaSemAcesso → 409 mp_conta_indisponivel no catch final. Outro modo → 400. */
+  const credencialParaPagar = async (m: Matricula): Promise<CredencialMp> => {
+    const modo = m.conta?.recebimento_modo;
+    if (modo === "mercadopago") {
+      if (!tokenMp(credencial)) falhar("mp_nao_configurado", 500);
+      return credencial;
+    }
+    if (modo === "mercadopago_conta" && m.conta_id) return await credencialDaConta(db, ctxMp(), m.conta_id);
+    return falhar("modo_nao_mercadopago");
   };
 
   /** O que a linha da mensalidade grava do plano (descrição + retrato) — MP, Pix manual e pagamento por fora. `reescrever`: a linha já
@@ -824,13 +1038,18 @@ Deno.serve(async (req) => {
     ...retratoDoPlano(m),
   });
 
-  /** cria (ou prepara) a linha da cobrança que o MP vai pagar */
-  const linhaParaMp = async (m: Matricula, alvo: Awaited<ReturnType<typeof alvoDoPagamento>>, metodo: "pix" | "cartao", expira: Date | null): Promise<Cobranca> => {
+  /** cria (ou prepara) a linha da cobrança que o MP vai pagar. W2 (C2): com QUAL conta do MP recebe (collectorDaLinha — a da conta, o
+   *  collector dela; a do MP do Physiq, nulo: a avulsa reaproveitada não fica com o collector de uma tentativa noutra conta) e lida de volta
+   *  com as colunas da W2 (o collector: a credencial da linha nas conferências) */
+  const linhaParaMp = async (m: Matricula, alvo: Awaited<ReturnType<typeof alvoDoPagamento>>, metodo: "pix" | "cartao", expira: Date | null,
+    cred: CredencialMp): Promise<Cobranca> => {
+    const colunas = await colunasCobranca();
+    const conta = await collectorDaLinha(db, schema, cred);
     if (alvo.avulsa) {
       const { data, error } = await db.from("cobrancas").update({
         status: "aguardando_confirmacao", forma: "mp", metodo, mp_status: "pending", mp_payment_id: null, pix_qr: null, pix_copia_cola: null,
-        pix_expira_em: expira ? expira.toISOString() : null, recusado_motivo: null, recusado_em: null,
-      }).eq("id", alvo.avulsa.id).select(COLUNAS_COBRANCA).single();
+        pix_expira_em: expira ? expira.toISOString() : null, recusado_motivo: null, recusado_em: null, ...conta,
+      }).eq("id", alvo.avulsa.id).select(colunas).single();
       if (error) throw error;
       return data as unknown as Cobranca;
     }
@@ -840,10 +1059,19 @@ Deno.serve(async (req) => {
       paciente_id: m.id, conta_id: m.conta_id, nutricionista_id: dono, criado_por: null, tipo: "mensalidade",
       ...(await linhaDoPlano(m, alvo.mesRef)), valor: alvo.valor, vencimento: alvo.vencimento, mes_ref: alvo.mesRef,
       status: "aguardando_confirmacao", forma: "mp", metodo, mp_status: "pending", plano_aluno_id: m.plano_aluno_id, origem: "app",
-      pix_expira_em: expira ? expira.toISOString() : null,
-    }).select(COLUNAS_COBRANCA).single();
+      pix_expira_em: expira ? expira.toISOString() : null, ...conta,
+    }).select(colunas).single();
     if (error) throw error;
     return data as unknown as Cobranca;
+  };
+
+  /** W2 (decisão 15 — o I5 da W1 estendido ao MP): a mensalidade do MP ainda aguardando que um pagamento atrasado ainda pode aprovar — o Pix
+   *  que não venceu ou o cartão em análise (sem validade) —, a mais nova. Com as colunas da W2 (o collector: a credencial para fechar no MP). */
+  const mensalidadeMpAguardando = async (pacienteId: string): Promise<Cobranca | null> => {
+    const { data, error } = await db.from("cobrancas").select(await colunasCobranca()).eq("paciente_id", pacienteId).eq("tipo", "mensalidade")
+      .eq("forma", "mp").eq("status", "aguardando_confirmacao").is("deleted_at", null).order("created_at", { ascending: false }).limit(10);
+    if (error) throw error;
+    return ((data ?? []) as unknown as Cobranca[]).find((c) => !c.pix_expira_em || Date.parse(c.pix_expira_em) > Date.now()) ?? null;
   };
 
   /** desfaz a linha quando o MP recusa criar o pagamento */
@@ -951,13 +1179,17 @@ Deno.serve(async (req) => {
         // W1: a tentativa vencida sai (o cobs relido abaixo já a vê fechada) e os avisos na hora são conferidos em 2º plano (I3) — só
         // na conta InfinitePay ou com a tentativa dela aberta (I2)
         if (m.conta?.recebimento_modo === "infinitepay" || cobs0.some(ehTentativaIp)) await cuidarDaInfinitePay(m);
-        const assinatura = m.conta?.recebimento_modo === "mercadopago" ? await conferirAssinatura(m.id) : await assinaturaDe(m.id);
+        // W2: os 2 MPs conferem a automática (a do personal pela credencial DELA — leitura, I3: com a conexão caída, a linha do banco)
+        const assinatura = ehModoMp(m.conta?.recebimento_modo) ? await conferirAssinatura(m) : await assinaturaDe(m.id);
         const atual = (await carregarMatricula(db, id)) ?? m;
         const cobs = await cobrancasDe(m.id);
         const pixAberto = cobs.find((c) => c.forma === "mp" && c.status === "aguardando_confirmacao" && c.metodo === "pix"
           && !!c.pix_copia_cola && (!c.pix_expira_em || new Date(c.pix_expira_em).getTime() > Date.now()));
         const modo = atual.conta?.recebimento_modo ?? "pix_manual";
         const chave = modo === "pix_manual" ? await chaveAtiva(atual.conta_id) : null;
+        // W2: o MP da conta do personal — a integração SEM token (integracaoMp): disponivel = a conexão ATIVA (caída, o app mostra
+        // "indisponível" e o histórico segue — I3); a chave pública do vendedor para o cartão (decisão 14: sem ela, só o Pix)
+        const mpDaConta = modo === "mercadopago_conta" && atual.conta_id ? await integracaoMp(db, atual.conta_id) : null;
         const dono = recebedor(atual);
         matriculas.push({
           paciente_id: atual.id, nome: atual.nome,
@@ -971,6 +1203,9 @@ Deno.serve(async (req) => {
           // hml-14d (B21 · D31): o "Ver todos (N)" do app — as listas acima continuam com as 48/24 de sempre (o APK antigo usa)
           total_cobrancas: await totalDoAluno("cobrancas", atual.id),
           total_recibos: await totalDoAluno("recibos", atual.id),
+          // W2: só na matrícula do MP do personal (nas outras, null — o APK antigo não lê)
+          mp: modo === "mercadopago_conta"
+            ? { disponivel: mpDaConta?.status === "ativa", chave_publica: mpDaConta?.status === "ativa" ? mpDaConta.mp_public_key : null } : null,
         });
       }
       return json({ ok: true, ambiente: schema, simulacao: schema === "staging", hoje, agora: new Date().toISOString(), matriculas }, 200, origin);
@@ -1083,7 +1318,8 @@ Deno.serve(async (req) => {
 
     if (acao === "aluno_mp_pix" || acao === "aluno_mp_cartao") {
       const m = await minhaMatricula(body.paciente_id);
-      exigirMp(m);
+      // W2: o MP do Physiq ou o da conta do personal (sem acesso a ela → 409 mp_conta_indisponivel) — a MESMA credencial em todas as idas daqui
+      const cred = await credencialParaPagar(m);
       const alvo = await alvoDoPagamento(m, body.cobranca_id);
       // I6: parcelas só no cartão parcelado, até o máximo do plano (a avulsa e o modo de hoje: 1×)
       const parcelas = body.installments === undefined ? 1 : body.installments;
@@ -1093,42 +1329,79 @@ Deno.serve(async (req) => {
       const assinatura = await assinaturaDe(m.id);
       if (!alvo.avulsa && assinatura?.status === "authorized") falhar("cartao_ativo");
       const metodo = acao === "aluno_mp_pix" ? "pix" : "cartao";
-      if (metodo === "pix") {
-        // Pix pendente igual e com mais de 30 min de validade → reaproveita; diferente → fecha no MP
-        const { data: abertos, error } = await db.from("cobrancas").select(COLUNAS_COBRANCA).eq("paciente_id", m.id).eq("forma", "mp")
-          .eq("metodo", "pix").eq("status", "aguardando_confirmacao").is("deleted_at", null);
-        if (error) throw error; // hml-06: sem ler o Pix aberto não se cria outro
-        for (const aberto of (abertos ?? []) as unknown as Cobranca[]) {
-          const atual = await conferir(aberto, m);
-          if (atual.status === "paga") return json({ ok: true, cobranca: vista(atual), aprovada: true }, 200, origin);
-          const valida = atual.pix_expira_em ? new Date(atual.pix_expira_em).getTime() > Date.now() + 30 * 60_000 : false;
-          const mesmoAlvo = alvo.avulsa ? atual.id === alvo.avulsa.id : atual.tipo === "mensalidade";
-          if (atual.status === "aguardando_confirmacao" && valida && mesmoAlvo && Number(atual.valor) === alvo.valor && atual.pix_copia_cola) {
-            return json({ ok: true, cobranca: vista(atual, true), reutilizada: true }, 200, origin);
-          }
-          if (atual.status === "aguardando_confirmacao" && (!alvo.avulsa || atual.id !== alvo.avulsa.id)) {
-            // W1b: no MP, só o Pix DESTA cobrança é fechado (o de outra coisa só vai ao log); a linha fecha de todo jeito
-            if (atual.mp_payment_id && !simulado(atual.mp_payment_id)) await cancelarNoMp(atual, m);
-            const { error: erroFechar } = atual.tipo === "avulsa"
-              ? await db.from("cobrancas").update({ status: "aberta", forma: null, mp_status: "cancelled", mp_payment_id: null, pix_qr: null, pix_copia_cola: null, pix_expira_em: null }).eq("id", atual.id)
-              : await db.from("cobrancas").update({ status: "cancelada", mp_status: "cancelled" }).eq("id", atual.id);
-            if (erroFechar) throw erroFechar;
-          }
+      // Os Pix abertos do aluno ANTES de um pagamento novo no MP (revisão I-3: no Pix E no cartão). O Pix igual, com mais de 30 min de
+      // validade e NA MESMA conta do MP → reaproveita (só no Pix). Os outros: TODO Pix que não vai ser reaproveitado é fechado NO MP com a
+      // credencial DELE (fecharNoMp) — inclusive o da própria avulsa (o linhaParaMp zera o mp_payment_id dela: o QR antigo seguia pagável e,
+      // pago, não dava baixa — o aluno pagava 2 vezes). O UPDATE da linha fica só para as OUTRAS (a da avulsa o linhaParaMp reescreve). A
+      // conta de antes que o Physiq não alcança para escrita (sem_escrita: a desconectada — decisão 10, só leitura; a credencial dos 7 dias
+      // não faz o PUT — ou outra conta do MP): o Pix dela segue pagável, então a linha FICA (paga, o aviso e a conferência dão baixa nela pela
+      // leitura dos 7 dias); o do MESMO alvo, vivo, volta no Pix em vez de um 2º e recusa o cartão (409 mp_conta_indisponivel). A conexão
+      // caída ou o MP fora no fechamento (falhou) não impedem o pagamento novo (o melhor esforço de sempre). W2: lido com as colunas da W2 (o
+      // collector de cada um: a conta dele e a credencial para fechá-lo)
+      const { data: abertos, error } = await db.from("cobrancas").select(await colunasCobranca()).eq("paciente_id", m.id).eq("forma", "mp")
+        .eq("metodo", "pix").eq("status", "aguardando_confirmacao").is("deleted_at", null);
+      if (error) throw error; // hml-06: sem ler o Pix aberto não se cria outro
+      for (const aberto of (abertos ?? []) as unknown as Cobranca[]) {
+        const atual = await conferir(aberto, m);
+        const mesmoAlvo = alvo.avulsa ? atual.id === alvo.avulsa.id : atual.tipo === "mensalidade";
+        if (atual.status === "paga") {
+          if (metodo === "pix") return json({ ok: true, cobranca: vista(atual), aprovada: true }, 200, origin);
+          if (mesmoAlvo) return json({ ok: true, cobranca: vista(atual), status: "paga", aprovada: true }, 200, origin);   // o cartão não cobra 2×
+          continue;
+        }
+        if (atual.status !== "aguardando_confirmacao") continue;
+        const valida = atual.pix_expira_em ? new Date(atual.pix_expira_em).getTime() > Date.now() + 30 * 60_000 : false;
+        // W2: o Pix de OUTRA conta do MP não serve (o modo mudou — do MP do Physiq para o do personal, ou o contrário): o aluno pagaria a de antes
+        const mesmaConta = Number(atual.mp_collector_id ?? 0) === Number(collectorDe(cred) ?? 0); // W2: depois do schemaTemW2
+        if (metodo === "pix" && valida && mesmoAlvo && mesmaConta && Number(atual.valor) === alvo.valor && atual.pix_copia_cola) {
+          return json({ ok: true, cobranca: vista(atual, true), reutilizada: true }, 200, origin);
+        }
+        // W1b: no MP, só o Pix DESTA cobrança é fechado (o de outra coisa só vai ao log — o cancelarNoMp)
+        const fechou = atual.mp_payment_id && !simulado(atual.mp_payment_id) ? await fecharNoMp(atual, m) : "fechado";
+        if (fechou === "sem_escrita" && !!atual.pix_expira_em && Date.parse(atual.pix_expira_em) > Date.now()) {
+          if (!mesmoAlvo) continue;
+          if (metodo === "pix" && atual.pix_copia_cola) return json({ ok: true, cobranca: vista(atual, true), reutilizada: true }, 200, origin);
+          log.aviso({ codigo: "mp_pix_vivo_sem_escrita", schema, acao, ref: atual.id });
+          return falhar("mp_conta_indisponivel", 409);
+        }
+        if (!alvo.avulsa || atual.id !== alvo.avulsa.id) {
+          const { error: erroFechar } = atual.tipo === "avulsa"
+            ? await db.from("cobrancas").update({ status: "aberta", forma: null, mp_status: "cancelled", mp_payment_id: null, pix_qr: null, pix_copia_cola: null, pix_expira_em: null }).eq("id", atual.id)
+            : await db.from("cobrancas").update({ status: "cancelada", mp_status: "cancelled" }).eq("id", atual.id);
+          if (erroFechar) throw erroFechar;
         }
       }
       const expira = metodo === "pix" ? new Date(Date.now() + PIX_HORAS * 3_600_000) : null;
-      const linha = await linhaParaMp(m, alvo, metodo, expira);
+      const linha = await linhaParaMp(m, alvo, metodo, expira, cred);
       const referencia = referenciaAluno(schema, m.id, alvo.avulsa ? "avulsa" : "mensalidade", linha.id);
+      // W2: o aviso do MP volta pela URL da conta (…&conta=<id>) no MP do personal; pela de sempre no MP do Physiq
+      const notificacao = notificacaoDe(cred, schema, SUPABASE_URL);
+      const pagador = pagadorDe(cred);
       if (metodo === "pix") {
-        const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, "/v1/payments", {
-          method: "POST",
-          body: JSON.stringify({
-            transaction_amount: alvo.valor, description: linha.descricao.slice(0, 120), payment_method_id: "pix", payer: { email: pagador },
-            external_reference: referencia, notification_url: notificacao, date_of_expiration: expira!.toISOString().replace("Z", "-00:00"),
-          }),
-        }, { prazo: prazoDoPedido });
+        let criado: RespostaMp<PagamentoMp>;
+        try {
+          criado = await mp<PagamentoMp>(cred, "/v1/payments", {
+            method: "POST",
+            body: JSON.stringify({
+              transaction_amount: alvo.valor, description: linha.descricao.slice(0, 120), payment_method_id: "pix", payer: { email: pagador },
+              external_reference: referencia, notification_url: notificacao, date_of_expiration: expira!.toISOString().replace("Z", "-00:00"),
+            }),
+          });
+        } catch (e) {
+          await desfazerLinha(linha); // W2: a conexão do personal caiu (ou o MP sumiu) no meio — a linha não fica "aguardando" sem pagamento
+          throw e;
+        }
+        const { status: st, body: pay } = criado;
         const td = pay?.point_of_interaction?.transaction_data;
         if (st >= 300 || !pay?.id || !td?.qr_code) {
+          if (typeof cred !== "string" && erroPixSemChave(pay)) {
+            // W2 (decisão 16): a conta do MP do personal sem chave Pix — o aluno usa o cartão e o dono fica sabendo (no máximo 1 aviso por dia)
+            log.aviso({ codigo: "mp_conta_sem_chave_pix", schema, acao, ref: linha.id, status: st });
+            await desfazerLinha(linha);
+            await avisarDonoDaConexao(db, ctxMp(), cred.contaId, "Um aluno tentou pagar por Pix, mas a sua conta do Mercado Pago ainda não tem chave Pix. Cadastre uma chave Pix no app do Mercado Pago para receber por Pix pelo Physiq.")
+              .catch((e) => log.excecao(e, { codigo: "mp_aviso_sem_chave_pix_falhou", schema, acao }));
+            return erro("mp_conta_sem_chave_pix", 400, origin);
+          }
           log.erro({ codigo: "mp_pix_falhou", schema, acao, ref: linha.id, status: st, externo: codigosDoMp(pay) });
           if (schema === "staging" && st >= 500) {
             // SÓ STAGING: o sandbox do MP cai com 500 de vez em quando → Pix simulado (sem QR real) pra manter o fluxo de teste
@@ -1157,12 +1430,26 @@ Deno.serve(async (req) => {
       };
       if (typeof body.payment_method_id === "string" && body.payment_method_id) pedido.payment_method_id = body.payment_method_id;
       if (body.issuer_id !== undefined && body.issuer_id !== null && body.issuer_id !== "") pedido.issuer_id = body.issuer_id;
-      const { status: st, body: pay } = await mpFetch<PagamentoMp>(credencial, "/v1/payments", { method: "POST", body: JSON.stringify(pedido) }, { prazo: prazoDoPedido });
+      let cobrado: RespostaMp<PagamentoMp>;
+      try {
+        cobrado = await mp<PagamentoMp>(cred, "/v1/payments", { method: "POST", body: JSON.stringify(pedido) });
+      } catch (e) {
+        await desfazerLinha(linha); // W2: a conexão do personal caiu (ou o MP sumiu) no meio — a linha não fica "aguardando" sem pagamento
+        throw e;
+      }
+      const { status: st, body: pay } = cobrado;
       if (st >= 300 || !pay?.id) {
         log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: linha.id, status: st, externo: codigosDoMp(pay) });
         await desfazerLinha(linha);
         return erro(erroDeCartao(st, pay) ? "cartao_recusado" : "mp_error", erroDeCartao(st, pay) ? 400 : 502, origin,
           { detalhe: String((pay as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
+      }
+      // MENOR 20: o pagamento tem de ser do mundo do schema — o de sandbox no public (ou um de verdade no staging) nunca vale: nada aplicado e a
+      // linha desfeita; o Weslley é avisado com o id do pagamento (para conferir/devolver no MP)
+      if (!modoConfere(credencialDoSchema(schemaDaCredencialMp(cred)), pay)) {
+        log.erro({ codigo: "mp_cartao_modo_errado", schema, acao, ref: String(pay.id), status: st });
+        await desfazerLinha(linha);
+        return erro("mp_error", 502, origin);
       }
       // hml-14 (H-32): o cartão JÁ foi cobrado — o erro daqui não vira 500 (o aluno pagaria 2×): registra e avisa; o aviso do MP
       // acha a cobrança pela referência
@@ -1174,19 +1461,29 @@ Deno.serve(async (req) => {
 
     if (acao === "aluno_mp_assinar") {
       const m = await minhaMatricula(body.paciente_id);
-      exigirMp(m);
+      // W2: o MP do Physiq ou o da conta do personal (sem acesso a ela → 409 mp_conta_indisponivel) — a MESMA credencial nos POST daqui
+      const cred = await credencialParaPagar(m);
       if (!m.mensalidade_valor || m.cobranca_pausada) falhar("sem_mensalidade");
       // W-P (B2): automática no mês a mês, no plano de 1 mês e no modo de hoje; no período todo, não (P-A "1": sem data de fim — renova)
       if (!aceitaAutomatica(m.plano_modalidade ?? null, m.plano?.meses ?? 1)) falhar("modalidade_sem_automatica");
       const cardToken = typeof body.card_token === "string" ? body.card_token : "";
       const checkout = body.checkout === true;
       if (!cardToken && !checkout) falhar("missing_card_token");
-      const atual = await assinaturaDe(m.id);
+      const atual = await assinaturaDe(m.id);                          // colunasAssinatura (C2): o collector da antiga
       if (atual?.mp_preapproval_id && ["authorized", "pending", "paused"].includes(atual.status) && !simulado(atual.mp_preapproval_id)) {
-        const { status: sa, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(atual.mp_preapproval_id)}`, {}, { prazo: prazoDoPedido });
-        if (sa === 200 && pre?.status === "authorized" && atual.payload?.sandbox !== true) falhar("assinatura_ja_ativa");
-        if (sa === 200 && pre?.status !== "cancelled") {
-          await mpFetch(credencial, `/preapproval/${encodeURIComponent(atual.mp_preapproval_id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) }, { prazo: prazoDoPedido });
+        // I11 (revisão da W2): a antiga viva é cancelada com a credencial DELA (o MP do Physiq ou outra conta do personal) e CONFERIDA no MP
+        // antes da nova — senão ela some do banco (a linha é reaproveitada abaixo) e segue cobrando: o aluno pagaria 2 automáticas. Sem a
+        // credencial dela (outra conta do MP, a desconectada, a conexão caída) ou sem a conferência → 409 assinatura_antiga_viva e NENHUM POST
+        const antiga = await desligarAntiga(async () => {
+          const dela = await credencialDaAssinatura(db, ctxMp, atual, credencial, { escrita: true });
+          return dela ? <T,>(caminho: string, init?: RequestInit) => mp<T>(dela, caminho, init) : null;
+        }, { mp_preapproval_id: atual.mp_preapproval_id, payload: atual.payload });
+        if (antiga.resultado === "assinatura_ja_ativa") falhar("assinatura_ja_ativa");
+        if (antiga.resultado === "assinatura_antiga_viva") {
+          // o MP aceitou o cancelamento e ela segue viva: avisa o Weslley; o resto (sem credencial, sem resposta, sem acesso) só vai ao log
+          if (antiga.motivo === "nao_cancelou") log.erro({ codigo: "mp_assinatura_antiga_viva", schema, acao, ref: m.id, status: antiga.status, resultado: antiga.motivo });
+          else log.aviso({ codigo: "mp_assinatura_antiga_viva", schema, acao, ref: m.id, status: antiga.status, resultado: antiga.motivo });
+          falhar("assinatura_antiga_viva", 409);
         }
       }
       // cobertura vigente → 1ª cobrança quando ela termina (regra do Calc); vencida → cobra na hora
@@ -1195,15 +1492,16 @@ Deno.serve(async (req) => {
       const recorrencia = { frequency: 1, frequency_type: "months", transaction_amount: valor, currency_id: "BRL", ...(inicio ? { start_date: inicio } : {}) };
       const motivo = `Physiq — ${descricaoMensalidade(m.plano?.nome ?? null, mesRefDe(hoje)).replace(/ · [^·]+$/, "")}`;
       const base = {
-        reason: motivo.slice(0, 120), external_reference: referenciaAluno(schema, m.id, "recorrente"), payer_email: pagador,
-        auto_recurring: recorrencia, back_url: `${SITE[schema]}/perfil/pagamentos?assinatura=ok`, notification_url: notificacao,
+        reason: motivo.slice(0, 120), external_reference: referenciaAluno(schema, m.id, "recorrente"), payer_email: pagadorDe(cred),
+        auto_recurring: recorrencia, back_url: `${SITE[schema]}/perfil/pagamentos?assinatura=ok`, notification_url: notificacaoDe(cred, schema, SUPABASE_URL),
       };
-      const pendente = () => mpFetch<AssinaturaMp>(credencial, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, status: "pending" }) }, { prazo: prazoDoPedido });
+      const pendente = () => mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, status: "pending" }) });
       let { status: st, body: pre } = checkout ? await pendente()
-        : await mpFetch<AssinaturaMp>(credencial, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, card_token_id: cardToken, status: "authorized" }) }, { prazo: prazoDoPedido });
+        : await mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, card_token_id: cardToken, status: "authorized" }) });
       let sandbox = false;
-      if (!checkout && (st >= 300 || !pre?.id) && credencial === "test" && recusaDoSandbox(st, pre)) {
-        // STAGING: o MP não tem assinatura com cartão no sandbox → nasce PENDENTE (checkout do MP) com a credencial de teste
+      if (!checkout && (st >= 300 || !pre?.id) && schemaDaCredencialMp(cred) === "staging" && recusaDoSandbox(st, pre)) {
+        // STAGING: o MP não tem assinatura com cartão no sandbox → nasce PENDENTE (checkout do MP). MENOR 28: pela credencial (a da conta de
+        // teste também — pelo "test" do MP do Physiq, como antes, a da conta nunca ligava a rede e dava 502)
         sandbox = true;
         ({ status: st, body: pre } = await pendente());
       }
@@ -1212,12 +1510,16 @@ Deno.serve(async (req) => {
         if (erroDeCartao(st, pre)) falhar("cartao_recusado", 400, { detalhe: String((pre as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
         falhar("mp_error", 502, { status_mp: st });
       }
-      const linha = { paciente_id: m.id, conta_id: m.conta_id, valor, ...espelhoAssinaturaAluno(pre!, { sandbox, checkout, inicio, criada_por: user.id }) };
+      // C2: QUAL conta do MP recebe, só pelo collectorDaLinha (sem a W2, nada — o PGRST204 aqui viria DEPOIS do POST = automática em dobro; no
+      // MP do Physiq, nulo — a linha reaproveitada não fica com o collector da antiga)
+      const linha = { paciente_id: m.id, conta_id: m.conta_id, valor, ...(await collectorDaLinha(db, schema, cred)),
+        ...espelhoAssinaturaAluno(pre!, { sandbox, checkout, inicio, criada_por: user.id }) };
       const { data: salva, error: es } = atual
         ? await db.from("aluno_assinaturas").update(linha).eq("id", atual.id).select("*").single()
         : await db.from("aluno_assinaturas").insert(linha).select("*").single();
       if (es) throw es;
-      return json({ ok: true, assinatura: salva, primeira_cobranca: inicio, sandbox, init_point: sandbox || checkout ? pre!.init_point ?? null : null }, 200, origin);
+      // revisão M-9: a VISTA (a do aluno_status), nunca a linha crua — o mp_collector_id (o user id do MP do personal) e o payload ficam aqui
+      return json({ ok: true, assinatura: assinaturaVista(salva), primeira_cobranca: inicio, sandbox, init_point: sandbox || checkout ? pre!.init_point ?? null : null }, 200, origin);
     }
 
     if (acao === "aluno_mp_cancelar" || acao === "prof_cancelar_assinatura") {
@@ -1231,9 +1533,13 @@ Deno.serve(async (req) => {
       const a = await assinaturaDe(m.id);
       if (!a?.mp_preapproval_id || !["authorized", "pending", "paused"].includes(a.status)) falhar("sem_assinatura");
       if (!simulado(a!.mp_preapproval_id)) {
-        const { status: sc, body: pre } = await mpFetch<AssinaturaMp>(credencial, `/preapproval/${encodeURIComponent(a!.mp_preapproval_id!)}`, {
+        // W2: com a credencial DESTA automática (escrita — o collector): outra conta do MP ou a desconectada → 409 mp_outra_conta (o Physiq não
+        // alcança: cancela-se pelo app do Mercado Pago); a conexão caída → 409 mp_conta_indisponivel (o catch final)
+        const cred = await credencialDaAssinatura(db, ctxMp, a!, credencial, { escrita: true });
+        if (!cred) falhar("mp_outra_conta", 409);
+        const { status: sc, body: pre } = await mp<AssinaturaMp>(cred!, `/preapproval/${encodeURIComponent(a!.mp_preapproval_id!)}`, {
           method: "PUT", body: JSON.stringify({ status: "cancelled" }),
-        }, { prazo: prazoDoPedido });
+        });
         if (sc >= 300 || !pre?.id) falhar("mp_error", 502, { status_mp: sc });
         const { error: erroCancelada } = await db.from("aluno_assinaturas").update(espelhoAssinaturaAluno(pre!, { ...(a!.payload ?? {}), cancelada_por: user.id })).eq("id", a!.id);
         if (erroCancelada) throw erroCancelada;
@@ -1296,8 +1602,12 @@ Deno.serve(async (req) => {
         exigirMensalidade(r.p);
       }
       if (c.forma !== "mp" || c.status !== "aguardando_confirmacao") falhar("nao_pendente");
-      // W1b: o Pix do sandbox só é fechado no MP se for DESTA cobrança; o de outra coisa é 409 e a linha não vira paga
-      if (c.mp_payment_id && !simulado(c.mp_payment_id) && (await cancelarNoMp(c, m!)) === "outro") falhar("cobranca_de_outro_pagamento", 409);
+      // W1b: o Pix do sandbox só é fechado no MP se for DESTA cobrança; o de outra coisa é 409 e a linha não vira paga. W2: com a credencial
+      // DELA (o collector); sem ela (outra conta do MP), só a linha — como o MP sem resposta
+      if (c.mp_payment_id && !simulado(c.mp_payment_id)) {
+        const cred = await credencialDaCobranca(db, ctxMp, c, credencial);
+        if (cred && (await cancelarNoMp(c, m!, cred)) === "outro") falhar("cobranca_de_outro_pagamento", 409);
+      }
       const { error: erroPaga } = await db.from("cobrancas").update({ status: "paga", mp_status: "approved", pago_em: new Date().toISOString(), metodo: c.metodo ?? "pix" }).eq("id", c.id);
       if (erroPaga) throw erroPaga;
       await avisar(db, m!.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos", log, schema);
@@ -1313,8 +1623,13 @@ Deno.serve(async (req) => {
         if (!podeVerCobranca(r.p, c)) falhar("not_found", 404);
       }
       if (!c.mp_payment_id || simulado(c.mp_payment_id)) return json({ ok: true, mp: null }, 200, origin);
+      // W2: a credencial DESTA cobrança (o collector — leitura, I3): a de outra conta do MP (ou sem acesso guardado) não é lida → mp null +
+      // motivo; a conexão caída ou o MP fora → mp null, como o MP sem resposta (lerSemDerrubar: undefined)
+      const cred = await lerSemDerrubar<CredencialMp | null | undefined>(c.id, () => credencialDaCobranca(db, ctxMp, c, credencial, { leitura: true }), undefined);
+      if (cred === null) return json({ ok: true, mp: null, motivo: "outra_conta_mp" }, 200, origin);
       // W1b: só o pagamento DESTA cobrança; o de outra coisa é 409 sem nenhum dado dele (a tela do aluno já trata: Pagamentos.tsx, .catch)
-      const conferido = await pagamentoDaLinha<PagamentoMpDetalhe & PagamentoMp>(c, m!);
+      const semResposta: { status: number; pay: (PagamentoMpDetalhe & PagamentoMp) | null; daCobranca: boolean } = { status: 0, pay: null, daCobranca: false };
+      const conferido = cred ? await lerSemDerrubar(c.id, () => pagamentoDaLinha<PagamentoMpDetalhe & PagamentoMp>(c, m!, cred), semResposta) : semResposta;
       if (!conferido.pay) return json({ ok: true, mp: null }, 200, origin);
       exigirDaCobranca(conferido, c);
       const pay = conferido.pay;
@@ -1426,7 +1741,6 @@ Deno.serve(async (req) => {
         if (!r.ok) falhar(r.erro || "erro_interno", statusDoErroDaRpc(r.erro || ""));
       }
       let canceladas = 0;
-      let falhasAutomaticas = 0;
       if (pedido.modo !== undefined && pedido.modo !== conta.modo) {
         if (pedido.modo === "mercadopago" && !ehMaster) falhar("mp_so_master", 403);
         if (pedido.modo === "infinitepay") {
@@ -1435,36 +1749,37 @@ Deno.serve(async (req) => {
           const ip = await integracaoIp(conta.id);
           if (!ip || ip.status !== "ativa") falhar("sem_infinitetag", 409);
         }
-        if (conta.modo === "mercadopago") {
-          // a regra cruzada (spec-review): sair do Mercado Pago com cobrança automática viva cancela — com o OK de quem troca
-          const ids = await automaticasVivasDaConta(conta.id);
+        if (pedido.modo === "mercadopago_conta") {
+          // W2: o MP da conta só com a conexão ATIVA (a guarda contas_guard_mp é a 2ª camada) e a flag — o "Salvar a forma" depois do
+          // conectado_sem_trocar (a confirmação conectou, mas havia automática viva no MP de antes)
+          if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+          if (!(await mpContaLiberada())) falhar("mp_conta_em_teste", 403);
+          if ((await integracaoMp(db, conta.id))?.status !== "ativa") falhar("mp_nao_conectado", 409);
+        }
+        if (ehModoMp(conta.modo)) {
+          // a regra cruzada (spec-review), W2: para os 2 MPs — sair de um Mercado Pago com cobrança automática viva cancela, com o OK de
+          // quem troca, cada uma pela credencial DELA. MENOR 11 (troca o MENOR 6 da W1): a recusa (sem acesso → 409 mp_sem_acesso; o MP
+          // recusou ou caiu → 502 automaticas_nao_canceladas) não muda o modo — a guarda do banco nem deixaria com a automática viva
+          const ids = await pacientesComAutomaticaViva(db, conta.id);
           if (ids.length && !pedido.cancelarAutomaticas) falhar("automaticas_ativas", 409, { alunos: ids.length });
           if (ids.length) {
-            const r = await cancelarAssinaturasDasMatriculas(db, credencial, ids, "trocou_a_forma", log, { prazo: prazoDoPedido });
+            const r = await desligarAutomaticas(conta.id, ids, "trocou_a_forma");
+            const recusa = recusaDoCancelamento(r);
+            if (recusa) return falhar(recusa.codigo, recusa.http, recusa.extra);
             canceladas = r.canceladas;
-            falhasAutomaticas = r.falhas;
-            if (r.falhas) {
-              // MENOR 6: o MP respondeu e recusou cancelar alguma — a resposta conta, o dono é avisado e o suporte termina no MP
-              log.erro({ codigo: "automaticas_nao_canceladas", schema, acao, ref: conta.id, n: r.falhas });
-              await avisar(db, user.id, "geral", `${r.falhas} cobrança(s) automática(s) no cartão não desligaram no Mercado Pago. Fale com o suporte.`,
-                "/painel/configuracoes/recebimento", log, schema);
-            }
-            const alunos = await emLotes(ids, 150, async (lote) => {
-              const { data, error } = await db.from("pacientes").select("user_id").in("id", lote);
-              if (error) throw error;
-              return (data ?? []) as Array<{ user_id: string | null }>;
-            });
-            for (const a of alunos) {
-              await avisar(db, a.user_id, "geral", "Seu profissional mudou a forma de receber: a cobrança automática no cartão foi desligada. Veja em Pagamentos.",
-                "/perfil/pagamentos", log, schema);
-            }
           }
         }
         const { data, error } = await dbPessoa.from("contas").update({ recebimento_modo: pedido.modo }).eq("id", conta.id).select("recebimento_modo");
-        if (error) throw error;
+        if (error) {
+          // W2: a guarda do modo (contas_guard_mp — para todo mundo) recusou: entrar no MP da conta sem a conexão ativa, ou uma automática
+          // nova entre o cancelamento e a troca → 409 com o código, nunca 500
+          const guarda = erroDaGuardaDoModo(error);
+          if (guarda) return falhar(guarda.codigo, guarda.http, guarda.extra);
+          throw error;
+        }
         // a contas_guard desfaz em silêncio o que não pode (o APK antigo conta com isso): a resposta diz a verdade
         if (((data ?? []) as Array<{ recebimento_modo: string }>)[0]?.recebimento_modo !== pedido.modo) {
-          falhar(pedido.modo === "infinitepay" ? "sem_infinitetag" : "sem_permissao", 409);
+          falhar(pedido.modo === "infinitepay" ? "sem_infinitetag" : pedido.modo === "mercadopago_conta" ? "mp_nao_conectado" : "sem_permissao", 409);
         }
       }
       if (pedido.bloquear !== undefined && pedido.bloquear !== conta.bloquear) {
@@ -1473,8 +1788,9 @@ Deno.serve(async (req) => {
         if (error) throw error;
         if (((data ?? []) as Array<{ bloquear_app_inadimplente: boolean }>)[0]?.bloquear_app_inadimplente !== pedido.bloquear) falhar("sem_permissao", 403);
       }
+      // automaticas_falhas: o campo da W1 fica (o APK antigo lê) — sempre 0 numa resposta 200: a falha agora é o 502 (MENOR 11)
       return json({ ...(await recebimentoVista(await contaDoRecebimento(conta.id))), link_teste: linkTeste, automaticas_canceladas: canceladas,
-        automaticas_falhas: falhasAutomaticas }, 200, origin);
+        automaticas_falhas: 0 }, 200, origin);
     }
 
     if (acao === "prof_ip_testar") {
@@ -1542,6 +1858,136 @@ Deno.serve(async (req) => {
       if (error) throw error;
       if (!data?.length) falhar("chave_inexistente", 404);
       return json({ ok: true }, 200, origin);
+    }
+
+    // ════════════════════════════ W2 — O MERCADO PAGO DA CONTA (conectar, confirmar, desconectar, simular) ════════════════════════════
+    if (acao === "prof_mp_conectar") {
+      const conta = await contaDoRecebimento(body.conta_id);           // dono e master leem — COMO A PESSOA
+      // MENOR 19: SÓ o dono DE VERDADE liga (o desenho D4) — o master só na conta em que é dono (o admin.teste da Task 23 continua
+      // funcionando); sem isso o master ligaria o MP DELE na conta de um personal (às vezes com o consentimento automático do MP)
+      if (!(await donoDeVerdade(conta.id))) falhar("so_o_dono", 403);
+      if (conta.origem === "app") falhar("conta_do_app", 403);         // a conta do app é o MP do Physiq: nunca OAuth
+      if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+      if (!(await mpContaLiberada())) falhar("mp_conta_em_teste", 403);
+      // decisão 6 (I8): no APK o fluxo inteiro acontece no SITE, no navegador por cima do app (a sessão do app não chega ao navegador — e a
+      // confirmação tem de vir da sessão de quem começou). Nada é criado aqui: o site, logado, chama esta ação de novo com origem "site".
+      if (body.origem === "apk") return json({ ok: true, url: `${SITE[schema]}/painel/configuracoes/recebimento?mp=conectar`, no_site: true }, 200, origin);
+      const oauth = oauthDoAmbiente(schema);
+      if (!oauth || !chaveMp) return falhar("mp_oauth_nao_configurado", 503);
+      if (!permitido(`mp-conectar:${user.id}`, 10, 3_600_000)) falhar("rate_limited", 429);
+      // SÓ staging: o redirect que a aplicação já tem (decisão 3) — a prova e o E2E do OAuth real antes da W2-a
+      const redirect = body.redirect_teste === true && schema === "staging" ? REDIRECT_TESTE_MP : redirectDoSchema(schema);
+      const estado = novoSegredoUrl(32);
+      const verificador = novoSegredoUrl(48);
+      // o state de uso único (10 min): só o sha256 vai ao banco; o verifier do PKCE, cifrado (a volta — mp-conectar-retorno — decifra)
+      const { error } = await db.from("mp_conexoes").insert({
+        estado_hash: await sha256Hex(estado), conta_id: conta.id, user_id: user.id, redirect_uri: redirect,
+        verificador: await cifrar(verificador, dadoAssociado(schema, conta.id, "pkce"), chaveMp),
+      });
+      if (error) throw error;
+      const url = urlDeAutorizacao({ base: MP_AUTH_BASE, clientId: oauth.clientId, redirect, estado,
+        desafio: pkceLigado() ? await desafioPkce(verificador) : null });
+      log.info({ codigo: "mp_conectar_inicio", schema, acao, ref: conta.id });
+      // I8: só a URL do MP — o id da conexão NÃO sai daqui (ele só chega ao site pela volta, para a sessão de quem começou confirmar)
+      return json({ ok: true, url, expira_em: new Date(Date.now() + ESTADO_MS).toISOString() }, 200, origin);
+    }
+
+    if (acao === "prof_mp_confirmar") {
+      if (!ehUuidMp(body.conexao_id)) falhar("mp_conexao_invalida", 400);
+      const conexaoId = String(body.conexao_id);
+      if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+      if (body.confirmar !== true) {
+        // a pergunta da tela ("Conectar a conta X do Mercado Pago?"): só o apelido, só para QUEM COMEÇOU — a mesma regra da RPC
+        const { data, error } = await db.from("mp_conexoes").select("user_id, resultado, usado_em, mp_apelido, live").eq("id", conexaoId).maybeSingle();
+        if (error) throw error;
+        const c = data as { user_id: string; resultado: string | null; usado_em: string | null; mp_apelido: string | null; live: boolean | null } | null;
+        if (!c || c.resultado !== "confirmar") return falhar("mp_invalido", 409);
+        if (c.user_id !== user.id) falhar("mp_outra_pessoa", 403);
+        if (!c.usado_em || Date.parse(c.usado_em) < Date.now() - 15 * 60_000) falhar("mp_vencido", 409);
+        return json({ ok: true, apelido: c.mp_apelido, teste: c.live === false }, 200, origin);
+      }
+      // a gravação é COMO A PESSOA (jeito 2): a RPC confere auth.uid() = quem começou, sou_dono, 15 min, a flag e o I5 (outra conta com algo aberto)
+      const { data, error } = await dbPessoa.rpc("recebimento_mp_confirmar", { p_conexao: conexaoId });
+      if (error) throw error;
+      const r = (data ?? {}) as { ok?: boolean; resultado?: "ok" | "conectado_sem_trocar"; erro?: string; abertos?: number; apelido?: string | null };
+      if (!r.ok) {
+        const recusa = erroDaConfirmacao(r);
+        log.aviso({ codigo: "mp_confirmar_recusado", schema, acao, ref: conexaoId, resultado: recusa.codigo });
+        return falhar(recusa.codigo, recusa.http, recusa.extra);
+      }
+      log.info({ codigo: "mp_conectado", schema, acao, ref: conexaoId, resultado: r.resultado });
+      const contaId = await contaDaConexao(conexaoId);                // service_role: o conta_id da conexão (para a vista)
+      return json({ ok: true, resultado: r.resultado ?? "ok", apelido: r.apelido ?? null,
+        recebimento: await recebimentoVista(await contaDoRecebimento(contaId)) }, 200, origin);
+    }
+
+    if (acao === "prof_mp_desconectar") {
+      const conta = await contaDoRecebimento(body.conta_id);           // dono e master (o master desliga o de um personal, com o OK)
+      if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+      const integ = await integracaoMp(db, conta.id);
+      if (!integ || integ.status === "desconectada") return falhar("mp_nao_conectado", 409);
+      // no modo do MP da conta, a troca de modo exige TODAS as automáticas vivas desligadas (a guarda contas_guard_mp); fora dele (MENOR 10:
+      // conectou e não salvou a forma — o modo segue o de antes), só as DESTA conta do MP: as do MP do Physiq seguem com o modo
+      const noModo = conta.modo === "mercadopago_conta";
+      const ids = noModo ? await pacientesComAutomaticaViva(db, conta.id) : await automaticasNaContaDoMp(conta.id, integ.mp_user_id);
+      if (ids.length && body.cancelar_automaticas !== true) falhar("automaticas_ativas", 409, { alunos: ids.length });
+      let canceladas = 0;
+      if (ids.length) {
+        const r = await desligarAutomaticas(conta.id, ids, "personal_desconectou_o_mp");
+        const recusa = recusaDoCancelamento(r);
+        if (recusa) return falhar(recusa.codigo, recusa.http, recusa.extra);   // nada mais muda: o modo e a conexão ficam
+        canceladas = r.canceladas;
+      }
+      let novoModo = conta.modo;
+      if (noModo) {
+        // o modo COMO A PESSOA (o RLS e as guardas valem): o gatilho contas_saiu_do_mp_conta marca a integração desconectada — o acesso
+        // fica 7 dias só para LER o que já estava em andamento (decisão 10)
+        novoModo = modoDepoisDeDesconectar(!!(await chaveAtiva(conta.id)));
+        const { data, error } = await dbPessoa.from("contas").update({ recebimento_modo: novoModo }).eq("id", conta.id).select("recebimento_modo");
+        if (error) {
+          const guarda = erroDaGuardaDoModo(error);                    // corrida: uma automática nova entre o cancelamento e a troca
+          if (guarda) return falhar(guarda.codigo, guarda.http, guarda.extra);
+          throw error;
+        }
+        if (((data ?? []) as Array<{ recebimento_modo: string }>)[0]?.recebimento_modo !== novoModo) falhar("sem_permissao", 409);
+      } else {
+        // MENOR 10: o modo já não é o MP da conta — a troca não acontece e o gatilho não roda: marca direto (a tabela é só do servidor)
+        const { error } = await db.from("recebimento_integracoes").update({ status: "desconectada", desconectada_em: new Date().toISOString(),
+          mp_renovando_ate: null }).eq("conta_id", conta.id).eq("provedor", "mercadopago").neq("status", "desconectada");
+        if (error) throw error;
+      }
+      const { error: erroEvento } = await db.from("conta_eventos").insert({
+        conta_id: conta.id, tipo: "outro", antes: { recebimento_modo: conta.modo, mp: integ.status },
+        depois: { w2: "mp_desconectado", recebimento_modo: novoModo, automaticas_canceladas: canceladas }, por: user.id,
+      });
+      if (erroEvento) throw erroEvento;
+      log.info({ codigo: "mp_desconectado", schema, acao, ref: conta.id, n: canceladas });
+      return json({ ...(await recebimentoVista(await contaDoRecebimento(conta.id))), automaticas_canceladas: canceladas }, 200, origin);
+    }
+
+    if (acao === "prof_mp_simular_conexao") {
+      // decisão 12 — SÓ staging, SÓ master: conecta com a credencial de TESTE da aplicação (lida do ambiente; nada vem do navegador além da
+      // chave pública de teste). MENOR 16: prova a GRAVAÇÃO e os caminhos da conta — collector e token são os do Physiq; o token de cada
+      // chamada quem prova é o --local (e2e/w2/api.py)
+      if (schema !== "staging") falhar("so_staging", 403);
+      if (!ehMaster) falhar("so_master", 403);
+      if (!(await schemaTemW2(db, schema))) falhar("w2_indisponivel", 409);
+      const conta = await contaDoRecebimento(body.conta_id);
+      if (conta.origem === "app") falhar("conta_do_app", 403);         // a conta do app é o MP do Physiq
+      const token = tokenMp("test");                                     // do ambiente — nada vem do navegador
+      if (!token || !chaveMp) return falhar("mp_conta_nao_configurado", 503);
+      const { status: st, body: eu } = await mpFetch<{ id?: number; nickname?: string }>("test", "/users/me", {}, { prazo: prazoDoPedido });
+      if (st !== 200 || !eu?.id) return falhar("mp_error", 502, { status_mp: st });
+      const chavePublica = typeof body.chave_publica === "string" && /^TEST-[A-Za-z0-9-]{8,72}$/.test(body.chave_publica) ? body.chave_publica : null;
+      const { error } = await db.from("recebimento_integracoes").upsert({
+        conta_id: conta.id, provedor: "mercadopago", status: "ativa", mp_user_id: eu.id, mp_apelido: "TESTE (simulada)", mp_public_key: chavePublica,
+        mp_access_token: await cifrar(token, dadoAssociado(schema, conta.id, "access"), chaveMp), mp_refresh_token: null,
+        mp_expira_em: new Date(Date.now() + 180 * 86_400_000).toISOString(), mp_teste: true, mp_origem: "teste_sem_oauth", mp_erro: null,
+        mp_renovar_tentativas: 0, conectado_em: new Date().toISOString(), desconectada_em: null, atualizado_por: user.id,
+      }, { onConflict: "conta_id,provedor" });
+      if (error) throw error;
+      log.info({ codigo: "mp_conexao_simulada", schema, acao, ref: conta.id });
+      return json(await recebimentoVista(await contaDoRecebimento(conta.id)), 200, origin);
     }
 
     if (acao === "prof_planos") {
@@ -1688,12 +2134,13 @@ Deno.serve(async (req) => {
       const { m, p } = await matriculaDoPainel(body.aluno);
       const veMensalidade = podeMexerNaMensalidade(p);
       let cobs = await cobrancasDe(m.id, 72);
-      if (veMensalidade && m.conta?.recebimento_modo === "mercadopago") {
+      // W2: os 2 MPs (ehModoMp) — as conferências daqui são de LEITURA (I3: a conexão do personal caída não derruba a ficha)
+      if (veMensalidade && ehModoMp(m.conta?.recebimento_modo)) {
         for (const c of cobs.filter((x) => x.forma === "mp" && x.status === "aguardando_confirmacao").slice(0, 4)) await conferir(c, m);
       }
       // W1: como no aluno_status — a vencida sai e a conferência vai em 2º plano (I3), só na conta InfinitePay ou com tentativa aberta (I2)
       if (veMensalidade && (m.conta?.recebimento_modo === "infinitepay" || cobs.some(ehTentativaIp))) await cuidarDaInfinitePay(m);
-      const assinatura = veMensalidade && m.conta?.recebimento_modo === "mercadopago" ? await conferirAssinatura(m.id) : await assinaturaDe(m.id);
+      const assinatura = veMensalidade && ehModoMp(m.conta?.recebimento_modo) ? await conferirAssinatura(m) : await assinaturaDe(m.id);
       const atual = (await carregarMatricula(db, m.id)) ?? m;
       cobs = (await cobrancasDe(m.id, 72)).filter((c) => podeVerCobranca(p, c));
       // W-P: os planos completos (meses, modalidades, parcelas) para a ficha — no schema sem a migration, as colunas de antes
@@ -1867,6 +2314,9 @@ Deno.serve(async (req) => {
           confirmado_em: new Date().toISOString(), recusado_motivo: null, recusado_em: null }).eq("id", alvo.id).select(COLUNAS_COBRANCA).single();
         if (error) throw error;
         c = data as unknown as Cobranca;
+        // W2 (no espírito da decisão 15): a avulsa que estava aguardando no MP tem o pagamento fechado lá, com a credencial DELA, por melhor
+        // esforço — o aluno não paga 2 vezes (a aprovação atrasada cai em "paga é final")
+        if (alvo.forma === "mp" && alvo.mp_payment_id && !simulado(alvo.mp_payment_id)) await fecharNoMp(alvo, m);
       } else {
         exigirMensalidade(p);
         const valor = valorValido(body.valor) ?? (m.mensalidade_valor ? Number(m.mensalidade_valor) : null);
@@ -1885,12 +2335,19 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: false }).limit(1);
         if (eip) throw eip;
         const ip = ((ips ?? []) as Array<{ id: string }>)[0];
-        const { data, error } = ip
-          ? await db.from("cobrancas").update(linhaManual).eq("id", ip.id).eq("status", "aguardando_confirmacao").select(COLUNAS_COBRANCA).single()
+        // W2 (decisão 15 — o I5 da W1 estendido ao MP): sem tentativa da InfinitePay, a mensalidade do MP ainda aguardando (o Pix que não
+        // venceu, o cartão em análise) vira ESTA linha (paga "por fora"); depois o pagamento é fechado no MP com a credencial DELA, por melhor
+        // esforço: a aprovação atrasada cai em "paga é final" (aplicarPagamentoMp) e não vira 2º período. A gravação é do servidor (a guarda da
+        // W1b só vale para o app)
+        const mpAguardando = ip ? null : await mensalidadeMpAguardando(m.id);
+        const mesma = ip ?? mpAguardando;
+        const { data, error } = mesma
+          ? await db.from("cobrancas").update(linhaManual).eq("id", mesma.id).eq("status", "aguardando_confirmacao").select(COLUNAS_COBRANCA).single()
           : await db.from("cobrancas").insert({ paciente_id: m.id, conta_id: m.conta_id, nutricionista_id: dono, criado_por: user.id,
               tipo: "mensalidade", ...linhaManual, origem: "app" }).select(COLUNAS_COBRANCA).single();
         if (error) throw error;
         c = data as unknown as Cobranca;
+        if (mpAguardando?.mp_payment_id && !simulado(mpAguardando.mp_payment_id)) await fecharNoMp(mpAguardando, m);
       }
       if (body.lancar === true) await lancar(c, dia, metodo);
       await recalcularTravaNutri();
@@ -1930,9 +2387,12 @@ Deno.serve(async (req) => {
       const { m, p } = await matriculaDoPainel(c.paciente_id);
       if (!podeMexerNaCobranca(p, c)) falhar("sem_permissao", 403);
       if (c.tipo !== "avulsa" || !["aberta", "aguardando_confirmacao"].includes(c.status)) falhar("cobranca_nao_aberta");
-      // W1b: no MP, só o pagamento DESTA cobrança; o de outra coisa é 409 e a linha fica (o MP sem resposta: só a linha, como antes)
-      if (c.forma === "mp" && c.mp_payment_id && !simulado(c.mp_payment_id) && (await cancelarNoMp(c, m)) === "outro") {
-        falhar("cobranca_de_outro_pagamento", 409);
+      // W1b: no MP, só o pagamento DESTA cobrança; o de outra coisa é 409 e a linha fica (o MP sem resposta: só a linha, como antes). W2: com
+      // a credencial DELA (escrita — o collector): outra conta do MP ou a desconectada → o Physiq não alcança e só a linha muda; a conexão
+      // caída → 409 mp_conta_indisponivel (o catch final)
+      if (c.forma === "mp" && c.mp_payment_id && !simulado(c.mp_payment_id)) {
+        const cred = await credencialDaCobranca(db, ctxMp, c, credencial, { escrita: true });
+        if (cred && (await cancelarNoMp(c, m, cred)) === "outro") falhar("cobranca_de_outro_pagamento", 409);
       }
       const { error } = await db.from("cobrancas").update({ status: "cancelada" }).eq("id", c.id);
       if (error) throw error;
@@ -1953,22 +2413,27 @@ Deno.serve(async (req) => {
         if (erroReembolso) throw erroReembolso;
         return json({ ok: true, simulado: true }, 200, origin);
       }
+      // W2: a credencial DESTA cobrança (escrita — o collector): a da conta desconectada (ou outra conta do MP) → 409: o estorno é pelo app do
+      // Mercado Pago (o Physiq não alcança); a conexão caída → 409 mp_conta_indisponivel (o catch final). A MESMA credencial nas 3 idas abaixo
+      const cred = await credencialDaCobranca(db, ctxMp, c, credencial, { escrita: true });
+      if (!cred) falhar("mp_reembolso_pelo_app_do_mp", 409);
       // W1b (C1): só estorna o pagamento DESTA cobrança — o id da linha não basta (antes da guarda do banco o app gravava qualquer um, e o
-      // mesmo token estorna o plano do personal). O MP sem resposta: não estorna o que não conferiu
-      const conferido = await pagamentoDaLinha(c, m);
+      // mesmo token estorna o plano do personal; W2: com a conta, o token de OUTRO personal — o recebedor confere). O MP sem resposta: não
+      // estorna o que não conferiu
+      const conferido = await pagamentoDaLinha(c, m, cred!);
       if (!conferido.pay) {
         log.erro({ codigo: "mp_reembolso_sem_conferir", schema, acao, ref: c.id, status: conferido.status });
         falhar("mp_error", 502, { status_mp: conferido.status });
       }
       exigirDaCobranca(conferido, c);
-      const { status: st, body: ref } = await mpFetch<{ id?: number | string }>(credencial, `/v1/payments/${encodeURIComponent(mpId)}/refunds`, {
+      const { status: st, body: ref } = await mp<{ id?: number | string }>(cred!, `/v1/payments/${encodeURIComponent(mpId)}/refunds`, {
         method: "POST", body: JSON.stringify({}),
-      }, { prazo: prazoDoPedido });
+      });
       if (st >= 300) {
         log.erro({ codigo: "mp_reembolso_falhou", schema, acao, ref: c.id, status: st, externo: codigosDoMp(ref) });
         falhar("mp_error", 502, { status_mp: st });
       }
-      const { status: sp, body: pay } = await mpFetch<PagamentoMp>(credencial, `/v1/payments/${encodeURIComponent(mpId)}`, {}, { prazo: prazoDoPedido });
+      const { status: sp, body: pay } = await mp<PagamentoMp>(cred!, `/v1/payments/${encodeURIComponent(mpId)}`);
       if (sp === 200 && pay?.id) await aplicarPagamentoMp(db, c, pay, m, log, schema);
       else {
         const { error: erroReembolso } = await db.from("cobrancas").update({ status: "cancelada", mp_status: "refunded", reembolsado_em: new Date().toISOString() }).eq("id", c.id);
@@ -1987,6 +2452,17 @@ Deno.serve(async (req) => {
     return erro("acao_invalida", 400, origin);
   } catch (e) {
     if (e instanceof ErroAcao) return erro(e.codigo, e.http, origin, e.extra);
+    // W2 (Task 9): a conexão do MP do personal caiu (ou a MP_TOKENS_CHAVE falta — o ctxMp lança assim) numa ação que cria/altera → 409, nunca
+    // 500 (as conferências de leitura não chegam aqui: lerSemDerrubar — I3). O "erro" da conexão já avisou o Weslley e o dono (marcarErro)
+    if (e instanceof MpContaSemAcesso) {
+      log.aviso({ codigo: "mp_conta_indisponivel", schema, acao, ref: e.contaId, resultado: e.motivo });
+      return erro("mp_conta_indisponivel", 409, origin);
+    }
+    // W2: o MP não respondeu de um jeito que decida no meio do 401 da conta (o /users/me ou a renovação) — o 502 de sempre do MP
+    if (e instanceof MpIndisponivel) {
+      log.erro({ codigo: "mp_indisponivel", schema, acao, status: e.status });
+      return erro("mp_error", 502, origin, { status_mp: e.status });
+    }
     log.excecao(e, { acao, schema });
     return erro("erro_interno", 500, origin);
   }

@@ -189,6 +189,9 @@ export interface DepsExclusao {
   apagarArquivos(arquivos: Array<{ bucket: string; path: string }>): Promise<number>;
   /** o login: cadastro do login limpo + soft delete (auth.admin.deleteUser(id, true)) */
   apagarLogin(): Promise<void>;
+  /** W2 (revisão I-2): o Mercado Pago DA CONTA das contas de que ele era dono sai do ar (a integração "desconectada": o job deixa de renovar
+   *  o acesso de quem saiu; os tokens ficam para a faxina de 7 dias). Só depois da exclusão de verdade; melhor esforço (a conta já saiu). */
+  desligarMpDasContas?(contaIds: string[]): Promise<void>;
   registrar?(msg: string): void;
 }
 
@@ -204,7 +207,8 @@ export interface EntradaExclusao {
  *   1. confere nos 2 bancos (qualquer recusa para ANTES de mexer em algo);
  *   2. cancela a cobrança automática (plano das contas dele, alunos → ele, as antigas do Calc) — falhou alguma → 502, nada mais muda;
  *   3. Banco do Treino (delete-my-account "excluir_profissional");
- *   4. banco principal (excluir_conta_profissional: alunos para a lixeira/app, equipe, conta cancelada, parte de aluno, cadastro);
+ *   4. banco principal (excluir_conta_profissional: alunos para a lixeira/app, equipe, conta cancelada, parte de aluno, cadastro) e — W2,
+ *      revisão I-2 — o Mercado Pago DA CONTA das contas dele desligado (melhor esforço: a falha só vai ao registro);
  *   5. o espelho (equipe e alunos no Treino), os arquivos e, por último, o login (soft delete).
  */
 export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclusao): Promise<Resposta> {
@@ -250,6 +254,10 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
     // 4. banco principal
     const fim = obj(await d.excluir());
     if (fim.ok !== true) return recusa(String(fim.erro ?? "erro_interno"), fim.motivo ? { motivo: fim.motivo } : {});
+
+    // 4b. W2 (revisão I-2): o Mercado Pago DA CONTA das contas dele sai do ar — só depois do SQL de verdade; a falha não volta a exclusão
+    const contasDele = lista(fim.contas_dono).map((c) => texto(c.id)).filter((id): id is string => id !== null);
+    if (d.desligarMpDasContas && contasDele.length) await d.desligarMpDasContas(contasDele).catch((err) => log(`mp: ${String(err)}`));
 
     // 5. espelho, arquivos e o login
     await d.dispararEspelho().catch((err) => log(`espelho: ${String(err)}`));

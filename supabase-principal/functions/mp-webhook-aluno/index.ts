@@ -14,16 +14,28 @@
 // W7b (aluno sem profissional): cobrança recorrente que chega para uma matrícula da conta do app JÁ ENCERRADA (o aluno entrou na
 // lista de um profissional e o cancelamento no MP falhou na hora) → grava o pagamento (é dele) e cancela a assinatura do app.
 // Publicar SÓ ASSIM: scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions mp-webhook-aluno false
-// Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos).
+// Segredos: MP_ACCESS_TOKEN_PROD, MP_ACCESS_TOKEN_TEST (+ os automáticos). W2: MP_TOKENS_CHAVE (os tokens da conta), PROXY_SEGREDO (o IP
+// de verdade pelo Worker do domínio próprio), MP_WEBHOOK_ASSINATURA (a assinatura secreta do painel — passo 6 da W2-a; sem ela, a
+// x-signature fica "ausente") e, para o ContextoMpConta, MP_CLIENT_ID/MP_CLIENT_SECRET (o aviso não renova: só lidos).
 // hml-10 (H-24, H-26): log em JSON pelo _shared/log.ts (ids técnicos e códigos, nada do corpo do MP); o catch final avisa
 // (log.excecao) e devolve o mesmo 500.
 // hml-14 (H-32): um prazo por aviso (ORCAMENTO_MS.servidor) em toda ida ao MP; a leitura que acha a matrícula, a assinatura ou a
 // cobrança lança no erro do banco (antes virava "não tem": 200 e o aviso se perdia, ou o crédito ia para outra matrícula).
+// W2 (Mercado Pago do personal — ./conta.ts): o aviso NA CONTA do personal chega pela notification_url com &conta=<uuid> (o Pix, o cartão e a
+// automática que a pagamentos-aluno cria com o token da conta) ou pela URL do PAINEL com o user_id de uma integração conhecida (o
+// mp-connect e, talvez, a cobrança de cada mês da automática — revisão I1, MENOR 5): o recurso é buscado com o token DA CONTA, o collector,
+// o live_mode e a referência de um aluno DESSA conta conferidos; prazo de 18 s e nada de renovar dentro do aviso (MENOR 34). Sem a
+// migration da W2 no schema: o &conta= volta 500 (o MP manda de novo) e o resto segue o caminho de hoje. O corpo é MEDIDO antes de ler
+// (até 16 KB — MENOR 4; passou → 413). Teto por IP (120/min) só no aviso de conta SEM user_id (MENOR 6) e por conta (60/min) só depois de
+// achada a integração (MENOR 26). A x-signature só vai ao log até app_config.mp_webhook.exigir_assinatura (Task 23).
+// W1b M4 (aplicado na W2): a referência de mensalidade/avulsa SEM o id da cobrança não vira cobrança (a conferência da W1b já recusava).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
 import { preapprovalDoPagamento, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
 import { buscarNoMp, credencialDoSchema } from "../_shared/cobranca-mp.ts";
+import { ipDoPedido } from "../_shared/entrar-senha-regras.ts";
+import { lerAvisoDaConta } from "../_shared/mp-conta-regras.ts";
 import { cancelarAssinaturasDasMatriculas, matriculaEncerradaPeloVinculo } from "../_shared/app-sem-profissional.ts";
 import { lerReferenciaAluno, lerReferenciaCalc, type Schema } from "../_shared/financeiro-regras.ts";
 import {
@@ -36,17 +48,24 @@ import {
   type Matricula,
 } from "../_shared/financeiro-mp.ts";
 import { ORCAMENTO_MS, prazo, type Prazo } from "../_shared/tempo.ts";
+import { LIMITE_CORPO, PRAZO_CONTA_MS, lerAte, pelaContaDoUserId, permitidoIp, tratarDaConta, type DepsAviso } from "./conta.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SCHEMAS: Schema[] = ["public", "staging"];
+/** W2: o segredo do proxy (o aviso chega pelo domínio próprio — o Worker manda o IP de verdade em x-physiq-ip). */
+const PROXY_SEGREDO = Deno.env.get("PROXY_SEGREDO") ?? null;
 const log = criarLog("mp-webhook-aluno", { avisar: avisarErro });
+const JSON_H = { "Content-Type": "application/json" };
 
-const ok = (resultado: string) => new Response(JSON.stringify({ ok: true, resultado }), { status: 200, headers: { "Content-Type": "application/json" } });
+const resposta = (http: number, resultado: string) => new Response(JSON.stringify({ ok: http < 300, resultado }), { status: http, headers: JSON_H });
+const ok = (resultado: string) => resposta(200, resultado);
 
 function dbDe(schema: Schema): SupabaseClient {
   return createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
 }
+/** W2: o que o caminho da conta (./conta.ts) usa daqui. */
+const deps: DepsAviso = { dbDe, log };
 
 /** A matrícula do aluno do Calc pelo id do Treino (a ativa primeiro). */
 async function matriculaDoTreino(db: SupabaseClient, treinoUserId: string): Promise<Matricula | null> {
@@ -110,6 +129,9 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null, p: Prazo
       const r = await aplicarPagamentoMp(db, c, pay, null, log, schema);
       return `cobranca_${r.status}${r.pagou ? "_paga" : ""}`;
     }
+    // W1b M4 (revisão da W1b, aplicada na W2): mensalidade/avulsa SEM o id da cobrança não é referência nossa desde a W6 — a conferência
+    // do pagamento da W1b (pagamentoEDaCobranca) também recusa; sem isto, ela virava uma mensalidade nova
+    if (ref.tipo !== "recorrente") return "referencia_sem_cobranca";
     // recorrente (cobrança da assinatura nova)
     const m = await carregarMatricula(db, ref.pacienteId);
     if (!m) return "matricula_inexistente";
@@ -192,11 +214,32 @@ Deno.serve(async (req) => {
     schema = SCHEMAS.includes(bruto as Schema) ? (bruto as Schema) : null;
     if (bruto && !schema) return ok("schema_invalido");
     const origem = url.searchParams.get("origem") === "treino" ? "treino" : "mp";
+    // MENOR 4: o corpo é MEDIDO antes de ler — a leitura do JSON de antes lia tudo, e o content-length pode faltar (chunked)
+    const texto = await lerAte(req, LIMITE_CORPO);
+    if (texto === null) return resposta(413, "corpo_grande");
     let corpo: Record<string, unknown> = {};
     try {
-      corpo = (await req.json()) as Record<string, unknown>;
+      const lido: unknown = texto ? JSON.parse(texto) : {};
+      corpo = lido && typeof lido === "object" && !Array.isArray(lido) ? (lido as Record<string, unknown>) : {};
     } catch {
       corpo = {}; // IPN antigo: tudo na query
+    }
+    // W2: o aviso NA CONTA do personal (./conta.ts)
+    const ip = ipDoPedido(req.headers, PROXY_SEGREDO) ?? "sem-ip";
+    const daConta = lerAvisoDaConta(url, corpo);
+    if (daConta) {
+      if (!schema) return ok("schema_invalido");
+      topico = daConta.topico;
+      // MENOR 6: o teto por IP só para o que vem SEM user_id (os avisos de TODOS os personais saem de poucos IPs do MP)
+      if (daConta.userId === null && !permitidoIp(ip)) return resposta(429, "limite");
+      const r = await tratarDaConta(deps, req, url, schema, daConta, prazo(PRAZO_CONTA_MS));   // MENOR 34: o MP espera 22 s
+      return resposta(r.http, r.resultado);
+    }
+    // I1 + MENOR 5: SEM &conta= (a URL do PAINEL — o mp-connect e, talvez, a cobrança mensal da automática) com o user_id de uma integração
+    // conhecida que NÃO é a conta do Physiq → o caminho da conta; nenhuma conta bateu → o caminho de hoje (o MP do Physiq), igual
+    if (schema) {
+      const r = await pelaContaDoUserId(deps, req, url, schema, corpo);
+      if (r) return resposta(r.http, r.resultado);
     }
     const dados = (corpo.data ?? {}) as Record<string, unknown>;
     topico = String(corpo.type || corpo.topic || url.searchParams.get("type") || url.searchParams.get("topic") || "");
@@ -209,7 +252,7 @@ Deno.serve(async (req) => {
     log.info({ codigo: origem === "treino" ? "aviso_mp_do_treino" : "aviso_mp", schema, acao: topico || null, ref: id, resultado });
     return ok(resultado);
   } catch (e) {
-    log.excecao(e, { acao: topico || null, schema });
-    return new Response(JSON.stringify({ ok: false, resultado: "erro" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    log.excecao(e, { acao: topico.replace(/-/g, "_") || null, schema });
+    return new Response(JSON.stringify({ ok: false, resultado: "erro" }), { status: 500, headers: JSON_H });
   }
 });

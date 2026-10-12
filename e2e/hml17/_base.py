@@ -243,7 +243,10 @@ FUNCOES_CONHECIDAS = {
 # hml-19c (11/10, depois do merge da W1 InfinitePay da LINUX 3): o infinitepay-webhook-aluno (o aviso de pagamento da InfinitePay,
 # chamado pelo servidor dela) processa cobrança — se um dia sair do navegador, é gravação.
 # hml-19d (decisão I): a financeiro (jeito 2 do Financeiro: as gravações pelo servidor) grava em TODA ação, como a nutricao.
-FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno", "financeiro"}
+# W2 (LINUX 3, 11/10): a mp-contas-renovar (a renovação do MP do personal, chamada só pelo pg_cron com o S10) e a mp-conectar-retorno
+# (a volta do OAuth do MP: o GET que grava a conexão) gravam — se um dia saírem do navegador, é gravação.
+FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno", "financeiro", "mp-conectar-retorno",
+                             "mp-contas-renovar"}
 # hml-20a (decisão I da hml-20a, H-42): as LEITURAS do jeito 2 passam pelo CORPO — { "acao": "ler" } na nutricao e na financeiro e
 # { "action": "minha_evolucao" } na admin-avaliacoes. O campo é o que a FUNÇÃO lê (um { "action": "ler", "acao": "<gravação>" } na
 # nutricao grava → barrado); corpo ilegível, sem a ação ou com outra ação = gravação, como antes. Sem o corpo (quem só tem a ação), a
@@ -294,7 +297,7 @@ class Guarda:
     (pagamentos-aluno fora das leituras, admin-semana-treinos fora das leituras, admin-delete-user, admin-update-user, admin-tags que
     não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava; hml-19c: a admin-avaliacoes fora
     da "list"; hml-19d: a financeiro inteira; hml-20a: menos as LEITURAS pelo corpo — `ler` da nutricao/financeiro e minha_evolucao da
-    admin-avaliacoes). O resto segue (fallback: a
+    admin-avaliacoes; W2: a mp-conectar-retorno e a mp-contas-renovar inteiras). O resto segue (fallback: a
     queda da API, quando ligada, vem antes e aborta). Teste: python3 e2e/hml19/guarda_teste.py."""
 
     def __init__(self) -> None:
