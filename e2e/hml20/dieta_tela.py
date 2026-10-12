@@ -49,7 +49,9 @@ CAB_REDE = ["quando", "base", "commit", "fase", "conta", "tela", "diretas", "dir
 CAB_TELAS = ["quando", "base", "commit", "fase", "conta", "medida", "n", "valores_s", "mediana_s", "referencia_s", "ok"]
 FOLGA_S = 0.3
 ABERTURAS = 3
-TELAS_DE_FORA = {"dashboard"}  # dependem das funções do Treino/financeiro (fora da área): o critério é a parte da 20c
+# dependem das funções do Treino/financeiro (fora da área): o critério é a parte da 20c — o Dashboard e o "Editar treino e dieta" (decisão
+# da sessão principal na etapa 2: o editor do TREINO — o treino-leitura, 2–3,5 s — domina a tela; como o Resumo/Avaliação na 20b)
+TELAS_DE_FORA = {"dashboard", "dieta_editar"}
 ACOES_PRECONSULTA = ("preconsulta_formulario_criar", "preconsulta_formulario_editar", "preconsulta_formulario_excluir", "preconsulta_resposta_ligar",
                      "preconsulta_resposta_excluir")
 TABELAS_PRECONSULTA = ("formularios_preconsulta", "respostas_preconsulta")
@@ -189,6 +191,7 @@ def seco(o, qual: str) -> None:  # noqa: PLR0915
          f"tabelas (o antes) contadas à parte: {g}")
     o.ok(miniatura_pedida([{"tipo": "fn", "nome": "nutricao", "corpo": json.dumps({"acao": "ler", "itens": [{"q": "diario_urls", "ids": [pac]}]})}])
          and miniatura_pedida([{"tipo": "storage", "nome": "sign", "url": f"{Pp}/storage/v1/object/sign/diario-staging"}])
+         and miniatura_pedida([{"tipo": "fn", "nome": "nutricao", "corpo": json.dumps({"acao": "ler", "itens": [{"q": "diario_hoje", "com_urls": True}]})}])
          and not miniatura_pedida([{"tipo": "fn", "nome": "nutricao", "corpo": json.dumps({"acao": "ler", "itens": [{"q": "diario_hoje"}]})}])
          and not miniatura_pedida([{"tipo": "storage", "nome": "sign", "url": f"{Pp}/storage/v1/object/sign/anexos-staging"}]),
          "o Dashboard com a foto da massa espera a miniatura pedida (o diario_urls no depois; o sign do diario no antes) antes de seguir")
@@ -212,8 +215,8 @@ def seco(o, qual: str) -> None:  # noqa: PLR0915
              and sum(1 for x in PRINTS_C if x.startswith("c_dieta_") and x != "c_dieta_erro") == 8,
              f"os {len(PRINTS_C)} prints c_* da spec §5 (a Dieta ×8, as Dietas ×3, a Pré-consulta ×2, o Dashboard da nutri e da personal, a foto do "
              f"diário, o fluxo da Pré-consulta e o erro) em {PRINTS}")
-        o.ok((FOLGA_S, ABERTURAS) == (0.3, 3) and TELAS_DE_FORA == {"dashboard"},
-             "os números do contrato (decisão M): ≤ antes + 0,3 s, 3 aberturas; o Dashboard pela parte da 20c")
+        o.ok((FOLGA_S, ABERTURAS) == (0.3, 3) and TELAS_DE_FORA == {"dashboard", "dieta_editar"},
+             "os números do contrato (decisão M): ≤ antes + 0,3 s, 3 aberturas; o Dashboard e o Editar (o editor do Treino junto) pela parte da 20c")
         o.ok(ERRO[2] in D.CONSULTAS_20C and ERRO[3] in D.TABELAS_DA_AREA and ERRO[0] in nomes,
              "o c_dieta_erro barra a leitura da seção Cálculo energético nos 2 caminhos (o `ler` com calculos_do_aluno e o REST da tabela)")
 
@@ -285,10 +288,24 @@ def _t_area(fim: FimDaArea, inicio: float) -> float | None:
     return round(max(fim.fins) - inicio, 2) if fim.fins else None
 
 
+def _itens(corpo: object) -> list[dict]:
+    try:
+        b = json.loads(corpo or "")
+    except Exception:  # noqa: BLE001
+        return []
+    return [i for i in (b.get("itens") or []) if isinstance(i, dict)] if isinstance(b, dict) else []
+
+
 def miniatura_pedida(pedidos: list[dict]) -> bool:
-    """A miniatura do diário foi pedida na janela? (o diario_urls pela nutricao no depois; o sign do diario no antes)"""
-    return any("diario_urls" in B.consultas_do_corpo(p.get("corpo")) or (p.get("tipo") == "storage" and p.get("nome") == "sign"
-                                                                        and "/object/sign/diario" in str(p.get("url", ""))) for p in pedidos)
+    """A miniatura do diário foi pedida na janela? (no depois: a lista com o com_urls — as URLs na mesma ida, 89f2a35 — ou o diario_urls;
+    no antes: o sign do diario)"""
+    for p in pedidos:
+        for i in _itens(p.get("corpo")) if p.get("tipo") == "fn" else []:
+            if i.get("q") == "diario_urls" or (i.get("q") in ("diario_hoje", "diario_pagina") and i.get("com_urls") is True):
+                return True
+        if p.get("tipo") == "storage" and p.get("nome") == "sign" and "/object/sign/diario" in str(p.get("url", "")):
+            return True
+    return False
 
 
 def percorrer(o, t, pend, fim: FimDaArea, L, base: str, conta: str, pac: str, ao_abrir, telas: list | None = None, com_foto: bool = False) -> None:

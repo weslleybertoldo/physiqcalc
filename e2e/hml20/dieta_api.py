@@ -162,8 +162,8 @@ def itens_do_p(pac: str, conta: str, plano: str, diario: str, base: str = "Recei
         i("registros_do_dia", aluno=pac, dia=hoje_sp()), *[i(q) for q in D.LISTAS_DA_CONTA],
         i("alimentos_busca", palavras=["arroz"], offset=0, limite=12), i("alimentos_busca", offset=0, limite=20, meus=True), i("grupos_alimentos"),
         i("receitas_pagina", filtros={}, offset=0, limite=20), i("receita_nome", base=base), i("grupos_receita", meus=True),
-        i("diario_pagina", conta=conta, de=de, dias=dias, pagina=1), i("diario_contagem", conta=conta, de=de, nao_reagidas=True),
-        i("diario_alunos", conta=conta, de=de), i("diario_hoje", conta=conta, de=D.inicio_do_periodo(1)), i("diario_urls", ids=[diario]),
+        i("diario_pagina", conta=conta, de=de, dias=dias, pagina=1, com_urls=True), i("diario_contagem", conta=conta, de=de, nao_reagidas=True),
+        i("diario_alunos", conta=conta, de=de), i("diario_hoje", conta=conta, de=D.inicio_do_periodo(1), com_urls=True), i("diario_urls", ids=[diario]),
         i("diario_foto_url", id=diario), i("formularios_preconsulta", conta=conta), i("preconsulta_numeros", conta=conta, inicio_mes=D.inicio_do_mes()),
         i("respostas_da_conta", conta=conta, filtros={}, offset=0, limite=20), i("preconsulta_novas", conta=conta), i("painel_resumo", conta=conta),
         i("respostas_recentes", conta=conta, desde=agora_iso(30)),
@@ -241,10 +241,14 @@ def seco(o) -> None:  # noqa: PLR0915
          and (consultas["receitas_pagina"]["linhasDosIds"] or {}).get("tabela") == "receitas",
          "sozinhas: os ★, todas as receitas e a foto grande; HEAD: o registro do dia, a contagem do diário e as novas; o total de cada dia; os ★ "
          "do dono com a conta (H-108); a página de receitas relida pelos ids na mesma ida")
+    com_urls = ("diario_pagina", "diario_hoje")
     o.ok(consultas["diario_urls"]["assinar"]["validade"] == 3600 and consultas["diario_foto_url"]["assinar"]["validade"] == 300
-         and all(consultas[q]["assinar"]["bucket"] == "diario" and consultas[q]["assinar"]["coluna"] == "path" for q in ("diario_urls", "diario_foto_url"))
-         and not any(consultas[q]["assinar"] for q in D.CONSULTAS_20C if q not in ("diario_urls", "diario_foto_url")),
-         "o Storage (decisão H): as miniaturas 1 h e a foto grande 300 s, no bucket diario do ambiente, só o path da linha; nenhuma outra assina")
+         and all(consultas[q]["assinar"]["bucket"] == "diario" and consultas[q]["assinar"]["coluna"] == "path" for q in ("diario_urls", "diario_foto_url") + com_urls)
+         and all(consultas[q]["assinar"] == {"bucket": "diario", "coluna": "path", "validade": 3600, "se": "com_urls"} and consultas[q]["params"]["com_urls"] == {"tipo": "booleano"}
+                 for q in com_urls)
+         and not any(consultas[q]["assinar"] for q in D.CONSULTAS_20C if q not in ("diario_urls", "diario_foto_url") + com_urls),
+         "o Storage (decisão H): as miniaturas 1 h e a foto grande 300 s, no bucket diario do ambiente, só o path da linha; a página do Diário e o "
+         "\"Diário de hoje\" com as miniaturas NA MESMA IDA só com o com_urls (a decisão da sessão principal na etapa 2); nenhuma outra assina")
     # os pedidos
     p1, p2, p3, p_n3, p_n458, p_ruim, p_n9 = r["pedidos"]
     n_p = len(itens_do_p(pac, conta, plano, diario))
@@ -585,7 +589,15 @@ def caso_p(R: Rodada) -> None:  # noqa: PLR0915
     # Dietas › Diário e o "Diário de hoje" do Dashboard (o recorte da conta ativa; a página com o total e o de cada dia cortado; o HEAD; os alunos)
     de30 = D.inicio_do_periodo(30)
     dias = D.dias_do_periodo(de30)
-    it = p_lista(R, tn, un, "diario_pagina", {"conta": conta, "de": de30, "dias": dias, "pagina": 1}, "nutri (a 1ª página, 30 dias)", conta=conta, uid=un, de=de30)
+    it = p_lista(R, tn, un, "diario_pagina", {"conta": conta, "de": de30, "dias": dias, "pagina": 1, "com_urls": True}, "nutri (a 1ª página, 30 dias, com as miniaturas)",
+                 conta=conta, uid=un, de=de30)
+    d = R.massa["diario"]
+    if d:
+        f = next((x for x in it.get("linhas") or [] if x.get("id") == d["id"]), {})
+        baixar_e_conferir(R, f.get("url"), d, 3600, "nutri diario_pagina com o com_urls (a miniatura da massa NA MESMA IDA da página)")
+        sem = R.item(tn, B.item("diario_pagina", conta=conta, de=de30, dias=dias, pagina=1))
+        o.ok(bool(sem.get("ok")) and not any("url" in x for x in sem.get("linhas") or []),
+             "P nutri diario_pagina sem o com_urls: as linhas como antes, sem url (o Storage não é chamado)")
     p_total(R, tn, un, "diario_pagina", {}, "nutri (a 1ª página)", "diario_pagina:total", it=it, conta=conta, uid=un, de=de30)
     janelas = D.janelas_dos_dias(it.get("linhas") or [], 1, 20, int(it.get("total") or 0), dias, de30)
     esperado = [{"dia": j["dia"], "total": R.como(un, D.sql_da_lib("diario_pagina:dia", R.s, conta=conta, uid=un, de=j["de"], ate=j["ate"]))} for j in janelas]
@@ -595,7 +607,11 @@ def caso_p(R: Rodada) -> None:  # noqa: PLR0915
             conta=conta, uid=un, de=de30)
     p_lista(R, tn, un, "diario_alunos", {"conta": conta, "de": de30}, "nutri (o filtro \"Aluno\")", ignorar=("url", "registros"), conta=conta, uid=un, de=de30)
     hoje0 = D.inicio_do_periodo(1)
-    p_lista(R, tn, un, "diario_hoje", {"conta": conta, "de": hoje0}, "nutri (o \"Diário de hoje\" do Dashboard)", conta=conta, uid=un, de=hoje0)
+    hj = p_lista(R, tn, un, "diario_hoje", {"conta": conta, "de": hoje0, "com_urls": True}, "nutri (o \"Diário de hoje\" do Dashboard, com as miniaturas)",
+                 conta=conta, uid=un, de=hoje0)
+    if R.massa["diario"]:
+        f = next((x for x in hj.get("linhas") or [] if x.get("id") == R.massa["diario"]["id"]), {})
+        baixar_e_conferir(R, f.get("url"), R.massa["diario"], 3600, "nutri diario_hoje com o com_urls (a miniatura da massa NA MESMA IDA)")
     d = R.massa["diario"]
     if d:
         ids_pag = [x.get("id") for x in it.get("linhas") or [] if C.eh_uuid(x.get("id"))]
@@ -862,6 +878,13 @@ def caso_n4_n5_n8(R: Rodada, casos: list[str]) -> None:  # noqa: PLR0915
         o.ok(st == 200 and st2 == 200 and P20B.caminho_da_url(url) == f"{d['bucket']}/{d['path']}" and caminhos == {f"{d['bucket']}/{d['path']}"}
              and OUTRO not in json.dumps(r) + json.dumps(r2),
              "N8 a foto grande e as miniaturas com outro caminho no corpo → assinam SÓ o caminho da linha relida pelo id")
+        hoje0 = D.inicio_do_periodo(1)
+        st3, r3 = R.ler(R.tn, [i("diario_hoje", conta=conta, de=hoje0, com_urls=True, path=f"{OUTRO}/x/y.png", caminhos=[f"{OUTRO}/x/y.png"])])
+        linhas3 = (r3.get("itens") or [{}])[0].get("linhas") or []
+        caminhos3 = {P20B.caminho_da_url(B.url_da_tela(B.API_P, x.get("url"))) for x in linhas3 if x.get("url")}
+        o.ok(st3 == 200 and f"{d['bucket']}/{d['path']}" in caminhos3 and all(c.split("/", 1)[1] in {x.get("path") for x in linhas3} for c in caminhos3)
+             and OUTRO not in json.dumps(r3),
+             f"N8 o \"Diário de hoje\" com o com_urls e um caminho no corpo → assina SÓ os caminhos das linhas que ele leu ({len(caminhos3)} URL(s))")
 
 
 def rodar(o, L, estado, rodada: str, casos: list[str]) -> None:

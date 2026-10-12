@@ -131,13 +131,15 @@ SECOES_DIETA = (
 EDITAR = ("dieta_editar", "/painel/alunos/{pac}/editar", "[data-editores]", 2)
 DIETAS = (
     ("dietas_alimentos", "/painel/dietas", "[data-pagina-alimentos]", 2), ("dietas_receitas", "/painel/dietas?aba=receitas", "[data-pagina-receitas]", 2),
-    ("dietas_diario", "/painel/dietas?aba=diario", "[data-pagina-diario]", 2),
+    ("dietas_diario", "/painel/dietas?aba=diario", "[data-pagina-diario]", 1),
 )
 PRECONSULTA = (
     ("preconsulta_formularios", "/painel/pre-consulta", "[data-aba-formularios]", 1),
     ("preconsulta_respostas", "/painel/pre-consulta?aba=respostas", "[data-aba-respostas]", 1),
 )
-DASHBOARD = ("dashboard", "/painel", "[data-pagina-dashboard][data-modulos]", 3)
+# o Dashboard e o Diário: 1 `ler` desde o com_urls (89f2a35 — a decisão da sessão principal na etapa 2: as miniaturas NA MESMA IDA da lista;
+# antes dele, 2 em série — a lista e o diario_urls); o Dashboard fica com folga de 1 (o contador do menu, que pode vencer no meio)
+DASHBOARD = ("dashboard", "/painel", "[data-pagina-dashboard][data-modulos]", 2)
 
 
 def telas_da_conta(conta: str) -> list[tuple[str, str, str, int]]:
