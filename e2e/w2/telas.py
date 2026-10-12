@@ -19,6 +19,7 @@ porque o destaque do ?mp=conectar fica no botão Conectar, que só existe com a 
                  (teste)" → pago (no banco: paga, forma mp, o collector da conta)
   6 app_cartao   o Brick abre com data-brick-chave="conta" (a chave pública do vendedor; nada é pago aqui — o cartão é provado no api.py)
   7 erro         a integração em erro (SQL): o dono vê "Conexão caiu" + "Conectar de novo"; o aluno vê "indisponível" ao tocar em Pagar
+                 (e a linha da mensalidade, antes, já diz "pagamento pelo app indisponível" — nem Pix nem cartão)
   8 desconectar  com uma automática pendente (simulada, da rodada): as 2 confirmações do app → o chip PIX NA CHAVE (ou POR FORA, sem chave)
   9 master       master › Integrações (a w27-master, master SÓ no staging.profiles durante a rodada): "Mercado Pago do personal" na linha
                  da conta com a situação, o KPI "MP do personal" e o "Desligar" com as 2 confirmações (o 1º OK e o das automáticas)
@@ -118,6 +119,7 @@ DESCONECTAR_TITULO = "Desconectar o Mercado Pago?"
 DESLIGAR_AUTOMATICAS = "Desligar as cobranças automáticas de 1 aluno?"
 DESCONECTADO_1 = "Mercado Pago desconectado. 1 cobrança automática desligada — cada aluno recebeu um aviso."
 INDISPONIVEL = "O pagamento pelo app está indisponível agora. Avise o seu profissional."
+LINHA_INDISPONIVEL = "pagamento pelo app indisponível"  # o fim da linha da mensalidade com a conexão caída (o mesmo sentido da folha)
 SIMULAR = "Simular aprovação (teste)"
 APROVACAO_SIMULADA = "Aprovação simulada (ambiente de teste)."
 KPI_MP_CONTA = "MP do personal"
@@ -143,6 +145,7 @@ TEXTOS_NO_CODIGO = (
     ('mercadopago_conta: "MERCADO PAGO (SUA CONTA)"', "supabase-principal/functions/_shared/recebimento-regras.ts"),
     (f'mp_apelido: "{APELIDO_SIMULADA}"', "supabase-principal/functions/pagamentos-aluno/index.ts"),
     (INDISPONIVEL, "src/financeiro/regras.ts"),
+    (f'"{LINHA_INDISPONIVEL}"', "src/app-aluno/perfil/Pagamentos.tsx"),
     (SIMULAR, "src/app-aluno/perfil/pagamentos/PagarMercadoPago.tsx"),
     (APROVACAO_SIMULADA, "src/app-aluno/perfil/pagamentos/PagarMercadoPago.tsx"),
     ('data-brick-chave={chavePublica ? "conta" : "physiq"}', "src/painel/configuracoes/plano/CartaoPagamento.tsx"),
@@ -776,15 +779,18 @@ def escolher_mp(t: Tela) -> bool:
     return t.esperar(lambda: t.tem("[data-recebimento-mp-conta] [data-mp-situacao]"), 20)
 
 
-def abrir_pagar(t: Tela, R, rotulo: str) -> bool:
-    """Pagamentos do aluno → "Pagar R$ 10,00" → a folha do Mercado Pago."""
+def abrir_pagar(t: Tela, R, rotulo: str, formas: str = "Pix ou cartão") -> bool:
+    """Pagamentos do aluno → "Pagar R$ 10,00" → a folha do Mercado Pago. A linha da mensalidade termina na forma de pagar: "Pix ou
+    cartão" ou, com a conexão do personal caída (7), LINHA_INDISPONIVEL — e aí nem "Pix" nem "cartão" na linha (a folha só avisa)."""
     valor = reais(API.um(f"select mensalidade_valor::float as v from {S}.pacientes where id = '{CTX['pac']}'")["v"])
     ok = R.ok(t.esperar(lambda: t.tem("[data-mensalidade-aluno] [data-pagar-mensalidade]"), 60),
               f"{rotulo}. Pagamentos abre com a mensalidade e o Pagar ({'loja' if CTX['loja'] else 'site'})")
     if not ok:
         return False
     botao, linha = t.texto("[data-pagar-mensalidade]"), t.texto("[data-linha-mensalidade]")
-    R.ok(botao == f"Pagar {valor}" and linha.endswith("Pix ou cartão"), f"{rotulo}. '{botao}' · '… {linha[-20:]}' (Pagar {valor} · Pix ou cartão)")
+    sem_forma = formas != LINHA_INDISPONIVEL or not re.search(r"Pix|cartão", linha)
+    R.ok(botao == f"Pagar {valor}" and linha.endswith(formas) and sem_forma,
+         f"{rotulo}. '{botao}' · '… {linha[-(len(formas) + 12):]}' (Pagar {valor} · {formas})")
     t.clicar("[data-pagar-mensalidade]")
     return R.ok(t.esperar(lambda: t.tem("[data-pagar-mp]"), 20), f"{rotulo}. a folha do Mercado Pago abre ({t.titulo_do_painel()!r})")
 
@@ -990,7 +996,7 @@ def passo_erro(R) -> None:
         R.ok(t.tem("[data-mp-desconectar]"), "7. o 'Desconectar' também (a conexão caída sai)")
         t.fotos("7_erro_dono", "[data-recebimento-mp-conta]", botoes=RAIZ_RECEBIMENTO)
         a = app_do_aluno(R)
-        if abrir_pagar(a, R, "7"):
+        if abrir_pagar(a, R, "7", LINHA_INDISPONIVEL):
             R.ok(a.esperar(lambda: a.texto("[data-mp-indisponivel]") == INDISPONIVEL, 15)
                  and not a.tem("[data-mp-gerar-pix]") and not a.tem("[data-mp-cartao]"),
                  f"7. o aluno: só o aviso '{INDISPONIVEL[:40]}…' — sem Pix nem cartão ({a.texto('[data-mp-indisponivel]')!r})")

@@ -67,7 +67,8 @@ const CONFERIR_IP_POR_MS = 10 * 60_000;
  * tentativa viva vira "Continuar o pagamento" (e "Continuar" na avulsa), com o cartão "em andamento" fora do histórico; com a folha
  * fechada, a tela confere de novo a cada 30 s; o recibo da InfinitePay no detalhe. Na loja é igual (o serviço do profissional).
  * W2: na conta que recebe pelo Mercado Pago DO PERSONAL (mercadopago_conta), o Pagar abre o PagarMercadoPago com o cartão na chave pública
- * dele (a conexão caída → só o aviso; sem a chave → só o Pix e a linha diz "Pix"). Na loja é igual (o serviço do profissional).
+ * dele (a conexão caída → só o aviso e a linha diz "pagamento pelo app indisponível", sem Pix nem cartão; sem a chave → só o Pix e a
+ * linha diz "Pix"). Na loja é igual (o serviço do profissional).
  */
 export default function Pagamentos() {
   const navigate = useNavigate();
@@ -472,9 +473,13 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar, ipAberta }: {
   const doApp = !!m.conta.app;
   // W1 da loja: a conta do app na versão da Google Play — o plano e a situação, sem preço nem forma de pagar
   const lojaApp = ehLoja && doApp;
-  // W2: o MP do personal sem a chave pública dele não tem cartão — só o Pix (decisão 14)
+  // W2: o MP do personal com a conexão caída (mp.disponivel false; a chave pública também vem null) não promete forma nenhuma — a folha
+  // só avisa que o pagamento pelo app está indisponível; conectado sem a chave pública dele, não tem cartão — só o Pix (decisão 14)
+  const mpCaido = m.conta.modo === "mercadopago_conta" && m.mp?.disponivel === false;
   const soPix = m.conta.modo === "mercadopago_conta" && !m.mp?.chave_publica;
-  const formas = pagarNoApp ? (soPix ? "Pix" : formasDePagar(m.conta.modo, !!m.chave)) : `combine com ${m.conta.profissional ?? "seu profissional"}`;
+  const formas = !pagarNoApp
+    ? `combine com ${m.conta.profissional ?? "seu profissional"}`
+    : mpCaido ? "pagamento pelo app indisponível" : soPix ? "Pix" : formasDePagar(m.conta.modo, !!m.chave);
   // W-P: plano com período — o valor é o do pagamento na modalidade ("/ano", " por 6 meses" ou "/mês" + "parcela 4 de 12")
   const modalidade = ms.modalidade ?? null;
   const sufixo = sufixoDoValor(modalidade, ms.meses);

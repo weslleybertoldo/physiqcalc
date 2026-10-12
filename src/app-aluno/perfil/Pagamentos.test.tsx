@@ -10,7 +10,8 @@
 // confere de novo a cada 30 s. A função, a abertura da página e o recibo são falsos.
 // W2: no Mercado Pago DO PERSONAL (mercadopago_conta) o Pagar abre o Mercado Pago com o cartão na chave pública dele (o ensureMpInit de
 // verdade sobre o initMercadoPago falso: a chave da matrícula e, depois, a do Physiq no plano do personal — PlanoContaNova); a conexão
-// caída → só o aviso; sem a chave → só o Pix (decisão 14: nunca o Brick com a chave do Physiq para pagar o personal).
+// caída → só o aviso (e a linha da mensalidade "pagamento pelo app indisponível", sem Pix nem cartão); sem a chave → só o Pix (decisão
+// 14: nunca o Brick com a chave do Physiq para pagar o personal).
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -490,6 +491,10 @@ describe("Perfil › Pagamentos — o Mercado Pago do personal (W2: o cartão co
   it("a conexão do personal caída (mp.disponivel false): só o aviso — sem Pix, sem cartão, sem automática", async () => {
     h.status.mockResolvedValue(status([MP_CONTA({ disponivel: false, chave_publica: null })]));
     await abrirPagar();
+    // a linha do cartão da mensalidade diz o mesmo que a folha: não promete Pix nem cartão (o E2E de tela, passo 7, achou "· Pix")
+    const linha = document.querySelector("[data-linha-mensalidade]")!.textContent!;
+    expect(linha).toMatch(/· parcela 4 de 12 · pagamento pelo app indisponível$/);
+    expect(linha).not.toMatch(/Pix|cartão/);
     const aviso = document.body.querySelector("[data-mp-indisponivel]");
     expect(aviso?.textContent).toBe("O pagamento pelo app está indisponível agora. Avise o seu profissional.");
     for (const sel of ["[data-mp-gerar-pix]", "[data-mp-cartao]", "[data-mp-assinar]", "[data-brick-mp]", "[data-pagar-pix-manual]"]) {

@@ -129,8 +129,9 @@ export interface MatriculaPagamentos {
   assinatura: AssinaturaVista | null;
   cobrancas: CobrancaVista[];
   recibos: ReciboVista[];
-  /** W2 — no modo 'mercadopago_conta': o MP do personal está conectado (disponivel) e a chave pública dele para o cartão (null = sem a chave
-   *  ou a conexão caída: só o Pix — decisão 14). Nos outros modos, null; ausente na função de antes da W2. */
+  /** W2 — no modo 'mercadopago_conta': o MP do personal está conectado (disponivel) e a chave pública dele para o cartão (conectado com a
+   *  chave null = sem a chave: só o Pix — decisão 14). A conexão caída vem com disponivel false (e a chave null): nada pelo app — a folha
+   *  só avisa e a linha da mensalidade não promete Pix nem cartão. Nos outros modos, null; ausente na função de antes da W2. */
   mp?: { disponivel: boolean; chave_publica: string | null } | null;
   /** hml-14d (B21 · D31): quantas cobranças e recibos vivos a matrícula tem — o "Ver todos (N)" (as listas acima param em 48/24).
    *  Ausentes na função de antes de publicar a 14d. */

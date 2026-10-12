@@ -1,7 +1,7 @@
 // Physiq W2 — Perfil › Pagamentos na versão da loja (Google Play): o aluno paga o PROFISSIONAL pelo Mercado Pago DELE igual ao site (é o
-// serviço do profissional — não libera recurso do app): o cartão com a chave pública do personal, só o aviso com a conexão caída e só o
-// Pix sem a chave (decisão 14). O topo é o do Pagamentos.test.tsx, com a distribuição da loja; a função e o SDK do Mercado Pago são
-// falsos (o ensureMpInit é o de verdade, por chave).
+// serviço do profissional — não libera recurso do app): o cartão com a chave pública do personal, só o aviso com a conexão caída (e a
+// linha da mensalidade sem Pix nem cartão) e só o Pix sem a chave (decisão 14). O topo é o do Pagamentos.test.tsx, com a distribuição
+// da loja; a função e o SDK do Mercado Pago são falsos (o ensureMpInit é o de verdade, por chave).
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -70,6 +70,7 @@ describe("Perfil › Pagamentos — o Mercado Pago do personal na versão da loj
   it("o aluno paga o PROFISSIONAL pelo Mercado Pago dele igual ao site — o Brick com a chave pública do personal", async () => {
     h.status.mockResolvedValue(status([matricula({ disponivel: true, chave_publica: CHAVE_DO_LUCAS })]));
     await abrirPagar();
+    expect(document.querySelector("[data-linha-mensalidade]")!.textContent).toMatch(/ · Pix ou cartão$/);
     expect(document.body.querySelector("[data-mp-gerar-pix]")).not.toBeNull();
     fireEvent.click(document.body.querySelector("[data-mp-cartao]")!);
     await waitFor(() => expect(document.body.querySelector("[data-brick-mp]")?.getAttribute("data-brick-chave")).toBe("conta"));
@@ -77,9 +78,12 @@ describe("Perfil › Pagamentos — o Mercado Pago do personal na versão da loj
     expect(h.init).not.toHaveBeenCalledWith("TEST-chave", expect.anything());
   });
 
-  it("a conexão do personal caída: só o aviso, igual ao site", async () => {
+  it("a conexão do personal caída: só o aviso, igual ao site — e a linha da mensalidade não promete Pix nem cartão", async () => {
     h.status.mockResolvedValue(status([matricula({ disponivel: false, chave_publica: null })]));
     await abrirPagar();
+    const linha = document.querySelector("[data-linha-mensalidade]")!.textContent!;
+    expect(linha).toMatch(/ · pagamento pelo app indisponível$/);
+    expect(linha).not.toMatch(/Pix|cartão/);
     expect(document.body.querySelector("[data-mp-indisponivel]")?.textContent).toBe("O pagamento pelo app está indisponível agora. Avise o seu profissional.");
     for (const sel of ["[data-mp-gerar-pix]", "[data-mp-cartao]", "[data-mp-assinar]", "[data-brick-mp]"]) {
       expect(document.body.querySelector(sel), sel).toBeNull();
@@ -89,6 +93,7 @@ describe("Perfil › Pagamentos — o Mercado Pago do personal na versão da loj
   it("sem a chave pública do personal: só o Pix, igual ao site (nunca o Brick com a chave do Physiq)", async () => {
     h.status.mockResolvedValue(status([matricula({ disponivel: true, chave_publica: null })]));
     await abrirPagar();
+    expect(document.querySelector("[data-linha-mensalidade]")!.textContent).toMatch(/ · Pix$/);
     expect(document.body.querySelector("[data-mp-gerar-pix]")).not.toBeNull();
     for (const sel of ["[data-mp-cartao]", "[data-mp-assinar]", "[data-brick-mp]", "[data-mp-indisponivel]"]) {
       expect(document.body.querySelector(sel), sel).toBeNull();
