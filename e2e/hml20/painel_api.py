@@ -236,8 +236,8 @@ def seco(o) -> None:
     o.ok(recusas == 3, "a limpeza recusa outro schema, o DELETE sem id e tabela que não é da massa")
     conta = P.sql_contar_marca("staging", "seco-0000")
     o.ok("'%hml20 e2e%seco-0000%'" in conta and "staging.anexos" in conta and "staging.fotos_evolucao" in conta, "a conferência final: a marca nos anexos e nas fotos (só contagem)")
-    o.ok(B.REG_LOGINS.name == "logins_etapa2_20b.txt" and B.B19.MAX_LOGINS in (6, 10),
-         f"o registro de logins da 20b (decisão G): {B.REG_LOGINS.name}, teto {B.B19.MAX_LOGINS} (6 na etapa 2; a sessão principal sobe para 10 no F6)")
+    o.ok(B.REG_LOGINS.name in ("logins_etapa2_20b.txt", "logins_etapa2_20c.txt") and B.B19.MAX_LOGINS in (6, 10),
+         f"o registro de logins da W (decisão G; hml-20c: o da 20c): {B.REG_LOGINS.name}, teto {B.B19.MAX_LOGINS} (6 na etapa 2; a sessão principal sobe para 10 no F6)")
 
 
 # ───────────────────────── a rodada no staging ─────────────────────────

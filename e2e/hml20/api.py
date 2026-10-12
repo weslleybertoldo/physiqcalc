@@ -31,6 +31,8 @@ Antes de CADA execução que toca o staging: ~/projetos/physiqcalc-scratch/hml/h
 Uso: python3 e2e/hml20/api.py --area aluno [--base local|staging|prod] [--casos P,N1,…,N10] [--seco | --limpar | --so-leitura | --sair]
 hml-20b: --area painel-aluno = os casos de servidor do Painel › Aluno (as 27 consultas da 20b: P e N1–N9, o --limpar, o --seco e o
 --so-leitura do smoke depois de publicar) — em painel_api.py (o docstring de lá); os casos da 20a seguem aqui, iguais.
+hml-20c: --area dieta = os casos de servidor da Dieta do aluno, das Dietas, da Pré-consulta e do Dashboard (as 34 consultas da 20c: P, G —
+as 5 gravações da Pré-consulta pela função —, N1–N9, o --limpar, o --seco e o --so-leitura do smoke) — em dieta_api.py (o docstring de lá).
 Da saída só saem status, códigos, contagens e tempos.
 """
 from __future__ import annotations
@@ -188,8 +190,9 @@ def seco(o) -> None:
     jpg, png = B.jpeg_sintetico(), B.png_sintetico()
     o.ok(jpg[:3] == b"\xff\xd8\xff" and png[:4] == b"\x89PNG" and len(jpg) < 2000 and len(png) < 2000,
          f"as imagens de teste são sintéticas e pequenas (JPEG {len(jpg)} B, PNG {len(png)} B)")
-    o.ok((B.REG_LOGINS.name == "logins_etapa2_20a.txt" and B.B19.MAX_LOGINS == 10) or (B.REG_LOGINS.name == "logins_etapa2_20b.txt" and B.B19.MAX_LOGINS in (6, 10)),
-         f"o registro de logins da W (decisão G; hml-20b: o da 20b, 6 na etapa 2 — 10 no F6): {B.REG_LOGINS.name} (até {B.B19.MAX_LOGINS})")
+    o.ok((B.REG_LOGINS.name == "logins_etapa2_20a.txt" and B.B19.MAX_LOGINS == 10)
+         or (B.REG_LOGINS.name in ("logins_etapa2_20b.txt", "logins_etapa2_20c.txt") and B.B19.MAX_LOGINS in (6, 10)),
+         f"o registro de logins da W (decisão G; hml-20b/20c: o da W, 6 na etapa 2 — 10 no F6): {B.REG_LOGINS.name} (até {B.B19.MAX_LOGINS})")
     # o teto conta só o staging: o login do smoke da produção (o motivo termina em "prod)") não come os 6 da etapa 2 (num registro de mentira)
     real = B.B19.REG_LOGINS
     falso = B.SCRATCH / "tmp" / "logins_seco_20a.txt"
@@ -610,8 +613,9 @@ def rodar(o, L, estado, rodada: str, casos: list[str]) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-20 — E2E de servidor das leituras: o app do aluno (20a) e o Painel › Aluno (20b, --area painel-aluno)")
-    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno"))
+    ap = argparse.ArgumentParser(description="hml-20 — E2E de servidor das leituras: o app do aluno (20a), o Painel › Aluno (20b, --area painel-aluno) "
+                                             "e a Dieta, as Dietas, a Pré-consulta e o Dashboard (20c, --area dieta)")
+    ap.add_argument("--area", default="aluno", choices=("aluno", "painel-aluno", "dieta"))
     ap.add_argument("--base", default="staging", choices=("local", "staging", "prod"))
     ap.add_argument("--casos", default=None, help="padrão: todos (" + ",".join(CASOS) + ")")
     modo = ap.add_mutually_exclusive_group()
@@ -627,6 +631,12 @@ def main() -> int:
         if any(c not in painel_api.CASOS for c in casos_p):
             raise SystemExit(f"caso desconhecido (os casos do painel-aluno: {', '.join(painel_api.CASOS)})")
         return painel_api.main(a, casos_p)
+    if a.area == "dieta":  # hml-20c: a Dieta, as Dietas, a Pré-consulta e o Dashboard (dieta_api.py)
+        import dieta_api  # noqa: PLC0415
+        casos_d = [c.strip() for c in (a.casos or ",".join(dieta_api.CASOS)).split(",") if c.strip()]
+        if any(c not in dieta_api.CASOS for c in casos_d):
+            raise SystemExit(f"caso desconhecido (os casos da dieta: {', '.join(dieta_api.CASOS)})")
+        return dieta_api.main(a, casos_d)
     casos = [c.strip() for c in (a.casos or ",".join(CASOS)).split(",") if c.strip()]
     if any(c not in CASOS for c in casos):
         raise SystemExit(f"caso desconhecido (os casos: {', '.join(CASOS)})")

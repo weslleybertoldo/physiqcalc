@@ -19,10 +19,13 @@ produção, a Tela com a sessão antes do 1º documento e os pedidos anotados po
                             sentinela 2000-01); os ids no Estado (hml19/agente/e2e_estado.json) e o --limpar desfaz.
 Antes de CADA execução que toca o staging: a PAUSA (~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "<o que ia rodar>") e
 o /health (exigir_saude, dentro dos scripts). O registro de logins é o da W (hml-20b: hml20/agente/logins_etapa2_20b.txt — o da 20a
-fica; teto 10 da W, no máximo 6 na etapa 2).
+fica; hml-20c: logins_etapa2_20c.txt — o da 20b fica; teto 10 da W, no máximo 6 na etapa 2).
 hml-20b: o `--area painel-aluno` (o Painel › Aluno: casca, Resumo, Prontuário ×10, Avaliação, PDF) mora em painel.py (as definições),
 painel_api.py (os casos de servidor) e painel_tela.py (a rede e as telas); daqui ele usa a guarda que conta (AREAS["painel-aluno"], posta
 pelo painel.py), o regras_leitura (o catálogo inteiro, com os campos da 20b) e o print_reduzido (a pasta prints/hml20/b).
+hml-20c: o `--area dieta` (a Dieta do aluno ×8, as Dietas ×3, a Pré-consulta ×2 e o Dashboard de saúde; as 5 gravações da Pré-consulta
+pela função) mora em dieta.py, dieta_api.py e dieta_tela.py, do mesmo jeito (AREAS["dieta"]; o regras_leitura com os campos da 20c —
+recorte, embutidos, HEAD, total por dia, faixa, os ★ do dono, a releitura pelos ids; os prints em prints/hml20/c).
 Sem segredo nem dado pessoal na saída: chaves pela Management API, senhas em ~/.physiq-teste-<nome> (600); das respostas só saem status,
 códigos, contagens e tempos.
 """
@@ -156,7 +159,10 @@ const consultas = Object.fromEntries(cat.CONSULTAS_DA_NUTRICAO.map((q) => {
   const f = c.fonte;
   return [q, { params: c.params, rpc: f.rpc ?? null, args: f.args ?? null, tabela: f.tabela ?? null, colunas: f.colunas ?? null, teto: f.teto ?? null,
     filtros: f.filtros ?? null, vivas: f.vivas ?? false, dono: c.dono ?? null, assinar: c.assinar ?? null, sozinha: c.sozinha ?? false,
-    ordem: f.ordem ?? null, erros: f.erros ? [...f.erros] : null, pagina: f.pagina ?? null, contar: f.contar ?? false, laco: f.laco ?? null, uma: f.uma ?? false }];
+    ordem: f.ordem ?? null, erros: f.erros ? [...f.erros] : null, pagina: f.pagina ?? null, contar: f.contar ?? false, laco: f.laco ?? null, uma: f.uma ?? false,
+    // hml-20c: o recorte da conta, os embutidos, o HEAD, o total de cada dia, a faixa, os ★ do dono, a releitura pelos ids, os nulos e o "meus"
+    recorte: f.recorte ?? null, embutidos: f.embutidos ?? null, soContar: f.soContar ?? false, porDia: f.porDia ?? null, faixa: f.faixa ?? null,
+    filtrarLista: f.filtrarLista ?? null, linhasDosIds: f.linhasDosIds ?? null, nulos: f.nulos ?? null, donoSe: c.donoSe ?? null }];
 }));
 const saida = {
   consultas, lote_max: motor.LOTE_MAX, paralelo: motor.LOTE_PARALELO, q_max: motor.Q_MAX, teto_max: motor.TETO_MAX, validade_max: motor.VALIDADE_MAX_S,

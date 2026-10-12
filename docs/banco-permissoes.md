@@ -153,6 +153,36 @@ O Supabase dá `EXECUTE` a `anon` e a `authenticated` em toda função nova. Por
 - Nenhuma migration; os grants e as policies de LEITURA **ficam** (decisão 12 da spec hml-20: a função lê com a sessão da pessoa, que
   precisa deles; os APKs antigos e o AAB ainda leem direto — desvio 2).
 
+## Principal: a Dieta, as Dietas, a Pré-consulta e o Dashboard de saúde pela função (hml-20c, H-42 + H-102 · jeito 2, etapa 2)
+- **Leituras (H-42):** a Dieta do aluno no painel (Planejamento, Acompanhamento, Cálculo energético, Suplementos, Manipulados, Orientações,
+  Metas e o "Editar treino e dieta"), as Dietas (Alimentos, Receitas, Diário), a Pré-consulta (Formulários, Respostas, os números e o
+  contador do menu), a parte de saúde do Dashboard (o resumo, a "Atividade recente" e o "Diário de hoje") e os ★ da Ferramentas › Modelos
+  não leem mais as tabelas, as RPCs e o Storage do principal no navegador: as libs mandam a ação **`ler`** da `nutricao` (o mesmo motor
+  e o mesmo catálogo da hml-20a/20b — só ganharam as 34 consultas da 20c), que roda cada consulta **como a pessoa** (o mesmo token): o
+  select das tabelas da área com as colunas do tipo (o `*` de antes, escrito coluna a coluna, e os embutidos de antes — as medidas do
+  alimento, os ingredientes com o alimento, o aluno do diário com `!inner`), o filtro do aluno (`paciente_id` do corpo — o RLS de hoje
+  decide), as vivas, a ordem, a página e o total de antes (o count exato, o HEAD do "só o número" e o total de cada dia que a página do
+  Diário partiu, na MESMA ida); o recorte da conta ativa (`conta_id = a conta do corpo` ou o paciente sem conta do próprio — o `.or()` de
+  hoje, montado no servidor com o `userId` do token); e as RPCs de leitura de hoje (`planos_do_aluno`, `plano_alimentar`,
+  `planos_favoritos`, `grupos_alimentos`, `receitas_da_nutricionista` — com as receitas da página relidas pelos ids na mesma ida —,
+  `preconsulta_numeros`, `respostas_da_conta`, `painel_resumo`), com o EXECUTE de hoje. "Minhas": os nomes para a cópia de receita e os
+  grupos de receita com o "meus" (o dono = o token, nunca o corpo); os ★ com a conta (H-108) = só os do dono (o token) e da conta do
+  corpo. Os modelos, o catálogo de produtos e todas as receitas seguem como a lib lia: sem filtro de dono — o RLS decide.
+- **Storage:** as miniaturas do Diário e do Dashboard (`diario_urls { ids }`, até 60 por lote, 1 h) e a foto grande (`diario_foto_url
+  { id }`, por clique, 300 s): o servidor relê as linhas pelo id como a pessoa e assina SÓ o `path` delas no `diario` do ambiente (a policy
+  de leitura de hoje). Nenhum caminho vem do navegador; a URL volta relativa e a tela monta com o domínio dela (uma função só — H-106).
+- **Gravações da Pré-consulta (H-102):** as 5 que a tela fazia direto passam pela `nutricao` com a sessão da pessoa (o RLS da W21 e os
+  gatilhos de hoje seguem valendo): `preconsulta_formulario_criar` (o dono = o token; a conta do corpo, que a policy confere — só membro
+  ativo; o `slug` nasce no servidor, no alfabeto e no tamanho da tela, de novo no conflito do índice único, até 5 vezes),
+  `preconsulta_formulario_editar` e `preconsulta_resposta_ligar` (só as colunas da lista — dono, conta, slug e as de controle do corpo
+  caem; o `importada_em` é o agora do servidor) e `preconsulta_formulario_excluir`/`preconsulta_resposta_excluir` (a Lixeira:
+  `deleted_at`). Os códigos dos gatilhos (`aluno_invisivel`, `resposta_imutavel`, `formulario_imutavel`) voltam como eles (403). O
+  formulário público `/f/:slug` (`preconsulta_formulario`/`preconsulta_responder`, como anônimo) **fica** como está (decisão 13).
+- Ficam no navegador (de OUTRA W): no Dashboard, os alunos, a agenda e o financeiro (H-43 e 20d) e o Treino (`painel-resumo-treino`, já
+  pelo servidor); na Pré-consulta, a equipe da conta (H-43); os links públicos do diário e do formulário (anônimos, de propósito).
+- Nenhuma migration; os grants e as policies de LEITURA e de ESCRITA **ficam** (decisão 12 da spec hml-20: a função lê e grava com a
+  sessão da pessoa, que precisa deles; os APKs antigos e o AAB ainda falam direto — desvio 2).
+
 ## Treino: quem lê os treinos montados
 - `tb_grupos_treino` e `tb_grupos_exercicios` (`physiq_pode_ler_grupo`): o master; o professor dono; qualquer profissional,
   se o grupo é do catálogo global do master (`professor_id` vazio); e o aluno que recebe o grupo (`tb_grupos_treino_perfis`).
