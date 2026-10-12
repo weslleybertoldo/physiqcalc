@@ -6118,3 +6118,60 @@ def kettlebell(nome="kettlebell", altura=0.254, largura_alca=0.197, raio=0.0165,
     cm = (c_c0 * v_c + c_a * v_a) / (v_c + v_a)              # a alça entra no corpo: a parte de dentro conta 2 vezes (pouca)
     return Kettlebell(raiz, o_corpo, o_alca, pegadores, raio, meia, laterais, -zc, z_top + raio - zc, cm, caminho, (a_c, c_c))
 # ===== fim: Kettlebell ==============================================================================================================
+
+
+# ===== Step =========================================================================================================================
+# ── STEP DE ACADEMIA solto no chão (Panturrilha no Step, lote 14, 12/10/2026): a plataforma de aeróbica, que também serve de degrau
+# de panturrilha (ExRx, Standing Calf Raise com o peso do corpo: "Exercise step that will not overturn can be used as calf block.").
+# O que é: o TAMPO comprido e retangular, com as laterais compridas inclinadas (mais largo embaixo), a BORRACHA antiderrapante em cima
+# (`ponta` m mais curta em cada ponta: aparece o plástico do tampo, como as pontas do Reebok) e um PÉ em cada ponta embaixo dele, com
+# o VÃO no meio, entre os pés (a forma do Reebok Step na foto da Lifespan: tampo com a superfície texturizada e as laterais inclinadas,
+# e 2 pés só nas pontas). Não é o degrau_panturrilha() (bloco maciço de aço com borracha, recuado da borda, da base de uma máquina): o
+# step é de plástico, comprido (os 2 pés cabem lado a lado na borda comprida, com folga) e oco embaixo.
+# Fontes e medidas: Reebok Step "The Original" — Lifespan Fitness (distribuidora da Reebok Fitness na Austrália; cópia do Internet
+# Archive de 18/04/2026, lida em 12/10/2026): "Occupancy Size 102cm x 38.5cm x 25cm (L x W x H)", "3 adjustable heights - 15, 20 and
+# 25 cm", "Non-slip workout surface", "Rubber feet prevent slipping"; Made4Fighters (loja; cópia de 09/12/2023): "Setup dimensions:
+# (L)102 x (W)38.5 x (H)15, 20, 25 cm", "The textured surface provides even more grip", "Eight rubberised ground contact points
+# prevent slipping and absorbs impact". O "The Step" americano (Perform Better) tem quase a mesma planta: "Platform Dimensions 43" L ×
+# 16" W × 4" H", "Riser Dimensions 16" square × 2" H (each)", "Four nonskid feet on platform and on each riser". Padrão: o Reebok na
+# altura mais baixa (15 cm). A espessura do tampo e da borracha, a altura dos pés nessa altura e a inclinação das laterais nenhuma
+# fonte dá: escolha da fábrica (pés de 5 cm, borracha de 6 mm como a do degrau_panturrilha, laterais 2 cm pra fora embaixo).
+# Uso numa cena (a pessoa olha pra −Y; o step fica atravessado na frente dela, com a borda comprida de TRÁS do tampo em y_borda):
+#   st = e3.step("step", y_borda=..., topo=0.15)       # 0,15 / 0,20 / 0,25 = as 3 alturas do Reebok
+#   Cena(..., apoios=[st])                              # a ponta dos pés apoia logo à frente de y_borda e os calcanhares ficam pra
+#                                                       # fora, atrás, descendo sem encostar (a lateral inclinada fica longe deles)
+#   zona da ficha: {"equipamento": "step", "partes": ["LeftFoot", "LeftToeBase"], ...}; calcanhar: "alturas" com "acima_de":
+#   "step_borracha" (− = abaixo do topo). Molde: cenas/panturrilha_no_step.py (y_borda 1,2 cm atrás da base dos dedos).
+# As raízes: "<nome>" (vazio na origem, parado; APOIO inteiro) com "<nome>_borracha" (o topo, onde o pé apoia), "<nome>_tampo" e
+# "<nome>_pe-1"/"<nome>_pe+1". Cada malha é fechada e CONVEXA (a medida de apoio da checagem conta com isso) e tem as quinas
+# chanfradas (a zona de apoio erra o sinal em quina viva). Só caixa(): o tampo é a caixa com as arestas de cima puxadas pra dentro.
+def step(nome="step", y_borda=0.0, topo=0.15, profundidade=0.385, comprimento=1.02, x=0.0, pes=0.05, inclina=0.02, comp_pe=0.20,
+         ponta=0.05):
+    """Step de academia solto no chão (ver o bloco acima), APOIO da ponta dos pés. Medidas no mundo, em m, com a pessoa olhando pra −Y:
+      y_borda      = borda de trás do tampo, em cima (a ponta dos pés apoia logo à frente dela; os calcanhares ficam atrás);
+      topo         = altura do topo da borracha (o Reebok: 0,15, 0,20 ou 0,25);
+      profundidade = de trás pra frente (Y), embaixo (a medida da loja: 0,385); em cima fica 2 × `inclina` mais estreito;
+      comprimento  = de lado a lado (X), centrado em x = `x` (1,02);
+      pes          = altura dos pés das pontas (o vão embaixo do meio do tampo); comp_pe = comprimento de cada pé (X);
+      inclina      = cada lateral comprida do tampo sai isso pra fora embaixo;
+      ponta        = a borracha para isso antes de cada ponta do tampo.
+    Devolve a raiz "<nome>" (vazio na origem, com tudo como filho)."""
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    em_cima = profundidade - 2 * inclina                      # profundidade do tampo em cima
+    y_m = y_borda - em_cima / 2                               # meio do step (em cima e embaixo)
+    caixa(nome + "_borracha", (x, y_m, topo - 0.003), (comprimento - 2 * ponta, em_cima, 0.006), mat_borracha(), pai=raiz,
+          chanfro=0.002)
+    z0, z1 = pes, topo - 0.006
+    tampo = caixa(nome + "_tampo", (x, y_m, (z0 + z1) / 2), (comprimento, profundidade, z1 - z0), mat_carenagem(), pai=raiz,
+                  chanfro=0.006)
+    for v in tampo.data.vertices:                             # laterais compridas inclinadas: em cima, a profundidade do topo
+        if v.co.z > 0:
+            v.co.y *= em_cima / profundidade
+    tampo.data.update()
+    for s in (-1, 1):
+        caixa(nome + "_pe%+d" % s, (x + s * (comprimento - comp_pe) / 2, y_m, pes / 2), (comp_pe, profundidade, pes), mat_borracha(),
+              pai=raiz, chanfro=0.004)
+    bpy.context.view_layer.update()
+    return raiz
+# ===== fim: Step ====================================================================================================================
