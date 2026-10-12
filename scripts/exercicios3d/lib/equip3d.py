@@ -8206,3 +8206,269 @@ def barra_w(nome="barra_w", entre_colares=0.816, raio=0.014, dobra=30.0, pedaco=
     bpy.context.view_layer.update()
     return barra
 # ===== fim: Barra W =================================================================================================================
+
+
+# ===== Anilha solta =================================================================================================================
+# ── ANILHA SOLTA COM 2 PEGADORES VAZADOS (a anilha de borracha de 10 kg segura pelas 2 mãos; Elevação Frontal com Anilha, lote 14,
+# 12/10/2026) ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# A anilha olímpica de borracha com pegadores ("grip plate"), solta (fora da barra): o DISCO de borracha com as bordas arredondadas (a
+# mão encosta nelas), o FURO do meio com o MIOLO de aço (a luva de parede grossa do bloco do SMITH, _tubo_oco) e 2 VAZADOS opostos perto
+# da borda. Cada vazado é uma lente: a borda de FORA é um arco concêntrico com a anilha e a de DENTRO um arco de outro círculo, com os 2
+# cantos arredondados — entre o vazado e a borda da anilha sobra um ARO de borracha de seção quase quadrada (largura = espessura), e é
+# nele que cada mão fecha: a palma na borda de fora da anilha, os dedos dando a volta pela frente e entrando no vazado, o polegar por
+# trás. Com os 2 vazados em 3 e 9 horas, as mãos ficam nas posições de 3 e 9 horas.
+# Medidas de fabricante: Eleiko Grip Plate Rubber 10 kg (ficha oficial, art. 3085671-10): "Diameter 350 mm / 13.78 in.", "Width 30 mm /
+# 1.18 in.", "Weight 10 kg / 22.05 lbs", "symmetric, ergonomic grip holes" ("allow for hand-held weighted strength movements"); a ficha
+# não dá o tamanho dos vazados nem do furo: medi na foto da ficha (de frente; escala pelo diâmetro de 350 mm = 185,5 px, 1,89 mm/px,
+# ±2 mm): os 2 vazados com 47 mm de largura e 100 mm de altura, a borda de fora deles a 145,5 mm do centro (sobra um aro de 29,5 mm até
+# a borda da anilha), a borda de dentro a 98–99 mm do centro no meio, num arco de raio ~69 mm centrado a ~167 mm (a reta do meio dos
+# vazados), os cantos arredondados (~14 mm: o vazado termina a ±50 mm); o furo do meio com ~50 mm, como o da Rogue ("50.60MM collar
+# opening", Rogue 6-Shooter Urethane Olympic Grip Plates), e o anel em volta dele com ~72 mm. Escolha da fábrica: o raio das bordas
+# (8 mm na borda de fora, 6 mm nos vazados, 2 mm no furo do miolo) e o miolo de aço (1 mm pra fora de cada face).
+# Uso numa cena (anilha rígida presa nas 2 mãos; s = +1 é o lado +X da anilha):
+#   an = e3.anilha("anilha")
+#   an.raiz.matrix_world = M                      # a raiz no centro do disco: X local = do centro pro pegador +1, Y local = a normal
+#                                                 # da face (a espessura), Z local = o "em pé" da anilha (o aro nos pegadores corre nele)
+#   p, e = an.mundo(s)                            # meio do aro do pegador do lado s agora (mundo) e a direção do aro ali
+#   an.sdf(P)                                     # distância com sinal (m, − = dentro) de pontos P (N×3, mundo) até a anilha
+#   Cena(pose, [an.raiz], pegadas=[("Left", ck.Barra(an.pegadores[1], an.raio, an.meia)), ("Right", ck.Barra(an.pegadores[-1], ...))])
+# A raiz é um vazio (o equipamento da cena); filhos: "<nome>_disco" (a borracha, uma malha só, fechada, sem modificador), "<nome>_miolo"
+# (o aço do furo) e os vazios "<nome>_pegador±1" (no meio da seção do aro, com o X local ao longo do aro — o checagem3d.Barra mede a mão
+# nele). Não encosta no corpo.
+class Anilha:
+    """Anilha solta pronta na cena (anilha())."""
+
+    def __init__(self, raiz, pegadores, raio, meia, medidas):
+        self.raiz = raiz                              # vazio no centro do disco (o equipamento da cena)
+        self.pegadores = pegadores                    # {+1, −1}: vazio no meio da seção do aro, X local ao longo do aro
+        self.raio = raio                              # meia seção do aro (o "raio" do pegador pro checagem3d.Barra)
+        self.meia = meia                              # meia largura da faixa da mão ao longo do aro (o arco reto do vazado)
+        self.medidas = medidas                        # as medidas usadas (m), pro relatório da cena
+
+    def local(self, s):
+        """Meio do aro do pegador do lado s (+1 = +X local) e a direção do aro ali (Z local), no referencial da raiz."""
+        return Vector((s * self.medidas["r_aro"], 0.0, 0.0)), Vector((0.0, 0.0, 1.0))
+
+    def mundo(self, s):
+        """O mesmo no mundo, com a anilha onde ela está agora."""
+        p, e = self.local(s)
+        M = self.raiz.matrix_world
+        return M @ p, (M.to_3x3() @ e).normalized()
+
+    def sdf_local(self, P):
+        """Distância com sinal (m, − = dentro) dos pontos P (N×3, no referencial da raiz) até a anilha (o disco de borracha com as
+        bordas arredondadas, os 2 vazados e o furo do meio — o miolo de aço fecha o furo da borracha até o furo de 50 mm)."""
+        import numpy as np
+        m = self.medidas
+        P = np.atleast_2d(np.asarray(P, float))
+        u, y, v = P[:, 0], P[:, 1], P[:, 2]
+        rho = np.hypot(u, v)
+        # 2D, no plano da face: o disco, o furo de 50 mm e os 2 vazados; cada ponto usa o raio da borda da beirada mais perto
+        termos = np.stack([rho - m["raio"], m["r_furo"] - rho, -_anilha_vazado_sdf(u, v, m), -_anilha_vazado_sdf(-u, v, m)])
+        qual = np.argmax(termos, axis=0)
+        d2 = termos.max(axis=0)
+        rb = np.array([m["borda"], m["borda_miolo"], m["borda_vazado"], m["borda_vazado"]])[qual]
+        qx, qy = d2 + rb, np.abs(y) - m["espessura"] / 2 + rb          # extrusão com a borda arredondada (raio rb)
+        return np.hypot(np.maximum(qx, 0.0), np.maximum(qy, 0.0)) + np.minimum(np.maximum(qx, qy), 0.0) - rb
+
+    def sdf(self, P):
+        """sdf_local com os pontos P no mundo (a anilha onde ela está agora)."""
+        import numpy as np
+        Mi = np.array(self.raiz.matrix_world.inverted())
+        P = np.atleast_2d(np.asarray(P, float))
+        return self.sdf_local(P @ Mi[:3, :3].T + Mi[:3, 3])
+
+
+def _anilha_lente(m):
+    """A lente do vazado do lado +X, ENCOLHIDA pelo raio dos cantos (os cantos arredondados = ela crescida de volta): círculo 1
+    (centro 0, raio r1), círculo 2 (centro (c2, 0), raio r2) e os cantos K± (onde os 2 círculos se cruzam)."""
+    rc = m["canto_vazado"]
+    r1, r2, c2 = m["vazado_fora"] - rc, m["vazado_raio_dentro"] - rc, m["vazado_centro_dentro"]
+    ku = (r1 * r1 - r2 * r2 + c2 * c2) / (2 * c2)
+    kv = math.sqrt(max(r1 * r1 - ku * ku, 0.0))
+    return r1, r2, c2, ku, kv
+
+
+def _anilha_vazado_sdf(u, v, m):
+    """Distância com sinal (2D, m, − = dentro do vazado) do vazado do lado +X: a lente (interseção do disco de raio vazado_fora com o
+    de raio vazado_raio_dentro centrado em (vazado_centro_dentro, 0)) com os cantos arredondados (canto_vazado). u, v: arrays."""
+    import numpy as np
+    r1, r2, c2, ku, kv = _anilha_lente(m)
+    rc = m["canto_vazado"]
+    a1 = np.hypot(u, v)
+    a2 = np.hypot(u - c2, v)
+    d1, d2 = a1 - r1, a2 - r2
+    dentro = np.maximum(d1, d2)
+    # fora: a mais perto das 2 bordas da lente encolhida (a projeção no círculo cai no trecho dele que é borda) ou dos 2 cantos
+    with np.errstate(invalid="ignore", divide="ignore"):
+        p1u, p1v = u * r1 / np.maximum(a1, 1e-12), v * r1 / np.maximum(a1, 1e-12)
+        p2u, p2v = c2 + (u - c2) * r2 / np.maximum(a2, 1e-12), v * r2 / np.maximum(a2, 1e-12)
+    na1 = np.hypot(p1u - c2, p1v) <= r2 + 1e-9                        # a projeção no círculo 1 está dentro do disco 2 (é borda)
+    na2 = np.hypot(p2u, p2v) <= r1 + 1e-9
+    inf = np.full(u.shape, np.inf)
+    c1 = np.where(na1, np.abs(d1), inf)
+    c2_ = np.where(na2, np.abs(d2), inf)
+    ck_ = np.minimum(np.hypot(u - ku, v - kv), np.hypot(u - ku, v + kv))
+    fora = np.minimum(np.minimum(c1, c2_), ck_)
+    sd = np.where((d1 <= 0) & (d2 <= 0), dentro, fora)
+    return sd - rc
+
+
+def _anilha_contorno_vazado(m, s, passo=0.002):
+    """Contorno fechado do vazado do lado s (pontos 2D (u, v) no plano da face, a cada ~passo m) e a normal de cada ponto apontando pra
+    DENTRO do vazado (o vão): arco de fora (círculo da anilha), canto, arco de dentro, canto."""
+    r1, r2, c2, ku, kv = _anilha_lente(m)
+    rc = m["canto_vazado"]
+    pts, nrm = [], []
+
+    def arco(cu, cv, r, a0, a1, normal_pro_centro):
+        n = max(2, int(math.ceil(abs(a1 - a0) * r / passo)))
+        for k in range(n):                                            # o último ponto é o 1º do trecho seguinte
+            a = a0 + (a1 - a0) * k / n
+            pu, pv = cu + r * math.cos(a), cv + r * math.sin(a)
+            nu, nv = (cu - pu) / r, (cv - pv) / r
+            if not normal_pro_centro:
+                nu, nv = -nu, -nv
+            pts.append((pu, pv))
+            nrm.append((nu, nv))
+
+    R1, R2 = r1 + rc, r2 + rc                                          # as bordas de verdade (a lente crescida de volta)
+    t1 = math.atan2(kv, ku)                                           # canto K+ visto do centro da anilha
+    t2 = math.atan2(kv, ku - c2)                                      # canto K+ visto do centro do círculo de dentro
+    arco(0.0, 0.0, R1, -t1, t1, True)                                 # borda de fora, de baixo pra cima (o vão fica pro centro)
+    arco(ku, kv, rc, t1, t2, True)                                    # canto de cima
+    arco(c2, 0.0, R2, t2, 2 * math.pi - t2, True)                     # borda de dentro, por cima e pela esquerda
+    arco(ku, -kv, rc, 2 * math.pi - t2, 2 * math.pi - t1, True)       # canto de baixo
+    if s < 0:
+        pts = [(-pu, pv) for pu, pv in reversed(pts)]
+        nrm = [(-nu, nv) for nu, nv in reversed(nrm)]
+    return pts, nrm
+
+
+def _anilha_circulo(r, n, normal_pra_fora):
+    pts = [(r * math.cos(2 * math.pi * k / n), r * math.sin(2 * math.pi * k / n)) for k in range(n)]
+    sg = 1.0 if normal_pra_fora else -1.0
+    return pts, [(sg * math.cos(2 * math.pi * k / n), sg * math.sin(2 * math.pi * k / n)) for k in range(n)]
+
+
+def _anilha_dentro(P, contornos):
+    """Ponto 2D dentro da região (regra par-ímpar com todos os contornos). P: array N×2."""
+    import numpy as np
+    dentro = np.zeros(len(P), bool)
+    for c in contornos:
+        c = np.asarray(c, float)
+        a, b = c, np.roll(c, -1, axis=0)
+        for (au, av), (bu, bv) in zip(a, b):
+            cruza = ((av > P[:, 1]) != (bv > P[:, 1])) & (P[:, 0] < (bu - au) * (P[:, 1] - av) / (bv - av + 1e-30) + au)
+            dentro ^= cruza
+    return dentro
+
+
+def _anilha_laje(nome, bordas, meia_esp, mat, pai, passo_grade=0.02, k_quarto=4):
+    """Malha fechada da laje com as bordas arredondadas: `bordas` = [(pontos 2D, normais 2D pro vão, raio da borda)], o 1º é o contorno
+    de fora. Cada borda vira uma faixa (¼ de círculo da face da frente até a parede, a parede reta e ¼ de círculo até a face de trás); as
+    2 faces planas (y = ∓meia_esp) são triangulações de Delaunay da região entre as faixas (com pontos no meio a cada passo_grade, pra
+    nenhum triângulo ficar comprido). Plano da face = XZ local (u → X, v → Z); espessura no Y. Uma malha só, sem modificador."""
+    import bmesh
+    import numpy as np
+    from mathutils.geometry import delaunay_2d_cdt
+    bm = bmesh.new()
+    aneis = []                                                        # contorno de cada face plana (2D), um por borda
+    for pts, nrm, rb in bordas:
+        perfil = []                                                   # (recuo ao longo da normal, y)
+        for k in range(k_quarto + 1):
+            a = 0.5 * math.pi * k / k_quarto
+            perfil.append((-rb + rb * math.sin(a), -(meia_esp - rb) - rb * math.cos(a)))
+        for k in range(k_quarto + 1):
+            a = 0.5 * math.pi * k / k_quarto
+            perfil.append((-rb + rb * math.cos(a), (meia_esp - rb) + rb * math.sin(a)))
+        grade = []
+        for (pu, pv), (nu, nv) in zip(pts, nrm):
+            grade.append([bm.verts.new((pu + nu * d, y, pv + nv * d)) for d, y in perfil])
+        n, mp = len(grade), len(perfil)
+        for i in range(n):
+            a, b = grade[i], grade[(i + 1) % n]
+            for j in range(mp - 1):
+                bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
+        aneis.append([(pu - nu * rb, pv - nv * rb) for (pu, pv), (nu, nv) in zip(pts, nrm)])
+    # faces planas: Delaunay com os contornos como restrição + pontos no meio, e só os triângulos dentro da região
+    verts2, arestas = [], []
+    for anel in aneis:
+        i0 = len(verts2)
+        verts2 += anel
+        arestas += [(i0 + k, i0 + (k + 1) % len(anel)) for k in range(len(anel))]
+    todos = np.array(verts2)
+    lim = np.abs(todos).max()
+    g = np.arange(-lim, lim + 1e-9, passo_grade)
+    G = np.array([(a, b) for a in g for b in g])
+    G = G[_anilha_dentro(G, aneis)]
+    if len(G):
+        perto = np.array([np.min(np.hypot(*(todos - q).T)) for q in G])
+        G = G[perto > 0.6 * passo_grade]
+    entrada = [Vector((float(a), float(b))) for a, b in list(verts2) + [tuple(q) for q in G]]
+    co, _, faces, _, _, _ = delaunay_2d_cdt(entrada, arestas, [], 0, 1e-7)
+    co2 = np.array([(c.x, c.y) for c in co])
+    tri = [f for f in faces if len(f) == 3]
+    cen = np.array([co2[list(f)].mean(axis=0) for f in tri])
+    tri = [f for f, ok in zip(tri, _anilha_dentro(cen, aneis)) if ok]
+    for y, inverte in ((-meia_esp, True), (meia_esp, False)):
+        vs = [bm.verts.new((c.x, y, c.y)) for c in co]
+        for f in tri:
+            q = [vs[i] for i in f]
+            bm.faces.new(list(reversed(q)) if inverte else q)
+    bmesh.ops.remove_doubles(bm, verts=list(bm.verts), dist=1e-6)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    me = bpy.data.meshes.new(nome)
+    bm.to_mesh(me)
+    bm.free()
+    for pl in me.polygons:
+        pl.use_smooth = True
+    o = bpy.data.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(mat)
+    if pai is not None:
+        o.parent = pai
+    return o
+
+
+def anilha(nome="anilha", diametro=0.350, espessura=0.030, furo=0.0506, miolo=0.036, vazado_fora=0.1455, vazado_raio_dentro=0.0688,
+           vazado_centro_dentro=0.1669, canto_vazado=0.014, borda=0.008, borda_vazado=0.006, borda_miolo=0.002, meia=0.030):
+    """Anilha solta com 2 pegadores vazados (ver o bloco acima). Medidas em m: `diametro` e `espessura` do disco; `furo` do meio (o do
+    miolo de aço, que tem raio de fora `miolo` e passa 1 mm pra fora de cada face); cada vazado = a lente entre o círculo de raio
+    `vazado_fora` (concêntrico) e o de raio `vazado_raio_dentro` centrado a `vazado_centro_dentro` do meio, na reta do pegador, com os
+    cantos arredondados `canto_vazado`; raio das bordas da borracha: `borda` (a de fora), `borda_vazado` e `borda_miolo`; `meia` = meia
+    largura da faixa da mão ao longo do aro. Devolve uma Anilha (raiz, pegadores, raio, meia, mundo(), sdf(), ...)."""
+    raio = diametro / 2
+    m = dict(raio=raio, espessura=espessura, furo=furo, r_furo=furo / 2, miolo=miolo, vazado_fora=vazado_fora,
+             vazado_raio_dentro=vazado_raio_dentro, vazado_centro_dentro=vazado_centro_dentro, canto_vazado=canto_vazado,
+             borda=borda, borda_vazado=borda_vazado, borda_miolo=borda_miolo, r_aro=(vazado_fora + raio) / 2,
+             aro=raio - vazado_fora)
+    if vazado_centro_dentro - vazado_raio_dentro <= miolo + 0.01 or vazado_fora >= raio - 2 * borda:
+        raise ValueError("anilha: o vazado não cabe entre o miolo e a borda (%r)" % (m,))
+    r1, r2, c2, ku, kv = _anilha_lente(m)
+    m["vazado_largura"] = vazado_fora - (vazado_centro_dentro - vazado_raio_dentro)
+    m["vazado_altura"] = 2 * (kv + canto_vazado)
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    n_fora = 120
+    bordas = [_anilha_circulo(raio, n_fora, True) + (borda,)]
+    for s in (1, -1):
+        bordas.append(_anilha_contorno_vazado(m, s) + (borda_vazado,))
+    bordas.append(_anilha_circulo(miolo, 48, False) + (borda_miolo,))
+    _anilha_laje(nome + "_disco", bordas, espessura / 2, mat_borracha(), raiz)
+    mi = _tubo_oco(nome + "_miolo", (0.0, 0.0, 0.0), miolo + 0.0005, furo / 2, espessura + 0.002, mat_aco(), vertices=48, pai=raiz)
+    mi.rotation_euler = (math.radians(90), 0.0, 0.0)                    # o eixo do furo no Y local (a espessura)
+    bpy.context.view_layer.update()
+    an = Anilha(raiz, {}, m["aro"] / 2, meia, m)
+    for s in (-1, 1):                                                   # vazio no meio da seção do aro, X ao longo do aro
+        p, e = an.local(s)
+        o = bpy.data.objects.new(nome + "_pegador%+d" % s, None)
+        bpy.context.scene.collection.objects.link(o)
+        o.empty_display_size = 0.03
+        o.parent = raiz
+        r = Vector((float(s), 0.0, 0.0))
+        o.matrix_basis = Matrix.Translation(p) @ Matrix((e, r, e.cross(r))).transposed().to_4x4()
+        an.pegadores[s] = o
+    bpy.context.view_layer.update()
+    return an
+# ===== fim: Anilha solta ============================================================================================================
