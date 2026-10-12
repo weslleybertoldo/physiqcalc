@@ -187,6 +187,11 @@ def seco(o, qual: str) -> None:  # noqa: PLR0915
     o.ok(g == ({"preconsulta_formulario_criar": 1, "preconsulta_resposta_excluir": 1}, {"PATCH tab:formularios_preconsulta": 1}),
          f"o fluxo da Pré-consulta: a gravação pela função (a ação do CORPO — o `ler` disfarçado conta como a gravação que ele é) e a DIRETA nas 2 "
          f"tabelas (o antes) contadas à parte: {g}")
+    o.ok(miniatura_pedida([{"tipo": "fn", "nome": "nutricao", "corpo": json.dumps({"acao": "ler", "itens": [{"q": "diario_urls", "ids": [pac]}]})}])
+         and miniatura_pedida([{"tipo": "storage", "nome": "sign", "url": f"{Pp}/storage/v1/object/sign/diario-staging"}])
+         and not miniatura_pedida([{"tipo": "fn", "nome": "nutricao", "corpo": json.dumps({"acao": "ler", "itens": [{"q": "diario_hoje"}]})}])
+         and not miniatura_pedida([{"tipo": "storage", "nome": "sign", "url": f"{Pp}/storage/v1/object/sign/anexos-staging"}]),
+         "o Dashboard com a foto da massa espera a miniatura pedida (o diario_urls no depois; o sign do diario no antes) antes de seguir")
     o.ok(fase_da_dieta("local", "x") == "depois" and fase_da_dieta("staging", "2436d0b") == "antes" and fase_da_dieta("staging", "0000000") == "?",
          "antes × depois vem do CÓDIGO medido: o 2436d0b (o staging do antes) lê o Diário direto → antes")
     # a produção (decisão N): a nutri-legado e o aluno de teste DELA; sem ele, RECUSA antes de abrir
@@ -280,8 +285,17 @@ def _t_area(fim: FimDaArea, inicio: float) -> float | None:
     return round(max(fim.fins) - inicio, 2) if fim.fins else None
 
 
-def percorrer(o, t, pend, fim: FimDaArea, L, base: str, conta: str, pac: str, ao_abrir, telas: list | None = None) -> None:
-    """Entra pela lista de alunos (fora da área) e abre cada tela da conta pela navegação do app; ao_abrir(tela, rota, marca, teto, pronta, t_area)."""
+def miniatura_pedida(pedidos: list[dict]) -> bool:
+    """A miniatura do diário foi pedida na janela? (o diario_urls pela nutricao no depois; o sign do diario no antes)"""
+    return any("diario_urls" in B.consultas_do_corpo(p.get("corpo")) or (p.get("tipo") == "storage" and p.get("nome") == "sign"
+                                                                        and "/object/sign/diario" in str(p.get("url", ""))) for p in pedidos)
+
+
+def percorrer(o, t, pend, fim: FimDaArea, L, base: str, conta: str, pac: str, ao_abrir, telas: list | None = None, com_foto: bool = False) -> None:
+    """Entra pela lista de alunos (fora da área) e abre cada tela da conta pela navegação do app; ao_abrir(tela, rota, marca, teto, pronta, t_area).
+    com_foto (a massa pôs 1 foto no diário de hoje): o Dashboard só está pronto com a miniatura PEDIDA (a série lista → assinar) — etapa 2,
+    14:09: com o Dashboard lento (as funções do Treino/financeiro, fora da área), o diario_urls dele caiu na janela da tela seguinte e foi
+    contado no Planejamento; agora a janela do Dashboard espera a miniatura (até 20 s) e fica quieta antes de seguir."""
     t.entrar(L, conta, D.ENTRADA)
     o.ok(t.esperar(lambda: t.n("[data-casca]") > 0, 60), f"[{base}] {conta}: o painel abriu (a casca)", parar=True)
     B.esperar_pronto(t, pend, max_s=40)
@@ -290,6 +304,12 @@ def percorrer(o, t, pend, fim: FimDaArea, L, base: str, conta: str, pac: str, ao
         inicio = time.time()
         B.navegar(t, D.rota(rota, pac))
         pronta = B.esperar_pronto(t, pend, marca=marca)
+        if com_foto and tela == "dashboard" and conta != D.PERSONAL and not miniatura_pedida(t.pedidos):
+            pediu = t.esperar(lambda: miniatura_pedida(t.pedidos), 20)
+            B.esperar_pronto(t, pend, min_s=0.5, quieto_s=1.5)
+            pronta = {**pronta, "pedidos": list(t.pedidos)}
+            o.linha(f"   [{base}] {conta.split('-')[-1]} dashboard: a miniatura do diário {'chegou depois da tela pronta' if pediu else 'NÃO foi pedida em 20 s'}"
+                    f" (a janela esperou: {len(t.pedidos)} pedidos)")
         o.ok(t.n(marca) > 0, f"[{base}] {conta.split('-')[-1]} {tela}: a tela abriu ({marca}; marca em {pronta['t_marca_s']} s)", parar=False)
         ao_abrir(tela, rota, marca, teto, pronta, _t_area(fim, inicio))
 
@@ -434,6 +454,7 @@ def rodar_rede(o, base: str, canal: str | None) -> None:
         B.exigir_saude(o, "o rede.py da hml-20 (dieta)")
         pac, contas = plano_da_base(o, base)
         guarda = B.Guarda() if base == "prod" else None
+        com_foto = False
         if base != "prod":
             pendente = B.Estado.ler()
             if not pendente.vazio():
@@ -441,7 +462,7 @@ def rodar_rede(o, base: str, canal: str | None) -> None:
             rodada = B.nova_rodada()
             estado = B.Estado({"rodada": rodada, "schema": s, "area": D.AREA_ESTADO, "linhas": [], "storage": [], "n8": None, "pac": pac})
             estado.salvar()
-            massa_do_diario(o, L, estado, pac, rodada)
+            com_foto = bool(massa_do_diario(o, L, estado, pac, rodada))
         with sync_playwright() as pw:
             o.linha(f"[{base}] {commit}: o {fase}")
             for conta, telas in contas:
@@ -455,7 +476,7 @@ def rodar_rede(o, base: str, canal: str | None) -> None:
                     anotar_rede(base, commit, fase, conta, tela, cont, pronta, t_area)
 
                 try:
-                    percorrer(o, t, pend, fim, L, base, conta, pac, ao_abrir, telas)
+                    percorrer(o, t, pend, fim, L, base, conta, pac, ao_abrir, telas, com_foto=com_foto)
                     if estado is not None and conta == D.NUTRI:
                         f = FluxoPreconsulta(o, t, pend, base, fase, estado, estado.d["rodada"], pac)
                         f.rodar()
@@ -613,7 +634,7 @@ def rodar_telas(o, base: str, canal: str | None, casos: list[str], prefixo: str 
                             pr(caso)
 
                     try:
-                        percorrer(o, t, pend, fim, L, base, conta, pac, ao_abrir)
+                        percorrer(o, t, pend, fim, L, base, conta, pac, ao_abrir, com_foto=bool(diario))
                         if n == 0 and "prints" in casos and conta == D.NUTRI:
                             if diario:
                                 caso_diario_foto(o, t, pend, base, pr, diario)
