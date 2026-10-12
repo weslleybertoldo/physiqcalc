@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { paginaValida, type Pagina } from "@/lib/paginacao";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { acaoFinanceiro, buscarFinanceiroDoAluno, ErroFinanceiro } from "../api";
-import { mensagemErroFinanceiro } from "../regras";
+import { mensagemDoProfissional } from "../regras";
 
 export const chaveFinanceiroDoAluno = (alunoId: string) => ["financeiro-aluno", alunoId] as const;
 
@@ -40,7 +40,8 @@ export function useFinanceiroDoAluno(alunoId: string, ativo = true) {
       await recarregar();
       return r;
     } catch (e) {
-      toast.error(mensagemErroFinanceiro(e instanceof ErroFinanceiro ? e.codigo : null));
+      // W2: a frase do PROFISSIONAL onde a global fala com o aluno (a conexão do Mercado Pago dele caída)
+      toast.error(mensagemDoProfissional(e instanceof ErroFinanceiro ? e.codigo : null));
       return null;
     }
   };

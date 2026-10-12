@@ -6,7 +6,8 @@ import type { Modalidade, Parcela, PlanoDoAluno } from "./planos";
 export type StatusCobranca = "aberta" | "paga" | "cancelada" | "aguardando_confirmacao";
 export type TipoCobranca = "mensalidade" | "avulsa";
 export type FormaCobranca = "pix_manual" | "mp" | "manual" | "infinitepay";
-export type ModoRecebimento = "pix_manual" | "nenhum" | "mercadopago" | "infinitepay";
+/** W2: 'mercadopago' = o Mercado Pago do Physiq (só o master liga); 'mercadopago_conta' = o Mercado Pago DO PERSONAL (o dono conecta o dele). */
+export type ModoRecebimento = "pix_manual" | "nenhum" | "mercadopago" | "infinitepay" | "mercadopago_conta";
 
 export interface CobrancaVista {
   id: string;
@@ -128,6 +129,9 @@ export interface MatriculaPagamentos {
   assinatura: AssinaturaVista | null;
   cobrancas: CobrancaVista[];
   recibos: ReciboVista[];
+  /** W2 — no modo 'mercadopago_conta': o MP do personal está conectado (disponivel) e a chave pública dele para o cartão (null = sem a chave
+   *  ou a conexão caída: só o Pix — decisão 14). Nos outros modos, null; ausente na função de antes da W2. */
+  mp?: { disponivel: boolean; chave_publica: string | null } | null;
   /** hml-14d (B21 · D31): quantas cobranças e recibos vivos a matrícula tem — o "Ver todos (N)" (as listas acima param em 48/24).
    *  Ausentes na função de antes de publicar a 14d. */
   total_cobrancas?: number;
@@ -264,6 +268,23 @@ export interface ChaveRecebimento {
   criado_em: string;
 }
 
+/** W2 — o Mercado Pago DA CONTA em Configurações › Recebimento: a situação da conexão (nenhum token sai do servidor — integracaoMp). */
+export interface MpDaConta {
+  /** a opção aparece: a W2 no schema, a flag ligada (o master sempre) e não é a conta do app */
+  disponivel: boolean;
+  status: "ativa" | "erro" | "desconectada" | null;
+  /** o apelido da conta no Mercado Pago (pode faltar: o servidor pergunta por melhor esforço) */
+  apelido: string | null;
+  expira_em: string | null;
+  /** renovacao_recusada · sem_renovacao (o acesso vale, mas o Mercado Pago não renova sozinho) · … */
+  erro: string | null;
+  conectado_em: string | null;
+  /** a conexão trouxe a chave do cartão (sem ela, o aluno paga só por Pix — decisão 14) */
+  chave_publica: boolean;
+  /** conta de teste do Mercado Pago (o staging) */
+  teste: boolean | null;
+}
+
 /** W1 — Configurações › Recebimento numa chamada (prof_recebimento / prof_recebimento_salvar). */
 export interface RecebimentoDaConta {
   ok: true;
@@ -273,8 +294,42 @@ export interface RecebimentoDaConta {
   chaves: ChaveRecebimento[];
   mp_liberado: boolean;
   infinitepay: { disponivel: boolean; handle: string | null; status: "ativa" | "erro" | null; testado_em: string | null };
-  /** só no salvar: o link de R$ 1,00 da InfiniteTag nova, quantas automáticas do MP foram desligadas e quantas o MP recusou (MENOR 6) */
+  /** W2 — o Mercado Pago da conta (ausente na função de antes da W2) */
+  mercadopago_conta?: MpDaConta;
+  /** só no salvar (e no desconectar): o link de R$ 1,00 da InfiniteTag nova e quantas automáticas do MP foram desligadas. W2 (MENOR 11): o
+   *  automaticas_falhas da W1 vem sempre 0 (fica para o APK antigo) — a recusa agora é o 409 mp_sem_acesso / 502 automaticas_nao_canceladas */
   link_teste?: string | null;
   automaticas_canceladas?: number;
-  automaticas_falhas?: number;
+}
+
+/** W2 — prof_mp_conectar: a autorização do Mercado Pago (site) ou, no APK, o SITE (`no_site`: o fluxo inteiro acontece no navegador — I8). */
+export interface ConexaoMpIniciada {
+  ok: true;
+  url: string;
+  no_site?: boolean;
+  expira_em?: string;
+}
+
+/** W2 — prof_mp_confirmar sem `confirmar`: a pergunta da tela, só para quem começou a conexão. */
+export interface PerguntaDaConexaoMp {
+  ok: true;
+  apelido: string | null;
+  teste: boolean;
+}
+
+/** W2 — prof_mp_confirmar com `confirmar`: conectou (`ok`) ou conectou sem trocar a forma (havia automática viva no MP de antes). */
+export interface ConexaoMpConfirmada {
+  ok: true;
+  resultado: "ok" | "conectado_sem_trocar";
+  apelido: string | null;
+  recebimento: RecebimentoDaConta;
+}
+
+/** W2 — detalhe_mp (o comprovante do aluno): os dados do Mercado Pago de uma cobrança paga. `mp` null = sem os dados (o comprovante sai sem
+ *  o bloco do MP): pagamento simulado, a conexão do profissional caída ou o MP fora (I3) — e, com `motivo: "outra_conta_mp"`, o pagamento
+ *  foi para OUTRA conta do Mercado Pago (ou uma sem acesso guardado), que o Physiq não alcança. */
+export interface DetalheDoPagamentoMp {
+  ok: true;
+  mp: import("./pdf").DetalheMp | null;
+  motivo?: "outra_conta_mp";
 }
