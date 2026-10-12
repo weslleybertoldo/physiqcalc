@@ -13,7 +13,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -439,6 +439,7 @@ export type Database = {
           conta_id: string | null
           criado_em: string
           id: string
+          mp_collector_id: number | null
           mp_preapproval_id: string | null
           paciente_id: string
           payload: Json | null
@@ -452,6 +453,7 @@ export type Database = {
           conta_id?: string | null
           criado_em?: string
           id?: string
+          mp_collector_id?: number | null
           mp_preapproval_id?: string | null
           paciente_id: string
           payload?: Json | null
@@ -465,6 +467,7 @@ export type Database = {
           conta_id?: string | null
           criado_em?: string
           id?: string
+          mp_collector_id?: number | null
           mp_preapproval_id?: string | null
           paciente_id?: string
           payload?: Json | null
@@ -1306,6 +1309,7 @@ export type Database = {
           mes_ref: string | null
           meses_cobertos: number
           metodo: string | null
+          mp_collector_id: number | null
           mp_payment_id: string | null
           mp_preapproval_id: string | null
           mp_status: string | null
@@ -1357,6 +1361,7 @@ export type Database = {
           mes_ref?: string | null
           meses_cobertos?: number
           metodo?: string | null
+          mp_collector_id?: number | null
           mp_payment_id?: string | null
           mp_preapproval_id?: string | null
           mp_status?: string | null
@@ -1408,6 +1413,7 @@ export type Database = {
           mes_ref?: string | null
           meses_cobertos?: number
           metodo?: string | null
+          mp_collector_id?: number | null
           mp_payment_id?: string | null
           mp_preapproval_id?: string | null
           mp_status?: string | null
@@ -3277,6 +3283,77 @@ export type Database = {
           },
         ]
       }
+      mp_conexoes: {
+        Row: {
+          conta_id: string
+          criado_em: string
+          estado_hash: string
+          expira_em: string
+          id: string
+          live: boolean | null
+          mp_apelido: string | null
+          mp_user_id: number | null
+          public_key: string | null
+          redirect_uri: string
+          renovavel: boolean | null
+          resultado: string | null
+          token_access: string | null
+          token_expira_em: string | null
+          token_refresh: string | null
+          usado_em: string | null
+          user_id: string
+          verificador: string
+        }
+        Insert: {
+          conta_id: string
+          criado_em?: string
+          estado_hash: string
+          expira_em?: string
+          id?: string
+          live?: boolean | null
+          mp_apelido?: string | null
+          mp_user_id?: number | null
+          public_key?: string | null
+          redirect_uri: string
+          renovavel?: boolean | null
+          resultado?: string | null
+          token_access?: string | null
+          token_expira_em?: string | null
+          token_refresh?: string | null
+          usado_em?: string | null
+          user_id: string
+          verificador: string
+        }
+        Update: {
+          conta_id?: string
+          criado_em?: string
+          estado_hash?: string
+          expira_em?: string
+          id?: string
+          live?: boolean | null
+          mp_apelido?: string | null
+          mp_user_id?: number | null
+          public_key?: string | null
+          redirect_uri?: string
+          renovavel?: boolean | null
+          resultado?: string | null
+          token_access?: string | null
+          token_expira_em?: string | null
+          token_refresh?: string | null
+          usado_em?: string | null
+          user_id?: string
+          verificador?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mp_conexoes_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orientacoes: {
         Row: {
           conteudo: string
@@ -4171,10 +4248,27 @@ export type Database = {
         Row: {
           atualizado_em: string
           atualizado_por: string | null
+          conectado_em: string | null
           conta_id: string
           criado_em: string
+          desconectada_em: string | null
           id: string
           infinitepay_handle: string | null
+          mp_access_token: string | null
+          mp_apelido: string | null
+          mp_avisado_em: string | null
+          mp_conferido_em: string | null
+          mp_erro: string | null
+          mp_expira_em: string | null
+          mp_origem: string | null
+          mp_public_key: string | null
+          mp_refresh_token: string | null
+          mp_renovado_em: string | null
+          mp_renovando_ate: string | null
+          mp_renovar_proxima_em: string | null
+          mp_renovar_tentativas: number
+          mp_teste: boolean | null
+          mp_user_id: number | null
           provedor: string
           status: string
           testado_em: string | null
@@ -4182,10 +4276,27 @@ export type Database = {
         Insert: {
           atualizado_em?: string
           atualizado_por?: string | null
+          conectado_em?: string | null
           conta_id: string
           criado_em?: string
+          desconectada_em?: string | null
           id?: string
           infinitepay_handle?: string | null
+          mp_access_token?: string | null
+          mp_apelido?: string | null
+          mp_avisado_em?: string | null
+          mp_conferido_em?: string | null
+          mp_erro?: string | null
+          mp_expira_em?: string | null
+          mp_origem?: string | null
+          mp_public_key?: string | null
+          mp_refresh_token?: string | null
+          mp_renovado_em?: string | null
+          mp_renovando_ate?: string | null
+          mp_renovar_proxima_em?: string | null
+          mp_renovar_tentativas?: number
+          mp_teste?: boolean | null
+          mp_user_id?: number | null
           provedor: string
           status?: string
           testado_em?: string | null
@@ -4193,10 +4304,27 @@ export type Database = {
         Update: {
           atualizado_em?: string
           atualizado_por?: string | null
+          conectado_em?: string | null
           conta_id?: string
           criado_em?: string
+          desconectada_em?: string | null
           id?: string
           infinitepay_handle?: string | null
+          mp_access_token?: string | null
+          mp_apelido?: string | null
+          mp_avisado_em?: string | null
+          mp_conferido_em?: string | null
+          mp_erro?: string | null
+          mp_expira_em?: string | null
+          mp_origem?: string | null
+          mp_public_key?: string | null
+          mp_refresh_token?: string | null
+          mp_renovado_em?: string | null
+          mp_renovando_ate?: string | null
+          mp_renovar_proxima_em?: string | null
+          mp_renovar_tentativas?: number
+          mp_teste?: boolean | null
+          mp_user_id?: number | null
           provedor?: string
           status?: string
           testado_em?: string | null
@@ -5339,6 +5467,12 @@ export type Database = {
       }
       exportar_dados_aluno: { Args: { p_uid: string }; Returns: Json }
       financeiro_do_aluno: { Args: never; Returns: Json }
+      financeiro_emitir_recibo: { Args: { p_recibo: Json }; Returns: string }
+      financeiro_excluir_recibo: { Args: { p_recibo: string }; Returns: number }
+      financeiro_garantir_padroes: {
+        Args: { p_categorias: string[]; p_conta: string; p_modelo: Json }
+        Returns: Json
+      }
       financeiro_lancamentos: {
         Args: {
           p_ate: string
@@ -5603,6 +5737,12 @@ export type Database = {
       minha_situacao: { Args: never; Returns: Json }
       minhas_regras_agenda: { Args: never; Returns: Json }
       modulos_do_plano: { Args: { p_plano: string }; Returns: string[] }
+      mp_automaticas_vivas: { Args: { p_conta: string }; Returns: number }
+      mp_contas_renovar_disparar: { Args: never; Returns: number }
+      mp_integracao_reservar: {
+        Args: { p_conta: string; p_segundos?: number }
+        Returns: boolean
+      }
       mudar_objetivo_app: { Args: { p_objetivo: string }; Returns: Json }
       nome_da_pessoa: { Args: { p_user: string }; Returns: string }
       normalizar_cpf: { Args: { p: string }; Returns: string }
@@ -5759,6 +5899,7 @@ export type Database = {
         Args: { p_conta: string; p_provedor: string }
         Returns: boolean
       }
+      recebimento_mp_confirmar: { Args: { p_conexao: string }; Returns: Json }
       receitas_da_nutricionista: {
         Args: { p_filtros?: Json; p_limite?: number; p_offset?: number }
         Returns: Json
