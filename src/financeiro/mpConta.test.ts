@@ -5,7 +5,7 @@
 // x-signature, qual credencial vale e a situação que o dono vê. Valores de teste feitos aqui; nenhum segredo de verdade, nada vai à rede.
 import { describe, expect, it } from "vitest";
 import {
-  REDIRECT_TESTE_MP, TEXTO_DO_RETORNO, assinaturaMp, desafioPkce, destinoDoRetorno, ehEstado, ehUrlDeAutorizacaoMp, lerAvisoDaConta,
+  REDIRECT_TESTE_MP, TEXTO_DO_RETORNO, assinaturaMp, assinaturaNoPrazo, desafioPkce, destinoDoRetorno, ehEstado, ehUrlDeAutorizacaoMp, lerAvisoDaConta,
   lerAvisoDoMp, lerTokenDoMp, manifestoDaAssinatura, modoDaConexaoConfere, motivoDoOauth, novoSegredoUrl, precisaRenovar, proximaTentativa, qualCredencial,
   redirectDoSchema, situacaoDoMp, urlDeAutorizacao, erroPixSemChave,
 } from "../../supabase-principal/functions/_shared/mp-conta-regras";
@@ -125,6 +125,18 @@ describe("o aviso por conta e a assinatura", () => {
     expect(await assinaturaMp({ cabecalho: `ts=9,v1=${"0".repeat(64)}`, requestId: "r", dataId: "123", segredo })).toBe("invalida");
     expect(await assinaturaMp({ cabecalho: null, requestId: "r", dataId: "123", segredo })).toBe("ausente");
     expect(await assinaturaMp({ cabecalho: `ts=9,v1=${v1}`, requestId: "r", dataId: "123", segredo: "" })).toBe("ausente");
+  });
+  it("revisão M-1: assinaturaNoPrazo — o ts em segundos (o MP) ou em milissegundos (o simulador) a até 5 min de agora; fora, sem ts ou torto → false", () => {
+    const seg = (ms: number) => String(Math.floor(ms / 1000));
+    const v1 = "a".repeat(64);
+    expect(assinaturaNoPrazo(`ts=${seg(AGORA)},v1=${v1}`, AGORA)).toBe(true);
+    expect(assinaturaNoPrazo(` ts = ${AGORA - 4 * 60_000} , v1=${v1}`, AGORA)).toBe(true);      // milissegundos, com espaços
+    expect(assinaturaNoPrazo(`v1=${v1},ts=${seg(AGORA + 4 * 60_000)}`, AGORA)).toBe(true);       // o relógio do MP adiantado
+    expect(assinaturaNoPrazo(`ts=${seg(AGORA - 6 * 60_000)},v1=${v1}`, AGORA)).toBe(false);      // capturado e reenviado depois
+    expect(assinaturaNoPrazo(`ts=${AGORA + 6 * 60_000},v1=${v1}`, AGORA)).toBe(false);
+    for (const ruim of [null, undefined, "", `v1=${v1}`, `ts=,v1=${v1}`, `ts=abc,v1=${v1}`, `ts=1e12,v1=${v1}`, `ts=${"9".repeat(17)},v1=${v1}`]) {
+      expect(assinaturaNoPrazo(ruim, AGORA), String(ruim)).toBe(false);
+    }
   });
 });
 

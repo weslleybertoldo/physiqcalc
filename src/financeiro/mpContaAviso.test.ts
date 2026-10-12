@@ -613,9 +613,40 @@ describe("tratarDaConta — a x-signature (decisão 9: só registra até a flag 
     expect(idas).toEqual([]);
     const errada = await tratar(db, aviso(), { req: pedido({ "x-signature": assinar("123", "req-1", "1760000000", "outro-segredo"), "x-request-id": "req-1" }) });
     expect(errada.r).toEqual({ http: 401, resultado: "assinatura" });
-    const certa = await tratar(db, aviso(), { req: pedido({ "x-signature": assinar("123", "req-1", "1760000000"), "x-request-id": "req-1" }) });
+    // revisão M-1: o ts de agora (o assinado há mais de 5 min não passa — o caso abaixo)
+    const agora = String(Math.floor(Date.now() / 1000));
+    const certa = await tratar(db, aviso(), { req: pedido({ "x-signature": assinar("123", "req-1", agora), "x-request-id": "req-1" }) });
     expect(certa.r).toEqual({ http: 200, resultado: "cobranca_paga_paga" });
     expect(certa.linhas).toContainEqual({ nivel: "info", campos: expect.objectContaining({ codigo: "aviso_mp_conta", msg: "assinatura valida" }) });
+  });
+  it("revisão M-1: com a flag exigir, a assinatura amarra O QUE e QUANDO — o id do aviso é o data.id ASSINADO (o da busca) e o ts de até 5 min", async () => {
+    ambiente({ MP_WEBHOOK_ASSINATURA: SEGREDO });
+    const idas = mpFalso(mundo());
+    const db = await cenario({ app_config: [{ chave: "mp_webhook", valor: { exigir_assinatura: true } }] });
+    const agora = String(Math.floor(Date.now() / 1000));
+    // o corpo diz 999; a busca (o que a assinatura cobre) diz 123: um aviso assinado capturado não trata outro id
+    const trocado = await tratar(db, aviso({ id: "999" }), { url: URL_CONTA("123"),
+      req: pedido({ "x-signature": assinar("123", "req-1", agora), "x-request-id": "req-1" }) });
+    expect(trocado.r).toEqual({ http: 401, resultado: "assinatura" });
+    expect(trocado.linhas).toContainEqual({ nivel: "aviso", campos: expect.objectContaining({ codigo: "aviso_mp_conta_sem_assinatura", resultado: "id_diferente" }) });
+    // assinado há 10 min (capturado e reenviado depois) → recusa
+    const velho = String(Math.floor(Date.now() / 1000) - 600);
+    const atrasado = await tratar(db, aviso(), { req: pedido({ "x-signature": assinar("123", "req-1", velho), "x-request-id": "req-1" }) });
+    expect(atrasado.r).toEqual({ http: 401, resultado: "assinatura" });
+    expect(atrasado.linhas).toContainEqual({ nivel: "aviso", campos: expect.objectContaining({ codigo: "aviso_mp_conta_sem_assinatura", resultado: "fora_do_prazo" }) });
+    expect(idas).toEqual([]);                                               // nada foi ao MP
+    // o ts em milissegundos (o simulador local do e2e/w2/api.py) há 1 min → passa
+    const ms = String(Date.now() - 60_000);
+    const certo = await tratar(db, aviso(), { req: pedido({ "x-signature": assinar("123", "req-1", ms), "x-request-id": "req-1" }) });
+    expect(certo.r).toEqual({ http: 200, resultado: "cobranca_paga_paga" });
+  });
+  it("revisão M-1: sem a flag (o padrão), nada muda — o id do corpo diferente da busca e o ts velho só vão ao log; o aviso é tratado pelo do corpo", async () => {
+    ambiente({ MP_WEBHOOK_ASSINATURA: SEGREDO });
+    mpFalso(mundo());
+    const db = await cenario();
+    const velho = String(Math.floor(Date.now() / 1000) - 3600);
+    const { r } = await tratar(db, aviso(), { url: URL_CONTA("999"), req: pedido({ "x-signature": assinar("999", "req-1", velho), "x-request-id": "req-1" }) });
+    expect(r).toEqual({ http: 200, resultado: "cobranca_paga_paga" });
   });
   it("com a flag desligada (o padrão): a assinatura inválida só vai ao log e o aviso é tratado", async () => {
     ambiente({ MP_WEBHOOK_ASSINATURA: SEGREDO });

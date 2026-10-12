@@ -197,6 +197,17 @@ export async function assinaturaMp(p: { cabecalho: string | null; requestId: str
   return dif === 0 ? "valida" : "invalida";
 }
 
+/** Revisão M-1: o ts da x-signature a até `toleranciaMs` de agora — o MP manda em segundos; o simulador local (e2e/w2/simulador_mp.py), em
+ *  milissegundos (13+ dígitos). Sem ts, torto ou fora → false. Quem chama só olha com a assinatura exigida (um aviso assinado capturado não
+ *  volta horas depois). O mesmo leitor do cabeçalho do assinaturaMp. */
+export function assinaturaNoPrazo(cabecalho: string | null | undefined, agora = Date.now(), toleranciaMs = 5 * 60_000): boolean {
+  const partes = new Map((cabecalho ?? "").split(",").map((x) => x.trim().split("=", 2)).filter((x) => x.length === 2).map(([k, v]) => [k.trim(), v.trim()]));
+  const ts = partes.get("ts") ?? "";
+  if (!/^\d{1,16}$/.test(ts)) return false;
+  const ms = ts.length >= 13 ? Number(ts) : Number(ts) * 1000;
+  return Math.abs(agora - ms) <= toleranciaMs;
+}
+
 export function qualCredencial(collector: number | string | null | undefined, integ: { mp_user_id: number | string | null } | null):
   "physiq" | "conta" | "outra_conta" {
   if (collector === null || collector === undefined || collector === "") return "physiq";

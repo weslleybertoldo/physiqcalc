@@ -12,7 +12,8 @@
 // Respostas: 200 no que tratou ou ignorou de verdade; 500 no que não dá para decidir (o MP manda de novo): MP fora, conta em erro ou sem
 // acesso, schema sem a W2 (MENOR 4 da W1), sem a MP_TOKENS_CHAVE (lança: o catch final da index.ts avisa o Weslley); 429 nos tetos; 401 só
 // com a assinatura exigida (app_config.mp_webhook.exigir_assinatura — a Task 23 liga depois de ver as notificações de verdade assinadas;
-// até lá a x-signature só vai ao log: valida | invalida | ausente).
+// até lá a x-signature só vai ao log: valida | invalida | ausente). Exigida, ela amarra o id tratado (o data.id assinado da busca = o do
+// aviso) e o ts (até 5 min) — revisão M-1.
 // Tetos (I6 da W1, MENORES 6 e 26): por conta, 60/min, só DEPOIS de achada a integração (uuid inventado não entra); por IP, 120/min, só no
 // aviso SEM user_id (a index.ts — os avisos de TODOS os personais saem de poucos IPs do MP). Maps separados, cada um com o seu limite.
 // Sem import de URL (só tipo) e sem o global Deno no topo: o Vitest importa (src/financeiro/mpContaAviso.test.ts); o log vem de quem chama.
@@ -45,7 +46,7 @@ import {
   type ContextoMpConta,
   type IntegracaoMp,
 } from "../_shared/mp-conta.ts";
-import { assinaturaMp, lerAvisoDoMp, type AvisoDaConta } from "../_shared/mp-conta-regras.ts";
+import { assinaturaMp, assinaturaNoPrazo, lerAvisoDoMp, type AvisoDaConta } from "../_shared/mp-conta-regras.ts";
 import { prazo as novoPrazo, type Prazo } from "../_shared/tempo.ts";
 
 type ComDeno = { Deno?: { env: { get: (nome: string) => string | undefined } } };
@@ -194,9 +195,18 @@ async function decidir(d: DepsAviso, req: Request, url: URL, schema: Schema, a: 
   if (!permitidoConta(a.conta)) return { http: 429, resultado: "limite" };               // MENOR 26: só conta DEPOIS de achada a integração
   const assinatura = await assinaturaMp({ cabecalho: req.headers.get("x-signature"), requestId: req.headers.get("x-request-id"),
     dataId: url.searchParams.get("data.id"), segredo: ambiente("MP_WEBHOOK_ASSINATURA") });
-  if (assinatura !== "valida" && (await exigeAssinatura(db, schema))) {
-    d.log.aviso({ codigo: "aviso_mp_conta_sem_assinatura", schema, ref: a.conta, resultado: assinatura });
-    return { http: 401, resultado: "assinatura", assinatura };
+  if (await exigeAssinatura(db, schema)) {
+    // revisão M-1: exigida, a assinatura amarra O QUE é tratado e QUANDO — o id do aviso (o do corpo, lido primeiro) tem de ser o data.id
+    // ASSINADO (o da busca) e o ts, de até 5 min de agora: um aviso assinado capturado não volta com outro id nem horas depois. Sem a flag,
+    // nada muda (a assinatura só vai ao log)
+    const recusa = assinatura !== "valida" ? assinatura
+      : (url.searchParams.get("data.id") ?? "").toLowerCase() !== a.id.toLowerCase() ? "id_diferente"
+      : !assinaturaNoPrazo(req.headers.get("x-signature")) ? "fora_do_prazo"
+      : null;
+    if (recusa) {
+      d.log.aviso({ codigo: "aviso_mp_conta_sem_assinatura", schema, ref: a.conta, resultado: recusa });
+      return { http: 401, resultado: "assinatura", assinatura: recusa };
+    }
   }
   // I4: o user_id NÃO decide — quem forja manda o certo ou nenhum, e nada garante o campo nos tópicos da automática; quem decide é o collector
   if (a.userId !== null && a.userId !== integ.mp_user_id) d.log.aviso({ codigo: "aviso_mp_conta_user_id_diferente", schema, ref: a.conta });
