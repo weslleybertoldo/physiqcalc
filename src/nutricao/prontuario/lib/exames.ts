@@ -1,7 +1,7 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/exames.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { deslocamento, intervalo, paginar, POR_PAGINA, type Pagina, type RespostaComContagem } from "@/lib/paginacao";
-import { supabase } from "@/nutricao/editor/lib/banco";
+import { deslocamento, POR_PAGINA, type Pagina } from "@/lib/paginacao";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import { type RegistroExameCatalogo, type RegistroPedido, type RegistroResultado } from "@/nutricao/prontuario/lib/examesUtil";
 import { acaoNutricao } from "@/nutricao/servidor";
 
@@ -11,7 +11,11 @@ import { acaoNutricao } from "@/nutricao/servidor";
 // excluir o item do catálogo depois não mexe no histórico (padrão das W15–W17). O banco mexe em `pacientes.updated_at` a cada
 // pedido/resultado (trigger). `exames` chega como lista de textos pelo PostgREST; a tela lê com `lerExames` (tolerante).
 // hml-19a (H-41 · H-81 · jeito 2): as gravações vão pela função nutricao (os resultados da mesma data: 1 chamada com o lote); o
-// catálogo padrão do 1º acesso nasce no servidor (padroes_garantir: 1 chamada, 1 vez só). Mesmas assinaturas; leituras aqui.
+// catálogo padrão do 1º acesso nasce no servidor (padroes_garantir: 1 chamada, 1 vez só). Mesmas assinaturas.
+// hml-20b (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa —
+// exames_catalogo (o RLS decide, como antes), pedidos_exame_do_aluno (a PÁGINA de 20 com o total: o .range e o count exato agora no
+// servidor), exames_do_aluno (a MESMA RPC, os mesmos args) e resultados_exame_do_aluno (TODOS: o laço de 1000 em 1000, até 50, foi para
+// o servidor, num lote só dele — `sozinha` — para não segurar a tela). Mesmos tipos; o erro é ErroLeitura (frase fixa do código).
 
 export type ExameCatalogo = Database["public"]["Tables"]["exames_catalogo"]["Row"];
 type ExameCatalogoUpdate = Database["public"]["Tables"]["exames_catalogo"]["Update"];
@@ -20,20 +24,10 @@ type PedidoExameUpdate = Database["public"]["Tables"]["pedidos_exame"]["Update"]
 export type ResultadoExame = Database["public"]["Tables"]["resultados_exame"]["Row"];
 type ResultadoExameUpdate = Database["public"]["Tables"]["resultados_exame"]["Update"];
 
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
 // ---- Catálogo ----
 export async function listarCatalogoExames(): Promise<ExameCatalogo[]> {
-  const { data, error } = await supabase
-    .from("exames_catalogo")
-    .select("*")
-    .is("deleted_at", null)
-    .order("favorito", { ascending: false })
-    .order("nome", { ascending: true });
-  falhou(error);
-  return (data ?? []) as ExameCatalogo[];
+  const r = await lerNutricao("exames_catalogo");
+  return (r.linhas ?? []) as ExameCatalogo[];
 }
 
 /**
@@ -73,21 +67,14 @@ export async function excluirExameCatalogo(id: string): Promise<void> {
 /**
  * Uma página (20) dos pedidos vivos do paciente, mais recente primeiro (data, criado por último, id), e o total.
  * hml-14d (B21 · D32): antes vinham todos sem `range` (cortados calados em 1000). Erro do banco lança.
+ * hml-20b: consulta pedidos_exame_do_aluno { aluno, pagina } — o .range da página e o count exato no servidor (a página como o
+ * intervalo() da tela: inteira, a 1ª é 1). Sem o total, recusa (como o paginar).
  */
-export function paginaPedidosDoPaciente(pacienteId: string, pagina: number): Promise<Pagina<PedidoExame>> {
-  return paginar<PedidoExame>(
-    (de, ate) =>
-      supabase
-        .from("pedidos_exame")
-        .select("*", { count: "exact" })
-        .eq("paciente_id", pacienteId)
-        .is("deleted_at", null)
-        .order("data", { ascending: false })
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(de, ate) as unknown as PromiseLike<RespostaComContagem<PedidoExame>>,
-    pagina,
-  );
+export async function paginaPedidosDoPaciente(pacienteId: string, pagina: number): Promise<Pagina<PedidoExame>> {
+  const p = Number.isFinite(pagina) ? Math.max(1, Math.floor(pagina)) : 1;
+  const r = await lerNutricao("pedidos_exame_do_aluno", { aluno: pacienteId, pagina: p });
+  if (typeof r.total !== "number") throw new ErroLeitura("erro_interno");
+  return { itens: (r.linhas ?? []) as PedidoExame[], total: r.total };
 }
 
 export async function criarPedido(nutricionistaId: string, pacienteId: string, r: RegistroPedido): Promise<PedidoExame> {
@@ -111,34 +98,24 @@ export async function excluirPedido(id: string): Promise<void> {
 }
 
 // ---- Resultados do paciente ----
-/** hml-14d (D32): leituras de 1000 (o teto do PostgREST) até a última — e um limite de segurança. */
-const RESULTADOS_POR_LEITURA = 1000;
-const MAX_LEITURAS_RESULTADOS = 50;
+/** O texto de quando passa do teto do laço (as 50 leituras de 1000 — hoje no servidor; a frase de antes). */
+export const MSG_RESULTADOS_DEMAIS = "Resultados de exame demais para ler de uma vez.";
 
 /**
  * TODOS os resultados vivos do paciente (a Avaliação integrada cruza todos; a tela de Exames lê por página — paginaDeExames).
  * hml-14d (B21 · D32): em leituras de 1000 com ordem estável (data, exame, id) até a última — antes era 1 leitura sem `range`, que o
  * PostgREST cortava calada em 1000. Erro do banco lança.
+ * hml-20b: consulta resultados_exame_do_aluno — o MESMO laço (1000 por leitura, a mesma ordem, até 50) agora no servidor, dentro do
+ * prazo do pedido, num lote só dele (`sozinha`); passou das 50 → a frase de antes.
  */
 export async function listarResultadosDoPaciente(pacienteId: string): Promise<ResultadoExame[]> {
-  const saida: ResultadoExame[] = [];
-  for (let leitura = 1; leitura <= MAX_LEITURAS_RESULTADOS; leitura += 1) {
-    const [de, ate] = intervalo(leitura, RESULTADOS_POR_LEITURA);
-    const { data, error } = await supabase
-      .from("resultados_exame")
-      .select("*")
-      .eq("paciente_id", pacienteId)
-      .is("deleted_at", null)
-      .order("data", { ascending: false })
-      .order("exame", { ascending: true })
-      .order("id", { ascending: true })
-      .range(de, ate);
-    falhou(error);
-    const linhas = (data ?? []) as ResultadoExame[];
-    saida.push(...linhas);
-    if (linhas.length < RESULTADOS_POR_LEITURA) return saida;
+  try {
+    const r = await lerNutricao("resultados_exame_do_aluno", { aluno: pacienteId }, { sozinha: true });
+    return (r.linhas ?? []) as ResultadoExame[];
+  } catch (e) {
+    if (e instanceof ErroLeitura && e.codigo === "muitas_linhas") throw new ErroLeitura(e.codigo, e.extra, MSG_RESULTADOS_DEMAIS);
+    throw e;
   }
-  throw new Error("Resultados de exame demais para ler de uma vez.");
 }
 
 /** Uma página dos resultados do paciente POR DATA (exames_do_aluno). */
@@ -160,11 +137,12 @@ export interface PaginaDeExames {
  * pela RLS de quem chama). `exame` = o "Ver evolução de" ('' = todos). Antes a tela lia todos (sem `range`) e agrupava aqui.
  */
 export async function paginaDeExames(pacienteId: string, exame: string, pagina: number): Promise<PaginaDeExames> {
-  const { data, error } = await supabase.rpc("exames_do_aluno" as never, {
-    p_aluno: pacienteId, p_exame: exame.trim() || null, p_offset: deslocamento(pagina), p_limite: POR_PAGINA,
-  } as never);
-  falhou(error);
-  const r = (data ?? {}) as Record<string, unknown>;
+  // hml-20b: a MESMA RPC pela nutricao (consulta exames_do_aluno) — os args de hoje (o p_exame só com o filtro: sem ele, o padrão null)
+  const filtro = exame.trim();
+  const { valor } = await lerNutricao("exames_do_aluno", {
+    aluno: pacienteId, ...(filtro ? { exame: filtro } : {}), offset: deslocamento(pagina), limite: POR_PAGINA,
+  });
+  const r = (valor ?? {}) as Record<string, unknown>;
   if (r.ok !== true) throw new Error("Não foi possível carregar os exames");
   const datas = Array.isArray(r.datas) ? (r.datas as Array<{ data: string; resultados?: unknown }>) : [];
   return {
@@ -213,7 +191,5 @@ export async function excluirResultado(id: string): Promise<void> {
   await acaoNutricao("resultado_exame_excluir", { id });
 }
 
-/** Nome da nutricionista (assinatura do PDF) — mesma consulta das orientações (W10). */
-export { nomeDaNutricionista } from "@/nutricao/editor/lib/orientacoes";
-/** CRN/telefone/endereço no PDF quando já existirem (W15; preenchidos na W35). */
-export { dadosProfissionais } from "@/nutricao/prontuario/lib/documentos";
+/** Nome da nutricionista e CRN/telefone/endereço (assinatura do PDF) — a fonte única (hml-20b: o profiles de quem chama, pela função). */
+export { dadosProfissionais, nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";

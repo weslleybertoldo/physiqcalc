@@ -2,9 +2,14 @@
  * Perfil do aluno no painel (W14): chamadas ao BANCO PRINCIPAL (funções security definer da migração
  * 20260930160000_w14_ajustes.sql — a regra de quem vê e quem edita mora lá) e, para quem tem treino, ao Banco do Treino
  * (admin-get-user / admin-update-user, as mesmas do "Configurar aluno" antigo: altura, peso e o cadastro de lá).
+ * hml-20b (H-42 · jeito 2, etapa 2): a LEITURA do perfil (a casca: cabeçalho, KPIs e cards) vai pela função nutricao, consulta
+ * aluno_perfil — a MESMA RPC lá, como a pessoa, no lote da tela (src/nutricao/leitura.ts). O erro chega como antes: o código na
+ * mensagem do ErroPerfil (o sem_acesso/aluno_inexistente/sem_login que a w14_matricula_da_rota levanta, o { ok:false, erro } da RPC; a
+ * rede que caiu → sem_internet, que a tela traduz como "Sem conexão…"). As gravações e o aviso da P15 seguem como estão (H-43).
  */
 import { principal } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
+import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import type { AjustesAluno, ChaveAjuste, MensagensDesligadas, PerfilAluno, PerfilTreinoAluno } from "./tipos";
 
 export class ErroPerfil extends Error {
@@ -26,9 +31,24 @@ async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T> {
   return r as T;
 }
 
+/** O erro de uma leitura pela função no formato do perfil: o código na mensagem; a rede que caiu → sem_internet (como antes). */
+function erroDoPerfil(e: unknown): ErroPerfil {
+  if (e instanceof ErroLeitura) return new ErroPerfil(e.codigo === "rede" ? "sem_internet" : e.codigo, e.extra);
+  return new ErroPerfil("erro_interno");
+}
+
 /** O perfil pelo id da rota do painel (a matrícula ou o id do Treino). */
 export async function buscarPerfilAluno(alunoId: string): Promise<PerfilAluno> {
-  const r = await rpc<PerfilAluno>("aluno_perfil", { p_aluno: alunoId });
+  let valor: unknown;
+  try {
+    valor = (await lerNutricao("aluno_perfil", { aluno: alunoId })).valor;
+  } catch (e) {
+    throw erroDoPerfil(e);
+  }
+  if (valor && typeof valor === "object" && !Array.isArray(valor) && (valor as { ok?: unknown }).ok === false) {
+    throw new ErroPerfil(String((valor as { erro?: unknown }).erro ?? "erro_interno"), valor as Record<string, unknown>);
+  }
+  const r = valor as PerfilAluno;
   return {
     ...r,
     tags: Array.isArray(r.tags) ? r.tags : [],

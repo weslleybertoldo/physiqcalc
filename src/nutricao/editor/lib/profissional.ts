@@ -1,13 +1,28 @@
 // Physiq W16 — dados da nutricionista para os PDFs (nome, CRN, telefone, endereço), como o site antigo do Nutri lia de
 // `profiles` (src/lib/anamneses.ts e src/lib/documentos.ts de lá). Só o que as seções da aba Dieta usam.
-import { supabase } from "./banco";
+// hml-20b (H-42 · jeito 2, etapa 2): a FONTE ÚNICA do nome e dos dados profissionais de quem está logado (o Prontuário, a Dieta, as
+// Dietas e os Impressos — antes eram 3 implementações do nomeDaNutricionista e 2 do dadosProfissionais): a leitura sai do navegador e vai
+// pela função nutricao, consulta `profissional` (o profiles de QUEM CHAMA — o id vem do token no servidor, nunca daqui), no lote da tela
+// (src/nutricao/leitura.ts). O `userId` fica na assinatura (as telas não mudam): vazio → null, como antes; o erro → null, como antes.
+// O nome e os dados profissionais pedidos juntos (o Promise.all das seções) viram 1 item no servidor (itens iguais rodam 1 vez).
+import { lerNutricao } from "@/nutricao/leitura";
+
+/** O profiles de quem está logado (o servidor lê o id = quem chama): nome e o jsonb dos dados profissionais. */
+async function profissionalLogado(): Promise<{ nome?: unknown; dados_profissionais?: unknown } | null> {
+  const r = await lerNutricao("profissional");
+  const [linha] = (Array.isArray(r.linhas) ? r.linhas : []) as Array<{ nome?: unknown; dados_profissionais?: unknown }>;
+  return linha ?? null;
+}
 
 /** Nome da nutricionista (cabeçalho do PDF). */
 export async function nomeDaNutricionista(userId: string): Promise<string | null> {
   if (!userId) return null;
-  const { data, error } = await supabase.from("profiles").select("nome").eq("id", userId).maybeSingle();
-  if (error) return null;
-  return (data as { nome: string | null } | null)?.nome ?? null;
+  try {
+    const nome = (await profissionalLogado())?.nome;
+    return typeof nome === "string" ? nome : null;
+  } catch {
+    return null;
+  }
 }
 
 export type DadosProfissionais = { crn: string | null; telefone: string | null; endereco: string | null };
@@ -24,7 +39,9 @@ export function lerDadosProfissionais(v: unknown): DadosProfissionais | null {
 /** CRN/telefone/endereço guardados em `profiles.dados_profissionais`; nada preenchido → null. */
 export async function dadosProfissionais(userId: string): Promise<DadosProfissionais | null> {
   if (!userId) return null;
-  const { data, error } = await supabase.from("profiles").select("dados_profissionais").eq("id", userId).maybeSingle();
-  if (error) return null;
-  return lerDadosProfissionais((data as { dados_profissionais: unknown } | null)?.dados_profissionais);
+  try {
+    return lerDadosProfissionais((await profissionalLogado())?.dados_profissionais);
+  } catch {
+    return null;
+  }
 }

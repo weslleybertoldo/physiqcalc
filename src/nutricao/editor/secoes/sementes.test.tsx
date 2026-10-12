@@ -25,18 +25,20 @@ function cadeia(): unknown {
   return p;
 }
 
-vi.mock("@/integrations/principal/client", () => ({
-  PRINCIPAL_SCHEMA: "staging",
-  principalConfigurado: true,
-  principal: {
+// hml-20b (H-42): o nome e os dados profissionais (src/nutricao/editor/lib/profissional.ts) leem pela nutricao (`ler`): o módulo de
+// verdade do servidor roda sobre o banco falso daqui (src/test/nutricaoFalsa.ts) — o h.invoke segue vendo só o que GRAVA (o garantir).
+vi.mock("@/integrations/principal/client", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const banco = {
     from: (t: string) => {
       h.from(t);
       return cadeia();
     },
     rpc: () => cadeia(),
-    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
-  },
-}));
+  };
+  const invoke = (f: string, o: { body: Record<string, unknown> }) => (ehLer(o?.body) ? lerPeloModulo(banco, { userId: h.usuario.id })(o.body) : h.invoke(f, o));
+  return { PRINCIPAL_SCHEMA: "staging", PRINCIPAL_URL: "https://principal.teste.invalid", principalConfigurado: true, principal: { ...banco, functions: { invoke } } };
+});
 // a sessão devolve um objeto NOVO a cada render (como o refresh do token faria): o useAuth() segura o mesmo (hml-19a)
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { ...h.usuario } }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), message: vi.fn(), error: (...a: unknown[]) => h.toastErro(...a) } }));

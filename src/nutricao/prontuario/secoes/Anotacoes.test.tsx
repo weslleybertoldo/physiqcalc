@@ -27,7 +27,15 @@ function cadeia(): unknown {
 
 vi.mock("@/painel/aluno/dados/api", () => ({ ErroPerfil: class extends Error {}, buscarPerfilAluno: h.perfil, buscarDadosTreino: vi.fn() }));
 // hml-19a: as gravações e os padrões do 1º acesso vão pela função nutricao (functions.invoke)
-vi.mock("@/nutricao/editor/lib/banco", () => ({ supabase: { rpc: h.rpc, from: () => cadeia(), storage: { from: () => cadeia() }, functions: { invoke: async () => ({ data: { ok: true, criados: 0, lista: [] }, error: null }) }, } }));
+// hml-20b (H-42): as LEITURAS vão pela nutricao (`ler`): o módulo de verdade do servidor roda sobre o banco falso daqui
+// (src/test/nutricaoFalsa.ts) — as idas ao banco (a RPC com os args, a tabela, a página) são as mesmas de quando a tela lia direto.
+vi.mock("@/nutricao/editor/lib/banco", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const banco = { rpc: h.rpc, from: () => cadeia(), storage: { from: () => cadeia() } };
+  const invoke = async (_f: string, o: { body: Record<string, unknown> }) =>
+    ehLer(o?.body) ? lerPeloModulo(banco, { userId: h.usuario.id })(o.body) : { data: { ok: true, criados: 0, lista: [] }, error: null };
+  return { supabase: { ...banco, functions: { invoke } } };
+});
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: h.usuario, treino: { estado: "desnecessario", erro: null } }) }));
 vi.mock("@/nutricao/prontuario/lib/prontuarioPdf", () => ({ baixarPDFProntuario: (d: unknown) => h.pdf(d) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -116,7 +124,8 @@ describe("Prontuário › Anotações em páginas (hml-14d, D33)", () => {
     await waitFor(() => expect(itens()).toHaveLength(20));
     fireEvent.click(document.querySelector("[data-btn-pdf-prontuario]")!);
     await waitFor(() => expect(h.pdf).toHaveBeenCalledTimes(1));
-    expect(chamadas().at(-1)).toEqual({ p_aluno: "p1", p_limite: null });
+    // hml-20b: todas = anotacoes_todas — sem o p_limite (o padrão null da RPC: todas), como o p_limite null de antes
+    expect(chamadas().at(-1)).toEqual({ p_aluno: "p1" });
     expect((h.pdf.mock.calls[0][0] as { registros: unknown[] }).registros).toHaveLength(41);
   });
 

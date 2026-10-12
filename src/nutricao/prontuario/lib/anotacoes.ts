@@ -5,10 +5,14 @@
 // restritiva da W18: "Só nutricionistas" só quem vê o clínico, e o papel gravado é o de verdade).
 // hml-19a (H-41 · jeito 2): escrever = a função nutricao (src/nutricao/servidor.ts), com a sessão de quem escreve — o RLS de antes
 // decide do mesmo jeito (a função grava como a pessoa); o autor é quem está logado (o servidor põe), as frases de antes ficam.
+// hml-20b (H-42 · jeito 2, etapa 2): LER também vai pela nutricao, no lote da tela (src/nutricao/leitura.ts) — a MESMA aluno_anotacoes
+// lá, como a pessoa: consulta `anotacoes` { aluno, limite, offset? } (o card do Resumo e a página da aba) ou `anotacoes_todas` { aluno }
+// (o PDF, sem limite). Os args de hoje (o p_offset só quando é página), a mesma normalização e as mesmas frases: o "sem_acesso" da RPC
+// (levantado pela w14_matricula_da_rota) volta como o código e vira "Você não acompanha este aluno.", como antes.
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { deslocamento, POR_PAGINA } from "@/lib/paginacao";
-import { supabase } from "@/nutricao/editor/lib/banco";
 import { formParaRegistro, type FormRegistro } from "@/nutricao/editor/lib/prontuarioUtil";
+import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 import type { PapelAutor, Visibilidade } from "./acesso";
 
@@ -41,10 +45,6 @@ export interface AnotacoesDoAluno {
 
 export type FormAnotacao = FormRegistro & { visibilidade: Visibilidade };
 
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(mensagemDoErro(error.message));
-};
-
 /** O banco recusa (RLS) quem não pode: vira um texto que a pessoa entende. */
 export function mensagemDoErro(msg: string): string {
   if (/row-level security|violates row-level|permission denied/i.test(msg)) return "Você não pode gravar essa anotação para este aluno.";
@@ -74,10 +74,22 @@ function normalizar(a: Partial<Anotacao> & Record<string, unknown>): Anotacao {
  * p_offset só vai quando pagina — a chamada de antes ({ p_aluno, p_limite }) segue igual.
  */
 export async function listarAnotacoes(alunoId: string, limite?: number, offset?: number): Promise<AnotacoesDoAluno> {
-  const args = offset === undefined ? { p_aluno: alunoId, p_limite: limite ?? null } : { p_aluno: alunoId, p_limite: limite ?? POR_PAGINA, p_offset: offset };
-  const { data, error } = await supabase.rpc("aluno_anotacoes" as never, args as never);
-  falhou(error);
-  const r = (data ?? {}) as Record<string, unknown>;
+  // os args de hoje: sem offset, as últimas `limite` (ou todas, sem limite: anotacoes_todas); com offset, a página (limite padrão 20)
+  const pedido =
+    offset !== undefined
+      ? lerNutricao("anotacoes", { aluno: alunoId, limite: limite ?? POR_PAGINA, offset })
+      : limite !== undefined && limite >= 1
+        ? lerNutricao("anotacoes", { aluno: alunoId, limite })
+        : lerNutricao("anotacoes_todas", { aluno: alunoId });
+  let valor: unknown;
+  try {
+    valor = (await pedido).valor;
+  } catch (e) {
+    // o sem_acesso (a pessoa não acompanha o aluno) com a frase de antes; o resto, a frase fixa do código
+    if (e instanceof ErroLeitura && e.codigo === "sem_acesso") throw new ErroLeitura(e.codigo, e.extra, mensagemDoErro(e.codigo));
+    throw e;
+  }
+  const r = (valor ?? {}) as Record<string, unknown>;
   if (r.ok === false) throw new Error(mensagemDoErro(String(r.erro ?? "erro_interno")));
   const lista = Array.isArray(r.anotacoes) ? (r.anotacoes as Record<string, unknown>[]) : [];
   const ultima = r.ultima as { id?: unknown; data?: unknown } | null | undefined;

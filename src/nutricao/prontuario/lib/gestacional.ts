@@ -1,7 +1,7 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/gestacional.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
 import { gestacaoParaBanco, registroParaBanco, type FormGestacao, type FormRegistroGestacional } from "@/nutricao/editor/lib/gestacionalUtil";
+import { lerNutricao } from "@/nutricao/leitura";
 import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 
 // Acesso do Acompanhamento gestacional (W25): as tabelas novas `gestacoes` (1 ATIVA por paciente — índice único parcial) e
@@ -9,36 +9,25 @@ import { acaoNutricao, comFraseDoCodigo } from "@/nutricao/servidor";
 // nutricionista só vê as dela; master vê tudo; exclusão SOFT → Lixeira (W32). A leitura da seção dona (antropometrias da
 // W6, pra sugerir peso/altura pré-gestacionais) e os dados do perfil pro PDF são reexportados pra tela ter uma porta só.
 // hml-19a (H-41 · jeito 2): as gravações vão pela função nutricao; o "upsert" do dia é 1 chamada (o servidor lê o vivo do dia, edita
-// ou insere, e trata a corrida do índice único parcial). Mesmas assinaturas; leituras seguem pelo banco.
+// ou insere, e trata a corrida do índice único parcial). Mesmas assinaturas.
+// hml-20b (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao, no lote da tela (src/nutricao/leitura.ts), como a pessoa:
+// gestacoes_do_aluno e registros_gestacionais (as de TODAS as gestações do paciente, como antes; a tela separa) + as antropometrias da
+// seção dona e o profissional (a fonte única, src/nutricao/editor/lib/profissional.ts). Mesmos tipos; o erro é ErroLeitura.
 
 export { listarAntropometrias, type Antropometria } from "@/nutricao/editor/lib/antropometrias";
-export { nomeDaNutricionista } from "@/nutricao/prontuario/lib/anamneses";
-export { dadosProfissionais } from "@/nutricao/prontuario/lib/documentos";
+export { dadosProfissionais, nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
 
 export type Gestacao = Database["public"]["Tables"]["gestacoes"]["Row"];
 export type RegistroGestacional = Database["public"]["Tables"]["registros_gestacionais"]["Row"];
 
-const T_GESTACOES = "gestacoes";
-const T_REGISTROS = "registros_gestacionais";
-
 export const MSG_GESTACAO_ATIVA = "Já existe um acompanhamento ativo pra esta aluna";
-
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
 
 // ---- Gestações ----
 
 /** Gestações vivas do paciente, a mais recente primeiro (a ativa, se houver, é a que não tem `encerrada_em`). */
 export async function listarGestacoes(pacienteId: string): Promise<Gestacao[]> {
-  const { data, error } = await supabase
-    .from(T_GESTACOES)
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as Gestacao[];
+  const r = await lerNutricao("gestacoes_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as Gestacao[];
 }
 
 export const gestacaoAtiva = (lista: Gestacao[]): Gestacao | null => lista.find((g) => g.encerrada_em === null) ?? null;
@@ -72,15 +61,8 @@ export async function excluirGestacao(id: string): Promise<void> {
 
 /** Registros vivos de TODAS as gestações do paciente, dia mais recente primeiro (a tela separa por `gestacao_id`). */
 export async function listarRegistrosDoPaciente(pacienteId: string): Promise<RegistroGestacional[]> {
-  const { data, error } = await supabase
-    .from(T_REGISTROS)
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as RegistroGestacional[];
+  const r = await lerNutricao("registros_gestacionais", { aluno: pacienteId });
+  return (r.linhas ?? []) as RegistroGestacional[];
 }
 
 /**

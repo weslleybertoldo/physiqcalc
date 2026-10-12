@@ -1,6 +1,6 @@
 // Physiq W18 — porta do PhysiqNutri (main ca9f66f, src/lib/avaliacaoIntegrada.ts) para o banco principal. Imports trocados; o resto é o do site antigo.
-import { supabase } from "@/nutricao/editor/lib/banco";
 import type { Database } from "@/nutricao/editor/lib/banco";
+import { lerNutricao } from "@/nutricao/leitura";
 import { formParaBanco, type Fontes, type FormAvaliacao, type Sintese } from "@/nutricao/prontuario/lib/avaliacaoIntegradaUtil";
 import { acaoNutricao } from "@/nutricao/servidor";
 
@@ -9,36 +9,24 @@ import { acaoNutricao } from "@/nutricao/servidor";
 // resultados de exames W18, aplicações de questionários W19), reexportadas pra tela ter uma porta só. A síntese e as fontes vão
 // CONGELADAS em jsonb: editar só mexe em título/parecer; `regerarSintese` troca os 2 jsonb e mantém título e parecer.
 // hml-19a (H-41 · jeito 2): as gravações vão pela função nutricao (a síntese segue calculada aqui — o servidor confere a forma; a
-// data da avaliação, o "agora", é do servidor). Mesmas assinaturas; leituras seguem pelo banco.
+// data da avaliação, o "agora", é do servidor). Mesmas assinaturas.
+// hml-20b (H-42 · jeito 2, etapa 2): as LEITURAS também vão pela nutricao (as das seções donas, reexportadas abaixo, e a desta:
+// avaliacoes_integradas_do_aluno), no lote da tela (src/nutricao/leitura.ts), como a pessoa — a seção abre com 1 chamada (os
+// resultados de exame vão num lote só deles: o laço). Mesmos tipos; o erro é ErroLeitura (frase fixa do código).
 
 export { listarAnamneses, type Anamnese } from "@/nutricao/prontuario/lib/anamneses";
 export { listarAntropometrias, type Antropometria } from "@/nutricao/editor/lib/antropometrias";
 export { listarResultadosDoPaciente, type ResultadoExame } from "@/nutricao/prontuario/lib/exames";
 export { listarAplicacoesDoPaciente, type Aplicacao } from "@/nutricao/prontuario/lib/questionarios";
-/** Nome da nutricionista (cabeçalho do PDF) — mesma consulta das orientações (W10). */
-export { nomeDaNutricionista } from "@/nutricao/editor/lib/orientacoes";
-/** CRN/telefone/endereço no PDF quando já existirem (W15; preenchidos na W35). */
-export { dadosProfissionais } from "@/nutricao/prontuario/lib/documentos";
+/** Nome da nutricionista e CRN/telefone/endereço (cabeçalho do PDF) — a fonte única (hml-20b: o profiles de quem chama, pela função). */
+export { dadosProfissionais, nomeDaNutricionista } from "@/nutricao/editor/lib/profissional";
 
 export type AvaliacaoIntegrada = Database["public"]["Tables"]["avaliacoes_integradas"]["Row"];
 
-const TABELA = "avaliacoes_integradas";
-
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-
 /** Avaliações vivas do paciente, mais recente primeiro. */
 export async function listarAvaliacoes(pacienteId: string): Promise<AvaliacaoIntegrada[]> {
-  const { data, error } = await supabase
-    .from(TABELA)
-    .select("*")
-    .eq("paciente_id", pacienteId)
-    .is("deleted_at", null)
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false });
-  falhou(error);
-  return (data ?? []) as AvaliacaoIntegrada[];
+  const r = await lerNutricao("avaliacoes_integradas_do_aluno", { aluno: pacienteId });
+  return (r.linhas ?? []) as AvaliacaoIntegrada[];
 }
 
 export type NovaAvaliacao = FormAvaliacao & { sintese: Sintese; fontes: Fontes };

@@ -1,5 +1,7 @@
 // Physiq hml-14d (B21 · D32): o acesso dos exames por página — a RPC exames_do_aluno (20 DATAS por página), os pedidos com `paginar`
 // e a leitura de TODOS os resultados (a Avaliação integrada) em leituras de 1000 até a última (antes: 1 leitura, cortada calada em 1000).
+// hml-20b (H-42): as leituras vão pela função nutricao (`ler`) — aqui o módulo de verdade do servidor roda sobre o banco falso
+// (src/test/nutricaoFalsa.ts): a página, o count, o laço de 1000 e os args da RPC chegam ao banco IGUAIS aos de quando a tela lia direto.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -8,11 +10,10 @@ const h = vi.hoisted(() => ({
   consultas: [] as Array<{ tabela: string; filtros: unknown[][]; ordem: Array<[string, boolean]>; range: [number, number] | null; contar: boolean }>,
   linhas: [] as Array<Record<string, unknown>>,
 }));
-vi.mock("@/nutricao/editor/lib/banco", () => ({
-  supabase: {
+vi.mock("@/nutricao/editor/lib/banco", async () => {
+  const { ehLer, lerPeloModulo } = await import("@/test/nutricaoFalsa");
+  const banco = {
     rpc: (...a: unknown[]) => h.rpc(...a),
-    // hml-19a: as gravações vão pela função nutricao
-    functions: { invoke: (...a: unknown[]) => h.invoke(...a) },
     from: (tabela: string) => {
       const c = { tabela, filtros: [] as unknown[][], ordem: [] as Array<[string, boolean]>, range: null as [number, number] | null, contar: false };
       h.consultas.push(c);
@@ -30,8 +31,11 @@ vi.mock("@/nutricao/editor/lib/banco", () => ({
       };
       return b;
     },
-  },
-}));
+  };
+  // hml-19a: as gravações vão pela função nutricao; hml-20b: o `ler` também (o módulo de verdade sobre o banco falso acima)
+  const invoke = (f: string, o: { body: Record<string, unknown> }) => (ehLer(o?.body) ? lerPeloModulo(banco)(o.body) : h.invoke(f, o));
+  return { supabase: { ...banco, functions: { invoke } } };
+});
 
 import { criarResultados, garantirCatalogoExames, listarResultadosDoPaciente, paginaDeExames, paginaPedidosDoPaciente } from "./exames";
 
@@ -67,7 +71,8 @@ describe("exames por página (hml-14d, D32)", () => {
       error: null,
     });
     const p = await paginaDeExames("p1", "", 2);
-    expect(h.rpc).toHaveBeenCalledWith("exames_do_aluno", { p_aluno: "p1", p_exame: null, p_offset: 20, p_limite: 20 });
+    // hml-20b: sem o filtro, o p_exame não vai (o padrão null da RPC = todos), como o p_exame null de antes
+    expect(h.rpc).toHaveBeenCalledWith("exames_do_aluno", { p_aluno: "p1", p_offset: 20, p_limite: 20 });
     expect(p).toMatchObject({ totalDatas: 41, totalResultados: 112, foraReferencia: 15 });
     expect(p.exames).toEqual(["Ácido úrico", "Glicemia de jejum", "TSH"]);
     expect(p.datas.map((d) => [d.data, d.resultados.length])).toEqual([["2026-07-20", 1], ["2026-07-15", 0]]);
@@ -75,9 +80,9 @@ describe("exames por página (hml-14d, D32)", () => {
     expect(h.rpc).toHaveBeenLastCalledWith("exames_do_aluno", { p_aluno: "p1", p_exame: "HDL", p_offset: 0, p_limite: 20 });
   });
 
-  it("paginaDeExames: erro do banco lança (a tela mostra o erro)", async () => {
+  it("paginaDeExames: erro do banco lança (a tela mostra o erro — hml-20b: a frase fixa do código, nunca a mensagem crua do banco)", async () => {
     h.rpc.mockResolvedValue({ data: null, error: { message: "statement timeout" } });
-    await expect(paginaDeExames("p1", "", 1)).rejects.toThrow("statement timeout");
+    await expect(paginaDeExames("p1", "", 1)).rejects.toMatchObject({ codigo: "erro_interno", message: "Não deu para carregar agora. Tente de novo." });
   });
 
   it("paginaPedidosDoPaciente: 20 por página com o total (count exato) e a ordem estável", async () => {
