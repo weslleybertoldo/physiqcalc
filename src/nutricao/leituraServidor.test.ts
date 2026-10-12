@@ -1153,10 +1153,10 @@ function clienteFalso20c(banco: Banco20c) {
   };
   return { cliente, rpcs, consultas, assinaturas };
 }
-function contexto20c(itens: unknown[], banco: Banco20c) {
+function contexto20c(itens: unknown[], banco: Banco20c, prazo?: { esgotado(): boolean }) {
   const f = clienteFalso20c(banco);
   const log = { info: vi.fn(), aviso: vi.fn(), erro: vi.fn(), excecao: vi.fn() };
-  const c = { schema: "staging" as const, origin: null, corpo: { acao: "ler", itens }, userId: EU, comoPessoa: f.cliente, log };
+  const c = { schema: "staging" as const, origin: null, corpo: { acao: "ler", itens }, userId: EU, comoPessoa: f.cliente, log, ...(prazo ? { prazo } : {}) };
   return { c: c as unknown as Parameters<typeof atenderLeitura>[0], ...f, log };
 }
 /** Roda os itens em pedidos de até 16 (o LOTE_MAX: o front divide assim) e junta as respostas na ordem; as consultas vão para `consultas`. */
@@ -1702,6 +1702,26 @@ describe("hml-20c — as consultas compostas no módulo: a página do diário co
       { tabela: "diario_alimentar", colunas: SELECT_DIARIO, opcoes: { count: "exact", head: true }, passos: [["gte", "data_hora", DIAS[6]], ...filtrosBase, ["lt", "data_hora", DIAS[7]]] },
       { tabela: "diario_alimentar", colunas: SELECT_DIARIO, opcoes: { count: "exact", head: true }, passos: [["gte", "data_hora", DIAS[2]], ...filtrosBase, ["lt", "data_hora", DIAS[3]]] },
     ]);
+  });
+
+  it("diario_pagina: o prazo do pedido esgotado no meio dos dias cortados → tempo_esgotado, sem contar mais (como o laço das páginas — revisão ⚪6)", async () => {
+    const pagina = Array.from({ length: 20 }, (_, i) => ({ id: `r${i}`, data_hora: new Date(Date.UTC(2026, 9, 12, 20) - i * 3_600_000 * 5).toISOString() }));
+    let idas = 0;
+    const prazo = { esgotado: () => idas >= 2 };
+    const k = contexto20c([{ q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS, pagina: 2 }], {
+      tabela: (q) => (idas++, q.opcoes?.head ? { data: null, error: null, count: 4 } : { data: pagina, error: null, count: 63 }),
+    }, prazo);
+    expect(itensDa(await atenderLeitura(k.c))).toEqual([{ ok: false, erro: "tempo_esgotado" }]);
+    // a página e o HEAD do 1º dia cortado; o 2º dia não vai ao banco
+    expect(k.consultas).toHaveLength(2);
+    expect(k.log.excecao).toHaveBeenCalledTimes(1);
+    // com tempo: os 2 dias cortados contados (o controle)
+    idas = -100;
+    const ok = contexto20c([{ q: "diario_pagina", conta: CONTA, de: DIAS[0], dias: DIAS, pagina: 2 }], {
+      tabela: (q) => (idas++, q.opcoes?.head ? { data: null, error: null, count: 4 } : { data: pagina, error: null, count: 63 }),
+    }, prazo);
+    expect(itensDa(await atenderLeitura(ok.c))[0]).toMatchObject({ ok: true, total: 63, valor: { por_dia: [{ total: 4 }, { total: 4 }] } });
+    expect(ok.consultas).toHaveLength(3);
   });
 
   it("diario_pagina: a 1ª página que cabe inteira — nenhum HEAD; o HEAD que falha → o código do item (a página não sai pela metade)", async () => {

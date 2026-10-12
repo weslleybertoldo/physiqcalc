@@ -194,6 +194,8 @@ async function lerTabela(c: ContextoLeitura, item: ItemValido, consulta: Consult
     );
     const porDia: Array<{ dia: string; total: number }> = [];
     for (const j of janelas) {
+      // o prazo do pedido esgotou antes de contar o dia → tempo_esgotado, sem contar mais (como o laço das páginas — o lerEmLaco)
+      if (c.prazo?.esgotado() === true) return falhou(c, item.q, { name: "TimeoutError", message: "TimeoutError: o prazo do pedido acabou no total por dia" });
       // os mesmos filtros, com o início do período trocado pelo início do dia e o fim do dia (lt) — a contagem que a tela fazia
       const filtros: FiltroLeitura[] = [
         ...plano.filtros.map((f) => (f.op === "gte" && f.coluna === pd.coluna ? { ...f, valor: j.de } : f)),
