@@ -20,8 +20,15 @@ quem lê é o extra --pagamento (1 Pix de R$ 1 com o COMPRADOR de teste como pag
 pagamento no sandbox?", o que decide como rodar os E2E de pagamento do MP depois de o sandbox recusar a credencial TEST- da conta real).
 Precisa: ~/.physiq-mp-oauth.json e ~/.physiq-mp-vendedor-teste.json (600 — scripts/segredos/mp_conta.py oauth local / usuarios-teste criar);
 o --pagamento também ~/.physiq-mp-comprador-teste.json.
+--client staging (plano B do I6): o client da aplicação de TESTE do integrador, ~/.physiq-mp-oauth-staging.json (mp_conta.py oauth local
+--staging, ou o e2e/w2/painel_mp_teste.py direto do navegador). --redirect padrao|staging|public|<https://…>: o redirect da autorização e
+da troca (padrão: "padrao" = https://www.mercadopago.com com o client real; "staging" com o client staging). Lido no código público do
+painel em 11/10: o campo "URLs de redirecionamento" RECUSA domínio do Mercado Pago/Livre (mercadopago.com está na lista) e trata o
+https://www.mercadopago.com como o valor PADRÃO (vazio) — é o que a criação grava quando ninguém configura. Com uma URL de verdade
+cadastrada, a prova usa a do staging: o code é lido do PEDIDO e a rota devolve 200 (o navegador não chega ao nosso servidor).
 Saída: ~/projetos/physiqcalc-scratch/w2/prova-public-key.json · prints (do MP, campos mascarados) em ~/projetos/physiqcalc-scratch/prints/w2/prova/.
-Uso: python3 e2e/w2/prova_public_key.py [--canal msedge] [--sem-pkce] [--com-tela] [--auth-br] [--pagamento | --so-pagamento]
+Uso: python3 e2e/w2/prova_public_key.py [--canal msedge] [--sem-pkce] [--com-tela] [--auth-br] [--client real|staging]
+     [--redirect padrao|staging|public|URL] [--pagamento | --so-pagamento]
 """
 from __future__ import annotations
 
@@ -46,13 +53,17 @@ CASA = Path.home()
 SAIDA = CASA / "projetos/physiqcalc-scratch/w2/prova-public-key.json"
 PRINTS = CASA / "projetos/physiqcalc-scratch/prints/w2/prova"
 ARQ_TOKENS = ".physiq-mp-vendedor-teste-oauth.json"           # os tokens do vendedor de TESTE (600) — só o --pagamento lê
-REDIRECT = "https://www.mercadopago.com"                    # o ÚNICO redirect cadastrado hoje (fato (a))
+ARQ_CLIENTE = {"real": ".physiq-mp-oauth.json", "staging": ".physiq-mp-oauth-staging.json"}  # staging = a aplicação de TESTE (plano B)
+REDIRECT = "https://www.mercadopago.com"                    # o ÚNICO redirect cadastrado hoje (fato (a)) — é o PADRÃO do painel (vazio)
+REDIRECTS = {"padrao": REDIRECT,                            # os de verdade: os da W2 (mp-conta-regras.ts redirectDoSchema)
+             "staging": "https://api-principal.physiqcalc.com.br/functions/v1/mp-conectar-retorno/staging",
+             "public": "https://api-principal.physiqcalc.com.br/functions/v1/mp-conectar-retorno/public"}
 AUTH = "https://auth.mercadopago.com/authorization"         # o da doc — o mesmo do app (MP_AUTH)
 AUTH_BR = "https://auth.mercadopago.com.br/authorization"   # medido 11/10: vai direto ao login do MLB (NÃO documentado)
 API = "https://api.mercadopago.com"
 TOKEN = f"{API}/oauth/token"
 UA_API = "physiq-unificado/1.0 (e2e-w2-prova)"
-SEGURAR = re.compile(r"^https://www\.mercadopago\.com/?(\?.*)?$")   # a rota que segura o redirect (o .com.br NÃO casa)
+SEGURAR = re.compile(r"^https://www\.mercadopago\.com/?(\?.*)?$")   # a rota do redirect padrão (o .com.br NÃO casa) = segurar_rx(REDIRECT)
 BRASIL = re.compile(r"^\s*brasil\s*$", re.I)
 CONFIRMAR = re.compile(r"^\s*confirmar\s*$", re.I)
 ENVIAR = re.compile(r"^\s*(continuar|entrar|iniciar sess[aã]o|confirmar|validar|verificar)\s*$", re.I)
@@ -190,13 +201,30 @@ def menciona_pkce(r: dict) -> bool:
 # ───────────────────────── o navegador ─────────────────────────
 
 
-def chegada(url: str) -> dict | None:
-    """O PEDIDO ao redirect cadastrado com o code (ou o error): host EXATO www.mercadopago.com e caminho "/" (ou vazio)."""
-    u = urllib.parse.urlparse(url)
-    if u.scheme != "https" or u.hostname != "www.mercadopago.com" or u.path not in ("", "/"):
+def chegada(url: str, redirect: str = REDIRECT) -> dict | None:
+    """O PEDIDO ao redirect com o code (ou o error): https, host EXATO e caminho EXATO do redirect (a barra final não conta) — nunca por
+    prefixo de texto (o https://www.mercadopago.com.br/ também começa com https://www.mercadopago.com)."""
+    u, r = urllib.parse.urlparse(url), urllib.parse.urlparse(redirect)
+    if u.scheme != "https" or u.hostname != r.hostname or (u.path or "/").rstrip("/") != (r.path or "/").rstrip("/"):
         return None
     q = urllib.parse.parse_qs(u.query)
     return q if ("code" in q or "error" in q) else None
+
+
+def segurar_rx(redirect: str) -> re.Pattern:
+    """A rota que segura o redirect (devolve 200 sem deixar o navegador seguir): o endereço exato, com ou sem a barra, com ou sem busca."""
+    return re.compile("^" + re.escape(redirect.rstrip("/")) + r"/?(\?.*)?$")
+
+
+def redirect_de(nome: str | None, cliente: str) -> str:
+    """--redirect: um dos nomes (padrao, staging, public) ou um https://…; sem ele, o padrão do client (staging → o do staging)."""
+    nome = nome or ("staging" if cliente == "staging" else "padrao")
+    if nome in REDIRECTS:
+        return REDIRECTS[nome]
+    u = urllib.parse.urlparse(nome)
+    if u.scheme != "https" or not u.hostname:
+        raise SystemExit(f"--redirect: use padrao, staging, public ou um endereço https:// (veio {nome[:60]!r})")
+    return nome
 
 
 def onde(url: str) -> str:
@@ -277,17 +305,18 @@ def enviar(pg) -> None:
 
 
 def autorizar(pg, cliente: dict, vendedor: dict, pkce: bool, rotulo: str, auth: str = AUTH,
-              registro: dict | None = None) -> tuple[str | None, str | None]:
-    """→ (code, verifier) da prova: monta a URL com o redirect que a aplicação já tem e segue até o code."""
+              registro: dict | None = None, redirect: str = REDIRECT) -> tuple[str | None, str | None]:
+    """→ (code, verifier) da prova: monta a URL com o redirect (o que a aplicação tem cadastrado) e segue até o code."""
     estado, verificador = guardar(b64u(secrets.token_bytes(32))), guardar(b64u(secrets.token_bytes(48)))
-    q = {"client_id": cliente["client_id"], "response_type": "code", "platform_id": "mp", "state": estado, "redirect_uri": REDIRECT}
+    q = {"client_id": cliente["client_id"], "response_type": "code", "platform_id": "mp", "state": estado, "redirect_uri": redirect}
     if pkce:
         q |= {"code_challenge": guardar(b64u(hashlib.sha256(verificador.encode()).digest())), "code_challenge_method": "S256"}
-    code = seguir_ate_o_code(pg, f"{auth}?{urllib.parse.urlencode(q)}", estado, vendedor, rotulo, registro)
+    code = seguir_ate_o_code(pg, f"{auth}?{urllib.parse.urlencode(q)}", estado, vendedor, rotulo, registro, redirect)
     return code, (verificador if pkce and code else None)
 
 
-def seguir_ate_o_code(pg, url_de_autorizacao: str, estado: str, vendedor: dict, rotulo: str, registro: dict | None = None) -> str | None:
+def seguir_ate_o_code(pg, url_de_autorizacao: str, estado: str, vendedor: dict, rotulo: str, registro: dict | None = None,
+                      redirect: str = REDIRECT) -> str | None:
     """Abre a URL de autorização (a da prova ou a que o prof_mp_conectar devolveu — o e2e/w2/api.py --casos oauth_real reusa), passa pela
     escolha de país, entra como o vendedor de teste, autoriza e devolve o code LIDO DO PEDIDO ao redirect (o evento request do CONTEXTO + a
     rota que devolve 200). Cada passo vai para registro["passos"] (tela sem a busca + ação) e o motivo de uma parada, para
@@ -298,9 +327,10 @@ def seguir_ate_o_code(pg, url_de_autorizacao: str, estado: str, vendedor: dict, 
     passos = reg.setdefault("passos", [])
     ctx = pg.context
     capturado: dict = {}
+    rota_rx = segurar_rx(redirect)
 
     def ao_pedir(req) -> None:
-        q = chegada(req.url)
+        q = chegada(req.url, redirect)
         if q is not None:
             for v in q.get("code", []) + q.get("state", []):
                 guardar(v)
@@ -319,7 +349,7 @@ def seguir_ate_o_code(pg, url_de_autorizacao: str, estado: str, vendedor: dict, 
         estado_tela["desde"] = time.time()
 
     ctx.on("request", ao_pedir)
-    ctx.route(SEGURAR, segurar)
+    ctx.route(rota_rx, segurar)
     motivo = "tempo_esgotado"
     try:
         pg.goto(url_de_autorizacao, wait_until="domcontentloaded", timeout=60_000)
@@ -459,7 +489,7 @@ def seguir_ate_o_code(pg, url_de_autorizacao: str, estado: str, vendedor: dict, 
             pg.wait_for_timeout(1_000)
     finally:
         ctx.remove_listener("request", ao_pedir)
-        ctx.unroute(SEGURAR, segurar)
+        ctx.unroute(rota_rx, segurar)
     if "q" in capturado and "code" in capturado["q"] and capturado["q"].get("state", [None])[0] == estado:
         passo("o code chegou no PEDIDO ao redirect (no último passo)")
         reg["motivo"] = None
@@ -554,6 +584,9 @@ def main() -> int:
     ap.add_argument("--sem-pkce", action="store_true")
     ap.add_argument("--com-tela", action="store_true", help="o MP barra navegador sem tela? abre a janela (o notebook tem tela)")
     ap.add_argument("--auth-br", action="store_true", help="abre direto o auth.mercadopago.com.br (pula a escolha de país; não documentado)")
+    ap.add_argument("--client", choices=sorted(ARQ_CLIENTE), default="real",
+                    help="real = a aplicação PhysiqCalc; staging = a aplicação de TESTE do integrador (plano B do I6)")
+    ap.add_argument("--redirect", help="padrao | staging | public | https://… (sem ele: staging com --client staging, senão padrao)")
     so = ap.add_mutually_exclusive_group()
     so.add_argument("--pagamento", action="store_true", help="depois do OAuth, o extra: 1 Pix de R$ 1 com o token do vendedor, cancelado")
     so.add_argument("--so-pagamento", action="store_true", help=f"só o extra, com os tokens já em ~/{ARQ_TOKENS}")
@@ -565,28 +598,29 @@ def main() -> int:
         escrever_saida(saida)
         dizer("pagamento extra:", json.dumps(saida["pagamento_extra"], ensure_ascii=False))
         return 0
-    cliente, vendedor = ler_600(".physiq-mp-oauth.json"), ler_600(".physiq-mp-vendedor-teste.json")
+    redirect = redirect_de(a.redirect, a.client)
+    cliente, vendedor = ler_600(ARQ_CLIENTE[a.client]), ler_600(".physiq-mp-vendedor-teste.json")
     comprador = ler_600(".physiq-mp-comprador-teste.json") if a.pagamento else {}
     assert cliente.get("client_secret"), "sem o Client Secret no cofre: a prova vai para o FIM (W2-a, passo 5)"
     guardar(str(vendedor["id"])[-6:])
     auth = AUTH_BR if a.auth_br else AUTH
     saida: dict = {"quando": time.strftime("%Y-%m-%d %H:%M"), "pkce": not a.sem_pkce, "auth_usado": urllib.parse.urlparse(auth).hostname,
-                   "com_tela": a.com_tela, "passos": []}
-    tokens: dict = {"criado_em": time.strftime("%Y-%m-%d %H:%M:%S"), "redirect_uri": REDIRECT}
+                   "com_tela": a.com_tela, "client": a.client, "redirect": redirect, "passos": []}
+    tokens: dict = {"criado_em": time.strftime("%Y-%m-%d %H:%M:%S"), "client": a.client, "redirect_uri": redirect}
     acessos: dict[str, str] = {}
     with sync_playwright() as p:
         nav, ctx = abrir_navegador(p, a.canal, a.com_tela)
         pg = ctx.new_page()
         for rotulo, teste in (("teste", "true"), ("producao", "false")):
             registro: dict = {"passos": saida["passos"]}
-            code, verif = autorizar(pg, cliente, vendedor, not a.sem_pkce, rotulo, auth, registro)
+            code, verif = autorizar(pg, cliente, vendedor, not a.sem_pkce, rotulo, auth, registro, redirect)
             if not code:
                 saida[rotulo] = {"parou": registro.get("motivo")}
                 if rotulo == "teste":
                     break  # sem a 1ª, a 2ª seria outra tentativa do mesmo login: não insistir
                 continue
             corpo = {"client_id": cliente["client_id"], "client_secret": cliente["client_secret"], "grant_type": "authorization_code",
-                     "code": code, "redirect_uri": REDIRECT, "test_token": teste}
+                     "code": code, "redirect_uri": redirect, "test_token": teste}
             if verif:
                 corpo["code_verifier"] = verif
             st, r = post_token(corpo)
