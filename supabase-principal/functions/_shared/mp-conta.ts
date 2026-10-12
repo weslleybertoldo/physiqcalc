@@ -6,8 +6,8 @@
 // coluna nova (colunasAssinatura/comCollector — C2), as cobranças da automática pela busca (I1) e cancelar automáticas pela credencial de
 // cada uma. Só `import type` de URL: o Vitest importa com db e fetch falsos (src/financeiro/mpContaServidor.test.ts). Nunca no log: token,
 // code, state, verifier, chave pública ou corpo do MP (só status, códigos e, no máximo, as CHAVES de um corpo fora do formato).
-// A volta do OAuth (guardarParaConfirmar — revisão I8) entra na Task 8; quem grava a integração é a RPC recebimento_mp_confirmar, COMO A
-// PESSOA (Task 6).
+// A volta do OAuth (mp-conectar-retorno) só troca o code e guarda o par CIFRADO na conexão (guardarParaConfirmar — revisão I8); quem grava a
+// integração é a RPC recebimento_mp_confirmar, COMO A PESSOA (Task 6).
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { cancelarAssinaturasDasMatriculas } from "./app-sem-profissional.ts";
 import { cifrar, dadoAssociado, decifrar, type LerAmbiente } from "./cifra-mp.ts";
@@ -19,7 +19,8 @@ import { avisar, carregarMatricula, registrarPagamentoAvulsoDoMp, type Matricula
 import type { Log } from "./log.ts";
 import { emLotes, todasAsPaginas } from "./paginas.ts";
 import {
-  AVISO_DONO_MS, RENOVAR_NA_HORA_MS, codigoDoOauth, lerTokenDoMp, motivoDoOauth, precisaRenovar, proximaTentativa, qualCredencial, type TokenMp,
+  AVISO_DONO_MS, RENOVAR_NA_HORA_MS, codigoDoOauth, lerTokenDoMp, modoDaConexaoConfere, motivoDoOauth, precisaRenovar, proximaTentativa,
+  qualCredencial, type ResultadoDoRetorno, type TokenMp,
 } from "./mp-conta-regras.ts";
 import { TEMPO_MS, buscarComTempo, tempoEsgotado, type Prazo } from "./tempo.ts";
 
@@ -153,6 +154,45 @@ export async function trocarCodigo(ctx: ContextoMpConta, p: { codigo: string; re
   if (t) return { ok: true, token: t };
   ctx.log.aviso({ codigo: "mp_oauth_troca_falhou", schema: ctx.schema, status: r.status, externo: { mp_erro: codigoDoOauth(r.body) } });
   return { ok: false, motivo: r.status >= 200 && r.status < 300 ? "recusado" : motivoDoOauth(r.status), status: r.status };
+}
+
+/** O apelido (nickname) da conta do MP do token NOVO — só para a pergunta da tela ("Conectar a conta X do Mercado Pago?"). Melhor esforço:
+ *  MP fora, rede, prazo ou corpo fora do formato → null; nunca lança. Só o nickname aparado, até 80 (o CHECK da mp_conexoes). Pelo
+ *  ctx.fetch (o Vitest passa um falso), com o tempo do MP e o prazo do pedido. */
+async function apelidoDoMp(ctx: ContextoMpConta, access: string): Promise<string | null> {
+  const ms = Math.min(TEMPO_MS.mp, ctx.prazo.restante());
+  if (ms < 1_000) return null;
+  try {
+    const res = await buscarComTempo(`${baseDoMp()}/users/me`, { headers: { Authorization: `Bearer ${access}`, Accept: "application/json" } },
+      ms, ctx.fetch ?? fetch);
+    const corpo = (await res.json().catch(() => null)) as { nickname?: unknown } | null;
+    const apelido = res.status === 200 && typeof corpo?.nickname === "string" ? corpo.nickname.trim() : "";
+    return apelido && apelido.length <= 80 ? apelido : null;
+  } catch {
+    return null;
+  }
+}
+
+/** I8 (Task 8): a volta do MP deu certo (a troca valeu) — guarda o par CIFRADO na própria conexão até a confirmação de quem começou (15 min;
+ *  a RPC recebimento_mp_confirmar copia as cifras como estão — o dado associado já é o da integração: physiq:w2:<schema>:<conta>:access|refresh).
+ *  NÃO toca em recebimento_integracoes: quem grava a integração é a confirmação, COMO A PESSOA (prof_mp_confirmar → a RPC).
+ *  MENOR 20: conta de TESTE na produção (ou de verdade no staging) → "conta_de_teste" e nada guardado (o cartão APRO "pagaria" de mentira). */
+export async function guardarParaConfirmar(db: SupabaseClient, ctx: ContextoMpConta, con: { id: string; conta_id: string }, t: TokenMp):
+  Promise<ResultadoDoRetorno> {
+  if (!modoDaConexaoConfere(t.live, ctx.schema)) {
+    ctx.log.aviso({ codigo: "mp_conexao_modo_errado", schema: ctx.schema, ref: con.conta_id, resultado: t.live ? "conta_real" : "conta_de_teste" });
+    return "conta_de_teste";
+  }
+  const apelido = await apelidoDoMp(ctx, t.access);   // GET /users/me com o token novo — melhor esforço (null), só o nickname (≤ 80)
+  const ad = (campo: "access" | "refresh") => dadoAssociado(ctx.schema, con.conta_id, campo);
+  const { error } = await db.from("mp_conexoes").update({
+    resultado: "confirmar", mp_user_id: t.userId, mp_apelido: apelido, public_key: t.publicKey, live: t.live,
+    renovavel: t.renovavel, token_expira_em: t.expiraEm,
+    token_access: await cifrar(t.access, ad("access"), ctx.chave),
+    token_refresh: t.refresh ? await cifrar(t.refresh, ad("refresh"), ctx.chave) : null,
+  }).eq("id", con.id);
+  if (error) throw error;
+  return "confirmar";
 }
 
 export type ResultadoRenovar = "renovada" | "outra_renovou" | "recusada" | "fora" | "ocupada" | "sem_refresh";

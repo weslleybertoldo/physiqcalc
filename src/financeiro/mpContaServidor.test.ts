@@ -2,7 +2,8 @@
 // src/financeiro/mpContaServidor.test.ts
 // Physiq W2 — o cliente do Mercado Pago DA CONTA do personal no servidor (supabase-principal/functions/_shared/mp-conta.ts) e o que a Task 4
 // trocou nos _shared de sempre: cobranca-mp.ts (a CredencialConta no tokenMp e no mpFetch, o baseDoMp), app-sem-profissional.ts (o filtro
-// pelo collector), financeiro-mp.ts (o colunasW2) e planos-automatica-mp.ts (a CredencialMp — MENOR 2).
+// pelo collector), financeiro-mp.ts (o colunasW2) e planos-automatica-mp.ts (a CredencialMp — MENOR 2). No fim, a Task 8: o
+// guardarParaConfirmar da volta do OAuth (o par cifrado na conexão até a confirmação de quem começou — revisão I8).
 // Um banco FALSO em memória (as chamadas do supabase-js gravadas numa lista; sem a W2 ele responde 42P01 ao mp_conexoes e 42703 a qualquer
 // select com mp_collector_id) e um fetch FALSO: o do /oauth/token entra pelo ctx.fetch; o das rotas do MP, pelo fetch global
 // (vi.stubGlobal). Tokens, chave e client são de teste, feitos aqui; nada vai à rede. Cada teste importa o módulo de novo
@@ -14,6 +15,7 @@ import type { CredencialConta, RespostaMp } from "../../supabase-principal/funct
 import type { Matricula } from "../../supabase-principal/functions/_shared/financeiro-mp";
 import type { Log } from "../../supabase-principal/functions/_shared/log";
 import type { ContextoMpConta } from "../../supabase-principal/functions/_shared/mp-conta";
+import { lerTokenDoMp, type TokenMp } from "../../supabase-principal/functions/_shared/mp-conta-regras";
 import type { Prazo } from "../../supabase-principal/functions/_shared/tempo";
 
 type ModMpConta = typeof import("../../supabase-principal/functions/_shared/mp-conta");
@@ -1089,5 +1091,115 @@ describe("pacientesComAutomaticaViva e oauthDoAmbiente", () => {
     expect(M.oauthDoAmbiente("public")).toEqual({ clientId: "111", clientSecret: "sss" });
     expect(M.pkceLigado(lerDe({}))).toBe(true);
     expect(M.pkceLigado(lerDe({ MP_OAUTH_PKCE: "0" }))).toBe(false);
+  });
+});
+
+// ───────────────────────── a volta do OAuth (Task 8 — revisão I8) ─────────────────────────
+
+describe("guardarParaConfirmar — a volta guarda o par CIFRADO na conexão até a confirmação de quem começou (Task 8, revisão I8)", () => {
+  const CONEXAO = "e0e0e0e0-1111-4222-8333-444455556666";
+  const conexao = (o: Linha = {}): Linha => ({
+    id: CONEXAO, estado_hash: "a".repeat(64), conta_id: CONTA, user_id: DONO, verificador: "v1:pkce-cifrado-falso:xxxxxxxxxxxxxxxxxxxx",
+    redirect_uri: "https://api-principal.physiqcalc.com.br/functions/v1/mp-conectar-retorno/staging", criado_em: new Date().toISOString(),
+    expira_em: new Date(Date.now() + 9 * 60_000).toISOString(), usado_em: new Date().toISOString(), resultado: null, token_access: null,
+    token_refresh: null, token_expira_em: null, mp_user_id: null, mp_apelido: null, public_key: null, live: null, renovavel: null, ...o,
+  });
+  const tokenDe = (o: Record<string, unknown> = {}): TokenMp => {
+    const t = lerTokenDoMp(respostaDoToken(o));
+    if (!t) throw new Error("a resposta de teste do /oauth/token tinha de ser lida");
+    return t;
+  };
+  /** O /users/me do token NOVO (o apelido) entra pelo ctx.fetch, como o /oauth/token. */
+  const usuarioDoMp = (body: unknown, status = 200) => (ida: Ida): RespostaFalsa =>
+    ida.caminho === "/users/me" ? { status, body } : { status: 404, body: {} };
+  const con = { id: CONEXAO, conta_id: CONTA };
+
+  it("grava as 2 cifras (o MESMO dado associado da integração: a RPC só copia), o collector, o apelido e resultado 'confirmar' — SEM tocar em recebimento_integracoes", async () => {
+    const antes = await integracao();
+    const db = criarDb({ mp_conexoes: [conexao()], recebimento_integracoes: [{ ...antes }] });
+    const { ctx, linhas, oauth } = contexto({ token: usuarioDoMp({ id: COLLECTOR, nickname: "VENDEDOR_NOVO" }) });
+    expect(await M.guardarParaConfirmar(db.cliente, ctx, con, tokenDe())).toBe("confirmar");
+    const c = db.tabelas.mp_conexoes[0];
+    expect(c).toMatchObject({ resultado: "confirmar", mp_user_id: COLLECTOR, mp_apelido: "VENDEDOR_NOVO", public_key: "APP_USR-chave-publica-0002",
+      live: false, renovavel: true });
+    perto(c.token_expira_em, 180 * DIA);
+    expect(String(c.token_access)).toMatch(/^v1:/);
+    expect(await decifrar(String(c.token_access), ad("access"), CHAVE)).toBe(TOKEN_B);
+    expect(await decifrar(String(c.token_refresh), ad("refresh"), CHAVE)).toBe(REFRESH_B);
+    // a cifra da conexão só abre com o dado associado da integração DESTA conta, deste schema e deste campo
+    await expect(decifrar(String(c.token_access), dadoAssociado("staging", P1, "access"), CHAVE)).rejects.toThrow();
+    await expect(decifrar(String(c.token_access), ad("access", "public"), CHAVE)).rejects.toThrow();
+    await expect(decifrar(String(c.token_access), ad("refresh"), CHAVE)).rejects.toThrow();
+    // I8: a volta NÃO grava a integração — 1 gravação só, na conexão, pelo id
+    expect(db.pedidos.map((p) => [p.tabela, p.op])).toEqual([["mp_conexoes", "update"]]);
+    expect(db.pedidos[0].filtros).toEqual([{ col: "id", op: "eq", v: CONEXAO }]);
+    expect(db.tabelas.recebimento_integracoes).toEqual([antes]);
+    // o apelido veio do /users/me com o token NOVO (e mais nada foi ao MP); nada em claro no banco nem no log
+    expect(oauth.idas.map((i) => [i.metodo, i.url, i.token])).toEqual([["GET", `${MP}/users/me`, TOKEN_B]]);
+    const tudo = JSON.stringify([db.pedidos, linhas]);
+    expect(tudo).not.toContain(TOKEN_B);
+    expect(tudo).not.toContain(REFRESH_B);
+  });
+
+  it("MENOR 20: conta de TESTE (live false) no public → 'conta_de_teste' e NADA gravado nem pedido ao MP; conta de verdade no staging → o mesmo", async () => {
+    const db = criarDb({ mp_conexoes: [conexao()] });
+    const pub = contexto({ token: usuarioDoMp({ id: COLLECTOR, nickname: "X" }) });
+    expect(await M.guardarParaConfirmar(db.cliente, { ...pub.ctx, schema: "public" }, con, tokenDe({ live_mode: false }))).toBe("conta_de_teste");
+    expect(pub.linhas).toEqual([{ nivel: "aviso", campos: { codigo: "mp_conexao_modo_errado", schema: "public", ref: CONTA, resultado: "conta_de_teste" } }]);
+    const stg = contexto({ token: usuarioDoMp({ id: COLLECTOR, nickname: "X" }) });
+    expect(await M.guardarParaConfirmar(db.cliente, stg.ctx, con, tokenDe({ live_mode: true }))).toBe("conta_de_teste");
+    expect(stg.linhas).toEqual([{ nivel: "aviso", campos: { codigo: "mp_conexao_modo_errado", schema: "staging", ref: CONTA, resultado: "conta_real" } }]);
+    expect(db.pedidos).toEqual([]);
+    expect([...pub.oauth.idas, ...stg.oauth.idas]).toEqual([]);
+    expect(db.tabelas.mp_conexoes[0]).toMatchObject({ resultado: null, token_access: null, token_refresh: null, mp_user_id: null });
+    // o modo certo de cada schema passa (e o live desconhecido também: não dá para conferir)
+    expect(await M.guardarParaConfirmar(db.cliente, { ...pub.ctx, schema: "public" }, con, tokenDe({ live_mode: true }))).toBe("confirmar");
+    expect(await M.guardarParaConfirmar(db.cliente, stg.ctx, con, tokenDe({ live_mode: undefined }))).toBe("confirmar");
+    expect(db.tabelas.mp_conexoes[0].live).toBeNull();
+  });
+
+  it("o apelido é melhor esforço: /users/me fora, rede caída, sem nickname, fora do tipo ou com mais de 80 → mp_apelido null e segue 'confirmar'", async () => {
+    const casos: Array<[string, (ida: Ida) => RespostaFalsa]> = [
+      ["500", usuarioDoMp({ message: "erro" }, 500)],
+      ["401", usuarioDoMp({ message: "unauthorized" }, 401)],
+      ["nickname num status que não é 200", usuarioDoMp({ id: COLLECTOR, nickname: "INTRUSO" }, 403)],
+      ["rede", () => "rede"],
+      ["sem nickname", usuarioDoMp({ id: COLLECTOR })],
+      ["nickname número", usuarioDoMp({ id: COLLECTOR, nickname: 12345 })],
+      ["nickname vazio", usuarioDoMp({ id: COLLECTOR, nickname: "   " })],
+      ["81 caracteres", usuarioDoMp({ id: COLLECTOR, nickname: "N".repeat(81) })],
+      ["corpo que não é JSON de objeto", usuarioDoMp(null)],
+    ];
+    for (const [nome, responder] of casos) {
+      const db = criarDb({ mp_conexoes: [conexao()] });
+      const { ctx } = contexto({ token: responder });
+      expect(await M.guardarParaConfirmar(db.cliente, ctx, con, tokenDe()), nome).toBe("confirmar");
+      expect(db.tabelas.mp_conexoes[0], nome).toMatchObject({ resultado: "confirmar", mp_apelido: null, mp_user_id: COLLECTOR });
+    }
+    // 80 caracteres (o CHECK da mp_conexoes) passa; o nome vem aparado
+    const db = criarDb({ mp_conexoes: [conexao()] });
+    const { ctx } = contexto({ token: usuarioDoMp({ id: COLLECTOR, nickname: ` ${"N".repeat(80)} ` }) });
+    expect(await M.guardarParaConfirmar(db.cliente, ctx, con, tokenDe())).toBe("confirmar");
+    expect(db.tabelas.mp_conexoes[0].mp_apelido).toBe("N".repeat(80));
+  });
+
+  it("sem prazo para o apelido (< 1 s) → nem pergunta ao MP: mp_apelido null e a conexão segue 'confirmar'", async () => {
+    const db = criarDb({ mp_conexoes: [conexao()] });
+    const { ctx, oauth } = contexto({ prazo: prazoDe(500), token: usuarioDoMp({ id: COLLECTOR, nickname: "VENDEDOR_NOVO" }) });
+    expect(await M.guardarParaConfirmar(db.cliente, ctx, con, tokenDe())).toBe("confirmar");
+    expect(oauth.idas).toEqual([]);
+    expect(db.tabelas.mp_conexoes[0]).toMatchObject({ resultado: "confirmar", mp_apelido: null });
+  });
+
+  it("sem refresh na resposta → token_refresh nulo e renovavel false (a RPC grava mp_erro sem_renovacao); o erro do banco LANÇA", async () => {
+    const db = criarDb({ mp_conexoes: [conexao()] });
+    const { ctx } = contexto({ token: usuarioDoMp({ id: COLLECTOR, nickname: "VENDEDOR_NOVO" }) });
+    expect(await M.guardarParaConfirmar(db.cliente, ctx, con, tokenDe({ refresh_token: undefined, public_key: undefined }))).toBe("confirmar");
+    expect(db.tabelas.mp_conexoes[0]).toMatchObject({ resultado: "confirmar", token_refresh: null, renovavel: false, public_key: null });
+    expect(await decifrar(String(db.tabelas.mp_conexoes[0].token_access), ad("access"), CHAVE)).toBe(TOKEN_B);
+    const recusa = criarDb({ mp_conexoes: [conexao()] }, { responder: (p) => (p.tabela === "mp_conexoes" && p.op === "update"
+      ? { data: null, error: { code: "23514", message: 'new row for relation "mp_conexoes" violates check constraint "mp_conexoes_check"' } }
+      : undefined) });
+    await expect(M.guardarParaConfirmar(recusa.cliente, ctx, con, tokenDe())).rejects.toMatchObject({ code: "23514" });
   });
 });
