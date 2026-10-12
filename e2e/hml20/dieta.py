@@ -619,9 +619,10 @@ def sql_contar_objetos(s: str, caminhos: list[str]) -> str:
 TABELAS_DA_MASSA = ("diario_alimentar", "formularios_preconsulta", "respostas_preconsulta")
 
 
-def sql_apagar(s: str, tabela: str, ids: list[str], *, paciente: str | None = None, dono: str | None = None) -> str:
-    """O DELETE das linhas da rodada (só no staging, só os ids anotados; o diário só da matrícula da aluna de TESTE; o formulário e a resposta só
-    da nutri de TESTE)."""
+def sql_apagar(s: str, tabela: str, ids: list[str], *, paciente: str | None = None) -> str:
+    """O DELETE das linhas da rodada (só no staging, só os ids ANOTADOS no e2e_estado.json): o diário, também só da matrícula da aluna de
+    TESTE; o formulário e a resposta da Pré-consulta, pelos ids (revisão ⚪8 — não pelo dono: o formulário que a outra conta criasse por
+    engano no N negativo também sai, e só o que a rodada anotou)."""
     if s != "staging":
         raise SystemExit("a massa só existe no staging — nada a apagar em outro schema")
     if tabela not in TABELAS_DA_MASSA:
@@ -629,15 +630,12 @@ def sql_apagar(s: str, tabela: str, ids: list[str], *, paciente: str | None = No
     validos = [i for i in ids if C.eh_uuid(i)]
     if not validos:
         raise SystemExit("nenhum id da rodada para apagar")
+    quem = ""
     if tabela == "diario_alimentar":
         if not paciente:
             raise SystemExit("o diário só se apaga com a matrícula da aluna de teste")
-        quem = f"paciente_id = {C.txt(C.uuid_ok(paciente))}"
-    else:
-        if not dono:
-            raise SystemExit("a Pré-consulta só se apaga com a nutri de teste")
-        quem = f"nutricionista_id = {C.txt(C.uuid_ok(dono))}"
-    return f"delete from {s}.{tabela} where {quem} and id = any(array[{', '.join(C.txt(i) for i in validos)}]::uuid[])"
+        quem = f"paciente_id = {C.txt(C.uuid_ok(paciente))} and "
+    return f"delete from {s}.{tabela} where {quem}id = any(array[{', '.join(C.txt(i) for i in validos)}]::uuid[])"
 
 
 def limpar_massa(o, estado, L, s: str) -> None:
@@ -667,13 +665,12 @@ def limpar_massa(o, estado, L, s: str) -> None:
     estado.d["storage_rodada"] = estado.d["storage"]
     estado.d["storage"] = []
     estado.salvar()
-    dono = L.uid(NUTRI)
     pac = estado.d.get("pac") or ""
     if por.get("diario_alimentar") and C.eh_uuid(pac):
         C.C2.sql_principal(sql_apagar(s, "diario_alimentar", por["diario_alimentar"], paciente=pac))
     for tabela in ("respostas_preconsulta", "formularios_preconsulta"):
         if por.get(tabela):
-            C.C2.sql_principal(sql_apagar(s, tabela, por[tabela], dono=dono))
+            C.C2.sql_principal(sql_apagar(s, tabela, por[tabela]))
     rodada = estado.d.get("rodada")
     sobra = B.ler_principal(sql_contar_marca(s, rodada))[0] if rodada else {}
     o.ok(bool(rodada) and not any(sobra.values()), f"limpeza conferida (SQL só leitura): 0 linha com a marca da rodada no diário e na Pré-consulta ({sobra})")

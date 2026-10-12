@@ -17,7 +17,8 @@ hml-19b, pela aluna), 1 formulário de Pré-consulta da nutri (pela ação NOVA 
   G   as 5 gravações da Pré-consulta pela função (H-102), como a nutri: criar (o dono, o slug — no alfabeto da tela — e a conta nascem no
       servidor; o slug/dono/id/deleted_at do corpo caem) → editar (o título; a conta, o dono e o slug do corpo caem; nada a mudar → 400) →
       a resposta anônima pelo /f/:slug → ligar à aluna, a importação com o importada_em do SERVIDOR, desligar (a importação pela metade →
-      400; aluno que a nutri não vê → 403 aluno_invisivel) → excluir a resposta e o formulário (a Lixeira; de novo → 404); OUTRA conta:
+      400; aluno que a nutri não vê → 403 aluno_invisivel) → excluir a resposta e o formulário (a Lixeira; de novo → 200 e segue na
+      Lixeira — o update pelo id sem o filtro da Lixeira, como a lib de hoje; o servidor não muda); OUTRA conta:
       editar/ligar/excluir → 404 nao_encontrado e criar na conta da nutri → 403 sem_acesso (nada grava); cada passo conferido no banco
       por SQL só leitura (só os campos de controle)
   N1  outra conta (w13-dono) pede as consultas com os ids da aluna, da massa e a conta da nutri → listas vazias / 0 / nao_encontrado / o
@@ -31,8 +32,9 @@ hml-19b, pela aluna), 1 formulário de Pré-consulta da nutri (pela ação NOVA 
   N9  lote de 17 → 400 lote_grande (16 → 200)
 --so-leitura (o smoke da sessão principal logo depois de publicar, 1 login por base): o CORS, o 401, o 400 de schema, a q desconhecida →
 consulta_invalida, CADA consulta da 20c que tem param obrigatório, sem ele → dados_invalidos (o catálogo da 20c está no ar, sem ir ao
-banco), 17 itens → lote_grande e as 5 ações da Pré-consulta com o corpo vazio → 400 dados_invalidos (estão no ar; nada grava — a recusa é
-antes do banco); nada lê dado de saúde.
+banco), 17 itens → lote_grande e as 5 ações da Pré-consulta: sem login → 401 e com o x-schema inválido → 400 (a porta recusa antes de ler
+a ação); LOGADO e no schema certo (o corpo vazio → 400 dados_invalidos, antes do banco) só no staging/local — na PRODUÇÃO nenhuma ação de
+gravação é chamada logada no schema de verdade (revisão ⚪7); nada lê dado de saúde.
 """
 from __future__ import annotations
 
@@ -383,19 +385,22 @@ def seco(o) -> None:  # noqa: PLR0915
     o.ok(D.formulario_de_teste("seco-0000", conta)["titulo"].startswith(f"{B.MARCA} seco-0000") and D.versao_dos_textos()
          and D.formulario_de_teste("seco-0000", conta)["perguntas"][0] == {"id": "p1", "texto": "Como você dorme?", "tipo": "texto", "max": 4, "pontos_sim": 1, "opcoes": []},
          "a massa: o título com a marca da rodada; a pergunta no formato da tela (preconsultaUtil.ts:69); a versão dos textos do consentimento")
-    sqls = [D.sql_apagar("staging", "diario_alimentar", [FALSO], paciente=pac), D.sql_apagar("staging", "formularios_preconsulta", [FALSO], dono=OUTRO),
-            D.sql_apagar("staging", "respostas_preconsulta", [FALSO], dono=OUTRO)]
-    o.ok(all("staging." in s and "any(array[" in s for s in sqls) and "paciente_id = '" in sqls[0] and all("nutricionista_id = '" in s for s in sqls[1:]),
-         "a limpeza: só staging, só os ids da rodada, o diário só da aluna de teste e a Pré-consulta só da nutri de teste")
+    sqls = [D.sql_apagar("staging", "diario_alimentar", [FALSO], paciente=pac), D.sql_apagar("staging", "formularios_preconsulta", [FALSO]),
+            D.sql_apagar("staging", "respostas_preconsulta", [FALSO])]
+    o.ok(all("staging." in s and "any(array[" in s for s in sqls) and "paciente_id = '" in sqls[0]
+         and sqls[1:] == [f"delete from staging.{t} where id = any(array['{FALSO}']::uuid[])" for t in ("formularios_preconsulta", "respostas_preconsulta")],
+         "a limpeza: só staging, só os ids da rodada (os do e2e_estado.json), o diário só da aluna de teste; a Pré-consulta pelos IDS anotados "
+         "(revisão ⚪8 — não pelo dono)")
     recusas = 0
-    for f in (lambda: D.sql_apagar("public", "diario_alimentar", [FALSO], paciente=pac), lambda: D.sql_apagar("staging", "formularios_preconsulta", [], dono=OUTRO),
-              lambda: D.sql_apagar("staging", "pacientes", [FALSO], dono=OUTRO), lambda: D.sql_apagar("staging", "diario_alimentar", [FALSO]),
-              lambda: D.sql_apagar("staging", "respostas_preconsulta", [FALSO])):
+    for f in (lambda: D.sql_apagar("public", "diario_alimentar", [FALSO], paciente=pac), lambda: D.sql_apagar("staging", "formularios_preconsulta", []),
+              lambda: D.sql_apagar("staging", "pacientes", [FALSO]), lambda: D.sql_apagar("staging", "diario_alimentar", [FALSO]),
+              lambda: D.sql_apagar("public", "formularios_preconsulta", [FALSO]), lambda: D.sql_apagar("staging", "respostas_preconsulta", ["nao-e-uuid"])):
         try:
             f()
         except SystemExit:
             recusas += 1
-    o.ok(recusas == 5, "a limpeza recusa outro schema, o DELETE sem id, tabela que não é da massa e o DELETE sem a aluna/nutri de teste")
+    o.ok(recusas == 6, "a limpeza recusa outro schema, o DELETE sem id (ou só com id que não é uuid), tabela que não é da massa e o diário sem a "
+         "aluna de teste")
     cont = D.sql_contar_marca("staging", "seco-0000")
     o.ok("'%hml20 e2e%seco-0000%'" in cont and all(f"staging.{t}" in cont for t in D.TABELAS_DA_MASSA) and cont.count(" as ") == 3,
          "a conferência final: a marca no diário, nos formulários e nas respostas (só contagem)")
@@ -687,15 +692,19 @@ def caso_g(R: Rodada) -> None:  # noqa: PLR0915
         o.ok(st == 200 and (r.get("linha") or {}).get("paciente_id") is None and banco.get("paciente") == "",
              f"G3 desligar (paciente_id null) → a resposta volta a ser \"nova\" ({st} {r.get('erro')})")
         st, r = R.acao(R.tn, "preconsulta_resposta_excluir", {"id": rid})
-        st2, r2 = R.acao(R.tn, "preconsulta_resposta_excluir", {"id": rid})
         banco = (B.ler_principal(sql_resposta(s, rid)) or [{}])[0]
-        o.ok(st == 200 and banco.get("viva") is False and st2 == 404 and r2.get("erro") == "nao_encontrado",
-             f"G4 preconsulta_resposta_excluir: a resposta vai à Lixeira (deleted_at); de novo → 404 ({st}, {st2})")
+        st2, r2 = R.acao(R.tn, "preconsulta_resposta_excluir", {"id": rid})
+        banco2 = (B.ler_principal(sql_resposta(s, rid)) or [{}])[0]
+        o.ok(st == 200 and banco.get("viva") is False and st2 == 200 and r2.get("ok") is True and banco2.get("viva") is False,
+             f"G4 preconsulta_resposta_excluir: a resposta vai à Lixeira (deleted_at); de novo → 200 e segue na Lixeira (o update pelo id sem o "
+             f"filtro da Lixeira, como a lib de hoje — revisão 🟡2) ({st}, {st2})")
     st, r = R.acao(R.tn, "preconsulta_formulario_excluir", {"id": f["id"]})
-    st2, r2 = R.acao(R.tn, "preconsulta_formulario_excluir", {"id": f["id"]})
     banco = (B.ler_principal(sql_formulario(s, f["id"])) or [{}])[0]
-    o.ok(st == 200 and banco.get("viva") is False and st2 == 404 and r2.get("erro") == "nao_encontrado",
-         f"G5 preconsulta_formulario_excluir: o formulário vai à Lixeira (deleted_at); de novo → 404 ({st}, {st2})")
+    st2, r2 = R.acao(R.tn, "preconsulta_formulario_excluir", {"id": f["id"]})
+    banco2 = (B.ler_principal(sql_formulario(s, f["id"])) or [{}])[0]
+    o.ok(st == 200 and banco.get("viva") is False and st2 == 200 and r2.get("ok") is True and banco2.get("viva") is False,
+         f"G5 preconsulta_formulario_excluir: o formulário vai à Lixeira (deleted_at); de novo → 200 e segue na Lixeira (como a lib de hoje — "
+         f"revisão 🟡2) ({st}, {st2})")
 
 
 # ───────────────────────── os N ─────────────────────────
@@ -845,8 +854,9 @@ def limpar(o, estado, L, s: str) -> None:
 
 def so_leitura(o, L, base: str) -> None:
     """Nada grava e nada lê dado de saúde: o CORS, o 401, o 400 de schema, a q desconhecida, as 26 consultas da 20c com param obrigatório
-    SEM ele (dados_invalidos), o lote de 17 e as 5 ações da Pré-consulta com o corpo vazio (400 dados_invalidos: no ar, recusadas antes do
-    banco)."""
+    SEM ele (dados_invalidos), o lote de 17 e as 5 ações da Pré-consulta — sem login (401) e com o x-schema inválido (400: a porta recusa
+    antes de ler a ação); logado no schema certo (o corpo vazio → 400 dados_invalidos, antes do banco) SÓ no staging/local (revisão ⚪7: na
+    produção, nenhuma ação de gravação logada no schema de verdade)."""
     st1, h1 = B.preflight(B.ORIGEM_FORA)
     o.ok(st1 in (200, 204) and B.cors(h1) == B.ORIGEM_PADRAO, f"{base} N7: origem fora da lista → o CORS padrão ({st1})")
     st, _r, _h, _ms = B.ler(None, [B.item("produtos")], sem_auth=True, origem=B.BASES[base])
@@ -867,11 +877,22 @@ def so_leitura(o, L, base: str) -> None:
     o.ok(st == 400 and r.get("erro") == "lote_grande", f"{base} N9: 17 itens → 400 lote_grande ({st})")
     ruins: list[str] = []
     for acao in ACOES_PRECONSULTA:
+        st_s, _r_s, _h, _ms = B.B19.funcao(None, acao, {}, sem_auth=True, origem=B.BASES[base])
+        st_x, r_x, _h, _ms = B.B19.funcao(token, acao, {}, schema_="producao", origem=B.BASES[base])
+        if not (st_s == 401 and st_x == 400 and r_x.get("erro") == "schema_invalido"):
+            ruins.append(f"{acao}:{st_s}/{st_x} {r_x.get('erro')}")
+    o.ok(not ruins, f"{base}: as 5 ações da Pré-consulta sem login → 401 e com o x-schema inválido → 400 schema_invalido (a porta recusa antes "
+         f"de ler a ação — nada grava) ({', '.join(ruins) or 'todas'})")
+    if base == "prod":
+        o.linha("   prod: as 5 ações da Pré-consulta NÃO são chamadas logadas no schema de verdade (revisão ⚪7) — o \"no ar\" delas é provado no staging")
+        return
+    ruins = []
+    for acao in ACOES_PRECONSULTA:
         st, r, _h, _ms = B.B19.funcao(token, acao, {}, origem=B.BASES[base])
         if not (st == 400 and r.get("erro") == "dados_invalidos"):
             ruins.append(f"{acao}:{st} {r.get('erro')}")
-    o.ok(not ruins, f"{base}: as 5 ações da Pré-consulta com o corpo vazio → 400 dados_invalidos (no ar; recusadas antes do banco — nada grava) "
-         f"({', '.join(ruins) or 'todas'})")
+    o.ok(not ruins, f"{base}: as 5 ações da Pré-consulta, logado e com o corpo vazio → 400 dados_invalidos (no ar; recusadas antes do banco — "
+         f"nada grava; só no staging/local) ({', '.join(ruins) or 'todas'})")
 
 
 def main(a, casos: list[str]) -> int:
