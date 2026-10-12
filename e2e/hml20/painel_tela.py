@@ -112,6 +112,10 @@ def conferir_rede(o, base: str, fase: str, conta: str, tela: str, teto: int, con
             o.ok(diretas >= 1, f"[antes] {rot}: a leitura de saúde ia direto do navegador ({cont['diretas']})")
         return
     o.ok(diretas == 0, f"[depois] {rot}: 0 leitura direta da área (as tabelas, as 4 RPCs, o sign de anexos/evolucao) ({cont['diretas'] or '—'})")
+    if tela == "avaliacao":  # hml-20b etapa 2 (ec101ce): a casca fria num lote só — o perfil e a série juntos
+        o.ok(P.avaliacao_num_lote(ler, cont["consultas"]),
+             f"[depois] {rot}: 1 `ler` com o perfil e a série juntos ({ler} `ler`; consultas {cont['consultas'] or '—'}) — t_pronto {pronta['t_pronto_s']} s")
+        return
     o.ok(1 <= ler <= teto if tela.startswith("prontuario_") else ler <= teto,
          f"[depois] {rot}: {ler} `ler` (≤ {teto}; consultas {cont['consultas'] or '—'}) — t_pronto {pronta['t_pronto_s']} s")
 
@@ -169,6 +173,11 @@ def seco(o, qual: str) -> None:
     o.ok(c["diretas"] == {} and c["funcao"] == {"fn:nutricao(ler)": 1} and c["consultas"] == {"aluno_perfil": 1, "profissional": 1}
          and c["gravacoes_aceitas"] == {"fn:nutricao(padroes_garantir)": 1} and not c["gravacoes_novas"] and c["fora"] == {"rpc:planos_do_aluno": 1},
          f"a guarda do DEPOIS: 0 direta da área, 1 `ler` (as consultas), o garantir do 1º acesso à parte, o GET da imagem não conta: {c}")
+    juntas = {"aluno_perfil": 1, "aluno_evolucao_painel": 1}
+    o.ok(P.avaliacao_num_lote(1, juntas) and not P.avaliacao_num_lote(2, juntas) and not P.avaliacao_num_lote(1, {"aluno_perfil": 1})
+         and not P.avaliacao_num_lote(0, {}) and P.AVALIACAO[3] == 1,
+         "a Avaliação no depois (a 1ª tela, a casca fria): 1 `ler` com o perfil e a série juntos — 2 voltas em série (o antes do ec101ce) "
+         "ou a série fora do lote = falha")
     grava = [{"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "consulta_criar", "url": f"{Pp}/functions/v1/nutricao",
               "corpo": json.dumps({"acao": "consulta_criar"})},
              {"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "ler", "url": f"{Pp}/functions/v1/nutricao",

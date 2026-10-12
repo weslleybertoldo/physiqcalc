@@ -109,7 +109,8 @@ def contar_painel(pedidos: list[dict]) -> dict:
 # ───────────────────────── as telas (a rota do painel é a da matrícula: /painel/alunos/<pacientes.id>) ─────────────────────────
 # (nome, rota relativa ao /painel/alunos/<id>, a marca de que a tela abriu, o teto de chamadas `ler` ao abrir — HIPÓTESE do etapa 1: a
 # casca/Resumo em até 3 voltas (o perfil, depois a série do principal, que espera o perfil; os cards), a seção do Prontuário 1 (a Avaliação
-# 360, 2: os resultados de exame vão num lote só deles — `sozinha`), a Avaliação 2 (o perfil da casca, depois a série, que espera o perfil)
+# 360, 2: os resultados de exame vão num lote só deles — `sozinha`), a Avaliação 1 (hml-20b etapa 2, a decisão da sessão principal sobre o
+# TEMPO, ec101ce: a 1ª tela — a casca fria — pede o perfil e a série do principal NUM lote só; antes do ec101ce eram 2, em série)
 SECOES = (
     ("anotacoes", "[data-secao-anotacoes]", 1), ("consultas", "[data-secao-consultas]", 1), ("anamnese", "[data-secao-anamnese]", 1),
     ("questionarios", "[data-secao-questionarios]", 1), ("exames", "[data-secao-exames]", 1),
@@ -117,7 +118,15 @@ SECOES = (
     ("farmaco-nutrientes", "[data-secao-farmaco]", 1), ("documentos", "[data-secao-documentos]", 1), ("anexos", "[data-secao-anexos]", 1),
 )
 RESUMO = ("resumo", "", "[data-resumo-aluno]", 3)
-AVALIACAO = ("avaliacao", "/avaliacao", '[data-aba-avaliacao="dados"], [data-aba-avaliacao="vazia"]', 2)
+AVALIACAO = ("avaliacao", "/avaliacao", '[data-aba-avaliacao="dados"], [data-aba-avaliacao="vazia"]', 1)
+# as 2 consultas que a casca fria da Avaliação pede JUNTAS (1 `ler`): o perfil e a série do principal (a parte do Treino espera o perfil e
+# vai pela treino-leitura, fora da nutricao)
+CONSULTAS_DA_AVALIACAO = frozenset({"aluno_perfil", "aluno_evolucao_painel"})
+
+
+def avaliacao_num_lote(ler: int, consultas: dict | None) -> bool:
+    """A Avaliação (a 1ª tela, a casca fria) no depois: 1 `ler` só, com o perfil e a série juntos."""
+    return ler == 1 and CONSULTAS_DA_AVALIACAO <= set(consultas or {})
 
 
 def telas_da_conta(conta: str) -> list[tuple[str, str, str, int]]:
