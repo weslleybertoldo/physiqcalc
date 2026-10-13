@@ -43,7 +43,13 @@ export async function conferirJwtLocal(token: string): Promise<ConferenciaLocal>
   if (!SUPABASE_URL) return { ok: false, motivo: "reserva", causa: "sem_url" };
   try {
     jwks ??= createRemoteJWKSet(new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`), { timeoutDuration: JWKS_TEMPO_MS });
-    const { payload } = await jwtVerify(token, jwks, { issuer: `${SUPABASE_URL}/auth/v1`, audience: "authenticated" });
+    const { payload } = await jwtVerify(token, jwks, {
+      issuer: `${SUPABASE_URL}/auth/v1`,
+      audience: "authenticated",
+      // revisão da 21a (⚪2): só ES256 (as chaves do projeto) e exp/sub obrigatórios — o que não passar cai no getUser de reserva
+      algorithms: ["ES256"],
+      requiredClaims: ["exp", "sub"],
+    });
     if (typeof payload.sub === "string" && UUID.test(payload.sub)) return { ok: true, userId: payload.sub };
     return { ok: false, motivo: "reserva", causa: "sem_sub" };
   } catch (e) {

@@ -7,9 +7,7 @@ import { lerConta } from "@/conta/ler";
  * os seus (RLS `destino_user_id = auth.uid()`); quem grava são as worktrees de cada assunto (plano
  * atualizado, reação no diário, pagamento, consulta, avaliação).
  *
- * O cliente do principal (src/integrations/principal/client.ts, W2) é carregado sob demanda e só se
- * existir no build (`import.meta.glob`): sem ele, ou sem login no principal (o login único entra na
- * W3), o sino mostra "Nenhum aviso" — nunca quebra a casca.
+ * Sem login no principal (ou com a função fora), o sino mostra "Nenhum aviso" — nunca quebra a casca.
  *
  * hml-21a (H-43 · jeito 2): a lista e o "marcar como lido" passam pela função conta, com a sessão de quem está logado — a lista pelo `ler`
  * (q "avisos": os 30 mais novos; o RLS de hoje decide que são os da pessoa) e o lido pela ação avisos_marcar_lidos (só o lido_em, só as

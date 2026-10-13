@@ -172,7 +172,13 @@ describe("hml-21a (H-109) — a porta COM jwtLeitura: \"jwks\" (a conta): só o 
     const r = await p.chamar({ acao: "ler", itens: [{ q: "avisos" }] });
     expect([r.status, await r.json()]).toEqual([200, { ok: true, userId: EU }]);
     expect(h.getUser).toEqual([]);
-    expect(h.verificados).toEqual([{ token: TOKEN, opcoes: { issuer: `${URL_PRINCIPAL}/auth/v1`, audience: "authenticated" } }]);
+    expect(h.verificados).toEqual([
+      {
+        token: TOKEN,
+        // revisão da 21a (⚪2): só ES256 e exp/sub obrigatórios
+        opcoes: { issuer: `${URL_PRINCIPAL}/auth/v1`, audience: "authenticated", algorithms: ["ES256"], requiredClaims: ["exp", "sub"] },
+      },
+    ]);
     expect(h.conjuntos).toEqual([{ url: `${URL_PRINCIPAL}/auth/v1/.well-known/jwks.json`, opcoes: { timeoutDuration: 3000 } }]);
     // o conjunto de chaves é 1 por instância (fica na memória)
     await p.chamar({ acao: "ler", itens: [] });
