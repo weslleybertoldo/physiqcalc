@@ -427,6 +427,13 @@ class Fluxo:
         self.o, self.t, self.pend, self.base, self.fase, self.s, self.estado, self.uid = o, t, pend, base, fase, s, estado, uid
         self.marca, self.prefixo = P21.marca(rodada), prefixo
 
+    def assentar(self, seletor: str, timeout: float = 15) -> bool:
+        """Espera a janela aparecer E assentar: os diálogos zeram o formulário num useEffect ao abrir (depois da pintura — o
+        AgendamentoDialog.tsx:124 faz o setConfirmarExclusao(false)); mexer antes disso corre contra o efeito (gente não clica tão rápido)."""
+        ok = self.t.esperar(lambda: self.t.n(seletor) > 0, timeout)
+        self.t.pg.wait_for_timeout(600)
+        return ok
+
     def gravou(self, acao: str, fazer, pronto, timeout: float = 40) -> bool:
         t = self.t
         t.zerar_pedidos()
@@ -458,7 +465,7 @@ class Fluxo:
         # 1. o calendário de teste (CalendarioDialog)
         def criar_cal() -> None:
             t.clicar("[data-btn-novo-calendario]")
-            t.esperar(lambda: t.n('[data-modal-calendario="novo"]') > 0, 15)
+            self.assentar('[data-modal-calendario="novo"]')
             t.pg.locator("[data-campo-nome-calendario]").fill(mk)
             t.clicar("[data-btn-salvar-calendario]")
         self.gravou("calendario_criar", criar_cal, lambda: t.n("[data-modal-calendario]") == 0)
@@ -472,7 +479,7 @@ class Fluxo:
 
         def criar_ag() -> None:
             t.clicar("[data-btn-novo-agendamento]")
-            t.esperar(lambda: t.n('[data-modal-agendamento="novo"]') > 0, 15)
+            self.assentar('[data-modal-agendamento="novo"]')
             t.pg.locator("[data-campo-titulo]").fill(mk)
             t.pg.locator("[data-campo-data]").fill(data)
             t.pg.locator("[data-campo-calendario]").select_option(cal)
@@ -487,14 +494,14 @@ class Fluxo:
 
             def editar_ag() -> None:
                 t.clicar(f'[data-evento="{ag}"]')
-                t.esperar(lambda: t.n('[data-modal-agendamento="editar"]') > 0, 15)
+                self.assentar('[data-modal-agendamento="editar"]')
                 t.pg.locator("[data-campo-observacao]").fill(mk)
                 t.clicar("[data-btn-salvar-agendamento]")
             self.gravou("agendamento_editar", editar_ag, lambda: t.n("[data-modal-agendamento]") == 0)
         # 3. a trava (recorrente, de madrugada) e o bloqueio (avulso, no dia da consulta de teste) — TravaDialog
         def criar_trava() -> None:
             t.clicar("[data-btn-travar]")
-            t.esperar(lambda: t.n("[data-modal-trava]") > 0, 15)
+            self.assentar("[data-modal-trava]")
             t.clicar('[data-modo-trava="recorrente"]')
             t.pg.locator("[data-campo-trava-das]").fill("05:00")
             t.pg.locator("[data-campo-trava-as]").fill("05:30")
@@ -507,7 +514,7 @@ class Fluxo:
 
         def criar_bloqueio() -> None:
             t.clicar("[data-btn-travar]")
-            t.esperar(lambda: t.n("[data-modal-trava]") > 0, 15)
+            self.assentar("[data-modal-trava]")
             t.clicar('[data-modo-trava="avulsa"]')
             t.pg.locator("[data-campo-trava-data]").fill(data)
             t.pg.locator("[data-campo-trava-das]").fill("05:00")
@@ -522,7 +529,7 @@ class Fluxo:
         # 4. a tag de teste (TagDialog) e a exclusão dela (a confirmação)
         def criar_tag() -> None:
             t.clicar("[data-btn-nova-tag]")
-            t.esperar(lambda: t.n('[data-modal-tag="nova"]') > 0, 15)
+            self.assentar('[data-modal-tag="nova"]')
             t.pg.locator("[data-campo-nome-tag]").fill(mk[:40])
             t.clicar("[data-btn-salvar-tag]")
         self.gravou("tag_criar", criar_tag, lambda: t.n("[data-modal-tag]") == 0)
@@ -532,7 +539,7 @@ class Fluxo:
 
             def excluir_tag() -> None:
                 t.clicar(f'[data-btn-excluir-tag="{tag}"]')
-                t.esperar(lambda: t.n("[data-btn-confirmar-excluir-tag]") > 0, 15)
+                self.assentar("[data-btn-confirmar-excluir-tag]")
                 t.clicar("[data-btn-confirmar-excluir-tag]")
             self.gravou("tag_excluir", excluir_tag, lambda: t.n(f'[data-tag-item="{tag}"]') == 0)
         # 5. a consulta à Lixeira (o diálogo dela) e o calendário (com a consulta de teste) pela RPC nova, atômica
@@ -542,17 +549,21 @@ class Fluxo:
 
             def excluir_ag() -> None:
                 t.clicar(f'[data-evento="{ag}"]')
-                t.esperar(lambda: t.n("[data-btn-excluir-agendamento]") > 0, 15)
+                self.assentar("[data-btn-excluir-agendamento]")
                 t.clicar("[data-btn-excluir-agendamento]")
-                t.esperar(lambda: t.n("[data-btn-confirmar-excluir]") > 0, 15)
+                if not self.assentar("[data-btn-confirmar-excluir]", 5):
+                    t.clicar("[data-btn-excluir-agendamento]")  # o efeito do diálogo zerou o confirmar: de novo, 1 vez
+                    self.assentar("[data-btn-confirmar-excluir]")
                 t.clicar("[data-btn-confirmar-excluir]")
             self.gravou("agendamento_excluir", excluir_ag, lambda: t.n(f'[data-evento="{ag}"]') == 0)
 
         def excluir_cal() -> None:
             t.clicar(f'[data-btn-editar-calendario="{cal}"]')
-            t.esperar(lambda: t.n("[data-btn-excluir-calendario]") > 0, 15)
+            self.assentar("[data-btn-excluir-calendario]")
             t.clicar("[data-btn-excluir-calendario]")
-            t.esperar(lambda: t.n("[data-btn-confirmar-excluir-calendario]") > 0, 15)
+            if not self.assentar("[data-btn-confirmar-excluir-calendario]", 5):
+                t.clicar("[data-btn-excluir-calendario]")  # idem: 1 vez
+                self.assentar("[data-btn-confirmar-excluir-calendario]")
             t.clicar("[data-btn-confirmar-excluir-calendario]")
         self.gravou("calendario_excluir", excluir_cal, lambda: t.n(f'[data-calendario="{cal}"]') == 0)
         vivos = B.ler_principal(f"select (select count(*) from {self.s}.calendarios where id = {C.txt(cal)} and deleted_at is null)::int as cal, "

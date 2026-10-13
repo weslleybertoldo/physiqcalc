@@ -1042,10 +1042,15 @@ def p_acoes_alunos(o, L, s: str, ctx: dict, casos: set) -> None:
     st, r, _h, _ms = B.conta(tok, "pacote_definir", {"aluno": pac, "profissional": uid, "total": 61})
     o.ok(st == 200 and (r.get("resultado") or {}).get("erro") == "total_invalido" and um(sql_pacote) == antes, f"P pacote_definir com 61 → total_invalido; nada mudou ({st})")
     if "N1" in casos:
+        # a conta v3 (98659b5): a recusa da w14_matricula_da_rota volta como o código (antes, 500 erro_interno + o aviso de erro inesperado)
         st, r, _h, _ms = B.conta(L.token(P21.OUTRA), "pacote_definir", {"aluno": pac, "profissional": uid, "total": 4})
-        res = r.get("resultado") or {}
-        o.ok(st != 500 and res.get("ok") is not True and um(sql_pacote) == antes,
-             f"N1 OUTRA conta define o pacote da aluna da nutri → {res.get('erro') or r.get('erro')}; nada mudou ({st})")
+        o.ok(st == 403 and r.get("erro") == "sem_acesso" and um(sql_pacote) == antes,
+             f"N1 OUTRA conta define o pacote da aluna da nutri → 403 sem_acesso (a recusa de hoje, da w14_matricula_da_rota); nada mudou "
+             f"({st}: {r.get('erro') or (r.get('resultado') or {}).get('erro')})")
+        st, r, _h, _ms = B.ler(L.token(P21.OUTRA), [B.item("aluno_compromissos", aluno=pac)])
+        itens = B.itens_de(r)
+        o.ok(st == 200 and itens == [{"ok": False, "erro": "sem_acesso"}],
+             f"N1 OUTRA conta lê os compromissos da aluna da nutri → o item sem_acesso (a recusa de hoje), nunca os dados ({st}: {itens})")
 
 
 def n_gerais_21b(o, L, area: str, casos: set, ctx: dict) -> None:

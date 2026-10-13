@@ -418,8 +418,9 @@ def seco_21b(o, area: str) -> None:
     o.ok(P21.ENTRADA_PAINEL.startswith("/painel/configuracoes") and not any(P21.ENTRADA_PAINEL.startswith(r) for r in ("/painel/agenda", "/painel/alunos"))
          and P21.ENTRADA_APP == "/perfil", "a entrada é de fora da 21b (a carga fria não entra na medida da 1ª tela)")
     o.ok(P21.fase_do_codigo_21b("local", "x") == "depois" and P21.fase_do_codigo_21b("staging", "d357719") == "antes"
-         and P21.fase_do_codigo_21b("staging", "HEAD") == "depois",
-         "antes × depois vem do CÓDIGO medido (o d357719 lê a Agenda direto: antes; o HEAD pela conta: depois)")
+         and P21.fase_do_codigo_21b("staging", "HEAD") == "depois" and P21.fase_do_codigo_21b("staging", "0123abc") == "antes",
+         "antes × depois vem do CÓDIGO medido (o d357719 lê a Agenda direto: antes; o HEAD pela conta: depois; um commit que o repo não tem — "
+         "a branch de outra W no staging — antes: a 21b só existe nesta worktree)")
     # 🟡3: a tela Alunos GRAVA ao abrir sem o codigo_convite da conta ativa (meuLink.ts:13 → garantir_meu_codigo): PULADA, em toda base —
     # conferido com a situação e as contagens FALSAS (nada vai ao banco)
     meu_link = (B.REPO / "src/painel/alunos/meuLink.ts").read_text(encoding="utf-8")

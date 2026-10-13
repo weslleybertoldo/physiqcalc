@@ -417,12 +417,14 @@ CAB_REDE = ["quando", "base", "commit", "fase", "area", "conta", "tela", "direta
 
 
 def fase_do_codigo_21b(base: str, commit: str) -> str:
-    """depois = o commit medido lê a Agenda pela conta (src/painel/agenda/dados.ts com o lerConta); antes = o código antigo (lia direto)."""
+    """depois = o commit medido lê a Agenda pela conta (src/painel/agenda/dados.ts com o lerConta); antes = o código antigo (lia direto).
+    Um commit que este repo não tem (o staging serve a branch de outra W — em 13/10, a refs/heads/staging = o PR #195 dos GIFs) é ANTES:
+    o código da 21b só existe nesta worktree até o PR (o mesmo critério do fase_do_codigo da 21a: sem o arquivo no commit → antes)."""
     if base == "local":
         return "depois"
     r = subprocess.run(["git", "-C", str(B.REPO), "show", f"{commit}:src/painel/agenda/dados.ts"], capture_output=True, text=True, timeout=20)
     if r.returncode != 0:
-        return "?"
+        return "antes"
     return "depois" if "lerConta(" in r.stdout else "antes"
 
 
