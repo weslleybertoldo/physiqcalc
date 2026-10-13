@@ -412,8 +412,16 @@ def a6_app_fechado(o, ap: Aparelho, R: dict, ids_hoje: dict, pasta: Path) -> Non
     e = R["e"]
     ap.sh("input keyevent KEYCODE_HOME")
     time.sleep(2)
-    ap.sh(f"am kill {PACOTE}", check=False)
-    o.ok(esperar(lambda: not ap.pid(PACOTE), 20), "A6 o app FECHADO (HOME + am kill: o processo morreu; os alarmes ficam)")
+
+    def fechado() -> bool:
+        # o `am kill` só mata o processo já em 2º plano (oom adj ≥ SERVICE_ADJ); logo depois do HOME a atividade ainda pode estar parando
+        # (no emulador, 2 s depois do HOME o 1º `am kill` não matou; com o app no adj 700 matou) → de novo a cada volta até o processo sair
+        if not ap.pid(PACOTE):
+            return True
+        ap.sh(f"am kill {PACOTE}", check=False)
+        return not ap.pid(PACOTE)
+
+    o.ok(esperar(fechado, 40, 2), "A6 o app FECHADO (HOME + am kill: o processo morreu; os alarmes ficam)")
     esperar_ate(e["horas"]["Agora"], 15)
     tocou = esperar(lambda: ids_hoje["hoje_agora"] in ap.ids_da_bandeja(), 120, 5)
     o.ok(tocou, f"A6 na hora da 'Agora' ({e['horas']['Agora']}), com o app fechado, a notificação {ids_hoje['hoje_agora']} está na bandeja")
@@ -425,9 +433,34 @@ def a6_app_fechado(o, ap: Aparelho, R: dict, ids_hoje: dict, pasta: Path) -> Non
         feito = ap.tocar_no_texto("Hora da rotina")
         o.linha("   (o botão 'Feito' não apareceu na bandeja recolhida: toquei no corpo — o toque também marca)")
     o.ok(feito, "A6 toquei no 'Feito' da notificação")
+    # o "Feito" abre o app A FRIO (o processo tinha morrido) na página e marca: o print espera a tela com o "… feita · Desfazer" (o toast
+    # fica 8 s) e a lista — antes, o print saía assim que o banco marcava e pegava a página ainda no esqueleto
+    tela = esperar_feito_na_tela(ap)
+    R["provas"].append(ap.print(pasta / "r_apk_feito.png"))
+    o.linha(f"   a tela do print r_apk_feito: {tela}")
     marcou = esperar(lambda: next((x["feita_hoje"] for x in rotinas(e) if x["id"] == e["ids"]["Agora"]), 0) == 1, 90, 1)
-    R["provas"].append(ap.print(pasta / "r_apk_feito.png"))  # logo: o toast "… feita · Desfazer" fica 8 s
     o.ok(marcou, "A6 o app abriu e marcou: no banco, a 'Agora' feita hoje")
+
+
+TOASTS_JS = "[...document.querySelectorAll('[data-sonner-toast]')].map((t) => t.innerText).join(' | ')"
+
+
+def esperar_feito_na_tela(ap: Aparelho, espera: float = 45) -> dict:
+    """Pelo DevTools da WebView (que nasce com o app): o toast "… feita · Desfazer" e, com ele na tela, a lista da página (até 6 s — o toast
+    fica 8 s). Devolve o que viu (vai para a saída; o print sai logo depois)."""
+    visto: dict = {"toast": False, "lista": False}
+    w = None
+    try:
+        w = webview(ap, espera)
+        visto["toast"] = esperar(lambda: "Desfazer" in str(w.avaliar(TOASTS_JS, timeout=10) or ""), espera, 0.3)
+        if visto["toast"]:
+            visto["lista"] = esperar(lambda: tem(w, '[data-pagina-rotinas="lista"]'), 6, 0.3)
+    except Exception as ex:  # noqa: BLE001 — o print sai de qualquer jeito (e o banco decide o caso)
+        visto["erro"] = f"{type(ex).__name__}: {str(ex)[:120]}"
+    finally:
+        if w:
+            w.fechar()
+    return visto
 
 
 def a7_antes_nao_tocou(o, ap: Aparelho, R: dict, ids_hoje: dict) -> None:
@@ -437,13 +470,19 @@ def a7_antes_nao_tocou(o, ap: Aparelho, R: dict, ids_hoje: dict) -> None:
 
 def a8_reiniciar(o, ap: Aparelho, w: CDP, R: dict) -> None:
     e = R["e"]
-    hora = hora_sp(4)
+    hora = hora_sp(5)  # +5 (não +4): a espera da 3ª agendada + o reboot do emulador (~2 min) + 40 s ainda acabam antes da hora
     st, r = funcao(R["L"].token(CONTA), {"acao": "rotina_salvar", "dados": {"nome": f"{e['marca']} Depois de reiniciar", "tipo": "habito",
                                                                      "horario": hora, "dias_semana": [1, 2, 3, 4, 5, 6, 7], "lembrete": True}})
     o.ok(st == 200, f"A8 a rotina 'Depois de reiniciar' ({hora}) pela função: {st}")
     ir(w, "/perfil/rotinas")
-    time.sleep(8)
+    dow = dia_da_semana_sp()
+    pos = len(e["ids"])  # Agora 0, Antes 1 → a 3ª é a posição 2
+    alvo = 40000 + pos * 10 + dow
+    # a página recarrega e a reconciliação agenda a 3ª — esperar por ela (antes, 8 s fixos: no emulador a 3ª ainda não estava agendada
+    # quando o armazenamento foi lido e o aparelho reiniciou → 12 → 12 ids e a notificação dela nunca tocou)
+    agendou = esperar(lambda: alvo in [x["id"] for x in pendentes(w)], 60, 1)
     antes = ap.armazenamento()
+    o.linha(f"   a 3ª agendada antes de reiniciar: {agendou} (o armazenamento com {len(antes)} ids)")
     w.fechar()
     ap.adb("reboot", check=False)
     time.sleep(10)
@@ -451,27 +490,40 @@ def a8_reiniciar(o, ap: Aparelho, w: CDP, R: dict) -> None:
     esperar(lambda: ap.sh("getprop sys.boot_completed", check=False).strip() == "1", 600, 5)
     time.sleep(40)
     depois = ap.armazenamento()
-    o.ok(depois == antes and len(depois) >= 7, f"A8 reiniciou SEM abrir o app: o armazenamento do plugin igual ({len(antes)} → {len(depois)} ids)")
-    dow = dia_da_semana_sp()
-    pos = len(e["ids"])  # Agora 0, Antes 1 → a 3ª é a posição 2
-    alvo = 40000 + pos * 10 + dow
+    o.ok(depois == antes and alvo in depois,
+         f"A8 reiniciou SEM abrir o app: o armazenamento do plugin igual ({len(antes)} → {len(depois)} ids, com o {alvo} da 3ª: {alvo in depois})")
     esperar_ate(hora, 15)
     o.ok(esperar(lambda: alvo in ap.ids_da_bandeja(), 120, 5), f"A8 na hora, depois de reiniciar e sem abrir o app, a notificação {alvo} tocou")
 
 
 def a9_sair(o, ap: Aparelho, R: dict) -> None:
     abrir_app(ap)
-    w = webview(ap)
+    w = webview(ap, 120)
     R["w"] = w
     ir(w, "/perfil")
-    esperar(lambda: tem(w, "[data-perfil-sair]"), 60)
-    clicar(w, "[data-perfil-sair]")
-    esperar(lambda: tem(w, "[data-perfil-sair-confirmar]"), 20)
-    clicar(w, "[data-perfil-sair-confirmar]")
-    # o Sair do app é GLOBAL: a sessão de teste que o script abriu saiu junto (o logout local do fim daria 403)
-    R["L"].sessoes.esquecer(R["L"].token(CONTA))
-    vazio = esperar(lambda: not pendentes(w), 40, 2)
-    o.ok(vazio and not ap.armazenamento(), "A9 Sair: o getPending e o armazenamento do plugin sem nenhum id da faixa 40000–40299")
+    # depois de reiniciar, a 1ª abertura é lenta (no emulador, ~45 s no "Carregando…" até o Perfil — diag_a9b); antes, 60 s e o clique sem
+    # conferir: sem o botão, o Sair não acontecia e o A9 falhava sem dizer por quê
+    achou = esperar(lambda: tem(w, "[data-perfil-sair]"), 150)
+    clicou = achou and clicar(w, "[data-perfil-sair]")
+    confirmou = clicou and esperar(lambda: tem(w, "[data-perfil-sair-confirmar]"), 20) and clicar(w, "[data-perfil-sair-confirmar]")
+    if confirmou:
+        # o Sair do app é GLOBAL: a sessão de teste que o script abriu saiu junto (o logout local do fim daria 403)
+        R["L"].sessoes.esquecer(R["L"].token(CONTA))
+    visto: dict = {}
+
+    def vazio() -> bool:
+        visto["armazenamento"] = len(ap.armazenamento())
+        try:
+            visto["getPending"] = len(pendentes(R["w"]))
+        except Exception:  # noqa: BLE001 — o emulador carregado pode derrubar a conexão do DevTools: de novo pelo processo do app
+            R["w"].fechar()
+            R["w"] = webview(ap, 60)
+            visto["getPending"] = len(pendentes(R["w"]))
+        return visto["getPending"] == 0 and visto["armazenamento"] == 0
+
+    ok = bool(confirmou) and esperar(vazio, 60, 2)
+    o.ok(ok, f"A9 Sair: o getPending e o armazenamento do plugin sem nenhum id da faixa 40000–40299 (o botão {achou}, "
+             f"clicou {bool(clicou)}, confirmou {bool(confirmou)}; {visto})")
 
 
 def fim(o, ap: Aparelho, alvo: str, R: dict) -> None:
