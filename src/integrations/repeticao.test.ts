@@ -97,7 +97,7 @@ describe("podeRepetir", () => {
     }
   });
 
-  it("hml-14d: as 6 RPCs novas das listas (STABLE) repetem — as 2 do Treino pelo cliente do Treino, as 4 pelo do principal", () => {
+  it("hml-14d: as RPCs das listas (STABLE) que seguem no navegador repetem — as 3 do principal (as 2 do Treino saíram na 21d; a minha_agenda_lista, na 21a)", () => {
     // hml-21d: as 2 do Treino (modelos_da_lista, exercicios_da_lista) saíram (vão pela função treinos — o `ler` dela repete 1 vez)
     // hml-21a: a minha_agenda_lista saiu (vai pela função conta)
     for (const nome of ["preconsulta_numeros", "exames_do_aluno", "financeiro_totais_do_aluno"]) {

@@ -1557,6 +1557,22 @@ def seco_21d(o) -> None:  # noqa: PLR0915
     o.ok(T21.fase_do_codigo_21d("local", "x") == "depois" and T21.fase_do_codigo_21d("staging", "7c1a637") == "antes"
          and T21.fase_do_codigo_21d("staging", "HEAD") == "depois" and T21.fase_do_codigo_21d("staging", "0123abc") == "antes",
          "[seco] antes × depois vem do CÓDIGO medido (o 7c1a637 lia o Treino direto: antes; o HEAD pela treinos: depois; um commit que o repo não tem: antes)")
+    # 🟡1 da revisão: o N1 da biblioteca — a OUTRA conta com o filtros.professor = o personal (o arg da RPC de hoje passa no leitor do servidor)
+    rb = T21.regras_treinos([{"acao": "ler", "itens": [B.item("exercicios_lista", filtros={"professor": FALSO, "q": B.MARCA}, offset=0, limite=20)]}])
+    ib = rb["pedidos"][0]["itens"][0]
+    import inspect  # noqa: PLC0415
+    fonte_n1 = inspect.getsource(n1_outra)
+    o.ok(ib.get("ok") is True and set(ib["params"]["filtros"]) == {"professor", "q"} and '"exercicios_lista", filtros={"professor": uid' in fonte_n1
+         and "ACHADO N1 exercicios_lista" in fonte_n1,
+         "[seco] 🟡1: o N1 pede a biblioteca do personal pela exercicios_lista com o filtros.professor (o arg de hoje passa no leitor) e REGISTRA o "
+         "resultado como ACHADO (o RLS de hoje deixa; restringir é da etapa 4)")
+    # ⚪10 da revisão: a identidade no Treino conferida ANTES de cada troca de token do script
+    fonte_ctx = inspect.getsource(contexto_21d) + inspect.getsource(limpar_21d) + inspect.getsource(so_leitura_21d)
+    pares = [("T21.exige_identidade(o, s, T21.PERSONAL)", "L.token_treino(T21.PERSONAL)"), ("T21.exige_identidade(o, s, T21.OUTRA)", "L.token_treino(T21.OUTRA)"),
+             ("T21.exige_identidade(o, B.schema(), conta)", "L.token_treino(conta)")]
+    o.ok(all(a in fonte_ctx and b in fonte_ctx and fonte_ctx.index(a) < fonte_ctx.index(b) for a, b in pares),
+         "[seco] ⚪10: antes de cada troca de token do script (o personal, a w13-dono, a conta do smoke) o SELECT só leitura confere que ela já "
+         "existe no Treino (physiq_identidades) — nenhuma conta nova")
 
 
 def um_treino(sql: str) -> dict:
@@ -1579,6 +1595,7 @@ def lib_treino(ctx: dict, q: str, s: str, **valores) -> object:
 def contexto_21d(o, L, s: str, casos: set) -> dict:
     """As contas de teste da rodada: o personal (o token do Treino — a troca, a mesma do app — e o id do Treino, o papel), a OUTRA (N1/N12) e
     a matrícula da aluna (SQL só leitura)."""
+    T21.exige_identidade(o, s, T21.PERSONAL)  # ⚪10 da revisão: a troca não cria conta nova no Treino
     tok = L.token_treino(T21.PERSONAL)
     uid = str((C.claims(tok) or {}).get("sub") or "")
     papel = T21.papel_do_token(tok)
@@ -1586,6 +1603,7 @@ def contexto_21d(o, L, s: str, casos: set) -> dict:
     ctx: dict = {"tok": tok, "uid": uid, "papel": papel, "tok_p": L.token(T21.PERSONAL), "uid_p": L.uid(T21.PERSONAL), "email_p": B.B5.CONTAS[T21.PERSONAL][0],
                  "pac": T21.matricula_do_aluno(s), "casos": casos}
     if casos & {"N1", "N12"}:
+        T21.exige_identidade(o, s, T21.OUTRA)  # ⚪10 da revisão: a w13-dono já existe no Treino (nenhuma conta nova)
         tok_o = L.token_treino(T21.OUTRA)
         ctx.update({"tok_o": tok_o, "uid_o": str((C.claims(tok_o) or {}).get("sub") or ""), "tok_po": L.token(T21.OUTRA)})
         o.ok(C.eh_uuid(ctx["uid_o"]) and ctx["uid_o"] != uid, "a OUTRA conta de teste no Treino (N1/N12): outro id do Treino", parar=True)
@@ -1824,6 +1842,19 @@ def n1_outra(o, s: str, ctx: dict, m: dict) -> None:
         ("exercicio_foto_preparar", {"exercicio": m["ex"], "tipo": "image/png", "tamanho": 100}, (403,)),
     ]
     res = [(a, T21.treinos(tok_o, a, c)[0], esperado) for a, c, esperado in tentativas]
+    # 🟡1 da revisão: a biblioteca do personal pela exercicios_lista com o filtros.professor = o personal, pedida pela OUTRA conta. O arg é o
+    # da RPC de hoje (decisão B: o código fica) e o RLS do tb_exercicios de hoje deixa qualquer profissional ler — o resultado é REGISTRADO
+    # (o ## ACHADO), não reprovado: restringir é da etapa 4
+    st_b, r_b, _h, _ms = T21.ler(tok_o, [B.item("exercicios_lista", filtros={"professor": uid, "q": B.MARCA}, offset=0, limite=20)])
+    it_b = (T21.itens_de(r_b) or [{}])[0]
+    valor_b = it_b.get("valor") if isinstance(it_b.get("valor"), dict) else {}
+    dele = [x for x in (valor_b.get("itens") or []) if isinstance(x, dict) and x.get("professor_id") == uid]
+    com_o_de_teste = m["ex"] in {x.get("id") for x in dele}
+    o.ok(st_b == 200 and it_b.get("ok") is True,
+         f"N1 (registro, 🟡1) a OUTRA conta pede a biblioteca do personal pela exercicios_lista (filtros.professor = o personal; q = a marca) → "
+         f"{st_b}; {len(dele)} exercício(s) DELE na resposta (o de teste {'incluído' if com_o_de_teste else 'não'}) — o RLS de hoje")
+    o.linha(f"ACHADO N1 exercicios_lista: a OUTRA conta lê {len(dele)} exercício(s) do personal pelo filtros.professor (o de teste "
+            f"{'visível' if com_o_de_teste else 'não visível'}) — o RLS do tb_exercicios de hoje; restringir é da etapa 4 (o código fica, decisão B)")
     depois = um_treino(sql_da_massa(s, m))
     o.ok(all(st in esperado for _a, st, esperado in res) and depois == antes,
          f"N1 OUTRA conta tenta mudar/apagar/ordenar/vincular a massa do personal e pedir o link da foto dele → recusado "
@@ -1923,6 +1954,7 @@ def limpar_21d(o, base: str) -> None:
     tok = None
     try:
         if s == "staging":
+            T21.exige_identidade(o, s, T21.PERSONAL)
             tok = L.token_treino(T21.PERSONAL)
             sobra = T21.ler_treino(T21.sql_contar_massa_21d(s))[0]
             if any(int(v or 0) for v in sobra.values()):
@@ -1952,6 +1984,8 @@ def so_leitura_21d(o, base: str) -> None:
     L = B.Sessoes(f"api21 so-leitura treinos {base}")  # na produção o motivo termina em "prod" (o registro: fora do teto do staging)
     try:
         conta = B.PROD_CONTA if base == "prod" else B.ALUNA
+        if base != "prod":
+            T21.exige_identidade(o, B.schema(), conta)
         tok = L.token_treino(conta)
         st, r, _h, _ms = T21.ler(tok, [B.item("treinos_prontos")], schema_="outro", origem=origem)
         o.ok(st == 400 and r.get("erro") == "schema_invalido", f"[{base}] treinos · x-schema inválido → 400 schema_invalido ({st})")

@@ -598,7 +598,7 @@ def seco_21d(o) -> None:  # noqa: PLR0915
          "as telas de cada conta (o Detalhe e a Folha pelo clique na tela de cima; o editor fora da produção — sem aluno de TESTE lá) e o teto de "
          "`ler` (2 só em Meus treinos — a série aceita, DECISÃO 12:1x)")
     # a trava das telas que PULAM (decisão N): sem o Treino na conta ativa / com profissional / sem a matrícula de teste — com valores FALSOS
-    originais = (T21.painel_tem_treino, T21.aluno_sem_profissional, T21.matricula_do_aluno)
+    originais = (T21.painel_tem_treino, T21.aluno_sem_profissional, T21.matricula_do_aluno, T21.exige_identidade)
 
     class Calado:
         def ok(self, c: object, _t: str, parar: object = None) -> bool:
@@ -611,17 +611,21 @@ def seco_21d(o) -> None:  # noqa: PLR0915
         T21.painel_tem_treino = lambda _s, _c: (False, "falso")  # type: ignore[assignment]
         T21.aluno_sem_profissional = lambda _s, _c: (False, "falso")  # type: ignore[assignment]
         T21.matricula_do_aluno = lambda _s: None  # type: ignore[assignment]
+        identidades: list[str] = []
+        T21.exige_identidade = lambda _o, _s, c: identidades.append(c)  # type: ignore[assignment]  (o ⚪10: SQL só leitura — aqui, falso)
         pula = ([x[0] for x in T21.telas_que_abrem(Calado(), "public", "prod", "nutri-legado")], [x[0] for x in T21.telas_que_abrem(Calado(), "public", "prod", "aluno-calc")],
                 [x[0] for x in T21.telas_que_abrem(Calado(), "staging", "local", T21.PERSONAL)])
         T21.painel_tem_treino = lambda _s, _c: (True, "falso")  # type: ignore[assignment]
         T21.aluno_sem_profissional = lambda _s, _c: (True, "falso")  # type: ignore[assignment]
         abre = ([x[0] for x in T21.telas_que_abrem(Calado(), "public", "prod", "nutri-legado")], [x[0] for x in T21.telas_que_abrem(Calado(), "public", "prod", "aluno-calc")])
     finally:
-        T21.painel_tem_treino, T21.aluno_sem_profissional, T21.matricula_do_aluno = originais
+        T21.painel_tem_treino, T21.aluno_sem_profissional, T21.matricula_do_aluno, T21.exige_identidade = originais
     o.ok(pula == ([], [], ["meus_treinos", "detalhe", "biblioteca", "folha", "modelos_treinos", "busca"])
-         and abre == (["meus_treinos", "detalhe", "biblioteca", "folha", "modelos_treinos", "busca"], ["treinos_prontos_aluno"]),
+         and abre == (["meus_treinos", "detalhe", "biblioteca", "folha", "modelos_treinos", "busca"], ["treinos_prontos_aluno"])
+         and identidades == [T21.PERSONAL],
          "decisão N: na produção o painel sem o Treino na conta ativa e o aluno com profissional PULAM (com o motivo, nada aberto); o editor sem a "
-         "matrícula de TESTE pula — e com as pré-condições, abrem")
+         "matrícula de TESTE pula — e com as pré-condições, abrem; ⚪10: fora da produção, a identidade no Treino é conferida ANTES de a conta "
+         "abrir no navegador (a troca do app não cria conta nova)")
     fonte = Path(__file__).read_text(encoding="utf-8").split("def seco_21d", 1)[0]
     base21d = (B.REPO / "e2e" / "hml21" / "treinos21d.py").read_text(encoding="utf-8")
     o.ok('guarda = B.guarda_da_w() if base == "prod" else None\n                    t, pend = T21.abrir_conta(nav, base, conta, f"rede_treinos_{conta}", guarda)' in fonte

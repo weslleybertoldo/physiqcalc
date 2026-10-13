@@ -204,6 +204,71 @@ def uid_treino(s: str, uid_principal: str | None) -> str | None:
     return v if C.eh_uuid(v) else None
 
 
+# ───────────────────────── ⚪10 da revisão: a conta de TESTE já existe no Treino (a troca não cria conta nova) ─────────────────────────
+def identidades_no_treino(s: str, conta: str) -> int:
+    """Quantas identidades do Treino a conta de TESTE tem (physiq_identidades: o id do principal → o do Treino) — SQL só leitura, só
+    contagem (o id do principal pelo auth.users do principal, também só leitura)."""
+    uid = B.uid_da_conta(conta)
+    if not C.eh_uuid(uid):
+        return 0
+    linhas = ler_treino(f"select count(*)::int as n from {s}.physiq_identidades where principal_user_id = {C.txt(uid)}")
+    return int((linhas[0] if linhas else {}).get("n") or 0)
+
+
+def exige_identidade(o, s: str, conta: str) -> None:
+    """ANTES da troca de token (a do script — L.token_treino — ou a do app no navegador): a conta de TESTE já tem a identidade dela no
+    Treino; sem ela, a troca criaria uma conta nova no Treino → para aqui (nada de troca, nenhum login)."""
+    n = identidades_no_treino(s, conta)
+    o.ok(n == 1, f"a conta de teste {conta} já existe no Treino (physiq_identidades: {n}; SQL só leitura) — a troca de token não cria conta nova",
+         parar=True)
+
+
+# ───────────────────────── o último pedido à treinos na BORDA (qualquer quem chama — o gate da ociosa) ─────────────────────────
+SQL_BORDA = ("SELECT timestamp AS t FROM logs WHERE source = 'function_edge_logs' AND log_attributes['request.method'] = 'POST' "
+             "AND extract(event_message, 'functions/v1/([a-z0-9-]+)') = 'treinos' ORDER BY t DESC LIMIT 1")
+
+
+def ultimo_pedido_na_borda(janela_min: int = 40) -> tuple[float | None, str | None]:
+    """O instante (epoch, s) do último POST na treinos nos logs de BORDA do Treino (a Management API, function_edge_logs — o MESMO jeito
+    da medição hml21/medicao/logs_borda_* — de QUALQUER quem chama, inclusive outro processo) nos últimos `janela_min` min → (instante ou
+    None se nenhum, o erro ou None). Só o instante sai (nenhum cabeçalho, corpo ou caminho)."""
+    import datetime as dt  # noqa: PLC0415
+    from urllib.parse import urlencode  # noqa: PLC0415
+    fim = dt.datetime.now(dt.timezone.utc)
+    q = urlencode({"sql": SQL_BORDA, "iso_timestamp_start": (fim - dt.timedelta(minutes=janela_min)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                   "iso_timestamp_end": (fim + dt.timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%SZ")})
+    try:
+        st, r, _h = B5.http("GET", f"https://api.supabase.com/v1/projects/{TREINO_REF}/analytics/endpoints/logs?{q}", None,
+                            {"Authorization": f"Bearer {C.C2.pat()}"}, timeout=60)
+    except Exception as e:  # noqa: BLE001
+        return None, type(e).__name__
+    if st != 200 or not isinstance(r, dict) or r.get("error"):
+        return None, f"HTTP {st}"
+    linhas = r.get("result") or []
+    if not linhas:
+        return None, None
+    v = linhas[0].get("t")
+    if isinstance(v, (int, float)):
+        return v / 1e6, None
+    try:
+        return dt.datetime.fromisoformat(str(v).replace("Z", "+00:00")).timestamp(), None
+    except ValueError:
+        return None, "instante ilegível"
+
+
+def antes_do_gate_vale(quando_antes: str | None, inicio_depois: float, max_min: int = 30) -> tuple[bool, int | None]:
+    """🟡2 da revisão: o "antes" do gate só vale se foi medido ATÉ `max_min` minutos antes do "depois" (o "quando" da planilha, horário local
+    "%Y-%m-%d %H:%M") → (vale?, o intervalo em minutos — None sem o antes)."""
+    if not quando_antes:
+        return False, None
+    try:
+        t_antes = time.mktime(time.strptime(quando_antes, "%Y-%m-%d %H:%M"))
+    except ValueError:
+        return False, None
+    intervalo = round((inicio_depois - t_antes) / 60)
+    return 0 <= intervalo <= max_min, intervalo
+
+
 # ───────────────────────── o SQL FIXO das libs do 7c1a637 (o P) ─────────────────────────
 COLS_LINHA = ("grupo_id", "exercicio_id", "ordem", "num_series", "reps_alvo", "descanso_segundos", "carga_sugerida_kg")
 COLS_EXERCICIO = ("id", "nome", "grupo_muscular", "emoji", "tipo", "imagem_url", "subgrupo", "dica", "professor_id", "padrao_movimento",
@@ -506,6 +571,8 @@ def telas_que_abrem(o, s: str, base: str, conta: str) -> list[tuple]:
     """As telas da conta que abrem (decisão N): na produção, o painel só com o Treino na conta ativa e o app só sem profissional; o editor
     só com a matrícula de TESTE. SQL só leitura; sem a pré-condição, PULADA com o motivo (nada aberto)."""
     telas = telas_da_conta(conta, base)
+    if base != "prod":
+        exige_identidade(o, s, conta)  # ⚪10: a troca que o app faz no navegador não cria conta nova no Treino
     if base == "prod":
         abre, motivo = aluno_sem_profissional(s, conta) if eh_do_app(conta) else painel_tem_treino(s, conta)
         if not abre:
