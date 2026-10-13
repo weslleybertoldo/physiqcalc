@@ -1,0 +1,350 @@
+{
+ "uuid": "cdbfa476-b311-5883-8a77-e1527bb4ff1a",
+ "nome": "Mobilidade Cervical",
+ "cena": "mobilidade_cervical",
+ "grupo": "Mobilidade",
+ "subgrupo": "Trapézio superior · elevador da escápula · esternocleidomastóideo",
+ "padrao_movimento": "along_pescoco",
+ "equipamento": "peso_corporal",
+ "variacao": "sentado ou em pé",
+ "alvos": [
+  "trapezio",
+  "pescoco"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 15,
+  "el": 8,
+  "dist": 3.3,
+  "alvo": [
+   0.0,
+   -0.15,
+   0.62
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.2,
+  "alvo": [
+   0.0,
+   -0.1,
+   0.66
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Mobilidade (ida e volta), não alongamento parado: as fontes de mobilidade do pescoço vão até onde é confortável e voltam, repetindo, sem segurar (NHS, Musculoskeletal Physiotherapy OCATS — Neck Mobility Exercises: \"Go as far as comfortable then return to the starting position.\", \"Remember to do this at a relatively moderate pace (you are trying to get your joints / muscles moving).\", \"Repeat 10 times\"; Calderdale and Huddersfield NHS FT, Cervical Spine Mobility Exercises: \"Mobility exercises are designed to improve flexibility round a joint and improve joint lubrication. [...] 5 - 10 repetitions slowly\"; ACSM, Garber 2011: \"Dynamic or slow movement stretching involves a gradual transition from one body position to another, and a progressive increase in reach and range of motion as the movement is repeated several times\"). A direção é a INCLINAÇÃO de lado pros 2 lados, alternando (ACE — Lateral Neck Flexion (#202): \"Slowly draw your right ear toward your right shoulder [...] Slowly return to starting position. Repeat on the left side.\"). t = 0 → 1 é UM ciclo e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar): t = 0 é a cabeça inclinada pra DIREITA, no meio da pausa do fim (a foto parada do app mostra o exercício — com a cabeça reta seria uma pessoa sentada olhando pra frente; a ACE começa pela direita); 0,5 s parado; volta ao centro em 1,5 s; 0,5 s parado no centro; inclina pra ESQUERDA em 1,5 s; 1,0 s parado (o meio cai em t = 0,5: os prints de t = 0,5 mostram o lado esquerdo); volta ao centro em 1,5 s; 0,5 s no centro; inclina pra direita em 1,5 s; 0,5 s parado (emenda com o começo). Cada ida e cada volta começa e acaba parada (ease seno). Tempos: nenhuma fonte dá os segundos (só \"Slowly\", ACE; \"gently and slowly\", Mayfield; \"Use smooth, slow movements\", NHS de Wolverhampton; \"relatively moderate pace\", NHS). Medi o vídeo da Mayo Clinic — Neck stretches for the workplace (o arquivo do próprio vídeo da página, a 12 quadros/s): a cabeça inclina em ~0,85 s (52,85 → 53,7 s) e volta ao centro em ~0,6 s (65,25 → 65,8 s, logo antes de um corte de câmera) — lá é a versão alongamento, em que ir e voltar não é o foco; como as fontes de mobilidade pedem devagar, usei 1,5 s pra cada ida e cada volta, mais devagar que o vídeo. As pausas são escolha minha: 1,0 s no fim de cada lado pra mostrar até onde a cabeça vai, sem a segurada de 5–30 s da versão alongamento (ACE: \"Hold the stretch for 5-10 seconds\"; Mayo: \"Hold the stretch for 15 to 30 seconds\"), e 0,5 s no centro (\"return to the starting position\", NHS). ida_s = 9,0 s = 1 ciclo (144 quadros a 16/s).",
+ "ida_s": 9.0,
+ "movimento": "Sentado na ponta de um banco reto, com o tronco ereto, os pés chapados no chão na largura do quadril e as mãos apoiadas em cima das coxas, com os ombros baixos e relaxados. Inclina a cabeça devagar para a direita, levando a orelha em direção ao ombro, sem subir o ombro, sem girar o rosto e sem levar a cabeça para a frente, até sentir o alongamento do lado esquerdo do pescoço, sem dor; volta devagar ao centro e inclina para a esquerda do mesmo jeito. Vai e volta sem segurar, alternando os lados, com a respiração solta. Também pode ser feito em pé, com os braços soltos ao lado do corpo.",
+ "cinesiologia": {
+  "plano": "frontal: flexão lateral (inclinação) da coluna cervical pra direita e pra esquerda, ativa e lenta, sem segurar — mobilidade (\"slow movement stretching\", ACSM, Garber 2011)",
+  "articulacoes": "pescoço (coluna cervical e a cabeça sobre ela): a cabeça inclina ~28° de cada lado em relação ao tronco, 3/4 do giro na base do pescoço e 1/4 na base do crânio, com o rosto de frente e sem ir pra frente nem pra trás; tronco, ombros, braços (as mãos apoiadas nas coxas) e pernas parados",
+  "agonistas": "flexores laterais do pescoço do MESMO lado da inclinação, que começam o movimento — ExRx (Muscles Directory): esternocleidomastóideo (\"Lateral flexion right [Right Sternocleidomastoid]\"), levantador da escápula (\"Lateral flexion right [Right Levator Scapulae]\"), esplênio (\"Lateral flexion right [Right 1, 2]\") e trapézio, fibras superiores (\"Lateral Flexion\"); os mesmos músculos do OUTRO lado seguram a descida da cabeça e a trazem de volta ao centro (raciocínio meu, sem frase de fonte: com a cabeça inclinada, o peso dela puxa pro lado da inclinação). Músculos ALONGADOS (do lado oposto à inclinação): trapézio superior (ExRx, Upper Trapezius Stretch: \"Tilt head away from lowered shoulder [...]\", Target \"Trapezius, Upper\"; ExRx, Trapezius (Upper Fibers): entra em insuficiência passiva \"through the completion of scapula depression when the neck is flexed, laterally flexed and rotated to the opposite side\"), levantador da escápula (a ACE põe a #202 na lista \"Neck > Levator Scapulae\"; ExRx, Levator Scapulae: \"when the neck is laterally flexed and rotated to the opposite side\"), esternocleidomastóideo (ACE #202: \"To stretch the sternocleidomastoid, after laterally flexing the neck, slowly lift you chin upwards\") e esplênio (ExRx, Upper Trapezius Stretch: \"Other: Splenius\"); Mayo: \"You'll feel tension in the side of your neck.\"",
+  "sinergistas": "os 4 flexores laterais do mesmo lado trabalham juntos (o ExRx dá a flexão lateral pro próprio lado aos 4); as fontes de mobilidade não separam agonista de sinergista",
+  "estabilizadores": "os músculos que seguram as escápulas baixas e pra trás, paradas (ACE #202: \"depress and retract your scapulae (pull shoulders down and back)\"), e o tronco ereto e parado (ACE #202: \"Stiffen your abdominal muscles (“brace”) to stabilize your spine\"); as mãos só apoiam nas coxas",
+  "fases": "ida (a cabeça inclina pro lado, devagar, até a tensão), pausa curta no fim, volta ao centro (devagar), pausa curta, o mesmo pro outro lado — sem segurar o alongamento; respiração solta (Mayo: \"Breathe freely as you hold each stretch\"; Mayfield: \"Remember to breathe naturally and without holding your breath\")"
+ },
+ "referencias": [
+  "American Council on Exercise — Lateral Neck Flexion (Exercise Library #202). https://www.acefitness.org/resources/everyone/exercise-library/202/lateral-neck-flexion/",
+  "American Council on Exercise — Neck Flexion and Extension (Exercise Library #204). https://www.acefitness.org/resources/everyone/exercise-library/204/neck-flexion-and-extension/",
+  "Mayo Clinic — Neck stretches for the workplace (vídeo, 26/09/2024). https://www.mayoclinic.org/healthy-lifestyle/adult-health/multimedia/neck-stretches/vid-20084697 (texto pela cópia do Internet Archive de 07/12/2025; o vídeo da página medido a 6 quadros/s)",
+  "NHS — Musculoskeletal Physiotherapy OCATS, Neck Mobility Exercises (Neck range of motion exercises – patient advice sheet). https://northcheshireandmersey.nhs.uk/media/emlfdohl/neck-range-of-motion-exercises-patient-advice-sheet.pdf",
+  "NHS — The Royal Wolverhampton NHS Trust, Neck Exercises. https://royalwolverhampton.nhs.uk/wp-content/uploads/2025/06/Neck-Exercises.pdf",
+  "NHS — Calderdale and Huddersfield NHS Foundation Trust, Physiotherapy, Cervical Spine Mobility Exercises (csph0126 v4). https://plr.cht.nhs.uk/download/902/Neck%20Exercises%20-%20Mobilising%20Exercises",
+  "Mayfield Clinic — Exercises: Neck Stretches & Strengthening (atualizado em 01/2017, revisado por Lisa Cleveland, PT). https://mayfieldclinic.com/pe-neckex.htm",
+  "ExRx.net — Upper Trapezius Stretch (cópia do Internet Archive de 18/12/2024). https://exrx.net/Stretches/TrapeziusUpper/Trap",
+  "ExRx.net — Neck Rotation Stretch (cópia do Internet Archive de 28/05/2023). https://exrx.net/Stretches/Sternocleidomastoid/NeckRotation",
+  "ExRx.net — Muscles Directory: Sternocleidomastoid, Trapezius (Upper Fibers), Levator Scapulae, Splenius (cópias do Internet Archive de 2024–2025). https://exrx.net/Muscles/Sternocleidomastoid",
+  "free-exercise-db (domínio público) — Side Neck Stretch. https://github.com/yuhonas/free-exercise-db",
+  "Garber CE et al. Quantity and Quality of Exercise for Developing and Maintaining Cardiorespiratory, Musculoskeletal, and Neuromotor Fitness in Apparently Healthy Adults. Med Sci Sports Exerc. 2011;43(7):1334-1359 (ACSM).",
+  "Farooq MN, Mohseni Bandpei MA, Ali M, Khan GA. Reliability of the universal goniometer for assessing active cervical range of motion in asymptomatic healthy persons. Pak J Med Sci. 2016;32(2):457-461.",
+  "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — valores de referência da AAOS (a mesma fonte do limites.py)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no banco",
+    "equipamento": "banco",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NHS, Musculoskeletal Physiotherapy OCATS — Neck Mobility Exercises (\"Sit upright\"); Mayfield Clinic — Exercises: Neck Stretches & Strengthening (\"Sit up tall with good posture\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mão esquerda apoiada em cima da coxa esquerda (encostando sem entrar)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "Mayfield Clinic — Exercises: Neck Stretches & Strengthening (foto da Neck Rotation: sentada com as mãos nas coxas); −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM) e 3 mm = o vão máximo de encostar (ENCOSTO_MAX)"
+   },
+   {
+    "nome": "mão direita apoiada em cima da coxa direita (encostando sem entrar)",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "Mayfield Clinic — Exercises: Neck Stretches & Strengthening (foto da Neck Rotation); −2 mm = PENETRA_MM e 3 mm = ENCOSTO_MAX"
+   },
+   {
+    "nome": "braços e antebraços não entram nas coxas",
+    "partes": [
+     "LeftArm",
+     "RightArm",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "antebraços e mãos não entram no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "a cabeça (pele e cabelo) não chega nos ombros",
+    "partes": [
+     "LeftArm",
+     "RightArm"
+    ],
+    "com": [
+     "Head"
+    ],
+    "cabelo": true,
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "Mayo Clinic — Neck stretches for the workplace (\"tilt your head so that you're moving your ear toward your shoulder. Don't bring your shoulder up to your ear.\"); ACE — Lateral Neck Flexion (#202) (\"draw your right ear toward your right shoulder stopping when you feel the stretch\"): a orelha vai EM DIREÇÃO ao ombro, não chega nele. A pele do ombro de cima e do trapézio (Spine2) não entra nesta regra: ela se emenda na do pescoço e perto da emenda a distância com sinal dá \"dentro\" falso (−30 mm já no repouso); a distância cabeça × ombro e trapézio de cada lado (a pele a mais de 9 cm do meio do corpo) sai à parte no info de cada quadro"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cabeça inclinada pra direita no começo (a foto)",
+    "medida": "cabeca_inclinacao",
+    "t": 0.0,
+    "graus": [
+     24,
+     32
+    ],
+    "fonte": "ACE — Lateral Neck Flexion (#202) (\"Slowly draw your right ear toward your right shoulder stopping when you feel the stretch\"); NHS, Musculoskeletal Physiotherapy OCATS — Neck Mobility Exercises (\"Go as far as comfortable\"); abaixo da média ativa MÁXIMA de jovens saudáveis sentados (Farooq et al. 2016, Pak J Med Sci 32(2):457–461, tabela II: \"Right side flexion\" 31,5 a 35,0°)"
+   },
+   {
+    "nome": "cabeça inclinada pra esquerda no meio do ciclo",
+    "medida": "cabeca_inclinacao",
+    "t": 0.5,
+    "graus": [
+     -32,
+     -24
+    ],
+    "fonte": "ACE — Lateral Neck Flexion (#202) (\"Repeat on the left side\"); NHS, Musculoskeletal Physiotherapy OCATS — Neck Mobility Exercises (\"Bend your neck to the side bringing your Left ear towards your Left shoulder. Go as far as comfortable\"); Farooq et al. 2016, Pak J Med Sci 32(2):457–461 (\"Left side flexion\" 31,4 a 36,6°)"
+   },
+   {
+    "nome": "cabeça dentro da amplitude ativa normal o ciclo todo",
+    "medida": "cabeca_inclinacao",
+    "t": "todos",
+    "graus": [
+     -34,
+     34
+    ],
+    "fonte": "Farooq et al. 2016, Pak J Med Sci 32(2):457–461 (tabela II, médias da flexão lateral ativa máxima: 31,4 a 36,6°)"
+   },
+   {
+    "nome": "a cabeça não vai pra frente nem pra trás (o queixo nivelado)",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -16,
+     -6
+    ],
+    "fonte": "ACE — Neck Flexion and Extension (#204) (\"Avoid any movement of the shoulders or shifting the head anterior and posterior\"); o boneco sentado, com a cabeça no repouso, mede ~−11°"
+   },
+   {
+    "nome": "ombros baixos, sem subir em direção à orelha (linha do ombro caída)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": "todos",
+    "graus": [
+     20,
+     32
+    ],
+    "fonte": "Mayo Clinic — Neck stretches for the workplace (\"Don't bring your shoulder up to your ear.\"); ACE — Lateral Neck Flexion (#202) (\"keeping your shoulders down and back\"); ExRx, Upper Trapezius Stretch (\"Tilt head away from lowered shoulder\"); a faixa dos ombros relaxados embaixo do Encolhimento com Halteres"
+   },
+   {
+    "nome": "ombros nivelados e parados",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ACE — Lateral Neck Flexion (#202) (\"Be sure to maintain body alignment keeping your shoulders down and back\"); Mayo Clinic — Neck stretches for the workplace (\"while keeping your shoulders nice and straight\")"
+   },
+   {
+    "nome": "tronco ereto e parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "NHS, Musculoskeletal Physiotherapy OCATS — Neck Mobility Exercises (\"Sit upright\"); Mayfield Clinic — Exercises: Neck Stretches & Strengthening (\"Sit up tall with good posture keeping shoulders down\"); Calderdale and Huddersfield NHS FT (\"Sit tall\")"
+   },
+   {
+    "nome": "o tronco não gira junto",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ACE — Lateral Neck Flexion (#202) (\"Be sure to maintain body alignment\")"
+   },
+   {
+    "nome": "costas retas (coluna neutra)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Lateral Neck Flexion (#202) (\"Stiffen your abdominal muscles (“brace”) to stabilize your spine, then depress and retract your scapulae (pull shoulders down and back) without arching your low back\")"
+   },
+   {
+    "nome": "joelhos e quadris dobrados a ~90° (sentado com os pés chapados)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "Farooq et al. 2016, Pak J Med Sci 32(2):457–461 (a posição sentada padrão pra medir o pescoço: \"Subject's ankles, knees and hips were positioned at right angle\")"
+   },
+   {
+    "nome": "quadris dobrados a ~90°",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "Farooq et al. 2016, Pak J Med Sci 32(2):457–461 (idem)"
+   }
+  ]
+ }
+}
