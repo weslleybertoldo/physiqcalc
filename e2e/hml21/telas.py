@@ -215,7 +215,7 @@ def prints_app(o, t, pend, L, nav, base: str, fase: str, s: str, estado, prefixo
             o.ok(ok and estado_pg in ("app", "sem-plano"), f"[{base}] a_meu_plano: o Meu plano do aluno SEM profissional (w7b-sozinho: {estado_pg})")
             pr("a_meu_plano", t2.pg)
         finally:
-            B.sair_do_treino(o, t2.pg, f"[{base}] telas (w7b-sozinho)", t2)
+            B.sair_do_treino(o, t2.pg, f"[{base}] telas (w7b-sozinho)", t2, conta=B.SOZINHO)
             L.do_navegador(B.SOZINHO, t2.pg)
             t2.fim()
     else:

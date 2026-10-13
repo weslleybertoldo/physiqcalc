@@ -88,10 +88,12 @@ navegar, esperar_pronto, Pendentes, mediana = B20.navegar, B20.esperar_pronto, B
 MAX_S, MIN_S, QUIETO_S = B20.MAX_S, B20.MIN_S, B20.QUIETO_S  # a regra do "pronto" da hml-20 (medir_leituras20.py)
 
 
-def sair_do_treino(o, pg, rotulo: str, t=None, espera_s: float = 40.0) -> None:
+def sair_do_treino(o, pg, rotulo: str, t=None, espera_s: float = 40.0, conta: str | None = None) -> None:
     """O logout (scope=local) da sessão do Treino que a troca do app abriu (decisão 23 da hml-20) — ESPERANDO a troca terminar quando a
     tela pediu a trocar-token (até 40 s, o teto do app: na etapa 2, o contexto do w7b-sozinho fechou antes de a sessão chegar ao
-    localStorage e 2 sessões do Treino dele ficaram abertas). `t` = a Tela (os pedidos anotados)."""
+    localStorage e 2 sessões do Treino dele ficaram abertas). `t` = a Tela (os pedidos anotados). `conta` na lista TREINO_SAIR_OUTRAS
+    (variável de ambiente, contas de teste separadas por vírgula) → antes do scope=local, o scope=others com o MESMO token fecha as
+    outras sessões do Treino dessa conta (hml-21a F7: as 2 do w7b-sozinho, sem login a mais). Sem a variável, nada muda."""
     if t is not None and any(p.get("tipo") == "fn" and p.get("nome") == "trocar-token" for p in getattr(t, "pedidos", [])):
         fim = time.time() + espera_s
         while time.time() < fim and not B20.token_do_treino_no_navegador(pg):
@@ -99,6 +101,18 @@ def sair_do_treino(o, pg, rotulo: str, t=None, espera_s: float = 40.0) -> None:
                 pg.wait_for_timeout(500)
             except Exception:  # noqa: BLE001 — a página fechou
                 break
+    outras = {c.strip() for c in os.environ.get("TREINO_SAIR_OUTRAS", "").split(",") if c.strip()}
+    if conta and conta in outras:
+        tok = B20.token_do_treino_no_navegador(pg)
+        if tok:
+            try:
+                st: object = C.http("POST", f"{C.TREINO_URL}/auth/v1/logout?scope=others", {},
+                                    {"apikey": C.anon(C.TREINO_REF), "Authorization": f"Bearer {tok}"})[0]
+            except Exception as e:  # noqa: BLE001
+                st = type(e).__name__
+            o.ok(st in (200, 204), f"{rotulo}: logout (scope=others) das outras sessões do Treino de {conta} ({st})", parar=False)
+        else:
+            o.linha(f"   ({rotulo}: sem sessão do Treino no navegador — o scope=others de {conta} não rodou)")
     B20.sair_do_treino(o, pg, rotulo)
 
 
