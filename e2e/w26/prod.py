@@ -42,14 +42,15 @@ ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 # "só leitura" de produção NUNCA pode seguir uma volta do OAuth (o GET com o state certo grava a conexão). Teste: python3 e2e/hml19/guarda_teste.py.
 # hml-21a (achado 5 da spec hml-21): a conta também — sem ela aqui, a w26 tratava a função DESCONHECIDA como leitura (o E2E "só leitura"
 # da produção gravaria o sino); o `ler` dela passa pelo corpo, como o da nutricao/financeiro.
-ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar|conta)(?:[/?#]|$)")
+# W-A P2 (LINUX 3): as 3 da W-A também — acessos, aluno-dia e (no Treino) treino-acessos —; o `ler` delas passa pelo corpo.
+ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar|conta|acessos|aluno-dia|treino-acessos)(?:[/?#]|$)")
 # hml-20a (decisão I): as funções em que o corpo { "acao": "ler" } é LEITURA — só a nutricao e a financeiro. A mp-contas-renovar (W2) não
 # lê o `acao` (o corpo dela é { schema, forcar_conta? }: com o schema certo, a rodada roda e grava) → segue escrita.
-LEITURA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|conta)(?:[/?#]|$)")
+LEITURA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|conta|acessos|aluno-dia|treino-acessos)(?:[/?#]|$)")
 
 
 def leitura_da_funcao(corpo: str | None) -> bool:
-    """hml-20a (decisão I): o corpo { "acao": "ler" } da nutricao/financeiro é a ação de LEITURA do jeito 2 (o campo que elas leem é o
+    """hml-20a (decisão I): o corpo { "acao": "ler" } da nutricao/financeiro e das 3 da W-A é a ação de LEITURA do jeito 2 (o campo que elas leem é o
     `acao`); corpo ilegível, sem a ação ou com outra ação → não (segue escrita)."""
     try:
         b = json.loads(corpo) if isinstance(corpo, str) else None
@@ -59,7 +60,7 @@ def leitura_da_funcao(corpo: str | None) -> bool:
 
 
 def eh_escrita(metodo: str, url: str, corpo: str | None = None) -> bool:
-    """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao e na financeiro (hml-20a: menos o POST com o
+    """O pedido grava? POST/PATCH/PUT/DELETE em tabela, nas RPCs que gravam, na nutricao/financeiro e nas 3 da W-A (hml-20a: menos o POST com o
     corpo de leitura, { "acao": "ler" }), na mp-contas-renovar (W2) e no Storage (fora o link de leitura)."""
     # hml-20a (revisão): a exceção olha só o CAMINHO (um POST em /rest/v1/<tabela>?x=/functions/v1/nutricao com { acao: "ler" } é escrita)
     if metodo == "POST" and LEITURA_FUNCAO.search(urlparse(url).path) and leitura_da_funcao(corpo):
