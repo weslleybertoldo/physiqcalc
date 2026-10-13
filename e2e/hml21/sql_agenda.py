@@ -5,7 +5,8 @@ bloco que termina com erro de propósito (nada fica gravado — a massa nasce DE
 "Como o app" = o papel authenticated com o sub de uma conta de TESTE (w5p-nutri, w5p-personal = o dono da conta, w5p-aluna, w13-dono = OUTRA
 conta); "sem login" = as claims vazias. A prova da criação (o 1º acesso de quem não tem calendário) é feita DENTRO do bloco: os calendários
 da nutri vão à Lixeira só nele (nenhuma conta nova no Auth — decisão I) e voltam com o bloco.
-Casos (staging): excluir E1–E7 · garantir G1–G8 · catalogo K1–K2 (só leitura; vale no public).
+Casos (staging): excluir E1–E7 · garantir G1–G9 + G5b (⚪7 da revisão: os 2 lados dos `or` da forma — papéis e módulos — e a trava
+pg_advisory_xact_lock tomada pelo authenticated) · catalogo K1–K2 (só leitura; vale no public).
 Uso: python3 e2e/hml21/sql_agenda.py [--grupo excluir,garantir,catalogo] [--casos E1,G2]     (staging; roda na ETAPA 2, depois da migration)
      python3 e2e/hml21/sql_agenda.py --so-catalogo --schema staging|public                 (só leitura)
      python3 e2e/hml21/sql_agenda.py --seco                                                 (monta os blocos; NADA vai ao banco)
@@ -170,6 +171,26 @@ def casos() -> dict[str, tuple[str, str, dict]]:
                + erro("nulo_na_lista", f"perform {S}.agenda_garantir_inicio(v_conta_a, array['personal', null], '{{}}'::text[]);")
                + erro("duas_dimensoes", f"perform {S}.agenda_garantir_inicio(v_conta_a, array[array['a'], array['b']], '{{}}'::text[]);") + VOLTA,
                {"onze": "dados_invalidos", "vazio": "dados_invalidos", "nulo_na_lista": "dados_invalidos", "duas_dimensoes": "dados_invalidos"})
+    # ⚪7 da revisão: os 2 lados dos `or` da forma (os PAPÉIS e os MÓDULOS — cada condição recusa sozinha) …
+    k["G5b"] = ("garantir",
+                como("v_nutri")
+                + erro("onze_modulos", f"perform {S}.agenda_garantir_inicio(v_conta_a, '{{}}'::text[], array_fill('x'::text, array[11]));")
+                + erro("modulo_vazio", f"perform {S}.agenda_garantir_inicio(v_conta_a, '{{}}'::text[], array['']);")
+                + erro("modulo_nulo", f"perform {S}.agenda_garantir_inicio(v_conta_a, '{{}}'::text[], array['treino', null]);")
+                + erro("modulos_2d", f"perform {S}.agenda_garantir_inicio(v_conta_a, '{{}}'::text[], array[array['a'], array['b']]);")
+                + erro("modulo_41", f"perform {S}.agenda_garantir_inicio(v_conta_a, '{{}}'::text[], array[repeat('m', 41)]);") + VOLTA,
+                {"onze_modulos": "dados_invalidos", "modulo_vazio": "dados_invalidos", "modulo_nulo": "dados_invalidos", "modulos_2d": "dados_invalidos",
+                 "modulo_41": "dados_invalidos"})
+    # … e a trava por pessoa (pg_advisory_xact_lock) PELO authenticated: depois da chamada (o INVOKER roda com o papel de quem chama), o lock
+    # consultivo desta transação está tomado (pg_locks) — e o lock some no fim da transação (o bloco volta)
+    k["G9"] = ("garantir",
+               f"  select count(*) into v_n from pg_catalog.pg_locks l where l.locktype = 'advisory' and l.pid = pg_catalog.pg_backend_pid() and l.granted;\n"
+               + como("v_nutri") + f"  v_j := {S}.agenda_garantir_inicio(v_conta_a, array['nutricionista'], array['nutricao']);\n"
+               + res(papel="current_user::text") + VOLTA
+               + res(locks_antes="v_n",
+                     locks_depois=("(select count(*) from pg_catalog.pg_locks l where l.locktype = 'advisory' and l.pid = pg_catalog.pg_backend_pid() "
+                                   "and l.granted)")),
+               {"papel": "authenticated", "locks_antes": 0, "locks_depois": 1})
     k["G6"] = ("garantir",
                sem_calendarios + como("v_nutri") + f"  v_j := {S}.agenda_garantir_inicio(v_conta_a, array['nutricionista'], array['nutricao']);\n" + VOLTA
                + res(nomes="(select jsonb_agg(x ->> 'nome') from jsonb_array_elements(v_j -> 'criados') x)",
@@ -217,11 +238,12 @@ def resultado(q: str) -> dict:
 
 def catalogo(o, s: str) -> None:
     """K1–K2 (só leitura; vale no public): as 2 funções existem, INVOKER com search_path '' e o EXECUTE só do logado e do servidor."""
-    fs = ", ".join(C.txt(f"{s}.{f}") for f in FUNCOES)
+    # o to_regprocedure aceita a assinatura como escrita (com espaços) e devolve null se não existe (o texto do regprocedure não tem espaço)
+    fs = ", ".join(f"to_regprocedure({C.txt(f'{s}.{f}')})" for f in FUNCOES)
     linhas = B.ler_principal(
         f"select p.oid::regprocedure::text as f, p.prosecdef as definer, coalesce(array_to_string(p.proconfig, ','), '') as cfg, "
         f"has_function_privilege('anon', p.oid, 'EXECUTE') as anon, has_function_privilege('authenticated', p.oid, 'EXECUTE') as autenticado, "
-        f"has_function_privilege('service_role', p.oid, 'EXECUTE') as servidor from pg_proc p where p.oid::regprocedure::text = any(array[{fs}])")
+        f"has_function_privilege('service_role', p.oid, 'EXECUTE') as servidor from pg_proc p where p.oid = any(array[{fs}]::oid[])")
     o.ok(len(linhas) == 2, f"[K1/{s}] as 2 funções da migration existem ({len(linhas)})")
     o.ok(all(x["definer"] is False and x["cfg"] in ('search_path=""', "search_path=") and x["anon"] is False and x["autenticado"] is True
              and x["servidor"] is True for x in linhas) and len(linhas) == 2,
@@ -248,9 +270,10 @@ def seco(o, ids: list[str]) -> None:
         o.ok(q.count("$t$") == 2 and q.count("perform set_config('role', 'authenticated'") == q.count("perform set_config('role', 'postgres'")
              and "public." not in q and q.rstrip().endswith("end $t$;") and "raise exception 'RESULTADO<<%>>', v_res::text;" in q,
              f"[{i}] bloco bem formado ({len(q)} caracteres; cada 'como o app' com o seu VOLTA; só staging; termina no RESULTADO — nada fica gravado)")
-    o.ok({k[0] for k in ks.values()} == {"excluir", "garantir"} and len([i for i in ks if i.startswith("E")]) == 7 and len([i for i in ks if i.startswith("G")]) == 8,
-         "os casos: excluir E1–E7 (a nutri, outra conta, sem login, nulo, na Lixeira, o dono da conta, a aluna) e garantir G1–G8 (idempotente, "
-         "a criação — Treino e Nutrição, a 2ª chamada, sem login, a forma, só nutri, sem conta, outra conta)")
+    o.ok({k[0] for k in ks.values()} == {"excluir", "garantir"} and len([i for i in ks if i.startswith("E")]) == 7 and len([i for i in ks if i.startswith("G")]) == 10,
+         "os casos: excluir E1–E7 (a nutri, outra conta, sem login, nulo, na Lixeira, o dono da conta, a aluna) e garantir G1–G9 + G5b (idempotente, "
+         "a criação — Treino e Nutrição, a 2ª chamada, sem login, a forma dos papéis e dos MÓDULOS — os 2 lados dos or —, só nutri, sem conta, "
+         "outra conta, a trava por pessoa tomada pelo authenticated)")
     o.ok(FALHA_SQL.search('erro: RESULTADO<<{"a": 1}>> fim').group(1) == '{"a": 1}', "o RESULTADO sai da mensagem do erro (o molde do sql_wa.py)")
 
 
