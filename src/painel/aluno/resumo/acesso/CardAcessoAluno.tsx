@@ -10,10 +10,10 @@ import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto } from "@/ui/premium/Estados";
-import { linhaDoPerfil } from "../dados/regras";
-import { useAtualizarAluno, usePerfilAluno } from "../dados/usePerfilAluno";
-import { acessoDoAluno } from "./acesso/api";
-import { SheetSenhaAluno } from "./acesso/SheetSenhaAluno";
+import { linhaDoPerfil } from "../../dados/regras";
+import { useAtualizarAluno, usePerfilAluno } from "../../dados/usePerfilAluno";
+import { acessoDoAluno } from "./api";
+import { SheetSenhaAluno } from "./SheetSenhaAluno";
 import {
   ROTULO_ESTADO,
   TOM_ESTADO,
@@ -21,7 +21,7 @@ import {
   horaDoBloqueio,
   textoErroAcesso,
   textoUltimoAcesso,
-} from "./acesso/regras";
+} from "./regras";
 
 function Linha({ rotulo, children, marca }: { rotulo: string; children: React.ReactNode; marca: string }) {
   return (
@@ -33,13 +33,14 @@ function Linha({ rotulo, children, marca }: { rotulo: string; children: React.Re
 }
 
 /**
- * Card "Acesso do aluno" do Resumo (spec 4.5, padrão da tela 7 — W8b): como o aluno entra (e-mail do login, Google ou senha,
- * último acesso), a senha provisória e o bloqueio por tentativas. O profissional responsável (dono da conta, personal ou
- * nutricionista do aluno) e o master CRIAM O ACESSO ou uma SENHA NOVA — provisória: no 1º login o aluno cria a dele — e a
- * senha nova destrava a conta bloqueada. W14 (N-63): "Desativar"/"Reativar" e "Remover da lista" pela função alunos da W13
- * (a regra nova: dono da conta, responsável ou master; as mesmas confirmações da lista de Alunos) — as RPCs antigas do Nutri
- * (banir/apagar o login) ficam só no site antigo: no Physiq o login é único (pode ser profissional, ter treino ou outra
- * matrícula) e cortar o app é o ajuste "Acesso ao app" (card Ajustes do aluno).
+ * Card "Login do aluno" (W8b; era o "Acesso do aluno" do Resumo — W-A P4: mora na aba Acessos, ao lado das linhas, e saiu do Resumo
+ * — a subpasta não é card: src/rotas/registro.ts; o que ele faz NÃO mudou, as RPCs seguem as de ./api.ts, da hml-21): como o aluno entra
+ * (e-mail do login, Google ou senha, último acesso), a senha provisória e o bloqueio por tentativas. O profissional responsável (dono da
+ * conta, personal ou nutricionista do aluno) e o master CRIAM O ACESSO ou uma SENHA NOVA — provisória: no 1º login o aluno cria a dele — e
+ * a senha nova destrava a conta bloqueada. W14 (N-63): "Desativar"/"Reativar" e "Remover da lista" pela função alunos da W13 (a regra
+ * nova: dono da conta, responsável ou master; as mesmas confirmações da lista de Alunos) — as RPCs antigas do Nutri (banir/apagar o
+ * login) ficam só no site antigo: no Physiq o login é único (pode ser profissional, ter treino ou outra matrícula) e cortar o app é a
+ * linha "Acesso ao app" da aba Acessos.
  */
 export default function CardAcessoAluno({ alunoId }: { alunoId: string }) {
   const q = useQuery({
@@ -66,7 +67,7 @@ export default function CardAcessoAluno({ alunoId }: { alunoId: string }) {
     <Cartao className="flex min-h-[240px] flex-col px-[18px] py-4" data-card-acesso-aluno data-acesso-estado={q.isLoading ? "carregando" : estado}>
       {/* título longo num card de 1/3 da largura (tela 7): o título não quebra e a ação fica no rodapé, como no card Financeiro */}
       <CabecalhoCartao
-        titulo={<span className="whitespace-nowrap">Acesso do aluno</span>}
+        titulo={<span className="whitespace-nowrap">Login do aluno</span>}
         extra={d ? <Chip tom={TOM_ESTADO[estado]} className="ml-auto" data-acesso-chip>{ROTULO_ESTADO[estado]}</Chip> : undefined}
       />
       {q.isLoading ? (

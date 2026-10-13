@@ -4,15 +4,15 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ acesso: vi.fn(), criar: vi.fn(), senha: vi.fn(), perfil: vi.fn(), acao: vi.fn() }));
-vi.mock("../dados/api", () => ({ buscarPerfilAluno: h.perfil, ErroPerfil: class extends Error {} }));
+vi.mock("../../dados/api", () => ({ buscarPerfilAluno: h.perfil, ErroPerfil: class extends Error {} }));
 vi.mock("@/painel/alunos/api", () => ({ acaoNoAluno: h.acao, ErroAlunos: class extends Error {} }));
-vi.mock("./acesso/api", () => ({ acessoDoAluno: h.acesso, criarAcessoDoAluno: h.criar, criarSenhaNovaDoAluno: h.senha }));
+vi.mock("./api", () => ({ acessoDoAluno: h.acesso, criarAcessoDoAluno: h.criar, criarSenhaNovaDoAluno: h.senha }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { perfil } from "@/test/fixturesPerfilAluno";
 import CardAcessoAluno from "./CardAcessoAluno";
 
-// W8b — o card "Acesso do aluno" do Resumo (tela 7): o profissional cria o acesso ou uma senha nova (provisória).
+// W8b — o card "Login do aluno" (era o "Acesso do aluno" do Resumo; W-A P4: na aba Acessos): o profissional cria o acesso ou uma senha nova (provisória).
 const abrir = () =>
   render(
     <MemoryRouter useTransitions={false}>
@@ -32,7 +32,7 @@ beforeEach(() => {
   h.perfil.mockResolvedValue(perfil({ paciente_id: "p1" }));
 });
 
-describe("card Acesso do aluno", () => {
+describe("card Login do aluno", () => {
   it("sem login: 'Criar acesso' com o e-mail do cadastro e a senha gerada; depois mostra o que passar ao aluno", async () => {
     h.acesso.mockResolvedValue(dados(null));
     h.criar.mockResolvedValue("u-novo");
@@ -69,6 +69,12 @@ describe("card Acesso do aluno", () => {
     abrir();
     expect(await screen.findByText("SENHA PROVISÓRIA")).toBeInTheDocument();
     expect(screen.getByText(/Provisória · ele cria a dele ao entrar/)).toBeInTheDocument();
+  });
+  it("W-A P4: o título é 'Login do aluno' (o card mora na aba Acessos)", async () => {
+    h.acesso.mockResolvedValue(dados(null));
+    abrir();
+    expect(await screen.findByText("Login do aluno")).toBeInTheDocument();
+    expect(screen.queryByText("Acesso do aluno")).toBeNull();
   });
   it("quem não mexe no acesso vê a frase (sem botão)", async () => {
     h.acesso.mockRejectedValue(new Error("sem_acesso"));
