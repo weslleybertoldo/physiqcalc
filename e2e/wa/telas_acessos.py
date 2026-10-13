@@ -20,7 +20,8 @@ w27-master (master SÓ no staging.profiles durante a rodada — o molde do api.p
   C9  a_acessos_celular    390 px: a aba ativa rola para a vista na barra; nada passa da largura da tela
   C10 a_resumo_depois      o Resumo sem o card de login; "Mensagens automáticas" só com o WhatsApp; o ⋯ › Acesso do aluno abre a aba Acessos
   C11 a_editor_sem_cadeado o editor do Treino sem o chip "ALUNO NÃO MUDA AS SÉRIES"
-  --loja: A0 + C1, C4, C5 e C6 SÓ LEITURA + C9 + C3 só até o Cancelar (o print com o prefixo loja_).
+  --loja: A0 + C1, C4 e C5 SÓ LEITURA + C6 da loja (o master no app vê "Conta master: use o site" e sai deste aparelho — hml-08)
+          + C9 + C3 só até o Cancelar (o print com o prefixo loja_).
 A rodada vai para o estado (~/projetos/physiqcalc-scratch/w-a/p4-estado.json) ANTES de qualquer escrita: a foto da matrícula A (o config, os acessos,
 o series_travadas do Treino) e o papel do w27-master; no fim (e no --limpar) tudo volta à foto, o histórico e os avisos da rodada saem e a Massa
 (a 2ª matrícula, a "sem login", os papéis) é desfeita — as sobras = 0.
@@ -72,6 +73,8 @@ NO_CODIGO = {
     "src/painel/aluno/resumo/CardAjustesAluno.tsx": ['titulo="Mensagens automáticas"', "data-card-ajustes-aluno", "data-ajuste={a.chave}"],
     "src/painel/aluno/Cabecalho.tsx": ["navigate(`${base}/acessos`)", 'marca="acesso"'],
     "src/ui/premium/Confirmar.tsx": ["data-confirmar-ok", "data-confirmar-cancelar"],
+    # o C6 da loja: no app, a conta master sai deste aparelho e vê o cartão (hml-08, H-22)
+    "src/ui/casca/MasterSoNoSite.tsx": ["data-master-so-no-site", "Conta master: use o site", 'sair({ escopo: "local" })'],
 }
 # o que SAIU com a P4 (tem de estar fora)
 FORA_DO_CODIGO = {
@@ -466,6 +469,25 @@ def caso_master(o, nav, R: Rodada) -> None:
         t.fim()
 
 
+def caso_master_loja(o, nav, R: Rodada) -> None:
+    """hml-08 (H-22): o painel master é só do site — no app (o build:loja), a conta master sai DESTE aparelho (logout LOCAL) e vê
+    "Conta master: use o site"; a aba não abre. O logout do fim da rodada não tem o que fechar (a sessão já saiu: 403)."""
+    e = R.e
+    t = R.tela(nav, "master-loja")
+    try:
+        token = R.L.token("w27-master")
+        t.entrar(R.L, "w27-master", f"/painel/alunos/{e['pac_a']}/acessos")
+        ok = t.esperar(lambda: t.tem("[data-master-so-no-site]"), 60)
+        o.ok(ok and "Conta master: use o site" in t.texto("[data-master-so-no-site]") and not t.tem("[data-aba-acessos]"),
+             "C6 loja: o master não abre o painel no app — 'Conta master: use o site' (hml-08), sem a aba")
+        R.print(t, f"{R.prefixo_print}a_master_use_o_site")
+        st = C.C.sair_local(token, "principal")
+        o.ok(st in (401, 403), f"C6 loja: a sessão do master já saiu deste aparelho (o app fez o logout local; de novo: {st})")
+        R.L.sessoes.esquecer(token)
+    finally:
+        t.fim()
+
+
 def caso_sem_login(o, nav, R: Rodada) -> None:
     e = R.e
     t = R.tela(nav, "sem-login")
@@ -668,7 +690,7 @@ def main() -> int:
                     rodar(caso_personal, True)
                     rodar(caso_nutri, True)
                     rodar(caso_dono_sem_papel, True)
-                    rodar(caso_master)
+                    rodar(caso_master_loja)
                     rodar(caso_celular)
                     rodar(caso_confirmar_e_cancelar)
                 else:
