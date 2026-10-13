@@ -481,7 +481,9 @@ def casos() -> dict[str, tuple[str, str, dict]]:
                 + negado("uuid", f"perform {S}.wa_uuid('x');") + VOLTA,
                 {"matriculas": "negado", "plano": "negado", "refeicao": "negado", "visivel": "negado", "lgpd": "negado", "uuid": "negado"})
     # ───────────── LGPD (wa3: o corpo vivo + as tabelas novas) ─────────────
-    massa_lgpd = (liberar() + como("v_aluna") + criar
+    # P2 (Task 1): a rotina de TODO dia — a do `criar` (seg/qua/dom) não aceita marcar hoje nas terças, quintas, sextas e sábados (o L1 caía
+    # com rotinas_feitas 0 nesses dias: o rotina_marcar responde dados_invalidos fora dos dias da rotina)
+    massa_lgpd = (liberar() + como("v_aluna") + todos_os_dias
                   + f"  perform {S}.rotina_marcar(v_id, v_hoje, true);\n"
                   + f"  perform {S}.dia_tirar(v_hoje, v_item);\n  perform {S}.dia_extra_salvar(null, jsonb_build_object('dia', v_hoje, 'nome', 'Lanche'));\n"
                   + f"  v_id2 := ({S}.meu_alimento_salvar(null, '{{\"nome\": \"{B.MARCA} pão\"}}'::jsonb) -> 'alimento' ->> 'id')::uuid;\n"
