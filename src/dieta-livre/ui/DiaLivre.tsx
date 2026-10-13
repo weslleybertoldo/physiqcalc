@@ -43,10 +43,12 @@ export function ExtrasDoDia({ extras, ocupado, desligado, aoAbrir, gravar }: {
   );
 }
 
-/** "Nova refeição" (só quando a matrícula do plano ativo é a da tela — o servidor põe a extra nela) e "Meus alimentos e receitas". */
+/** "Nova refeição" (só quando a matrícula do plano ativo é a da tela — o servidor põe a extra nela) e "Meus alimentos e receitas".
+ *  `flex-wrap`: os 2 rótulos (o botão não quebra texto) não cabem lado a lado em 390 px — sem isso a página passava de 431 px e as folhas
+ *  (fixas no fundo) ficavam com os botões abaixo da tela. Não cabendo, o 2º desce para a linha de baixo, cada um com a largura toda. */
 export function BotoesDoDia({ extra, desligado, aoNovaRefeicao, aoMeus }: { extra: boolean; desligado: boolean; aoNovaRefeicao: () => void; aoMeus: () => void }) {
   return (
-    <div className="mt-2.5 flex gap-2.5" data-dieta-livre="liberada">
+    <div className="mt-2.5 flex flex-wrap gap-2.5" data-dieta-livre="liberada">
       {extra && (
         <Botao variante="g" icone={Plus} className="flex-1" onClick={aoNovaRefeicao} disabled={desligado} data-dieta-nova-refeicao>{TEXTOS.novaRefeicao}</Botao>
       )}

@@ -333,6 +333,10 @@ def caso_liberada_e_tirar(o, nav, R: Rodada) -> None:
         ok = abrir_dieta(t, R, "w5p-aluna", esperar="liberada")
         o.ok(ok and t.tem('[data-dieta-livre="liberada"]') and t.n("[data-dieta-meus]") == 1 and t.n("[data-dieta-nova-refeicao]") == 1,
              "D2 'Pode mexer': 'Nova refeição' e 'Meus alimentos e receitas' embaixo das refeições")
+        # 13/10 (o 1º E2E real): os 2 botões lado a lado passavam de 390 px → a página ia a 431 px e as folhas (fixas no fundo) ficavam com os
+        # botões abaixo da tela (os cliques de pôr, criar e salvar não aconteciam). A tela tem que caber na largura do celular.
+        larg = t.pg.evaluate("() => [window.innerWidth, document.documentElement.scrollWidth]")
+        o.ok(larg[0] <= t.largura and larg[1] <= t.largura, f"D2 a tela 'Pode mexer' cabe em {t.largura} px, sem rolar para o lado (innerWidth, scrollWidth = {larg})")
         t.pg.eval_on_selector('[data-dieta-livre="liberada"]', "e => e.scrollIntoView({ block: 'center' })")
         R.print(t, "d_liberada")
         r1, it = e["r1"], e["item1"]
