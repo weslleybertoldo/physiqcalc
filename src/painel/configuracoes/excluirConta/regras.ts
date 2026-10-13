@@ -117,6 +117,9 @@ export function listaApaga(c: Conferencia): string[] {
   if (soma(t, ["physiq_recebimentos"])) linhas.push("Os dados de recebimento que estavam no app antigo de treino");
   const enviados = soma(c.aluno?.apaga, ["diario_alimentar", "refeicoes_concluidas", "metas_concluidas"]);
   if (enviados) linhas.push(`O que você enviou como aluno: fotos do diário e refeições/metas marcadas (${enviados})`);
+  // W-A (P1: o `rotinas_e_dieta` da parte de aluno da excluir_conta_profissional)
+  const criados = soma(c.aluno?.apaga, ["rotinas_e_dieta"]);
+  if (criados) linhas.push(`Rotinas, alimentos e receitas que você criou como aluno (${criados})`);
   return linhas;
 }
 

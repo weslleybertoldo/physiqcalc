@@ -75,6 +75,10 @@ describe("excluir conta do profissional — os textos da conferência", () => {
     expect(apaga[0]).toMatch(/O seu login no Physiq/);
     expect(apaga).toContain("O seu histórico de treino pessoal: 4 treinos feitos e 30 séries");
     expect(apaga).toContain("O que você enviou como aluno: fotos do diário e refeições/metas marcadas (3)");
+    expect(apaga.some((l) => l.startsWith("Rotinas, alimentos e receitas"))).toBe(false); // sem nada da W-A, sem a linha
+    // W-A P3: o `rotinas_e_dieta` da parte de aluno da excluir_conta_profissional (P1)
+    const comWa = listaApaga(conferencia({ aluno: { matriculas: 1, contas: ["X"], apaga: { rotinas_e_dieta: 7 }, mantem: {} } }));
+    expect(comWa).toContain("Rotinas, alimentos e receitas que você criou como aluno (7)");
     const fica = listaFica(conferencia());
     expect(fica[0]).toMatch(/Res\. CFN 594\/2017 e Lei 13\.787\/2018: 20 anos/);
     expect(fica).toContain("Os treinos e exercícios que você montou para os alunos (4) continuam com eles.");

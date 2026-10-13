@@ -45,6 +45,9 @@ function resumoDaExclusao(r: ResultadoExclusao): { apaga: string[]; fica: string
   if (proprios) apaga.push(`Treinos, exercícios e academias que você criou (${proprios})`);
   const enviados = soma(ap, ["diario_alimentar", "refeicoes_concluidas", "metas_concluidas"]);
   if (enviados) apaga.push(`O que você enviou: fotos do diário e refeições/metas marcadas (${enviados})`);
+  // W-A (P1: o `rotinas_e_dieta` da excluir_dados_aluno — rotinas, alimentos, receitas e o que pôs e tirou no dia)
+  const criados = soma(ap, ["rotinas_e_dieta"]);
+  if (criados) apaga.push(`Rotinas, alimentos e receitas que você criou (${criados})`);
   apaga.push("A foto do seu perfil e os seus avisos");
   const fica: string[] = [];
   if (Number(mp.matriculas)) fica.push("O seu cadastro e a matrícula (desligados do seu login)");

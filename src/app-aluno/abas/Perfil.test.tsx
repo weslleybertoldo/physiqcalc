@@ -205,7 +205,7 @@ describe("aba Perfil (tela 5)", () => {
   it("Excluir: confere antes, o botão só liga com EXCLUIR digitado e então exclui e sai", async () => {
     h.conferencia = {
       ok: true, simulacao: true,
-      apaga: { principal: { diario_alimentar: 2 }, treino: { treino_historico: 6, tb_treino_series: 28 } },
+      apaga: { principal: { diario_alimentar: 2, rotinas_e_dieta: 4 }, treino: { treino_historico: 6, tb_treino_series: 28 } },
       mantem: { principal: { matriculas: 1, cobrancas: 3 }, treino: { physiq_avaliacoes: 5 } },
     };
     h.excluir.mockResolvedValue({ ok: true });
@@ -213,6 +213,8 @@ describe("aba Perfil (tela 5)", () => {
     fireEvent.click(await screen.findByText("Excluir minha conta"));
     expect(await screen.findByText(/6 treino\(s\) feito\(s\) e 28 série\(s\)/)).toBeInTheDocument();
     expect(screen.getByText(/Avaliações e fotos de avaliação \(5\)/)).toBeInTheDocument();
+    // W-A P3: o que a P1 conta na excluir_dados_aluno (rotinas, alimentos, receitas e o dia)
+    expect(screen.getByText("Rotinas, alimentos e receitas que você criou (4)")).toBeInTheDocument();
     const botao = document.querySelector("[data-excluir-confirmar]") as HTMLButtonElement;
     expect(botao).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Para confirmar, digite EXCLUIR"), { target: { value: "EXCLUI" } });
