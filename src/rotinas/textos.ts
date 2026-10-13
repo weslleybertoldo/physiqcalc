@@ -9,7 +9,7 @@ import type { TipoDeRotina } from "@/aluno-dia/tipos";
  */
 export const REMEDIO_SEM_NOME_NA_TELA_BLOQUEADA = true;
 
-/** Q4 (spec W-A §9 — sem resposta; vale a recomendada, "sim"): a linha fixa da página. Resposta "não" = trocar para null. */
+/** Q4 (spec W-A §9 — respondida pelo Weslley em 13/10/2026: "1", sim): a linha fixa da página. Tirar a linha = trocar para null. */
 export const LINHA_PROFISSIONAIS_VEEM: string | null = "Seus profissionais veem as suas rotinas.";
 
 export const TITULO_DO_LEMBRETE = "Hora da rotina";
