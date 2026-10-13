@@ -16,9 +16,6 @@
 // as 14 RPCs que saíram do navegador (a casca e o app do aluno: 6 de leitura e 8 que gravam) saíram das 2 listas — o front não as chama
 // mais (a conta chama no servidor). O E2E que mede o front ANTIGO (o "antes" do staging) soma as 6 de leitura à lista da Guarda dele
 // (e2e/hml21/_base.py), no molde do RPCS_DO_APP da hml-19b.
-// hml-21d: + o `ler` da função treinos (Banco do Treino) em ACOES_DE_LEITURA (repete 1 vez, como o GET de hoje; as ações dela não); as 3
-// RPCs de leitura que saíram do navegador (modelos_da_lista e exercicios_da_lista do Treino — a treinos chama — e a aluno_treino do
-// principal — a conta chama) saíram do RPC_SO_LEITURA.
 import type { BancoErro } from "../../supabase-principal/functions/_shared/erros";
 import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 
@@ -43,20 +40,19 @@ export const TENTATIVAS_LEITURA = 1;
  * hml-17, STABLE pela migração 20261010100000): podem repetir. hml-21a: saíram as 6 que a função conta chama (meu_perfil_aluno,
  * meu_plano_app, minha_agenda, minha_agenda_lista, minha_situacao, pratos_prontos_do_app) — eram 45. hml-21b: saíram as 9 da Agenda e dos
  * Alunos que a função conta chama (agenda_horarios, aluno_agenda_horarios, aluno_compromissos, aluno_convites, alunos_da_conta,
- * alunos_novos_por_mes, alunos_pendentes, equipe_da_conta, minhas_regras_agenda) — eram 39. hml-21d: saíram as 3 que a treinos e a conta
- * chamam (aluno_treino, exercicios_da_lista, modelos_da_lista) — eram 30.
+ * alunos_novos_por_mes, alunos_pendentes, equipe_da_conta, minhas_regras_agenda) — eram 39.
  */
 export const RPC_SO_LEITURA = new Set<string>([
   "aluno_anotacoes", "aluno_evolucao",
-  "aluno_perfil", "aluno_responsavel",
+  "aluno_perfil", "aluno_responsavel", "aluno_treino",
   "financeiro_do_aluno", "grupos_alimentos", "lixeira_da_conta", "master_alunos_do_app", "mensagens_desligadas",
   "minha_dieta", "minha_evolucao",
   "paciente_dado_livre", "painel_resumo", "w2l_prontuarios_para_baixar",
   "whatsapp_fila", "whatsapp_resumo",
   // hml-14b (B21): as listas do painel por página, com o total e as somas do banco
   "financeiro_lancamentos", "financeiro_recibos", "financeiro_resumo_periodo", "receitas_da_nutricionista", "respostas_da_conta",
-  // hml-14d (B21): os números da Pré-consulta e as listas/somas por aluno (hml-21d: as 2 listas do Treino saíram — a treinos chama)
-  "exames_do_aluno", "financeiro_totais_do_aluno",
+  // hml-14d (B21): as listas do Treino (banco do Treino), os números da Pré-consulta e as listas/somas por aluno
+  "exames_do_aluno", "exercicios_da_lista", "financeiro_totais_do_aluno", "modelos_da_lista",
   "preconsulta_numeros",
   // hml-17 (H-38): o plano alimentar do aluno montado no banco (o painel lê por elas)
   "plano_alimentar", "planos_do_aluno", "planos_favoritos",
@@ -90,8 +86,7 @@ export const RPC_QUE_GRAVAM = new Set<string>([
  * hml-21b (pedido da LINUX 3, decisão da sessão principal 13/10 03:07): + o `ler` das 3 da W-A — conferido no código que ele SÓ LÊ: a
  * acessos (a RPC acessos_ler: a wa_rota e o wa_acessos_json, sem escrita), a aluno-dia (as RPCs minhas_rotinas, meu_dia, meus_alimentos e
  * buscar_alimentos_do_aluno — STABLE — e rotinas_do_aluno e dia_do_aluno — só leem, com ajudantes stable/immutable) e a treino-acessos
- * (a acessos_ler no principal + o select de physiq_identidades/physiq_profiles; a única escrita, o update, é do `salvar`). hml-21d: + o `ler`
- * da treinos (o Banco do Treino; o catálogo só lê — as tabelas e as RPCs modelos_da_lista/exercicios_da_lista, STABLE).
+ * (a acessos_ler no principal + o select de physiq_identidades/physiq_profiles; a única escrita, o update, é do `salvar`).
  */
 export const ACOES_DE_LEITURA: Readonly<Record<string, { campo: "acao" | "action"; acoes: readonly string[] }>> = {
   nutricao: { campo: "acao", acoes: ["ler"] },
@@ -101,7 +96,6 @@ export const ACOES_DE_LEITURA: Readonly<Record<string, { campo: "acao" | "action
   acessos: { campo: "acao", acoes: ["ler"] },
   "aluno-dia": { campo: "acao", acoes: ["ler"] },
   "treino-acessos": { campo: "acao", acoes: ["ler"] },
-  treinos: { campo: "acao", acoes: ["ler"] },
 };
 
 /** O corpo (o texto JSON que o supabase-js manda) é de uma ação de LEITURA da função? Corpo ilegível, sem a ação ou outra → não. */

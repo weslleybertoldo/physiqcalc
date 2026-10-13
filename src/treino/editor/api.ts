@@ -2,11 +2,7 @@
  * Editor do treino do aluno (W15): chamadas às funções do Banco do Treino (admin-semana-treinos, admin-get-workout-plan,
  * admin-relatorio — a regra de quem vê e quem muda mora lá, com a sessão do Treino do profissional) e ao principal (achar o
  * usuário do Treino de uma matrícula nova). Tudo online: o painel não tem PowerSync.
- * hml-21d (H-43 · jeito 2, etapa 3): as 2 leituras que ainda iam direto saem do navegador — a biblioteca da folha "Adicionar exercício"
- * (a RPC exercicios_da_lista → a função treinos, lerTreinos) e o usuário do Treino da matrícula nova (a RPC aluno_treino do principal → a
- * função conta, lerConta) —, com os MESMOS exports, assinaturas e erros (o código da função no ErroTreinoPainel, nunca a mensagem do banco).
  */
-import { codigoDaLeitura, lerConta } from "@/conta/ler";
 import { principal } from "@/integrations/principal/client";
 import { criarFetchResiliente, TEMPO_FUNCAO_MS } from "@/integrations/repeticao";
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
@@ -14,7 +10,6 @@ import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import type { VolumeBloco } from "@/lib/volumeSemanal";
 import { calcularVolumeSemanal, type GrupoVolume, type SemanaRowVolume } from "@/lib/volumeSemanal";
 import type { SeriePadraoRow } from "@/lib/seriesPadrao";
-import { codigoDoTreino, lerTreinos } from "@/treino/servidor";
 import type { ConfigTreinoAluno, DadosEditor, ExercicioBiblioteca, ModeloTreino, PrescricaoEditavel, SemanaAtual } from "./tipos";
 
 /** Erro de uma função do Treino, com o código que ela devolveu ("ja_no_treino", "forbidden", "sem_internet"…). */
@@ -64,14 +59,9 @@ export async function acharAlunoNoTreino(alunoIdDaRota: string, treinoUserId: st
   if (treinoUserId) return treinoUserId;
   if (!temLogin) return null;
   if (!online()) throw new ErroTreinoPainel("sem_internet");
-  // hml-21d: a RPC aluno_treino pela função conta (como a pessoa; o raise da matrícula da rota — sem_acesso, aluno_inexistente — como o código)
-  let valor: unknown;
-  try {
-    valor = (await lerConta("aluno_treino", { aluno: alunoIdDaRota })).valor ?? null;
-  } catch (e) {
-    throw new ErroTreinoPainel(codigoDaLeitura(e));
-  }
-  const r = valor as { user_id?: string | null; treino_user_id?: string | null } | null;
+  const { data, error } = await principal.rpc("aluno_treino" as never, { p_aluno: alunoIdDaRota } as never);
+  if (error) throw new ErroTreinoPainel(error.message || "erro_interno");
+  const r = data as { user_id?: string | null; treino_user_id?: string | null } | null;
   if (r?.treino_user_id) return r.treino_user_id;
   if (!r?.user_id) return null;
   const res = await invocar<{ treino_user_id: string | null }>("admin-semana-treinos", { action: "resolverAluno", principalUserId: r.user_id });
@@ -178,14 +168,9 @@ export async function exerciciosDaLista<T = ExercicioBiblioteca>(filtros: Filtro
     if (v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
     p_filtros[k] = v;
   }
-  // hml-21d: a RPC exercicios_da_lista pela função treinos (como a pessoa; os MESMOS p_filtros, offset e limite)
-  let valor: unknown;
-  try {
-    valor = (await lerTreinos("exercicios_lista", { filtros: p_filtros, offset: deslocamento(pagina, porPagina), limite: porPagina })).valor ?? null;
-  } catch (e) {
-    throw new ErroTreinoPainel(codigoDoTreino(e));
-  }
-  const r = (valor ?? {}) as Record<string, unknown>;
+  const { data, error } = await supabase.rpc("exercicios_da_lista" as never, { p_filtros, p_offset: deslocamento(pagina, porPagina), p_limite: porPagina } as never);
+  if (error) throw new ErroTreinoPainel((error as { message?: string }).message || "erro_interno");
+  const r = (data ?? {}) as Record<string, unknown>;
   const n = (k: string) => Number(r[k] ?? 0) || 0;
   return {
     itens: (Array.isArray(r.itens) ? r.itens : []) as T[],

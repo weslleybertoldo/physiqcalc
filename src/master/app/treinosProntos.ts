@@ -7,11 +7,10 @@
  * no servidor ANTES do banco, e o RLS decide de novo): o salvar vira 1 ação numa transação (a RPC treino_pronto_salvar: a linha, as divisões e
  * os exercícios juntos — antes 2 + 2×N pedidos em série, e uma falha no meio deixava o treino sem as divisões — achado 3); a mesma assinatura;
  * o erro com a frase fixa do código (a mensagem crua do banco não chega mais à tela).
- * hml-21d (as LEITURAS): a lista dos treinos prontos (treinos_prontos_todos) e a biblioteca global (exercicios_globais) pela treinos (o
- * papel de master conferido no servidor antes do banco); a biblioteca COM página: antes lia sem `range` e cortava calada em 1000 (achado 3
- * da spec hml-21 §1.9) — agora a lib pede as páginas de 1000 até a curta (as MESMAS linhas, sem o corte; a ordem nome + id).
  */
-import { acaoTreinos, lerTreinos } from "@/treino/servidor";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { acaoTreinos } from "@/treino/servidor";
 
 export const OBJETIVOS = ["emagrecer", "manter", "ganhar_massa"] as const;
 export const NIVEIS = ["iniciante", "intermediario", "avancado"] as const;
@@ -35,18 +34,21 @@ export interface TreinoPronto {
   grupos: GrupoPronto[];
 }
 
-/** As páginas da biblioteca global (o teto do servidor: 1000 por página; 50 páginas = 50 mil exercícios). */
-const PAGINAS_DA_BIBLIOTECA = 50;
-const POR_PAGINA_DA_BIBLIOTECA = 1000;
+const cliente = () => supabase as unknown as SupabaseClient;
+
+const COLUNAS =
+  "id, codigo, nome, objetivo, nivel, dias_por_semana, divisao, descricao, ordem, ativo, " +
+  "grupos:physiq_treinos_prontos_grupos(letra, nome, dias, ordem, " +
+  "exercicios:physiq_treinos_prontos_exercicios(exercicio_id, ordem, series, reps, descanso_segundos, observacao, exercicio:tb_exercicios(nome)))";
 
 type Linha = Omit<TreinoPronto, "grupos"> & {
   grupos: Array<GrupoPronto & { ordem: number; exercicios: Array<ExercicioPronto & { ordem: number; exercicio?: { nome: string } | null }> }>;
 };
 
-/** Todos os treinos prontos (os inativos também), com as divisões e os exercícios — as colunas de hoje, no servidor. */
 export async function listarTreinosProntos(): Promise<TreinoPronto[]> {
-  const { linhas } = await lerTreinos("treinos_prontos_todos");
-  return ((linhas ?? []) as unknown as Linha[]).map((t) => ({
+  const { data, error } = await cliente().from("physiq_treinos_prontos").select(COLUNAS).order("ordem");
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as Linha[]).map((t) => ({
     ...t,
     grupos: [...(t.grupos ?? [])].sort((a, b) => a.ordem - b.ordem).map((g) => ({
       letra: g.letra, nome: g.nome, dias: g.dias ?? [],
@@ -57,15 +59,10 @@ export async function listarTreinosProntos(): Promise<TreinoPronto[]> {
   }));
 }
 
-/** A biblioteca global inteira (professor_id nulo), por nome — as páginas de 1000 até a curta (hoje: só as 1000 primeiras, calado). */
 export async function bibliotecaGlobal(): Promise<Array<{ id: string; nome: string; grupo_muscular: string | null }>> {
-  const saida: Array<{ id: string; nome: string; grupo_muscular: string | null }> = [];
-  for (let pagina = 1; pagina <= PAGINAS_DA_BIBLIOTECA; pagina++) {
-    const linhas = ((await lerTreinos("exercicios_globais", { pagina })).linhas ?? []) as Array<{ id: string; nome: string; grupo_muscular: string | null }>;
-    saida.push(...linhas);
-    if (linhas.length < POR_PAGINA_DA_BIBLIOTECA) break;
-  }
-  return saida;
+  const { data, error } = await cliente().from("tb_exercicios").select("id, nome, grupo_muscular").is("professor_id", null).order("nome");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id: string; nome: string; grupo_muscular: string | null }>;
 }
 
 /** O mesmo que a carga confere (carregar_treinos_prontos.py → validar): dias × dias por semana, letras, exercícios, séries e reps. */

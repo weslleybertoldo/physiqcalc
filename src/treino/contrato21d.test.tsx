@@ -4,19 +4,13 @@
 // DE VERDADE (src/test/treinosFalso.ts) sobre o banco falso deste teste — as idas ao banco são as que a lib fazia (agora o servidor faz).
 // Parte 1 (F3a): as GRAVAÇÕES — o Painel › Treinos (modelos, exercícios do modelo, a ordem, pastas, a biblioteca, os grupos musculares e a foto
 // do exercício pelo link assinado), os treinos prontos do Master e o espelho do Perfil.
-// Parte 2 (F3b): as LEITURAS — Meus treinos (a página e os detalhes: 2 `ler` em série, os detalhes numa consulta), o treino por id, as pastas,
-// os grupos musculares, o catálogo dos Modelos, a biblioteca (exercicios_lista — também a folha do editor), o aluno_treino do editor (pela
-// conta), os treinos prontos do Master e do aluno e a biblioteca global COM página — o MESMO tipo e a MESMA ordem de hoje.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CORPOS_DAS_ACOES, lerCorpoDaAcao, lerTreinoPronto, moduloDoPedido, type AcaoTreinos } from "../../supabase/functions/_shared/treinos-regras";
-import { CATALOGO_TREINOS, lerExerciciosLista } from "../../supabase/functions/_shared/treinos-leituras";
-import { lerPedidoDeLeitura, type CatalogoLeitura } from "../../supabase/functions/_shared/leitura-lote";
 
 const EU = "33333333-3333-4333-8333-333333333333";
 const M1 = "a1111111-1111-4111-8111-111111111111";
-const M2 = "a2222222-2222-4222-8222-222222222222";
 const EX = "e1111111-1111-4111-8111-111111111111";
 const EX2 = "e2222222-2222-4222-8222-222222222222";
 const PASTA = "b1111111-1111-4111-8111-111111111111";
@@ -61,47 +55,15 @@ vi.mock("@/integrations/supabase/client", async () => {
   };
 });
 
-vi.mock("@/integrations/principal/client", async () => {
-  const { invocarContaPeloModulo } = await import("@/test/contaFalsa");
-  const conta = invocarContaPeloModulo({ rpc: (...a: unknown[]) => (h.banco.rpcPrincipal as Fn | undefined)?.(...a) }, { userId: "u-teste" });
-  return {
-    PRINCIPAL_SCHEMA: "staging",
-    principal: {
-      auth: { getSession: async () => ({ data: { session: null } }) },
-      functions: {
-        invoke: async (nome: string, o: { body: Record<string, unknown> }) => {
-          h.corpos.push({ nome, corpo: o.body });
-          return nome === "conta" ? conta(o.body) : { data: null, error: { name: "FunctionsHttpError" } };
-        },
-      },
-    },
-  };
-});
-
 import * as painel from "@/painel/treinos/api";
-import { ErroTreinoPainel, acharAlunoNoTreino, exerciciosDaLista } from "@/treino/editor/api";
-import { ativarTreinoPronto, bibliotecaGlobal, listarTreinosProntos, salvarTreinoPronto, treinoNovo, type TreinoPronto } from "@/master/app/treinosProntos";
-import { buscarTreinosProntos } from "@/app-aluno/sozinho/api";
+import { ErroTreinoPainel } from "@/treino/editor/api";
+import { ativarTreinoPronto, salvarTreinoPronto, treinoNovo, type TreinoPronto } from "@/master/app/treinosProntos";
 
 /** O corpo que a tela mandou PASSA nas regras reais do servidor: a ação conhecida e NENHUMA chave fora da lista (nem dono). */
 function passaNoServidor(corpo: Record<string, unknown>) {
   const pedido = moduloDoPedido(corpo);
   expect(pedido, JSON.stringify(corpo)).not.toBeNull();
-  if (pedido!.modulo === "leitura") {
-    // cada item: a consulta do catálogo (ou a especial) com params na forma e NENHUMA chave fora da lista
-    for (const item of (corpo.itens as Array<Record<string, unknown>>) ?? []) {
-      if (item.q === "exercicios_lista") {
-        expect(lerExerciciosLista(item), JSON.stringify(item)).toMatchObject({ ok: true });
-        expect(Object.keys(item).filter((k) => !["q", "filtros", "offset", "limite"].includes(k))).toEqual([]);
-        continue;
-      }
-      const r = lerPedidoDeLeitura({ itens: [item] }, CATALOGO_TREINOS.consultas as CatalogoLeitura);
-      expect(r.ok === true && r.itens[0].ok, JSON.stringify(item)).toBe(true);
-      const declarados = Object.keys((CATALOGO_TREINOS.consultas as Record<string, { params: object }>)[String(item.q)].params);
-      expect(Object.keys(item).filter((k) => k !== "q" && !declarados.includes(k)), String(item.q)).toEqual([]);
-    }
-    return;
-  }
+  if (pedido!.modulo === "leitura") return;
   const acao = pedido!.acao as AcaoTreinos;
   if (acao === "treino_pronto_salvar") {
     expect(lerTreinoPronto(corpo), acao).toMatchObject({ ok: true });
@@ -304,165 +266,5 @@ describe("hml-21d — F3a: os treinos prontos do Master (src/master/app/treinosP
     for (const campos of [{ nome: "Lucas" }, { foto_url: "https://api-principal.physiqcalc.com.br/storage/v1/object/public/fotos-perfil/u/foto-1.jpg" }, { foto_url: null }]) {
       passaNoServidor({ ...campos, acao: "professor_perfil" });
     }
-  });
-});
-
-// ───────────────────────── parte 2 (F3b): as leituras ─────────────────────────
-/** Uma tabela do banco falso só de leitura: devolve as linhas da tabela e anota a cadeia (o servidor monta). */
-function leitura(linhas: Record<string, unknown[]>, idas: Array<[string, unknown[]]> = []) {
-  return (t: string) => {
-    const registro: unknown[] = [];
-    idas.push([t, registro]);
-    const c: Record<string, unknown> = {};
-    for (const op of ["select", "eq", "in", "is", "or", "order", "limit", "range", "ilike"]) c[op] = (...a: unknown[]) => (registro.push([op, ...a]), c);
-    c.then = (ok: Fn, falha?: Fn) => Promise.resolve({ data: linhas[t] ?? [], error: null }).then(ok as never, falha as never);
-    return c;
-  };
-}
-const itensDaTreinos = () => daTreinos().filter((c) => c.acao === "ler").map((c) => (c.itens as Array<{ q: string }>).map((i) => i.q));
-
-describe("hml-21d — F3b: as leituras do Painel › Treinos pela treinos (o MESMO tipo, a MESMA ordem)", () => {
-  const ex = (id: string, professor_id: string | null) => ({
-    id, nome: `Ex ${id}`, grupo_muscular: "Peito", emoji: null, tipo: "musculacao", imagem_url: null, subgrupo: null, dica: null, professor_id,
-    padrao_movimento: null, equipamento: null, variacao: null,
-  });
-  it("Meus treinos: a página (modelos_da_lista) + as pastas + a contagem com GIF na MESMA ida; os detalhes na 2ª (dependem dos ids) — 2 idas", async () => {
-    const valor = { ok: true, total: 2, total_geral: 5, por_pasta: { [PASTA]: 1 }, itens: [{ id: M1, nome: "A", professor_id: EU }] };
-    const linhaA = (id: string, ordem: number, exercicio: unknown, ex_id: string) => ({
-      id, grupo_id: M1, exercicio_id: ex_id, ordem, num_series: 3, reps_alvo: null, descanso_segundos: null, carga_sugerida_kg: null, exercicio,
-    });
-    h.banco.rpc = (nome: unknown) => ({ data: nome === "modelos_da_lista" ? valor : { ok: true, itens: [], com_gif: 9, total: 0 }, error: null });
-    h.banco.from = leitura({
-      tb_pastas_treino: [{ id: PASTA, nome: "P", professor_id: EU }],
-      // as linhas fora da ordem (o servidor não ordena o embutido): a lib devolve por (ordem, id), como o .order("ordem").order("id") de hoje
-      tb_grupos_treino: [{ id: M1, linhas: [linhaA("l2", 1, ex(EX2, null), EX2), linhaA("l3", 0, null, EX), linhaA("l1", 0, ex(EX, EU), EX)], vinculos: [{ id: "v2", pasta_id: PASTA, grupo_id: M1 }] }],
-    });
-    const [pagina, pastas, resumo] = await Promise.all([
-      painel.carregarPaginaDeModelos(EU, { q: " supino ", pasta: PASTA }, 2), painel.carregarPastas(EU), painel.listarExercicios({ escopo: "visiveis" }, 1, 1),
-    ]);
-    expect(itensDaTreinos()).toEqual([["modelos", "pastas", "exercicios_lista"], ["modelos_detalhes"]]);
-    todosPassam();
-    expect(daTreinos()[0].itens).toContainEqual({ q: "modelos", filtros: { q: "supino", pasta: PASTA }, offset: 20, limite: 20 });
-    expect(pastas).toEqual([{ id: PASTA, nome: "P", professor_id: EU }]);
-    expect(resumo.comGif).toBe(9);
-    expect(pagina).toEqual({
-      itens: valor.itens, total: 2, totalGeral: 5, porPasta: { [PASTA]: 1 },
-      detalhes: {
-        linhas: [
-          { grupo_id: M1, exercicio_id: EX, ordem: 0, num_series: 3, reps_alvo: null, descanso_segundos: null, carga_sugerida_kg: null },
-          { grupo_id: M1, exercicio_id: EX, ordem: 0, num_series: 3, reps_alvo: null, descanso_segundos: null, carga_sugerida_kg: null },
-          { grupo_id: M1, exercicio_id: EX2, ordem: 1, num_series: 3, reps_alvo: null, descanso_segundos: null, carga_sugerida_kg: null },
-        ],
-        exercicios: [ex(EX, EU), ex(EX2, null)],
-        vinculos: [{ pasta_id: PASTA, grupo_id: M1 }],
-      },
-    });
-  });
-
-  it("o treino por id: a linha e os detalhes na MESMA ida; outro (nenhuma linha) → null, como antes; id que não é uuid → nem vai", async () => {
-    h.banco.from = leitura({ tb_grupos_treino: [{ id: M1, nome: "A", professor_id: null, linhas: [], vinculos: [] }] });
-    expect(await painel.carregarModeloPorId(EU, M1)).toEqual({ modelo: { id: M1, nome: "A", professor_id: null }, detalhes: { linhas: [], exercicios: [], vinculos: [] } });
-    h.banco.from = leitura({});
-    expect(await painel.carregarModeloPorId(EU, M2)).toEqual({ modelo: null, detalhes: { linhas: [], exercicios: [], vinculos: [] } });
-    h.corpos = [];
-    expect(await painel.carregarModeloPorId(EU, "x")).toEqual({ modelo: null, detalhes: { linhas: [], exercicios: [], vinculos: [] } });
-    expect(h.corpos).toEqual([]);
-    // a página vazia: nenhum detalhe a pedir (a 2ª ida nem sai)
-    h.banco.rpc = () => ({ data: { ok: true, total: 0, total_geral: 0, por_pasta: {}, itens: [] }, error: null });
-    h.corpos = [];
-    expect(await painel.carregarPaginaDeModelos(EU, { q: "", pasta: null }, 1).then((p) => p.detalhes)).toEqual({ linhas: [], exercicios: [], vinculos: [] });
-    expect(itensDaTreinos()).toEqual([["modelos"]]);
-  });
-
-  it("o catálogo dos Modelos: os modelos com as linhas e as pastas com os vínculos na MESMA ida; sem os exercícios e os grupos (vazios)", async () => {
-    h.banco.from = leitura({
-      tb_grupos_treino: [{ id: M1, nome: "A", professor_id: EU, linhas: [{ id: "l1", grupo_id: M1, exercicio_id: EX, ordem: 0, num_series: null, reps_alvo: null, descanso_segundos: null, carga_sugerida_kg: null }] }],
-      tb_pastas_treino: [{ id: PASTA, nome: "P", professor_id: null, vinculos: [{ id: "v1", pasta_id: PASTA, grupo_id: M1 }] }],
-    });
-    const c = await painel.carregarCatalogo(EU);
-    expect(itensDaTreinos()).toEqual([["catalogo_modelos", "catalogo_pastas"]]);
-    todosPassam();
-    expect(c).toEqual({
-      modelos: [{ id: M1, nome: "A", professor_id: EU }], pastas: [{ id: PASTA, nome: "P", professor_id: null }], vinculos: [{ pasta_id: PASTA, grupo_id: M1 }],
-      linhas: [{ grupo_id: M1, exercicio_id: EX, ordem: 0, num_series: null, reps_alvo: null, descanso_segundos: null, carga_sugerida_kg: null }], exercicios: [], musculos: [],
-    });
-  });
-
-  it("os grupos musculares; o erro do servidor vira o código da tela (sem_acesso → sem_permissao; a lista grande → lista_grande_demais)", async () => {
-    h.banco.from = leitura({ grupos_musculares: [{ id: "g1", nome: "Peito", professor_id: null }] });
-    expect(await painel.carregarMusculos(EU)).toEqual([{ id: "g1", nome: "Peito", professor_id: null }]);
-    todosPassam();
-    h.banco.from = () => ({ select: () => ({ or: () => ({ order: () => ({ order: () => ({ range: () => Promise.resolve({ data: null, error: { code: "42501", message: "permission denied" } }) }) }) }) }) });
-    await expect(painel.carregarPastas(EU)).rejects.toMatchObject({ codigo: "sem_permissao" });
-  });
-});
-
-describe("hml-21d — F3b: o editor, o Master e o app do aluno", () => {
-  it("a folha da biblioteca do editor: exercicios_lista com o MESMO p_filtros (só os com valor), o offset e o limite → a página e as contagens", async () => {
-    const rpcs: unknown[][] = [];
-    h.banco.rpc = (nome: unknown, args: unknown) => (rpcs.push([nome, args]), { data: { ok: true, itens: [{ id: EX }], total: 41, total_global: 30, total_meu: 3, total_professores: 0, com_gif: 20, total_escopo: 33, sem_classificacao: 2 }, error: null });
-    const r = await exerciciosDaLista({ professor: EU, q: "rosca", codigos: ["rosca_direta"], musculos: ["biceps"], fora: [], escopo: undefined }, 3, 12);
-    expect(rpcs).toEqual([["exercicios_da_lista", { p_filtros: { professor: EU, q: "rosca", codigos: ["rosca_direta"], musculos: ["biceps"] }, p_offset: 24, p_limite: 12 }]]);
-    todosPassam();
-    expect(r).toEqual({ itens: [{ id: EX }], total: 41, totalGlobal: 30, totalMeu: 3, totalProfessores: 0, comGif: 20, totalEscopo: 33, semClassificacao: 2 });
-    h.banco.rpc = () => ({ data: null, error: { code: "XX000", message: "mensagem crua" } });
-    const e = await exerciciosDaLista({}, 1).catch((x: unknown) => x);
-    expect(e).toBeInstanceOf(ErroTreinoPainel);
-    expect((e as ErroTreinoPainel).codigo).toBe("erro_interno");
-  });
-
-  it("o aluno do editor: a aluno_treino pela conta (o p_aluno do param); o raise da matrícula como o código; o treino_user_id de volta", async () => {
-    const rpcs: unknown[][] = [];
-    h.banco.rpcPrincipal = (nome: unknown, args: unknown) => (rpcs.push([nome, args]), { data: { ok: true, paciente_id: M1, user_id: null, treino_user_id: M2 }, error: null });
-    expect(await acharAlunoNoTreino(M1, null, true)).toBe(M2);
-    expect(rpcs).toEqual([["aluno_treino", { p_aluno: M1 }]]);
-    expect(h.corpos.filter((c) => c.nome === "conta").map((c) => c.corpo)).toEqual([{ acao: "ler", itens: [{ aluno: M1, q: "aluno_treino" }] }]);
-    h.banco.rpcPrincipal = () => ({ data: null, error: { code: "P0001", message: "sem_acesso" } });
-    await expect(acharAlunoNoTreino(M1, null, true)).rejects.toMatchObject({ codigo: "sem_acesso" });
-    // sem login no Treino ou com o treino_user_id já na matrícula: nem chama
-    h.corpos = [];
-    expect(await acharAlunoNoTreino(M1, M2, true)).toBe(M2);
-    expect(await acharAlunoNoTreino(M1, null, false)).toBeNull();
-    expect(h.corpos).toEqual([]);
-  });
-
-  it("o Master: todos os treinos prontos (as colunas de hoje; as divisões e os exercícios na ordem) e a biblioteca global COM página (sem o corte de 1000)", async () => {
-    h.master = true;
-    const linhaT = {
-      id: M1, codigo: "c", nome: "T", objetivo: "manter", nivel: "iniciante", dias_por_semana: 1, divisao: "A", descricao: null, ordem: 1, ativo: false,
-      grupos: [{ letra: "B", nome: "B", dias: ["TER"], ordem: 2, exercicios: [] }, { letra: "A", nome: "A", dias: ["SEG"], ordem: 1, exercicios: [{ exercicio_id: EX, ordem: 1, series: 3, reps: "12", descanso_segundos: null, observacao: null, exercicio: { nome: "Supino" } }] }],
-    };
-    let paginas = 0;
-    const idas: Array<[string, unknown[]]> = [];
-    h.banco.from = (t: string) => {
-      if (t === "tb_exercicios") {
-        paginas += 1;
-        return leitura({ tb_exercicios: Array.from({ length: paginas === 1 ? 1000 : 2 }, (_, i) => ({ id: `${paginas}-${i}`, nome: "x", grupo_muscular: null })) }, idas)(t);
-      }
-      return leitura({ physiq_treinos_prontos: [linhaT] }, idas)(t);
-    };
-    const lista = await listarTreinosProntos();
-    expect(lista[0].grupos.map((g) => g.letra)).toEqual(["A", "B"]);
-    expect(lista[0].grupos[0].exercicios[0]).toEqual({ exercicio_id: EX, nome: "Supino", series: 3, reps: "12", descanso_segundos: null, observacao: null });
-    const bib = await bibliotecaGlobal();
-    expect(bib).toHaveLength(1002);
-    expect(itensDaTreinos()).toEqual([["treinos_prontos_todos"], ["exercicios_globais"], ["exercicios_globais"]]);
-    expect(daTreinos().slice(1).map((c) => (c.itens as Array<{ pagina: number }>)[0].pagina)).toEqual([1, 2]);
-    todosPassam();
-  });
-
-  it("o aluno sem profissional: os treinos prontos ativos (a mesma ordem da tela); o erro → o guardado no aparelho ou o ErroApp de hoje", async () => {
-    localStorage.clear();
-    const t = { id: M1, codigo: "c", nome: "T", objetivo: "manter", nivel: "iniciante", dias_por_semana: 1, divisao: "A", descricao: null, ordem: 1, grupos: [{ id: "g1", letra: "A", nome: "A", dias: ["SEG"], ordem: 1, exercicios: [] }] };
-    h.banco.from = leitura({ physiq_treinos_prontos: [t] });
-    const lista = await buscarTreinosProntos();
-    expect(lista.map((x) => x.id)).toEqual([M1]);
-    expect(itensDaTreinos()).toEqual([["treinos_prontos"]]);
-    todosPassam();
-    // a API fora: o guardado da última vez (o de cima)
-    h.banco.from = () => ({ select: () => ({ eq: () => ({ order: () => ({ limit: () => Promise.resolve({ data: null, error: { code: "XX000", message: "fora" } }) }) }) }) });
-    expect((await buscarTreinosProntos()).map((x) => x.id)).toEqual([M1]);
-    localStorage.clear();
-    await expect(buscarTreinosProntos()).rejects.toMatchObject({ codigo: "erro_interno" });
   });
 });

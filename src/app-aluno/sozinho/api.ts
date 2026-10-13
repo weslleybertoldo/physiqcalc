@@ -4,13 +4,12 @@
 // no aparelho — escolher o treino funciona sem internet depois de aberto 1 vez).
 // hml-21a (H-43 · jeito 2): as 4 do banco principal vão pela função conta, com a sessão da pessoa — as leituras pelo `ler`
 // (meu_plano_app, pratos_prontos_do_app) e as gravações pelas ações (entrar_sem_profissional, mudar_objetivo_app), com os MESMOS
-// argumentos; o { ok, erro } das RPCs chega como hoje e vira o ErroApp com o código. Sem internet → sem_internet sem chamar. hml-21d: o
-// catálogo dos treinos prontos (Banco do Treino) pela função treinos (lerTreinos("treinos_prontos"): os ativos, por ordem, as MESMAS colunas
-// e os embutidos de hoje, como a pessoa — a sessão do Treino do aluno); o guardado no aparelho e a volta sem internet seguem iguais.
+// argumentos; o { ok, erro } das RPCs chega como hoje e vira o ErroApp com o código. Sem internet → sem_internet sem chamar. Os treinos
+// prontos (Banco do Treino) seguem como estão até a hml-21d.
 import { acaoConta, codigoDaGravacao, resultadoDaAcao } from "@/conta/gravar";
 import { codigoDaLeitura, lerConta } from "@/conta/ler";
 import { acaoFinanceiro, invalidarResumo } from "@/financeiro/api";
-import { lerTreinos } from "@/treino/servidor";
+import { supabase } from "@/integrations/supabase/client";
 import { normalizarMeuPlano, normalizarPratos, ordenarTreino, type MeuPlanoApp, type Objetivo, type RespostaPratos, type TreinoPronto } from "./regras";
 
 export class ErroApp extends Error {
@@ -100,6 +99,17 @@ export async function buscarPratos(objetivo: Objetivo | null): Promise<RespostaP
 // ───────────────────────── treinos prontos (Banco do Treino) ─────────────────────────
 
 const CHAVE_CATALOGO = "physiq_treinos_prontos_v1";
+const COLUNAS =
+  "id, codigo, nome, objetivo, nivel, dias_por_semana, divisao, descricao, ordem, " +
+  "grupos:physiq_treinos_prontos_grupos(id, letra, nome, dias, ordem, " +
+  "exercicios:physiq_treinos_prontos_exercicios(exercicio_id, ordem, series, reps, descanso_segundos, observacao, " +
+  "exercicio:tb_exercicios(id, nome, grupo_muscular, imagem_url, tipo)))";
+
+interface Resposta {
+  data: unknown;
+  error: { message?: string } | null;
+}
+type Consulta = { select: (c: string) => { eq: (c: string, v: unknown) => { order: (c: string) => PromiseLike<Resposta> } } };
 
 export function catalogoGuardado(): TreinoPronto[] | null {
   try {
@@ -117,15 +127,14 @@ export async function buscarTreinosProntos(): Promise<TreinoPronto[]> {
     if (g) return g;
     throw new ErroApp("sem_internet");
   }
-  let linhas: unknown[];
-  try {
-    linhas = (await lerTreinos("treinos_prontos")).linhas ?? [];
-  } catch {
+  const cliente = supabase as unknown as { from: (t: string) => Consulta };
+  const { data, error } = await cliente.from("physiq_treinos_prontos").select(COLUNAS).eq("ativo", true).order("ordem");
+  if (error) {
     const g = catalogoGuardado();
     if (g) return g;
     throw new ErroApp("erro_interno");
   }
-  const lista = (linhas as TreinoPronto[]).map(ordenarTreino);
+  const lista = ((data ?? []) as TreinoPronto[]).map(ordenarTreino);
   try {
     localStorage.setItem(CHAVE_CATALOGO, JSON.stringify({ em: Date.now(), lista }));
   } catch {

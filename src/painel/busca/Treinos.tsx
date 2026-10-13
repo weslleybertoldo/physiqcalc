@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Dumbbell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { useConta } from "@/nucleo/conta";
-import { codigoDoTreino, lerTreinos } from "@/treino/servidor";
 import { GrupoBusca, ItemBusca } from "@/ui/premium/Busca";
 import { MAX_RESULTADOS, useTermoComEspera } from "./_comum";
 import { ErroNaBusca } from "./_ErroNaBusca";
@@ -22,8 +22,6 @@ const literal = (t: string) => t.replace(/[\\%_]/g, (c) => `\\${c}`);
  * escopo da aba Meus treinos, W23), no Banco do Treino com a sua sessão do Treino. Só para conta com o módulo Treino e quem tem a
  * sessão do Treino (personal, dono, master). Cada resultado abre o treino em Treinos › Meus treinos.
  * hml-17 (H-39): a busca falhou → a linha "Não deu para buscar treinos agora" (tocar refaz), nunca o grupo sumindo calado.
- * hml-21d (H-43 · jeito 2): a leitura pela função treinos (busca_treinos: o mesmo ilike do literal, o "global ou meu" com o usuário do
- * token no servidor, por nome, os 6 primeiros) — a mesma chave, o mesmo erro.
  */
 export default function BuscaTreinos({ termo, fechar }: { termo: string; fechar: () => void }) {
   const { conta } = useConta();
@@ -35,13 +33,17 @@ export default function BuscaTreinos({ termo, fechar }: { termo: string; fechar:
   const r = useQuery({
     queryKey: ["busca-global", "treinos", meuId, q],
     queryFn: async () => {
-      try {
-        const { linhas } = await lerTreinos("busca_treinos", { termo: literal(q) });
-        return (linhas ?? []).slice(0, MAX_RESULTADOS) as TreinoAchado[];
-      } catch (e) {
-        console.warn("[busca] treinos:", codigoDoTreino(e));
+      const { data, error } = await (supabase.from as unknown as (t: string) => ReturnType<typeof supabase.from>)("tb_grupos_treino")
+        .select("id, nome, professor_id")
+        .or(`professor_id.is.null,professor_id.eq.${meuId}`)
+        .ilike("nome", `%${literal(q)}%`)
+        .order("nome")
+        .limit(MAX_RESULTADOS);
+      if (error) {
+        console.warn("[busca] treinos:", error.code ?? "", error.message);
         throw new Error("Não deu para buscar os treinos agora.");
       }
+      return (data ?? []) as unknown as TreinoAchado[];
     },
     enabled: ligado,
     staleTime: 30_000,

@@ -5,13 +5,14 @@ import { Edit2, Globe, Image as ImageIcon, Plus, Search, Trash2, X } from "lucid
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { invokeEdge, type ProfessorRow } from "@/lib/saasApi";
 import {
   CAMPOS_EQUIVALENCIA_VAZIOS, camposDoExercicio, camposParaGravar, rotuloEquipamento, rotuloPadrao, type CamposEquivalencia,
 } from "@/treino/equivalencia";
 import { codigosDaBusca } from "@/treino/equivalenciaBusca";
-import { ErroGravacaoConta, acaoTreinos, lerTreinos, type AcaoTreinos } from "@/treino/servidor";
+import { ErroGravacaoConta, acaoTreinos, type AcaoTreinos } from "@/treino/servidor";
 import { FormExercicioBiblioteca } from "@/treino/ui/FormExercicioBiblioteca";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Paginacao } from "@/ui/premium/Paginacao";
@@ -36,13 +37,15 @@ function masterProfessores<T = unknown>(action: string, payload: Record<string, 
   return invokeEdge<T>("master-professores", { action, ...payload });
 }
 
+// tipos gerados não conhecem `professor_id` → `(supabase.from as any)(...)` como o AdminTreinos (mantém o `this` do client)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tabela = (nome: string) => (supabase.from as any)(nome);
+
 /**
  * hml-14d (B21 · D24): uma página da Biblioteca pela RPC do Treino exercicios_da_lista (SECURITY INVOKER: a RLS do master) — o
  * escopo (os globais ou os dos professores, este só para o master no Treino), a busca sem acento no nome, grupo, subgrupo e variação
  * OU pelos rótulos de movimento/equipamento (os códigos que casaram — codigosDaBusca), a ordem, o total e os números do topo, tudo
  * no banco. Antes a página lia tb_exercicios inteira (sem range) e filtrava, contava e fatiava no navegador.
- * hml-21d (H-43 · jeito 2): as 3 leituras da página (a lista, os grupos globais e a contagem do grupo) pela função treinos (lerTreinos —
- * a lista e os grupos na MESMA ida; os grupos e a contagem só para o master, conferido no servidor antes do banco), os MESMOS params.
  */
 interface PaginaExercicios {
   itens: Exercicio[];
@@ -52,11 +55,12 @@ interface PaginaExercicios {
   semClassificacao: number;
 }
 async function listarExercicios(dosProfessores: boolean, termo: string, pagina: number): Promise<PaginaExercicios> {
-  const { valor } = await lerTreinos("exercicios_lista", {
-    filtros: { escopo: dosProfessores ? "professores" : "global", q: termo, codigos: codigosDaBusca(termo) },
-    offset: deslocamento(pagina), limite: POR_PAGINA,
-  });
-  const r = (valor ?? {}) as Record<string, unknown>;
+  const { data, error } = await supabase.rpc("exercicios_da_lista" as never, {
+    p_filtros: { escopo: dosProfessores ? "professores" : "global", q: termo, codigos: codigosDaBusca(termo) },
+    p_offset: deslocamento(pagina), p_limite: POR_PAGINA,
+  } as never);
+  if (error) throw error;
+  const r = (data ?? {}) as Record<string, unknown>;
   if (r.ok !== true || !Array.isArray(r.itens) || !Number.isInteger(r.total)) throw new Error("A biblioteca voltou num formato inesperado.");
   const n = (k: string) => Number(r[k] ?? 0) || 0;
   return { itens: r.itens as Exercicio[], total: n("total"), totalGlobal: n("total_global"), totalProfessores: n("total_professores"), semClassificacao: n("sem_classificacao") };
@@ -64,12 +68,16 @@ async function listarExercicios(dosProfessores: boolean, termo: string, pagina: 
 
 /** Os grupos musculares globais (catálogo pequeno — 23 —, inteiro; o filtro "global" no banco). */
 async function lerGruposGlobais(): Promise<GrupoMuscular[]> {
-  return ((await lerTreinos("grupos_globais")).linhas ?? []) as GrupoMuscular[];
+  const { data, error } = await tabela("grupos_musculares").select("id, nome, professor_id").is("professor_id", null).order("nome").order("id");
+  if (error) throw error;
+  return (data as GrupoMuscular[]) ?? [];
 }
 
 /** Quantos exercícios GLOBAIS usam esse nome de grupo (contado no banco, só o número — o aviso antes de excluir o grupo). */
 async function contarGlobaisDoGrupo(nome: string): Promise<number> {
-  return (await lerTreinos("globais_do_grupo", { nome })).total ?? 0;
+  const { count, error } = await tabela("tb_exercicios").select("id", { count: "exact", head: true }).is("professor_id", null).eq("grupo_muscular", nome);
+  if (error) throw error;
+  return count ?? 0;
 }
 
 /**

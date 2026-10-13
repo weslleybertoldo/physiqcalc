@@ -8,13 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // (globais / dos professores), a busca sem acento + os códigos dos rótulos (codigosDaBusca, do agente A — aqui um mock), o total e os
 // números do topo do banco; os nomes dos donos só dos exercícios da página (master-professores); erro = o estado de erro.
 const h = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn(), invoke: vi.fn(), codigos: vi.fn(), contagem: 0, grupos: [] as unknown[] }));
-// hml-21d: a página lê e grava pela função treinos — os MÓDULOS DE VERDADE do servidor (src/test/treinosFalso.ts, o master) sobre o MESMO
-// banco falso (h.rpc, h.from): as idas ao banco são as que a página fazia (agora o servidor faz, como a pessoa)
-vi.mock("@/integrations/supabase/client", async () => {
-  const { invocarComTreinos } = await import("@/test/treinosFalso");
-  const banco = { rpc: (...a: unknown[]) => h.rpc(...a), from: (t: string) => h.from(t) };
-  return { DB_SCHEMA: "staging", supabase: { rpc: h.rpc, from: h.from, functions: { invoke: invocarComTreinos(banco, { userId: "t-master", master: true }) } } };
-});
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { rpc: h.rpc, from: h.from } }));
 vi.mock("@/lib/saasApi", () => ({ invokeEdge: h.invoke }));
 vi.mock("@/treino/equivalenciaBusca", () => ({ codigosDaBusca: h.codigos }));
 vi.mock("@/treino/ui/FormExercicioBiblioteca", () => ({ FormExercicioBiblioteca: () => null }));
@@ -126,9 +120,7 @@ describe("hml-14d — Master › Biblioteca global (exercicios_da_lista)", () =>
   it("erro do banco = o estado de erro (nunca \"Biblioteca global vazia\")", async () => {
     h.rpc.mockResolvedValue({ data: null, error: { message: "permission denied for function exercicios_da_lista" } });
     montar();
-    // hml-21d (decisão 20): a mensagem crua do banco não chega mais à tela — a frase fixa do código (pela função treinos)
-    expect(await screen.findByText("Erro: Não deu para carregar agora. Tente de novo.")).toBeInTheDocument();
-    expect(screen.queryByText(/permission denied/)).toBeNull();
+    expect(await screen.findByText("Erro: permission denied for function exercicios_da_lista")).toBeInTheDocument();
     expect(screen.queryByText("Biblioteca global vazia.")).toBeNull();
     expect(document.querySelector('[data-paginacao="master-biblioteca"]')).toBeNull();
   });
@@ -140,10 +132,6 @@ describe("hml-14d — Master › Biblioteca global (exercicios_da_lista)", () =>
     fireEvent.click(document.querySelector('[data-grupo-chip="g1"] [data-btn-excluir-grupo]')!);
     expect(await screen.findByText(/7 exercício\(s\) global\(is\) usam esse nome/)).toBeInTheDocument();
     const conta = consultas.find((c) => c.tabela === "tb_exercicios")!;
-    // hml-21d: a MESMA contagem montada no servidor (o HEAD com os 2 filtros — o servidor põe o eq antes do is)
-    expect(conta.cadeia.passos[0]).toEqual(["select", ["id", { count: "exact", head: true }]]);
-    expect(conta.cadeia.passos.slice(1)).toHaveLength(2);
-    expect(conta.cadeia.passos).toContainEqual(["is", ["professor_id", null]]);
-    expect(conta.cadeia.passos).toContainEqual(["eq", ["grupo_muscular", "Peito"]]);
+    expect(conta.cadeia.passos).toEqual([["select", ["id", { count: "exact", head: true }]], ["is", ["professor_id", null]], ["eq", ["grupo_muscular", "Peito"]]]);
   });
 });
