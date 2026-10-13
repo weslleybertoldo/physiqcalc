@@ -913,7 +913,7 @@ def ociosa_agora(ultimo: dict) -> tuple[bool, int, str]:
     return True, round(time.time() - ultimo["t"]), ("a borda também parada" if t_borda else "nenhum pedido na borda nos últimos 40 min")
 
 
-def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # noqa: PLR0915
+def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str, ate: float | None = None) -> None:  # noqa: PLR0915
     """O GATE (decisão K), no FIM da etapa 2: o personal (Meus treinos) e o aluno sem profissional (os Treinos prontos), cada um no seu
     contexto. Antes (o staging com o código antigo): 5 aberturas de cada (e 0 pedido à treinos — o antes não acorda a função). Depois: 5
     rodadas com a treinos OCIOSA — a espera de ≥ 10 min sem NENHUM pedido a ela (a escuta dos 2 contextos E a borda: qualquer quem chama;
@@ -951,8 +951,18 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
                     o.ok(pedidos_treinos == 0, f"[antes] gate {conta} · {tela[0]}: {medidas[tela[0]]['antes']} → p50 {p50(medidas[tela[0]]['antes'])} s "
                          f"(a referência do depois; vale por 30 min) — {pedidos_treinos} pedido(s) à treinos (o antes não a chama: não acorda a função)")
             return
+        # o QUENTE primeiro (a treinos acabou de ser chamada na preparação: < 120 s entre as aberturas) e as ociosas depois, até o prazo
+        with LockPesado():
+            for conta, tela, t, pend in abertos:
+                for _ in range(ABERTURAS_QUENTE):
+                    medidas[tela[0]]["quente"].append(medir_gate(t, pend, tela, conta, s)["t_pronto_s"])
+        o.linha("   gate quente: " + "; ".join(f"{tela[0]} {medidas[tela[0]]['quente']}" for _c, tela, _t, _p in abertos))
         feitas, tentativas = 0, 0
         while feitas < ABERTURAS_OCIOSA and tentativas < ABERTURAS_OCIOSA + 3:
+            if ate is not None and time.time() + OCIOSA_S + 90 > ate:
+                o.linha(f"   gate: o prazo ({time.strftime('%H:%M', time.localtime(ate))}) não cabe outra espera de {OCIOSA_S // 60} min — as ociosas "
+                        f"que faltam ({ABERTURAS_OCIOSA - feitas}) ficam para depois (o F7)")
+                break
             tentativas += 1
             for conta, tl, t, pnd in abertos:  # as 2 telas paradas na entrada, o dado velho (nada chama a treinos enquanto espera)
                 if T21.eh_do_app(conta):
@@ -963,7 +973,7 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
             teto = time.time() + 3 * OCIOSA_S  # algo chamando a treinos sem parar (a espera não acaba): a rodada não conta como ociosa
             while True:
                 ociosa, desde, nota = ociosa_agora(ultimo)
-                if ociosa or time.time() > teto:
+                if ociosa or time.time() > teto or (ate is not None and time.time() > ate):
                     break
                 abertos[0][2].pg.wait_for_timeout(5000)
             if not ociosa:
@@ -987,10 +997,7 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
                 medidas[tela[0]]["ociosa"].append(r["t_pronto_s"])
             o.linha(f"   gate ociosa {feitas}/{ABERTURAS_OCIOSA} (as 2 juntas, a treinos parada há {desde} s; {nota}): "
                     + ", ".join(f"{tela[0]} {r['t_pronto_s']} s" for (_c, tela, _t, _p), r in zip(abertos, rs)))
-        with LockPesado():
-            for conta, tela, t, pend in abertos:
-                for _ in range(ABERTURAS_QUENTE):
-                    medidas[tela[0]]["quente"].append(medir_gate(t, pend, tela, conta, s)["t_pronto_s"])
+        parcial = len(next(iter(medidas.values()))["ociosa"]) < ABERTURAS_OCIOSA
         for conta, tela, _t, _pend in abertos:
             m = medidas[tela[0]]
             todas = m["ociosa"] + m["quente"]
@@ -1007,6 +1014,12 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
                 regra = f"≤ {GATE_ALUNO_MAX_S} s"
             for tipo in ("ociosa", "quente"):
                 anotar_gate(base, commit, fase, conta, tela[0], tipo, m[tipo], ref, None)
+            if parcial:
+                anotar_gate(base, commit, fase, conta, tela[0], "parcial", todas, ref, None)
+                o.ok(True, f"GATE {tela[0]} PARCIAL (o prazo do BANCO): {len(m['ociosa'])} de {ABERTURAS_OCIOSA} ociosas {m['ociosa']} (p50 "
+                           f"{p50(m['ociosa'])}) e {len(m['quente'])} quentes {m['quente']} (p50 {p50(m['quente'])}); p50 de todas = {p50(todas)} s {regra} "
+                           f"— o veredito fica para o F7 (faltam {ABERTURAS_OCIOSA - len(m['ociosa'])} ociosas)")
+                continue
             anotar_gate(base, commit, fase, conta, tela[0], "todas", todas, ref, ok)
             if not o.ok(ok is True, f"GATE {tela[0]}: p50 das {len(todas)} = {p50(todas)} s {regra} (ociosa {m['ociosa']} p50 {p50(m['ociosa'])}; "
                                     f"quente {m['quente']} p50 {p50(m['quente'])})" + (" — sem o antes medido" if ref is None else ""), parar=False):
@@ -1017,7 +1030,7 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
             T21.sair_da_conta(o, t, L, base, conta, "gate treinos")
 
 
-def rodar_21d(o, base: str, canal: str | None, casos: list[str], prefixo: str | None = None, gate: bool = False) -> None:
+def rodar_21d(o, base: str, canal: str | None, casos: list[str], prefixo: str | None = None, gate: bool = False, ate: float | None = None) -> None:
     """As telas da 21d, conta por conta: os prints d_* (conferir cada um: tela certa, sem login nem "carregando", nomes de teste), o tempo
     (decisão K) — ou, com --gate, SÓ o gate (decisão K: no fim da etapa 2, um por vez)."""
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
@@ -1036,7 +1049,7 @@ def rodar_21d(o, base: str, canal: str | None, casos: list[str], prefixo: str | 
             nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
             try:
                 if gate:
-                    gate_21d(o, nav, L, base, commit, fase, s)
+                    gate_21d(o, nav, L, base, commit, fase, s, ate)
                     return
                 for conta in T21.contas_da_area(base):
                     telas = T21.telas_que_abrem(o, s, base, conta)
@@ -1116,6 +1129,11 @@ def seco_21d(o) -> None:
             res.append((ociosa_agora(u)[0], round(time.time() - u["t"]) < 120))
     finally:
         T21.ultimo_pedido_na_borda = original
+    import calendar  # noqa: PLC0415
+    utc_ok = (T21.instante_da_borda("2026-10-13T17:24:03")[0] == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0))
+              and T21.instante_da_borda(1760376243000000)[0] == 1760376243.0 and T21.instante_da_borda("x")[1] == "instante ilegível")
+    o.ok(utc_ok, "o instante dos logs da borda: o texto ISO SEM fuso é UTC (tomá-lo como hora local o punha 3 h no futuro e a espera da "
+                 "ociosa nunca acabava — o defeito das 14:48); os microssegundos; o ilegível")
     o.ok(res == [(False, True), (True, False), (False, True), (True, False), (True, False)],
          f"a ociosa: parada há < 10 min aqui → espera; parada aqui e na borda → mede; a borda viu um pedido de OUTRO processo → a espera recomeça; "
          f"os logs da borda fora → só a escuta deste processo (anotado) {res}")
@@ -1138,6 +1156,7 @@ def main() -> int:
     ap.add_argument("--prefixo", default=None)
     ap.add_argument("--seco", action="store_true")
     ap.add_argument("--gate", action="store_true", help="hml-21d: SÓ o gate de latência (decisão K) — no fim da etapa 2, um por vez")
+    ap.add_argument("--gate-ate", default=None, help="hml-21d: HH:MM — o prazo do gate (a janela do BANCO): nenhuma espera nova que não acabe até lá")
     a = ap.parse_args()
     B.corte_vira_saida()
     B.usar_area(a.area)
@@ -1161,7 +1180,11 @@ def main() -> int:
     o = C.Saida(f"telas21_{a.area}_{a.base}" + ("_gate" if a.gate else ""))
     try:
         if da_21d:
-            rodar_21d(o, a.base, a.canal, casos, a.prefixo, gate=a.gate)
+            ate = None
+            if a.gate_ate:
+                hh, mm = (int(x) for x in a.gate_ate.split(":"))
+                ate = time.mktime(time.localtime()[:3] + (hh, mm, 0) + time.localtime()[6:])
+            rodar_21d(o, a.base, a.canal, casos, a.prefixo, gate=a.gate, ate=ate)
         elif da_21b:
             rodar_21b(o, a.area, a.base, a.canal, casos, a.prefixo)
         else:

@@ -247,13 +247,22 @@ def ultimo_pedido_na_borda(janela_min: int = 40) -> tuple[float | None, str | No
     linhas = r.get("result") or []
     if not linhas:
         return None, None
-    v = linhas[0].get("t")
+    return instante_da_borda(linhas[0].get("t"))
+
+
+def instante_da_borda(v: object) -> tuple[float | None, str | None]:
+    """O instante de uma linha dos logs da borda → epoch (s): em microssegundos (número) ou o texto ISO — que vem SEM o fuso e é UTC (o
+    fromisoformat sem fuso tomaria a hora local: 3 h no futuro, e a espera da ociosa nunca acabaria — o defeito das 14:48)."""
+    import datetime as dt  # noqa: PLC0415
     if isinstance(v, (int, float)):
         return v / 1e6, None
     try:
-        return dt.datetime.fromisoformat(str(v).replace("Z", "+00:00")).timestamp(), None
+        d = dt.datetime.fromisoformat(str(v).replace("Z", "+00:00"))
     except ValueError:
         return None, "instante ilegível"
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=dt.timezone.utc)
+    return d.timestamp(), None
 
 
 def antes_do_gate_vale(quando_antes: str | None, inicio_depois: float, max_min: int = 30) -> tuple[bool, int | None]:
