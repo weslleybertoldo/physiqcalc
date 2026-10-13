@@ -29,6 +29,21 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 13/10 02:49 | W-A P2 | `b550192` | `e2e/wa/api.py --so-leitura --desde 2026-10-13T05:37:03Z` | produção | 23/23 | smoke SÓ LEITURA logo depois de publicar (nenhuma gravação; 0 5xx das 3 na borda; 100% JSON); os logs das 3 desde a publicação 7/7 (0 5xx, 0 e-mail/JWT/chave) |
+| 13/10 02:48 | W-A P2 | `b550192` | `e2e/wa/sql_wa.py --casos L1` | staging | 1/1 | o L1 da P1 com a rotina de todo dia (defeito achado na Task 1 da P2: a rotina seg/qua/dom não aceitava marcar hoje nos outros dias) |
+| 13/10 02:48 | W-A P2 | `b550192` | `e2e/wa/sql_wa.py --casos D5` | staging | 1/1 | o D5 da P1 sem depender do RLS da aluna (Task 1 da P2): 3 rodadas seguidas |
+| 13/10 02:48 | W-A P2 | `b550192` | `e2e/wa/sql_wa.py --casos D5` | staging | 1/1 | o D5 da P1 sem depender do RLS da aluna (Task 1 da P2): 3 rodadas seguidas |
+| 13/10 02:48 | W-A P2 | `b550192` | `e2e/wa/sql_wa.py --casos D5` | staging | 1/1 | o D5 da P1 sem depender do RLS da aluna (Task 1 da P2): 3 rodadas seguidas |
+| 13/10 02:48 | W-A P2 | `b550192` | `e2e/wa/api.py` | staging | 98/98 | as 3 funções publicadas (v1 do `1d83367`): A/T/R/D/X/Y/B por papel nos 2 bancos + os negativos da §5.5 + os logs da borda; o `w27-master` master SÓ durante a rodada (devolvido a `pessoa`); sobras 0 |
+| 13/10 02:41 | W-A P2 | `1d83367` | `e2e/wa/api.py` | staging | 93/98 | 1ª rodada: os 5 ❌ eram do TESTE — A2.1/A12.x (o `w27-master` não é master fixo no staging desde a hml-18a: a rodada passou a dar o papel e devolver) e X3 (o R14 deixava a aluna no teto de 30 rotinas vivas) → corrigidos em `b550192`; sobras 0 |
+| 13/10 00:48 | W-A P2 | `8d23c9e` | `e2e/wa/sql_wa.py --so-catalogo --schema public` | produção | 8/8 | Task 0 da P2: o catálogo da P1 (K1–K8) SÓ LEITURA antes de começar |
+| 13/10 00:48 | W-A P2 | `8d23c9e` | `e2e/wa/sql_wa.py --so-catalogo --schema staging` | staging | 8/8 | Task 0 da P2: o catálogo da P1 (K1–K8) SÓ LEITURA antes de começar |
+| 12/10 22:36 | W-A P1 | `feb9361` | `e2e/wa/sql_wa.py --so-catalogo --schema public` | produção | 8/8 | o catálogo de novo depois do merge da P1 (só leitura) |
+| 12/10 22:24 | W-A P1 | `feb9361` | `e2e/w10/api.py --schema public` | produção | 2/2 | smoke só leitura depois do merge da P1 |
+| 12/10 22:22 | W-A P1 | `feb9361` | `e2e/w07/smoke_prod.py telas --versao 3.110 --canal msedge` | produção | 13/13 | smoke só leitura depois do merge da P1 (v3.110 no site) |
+| 12/10 22:03 | W-A P1 | `0fbfd1f` | `e2e/hml12/banco.py --schema public` | produção | 10/10 | regressão só leitura da hml-12 (a exportar com `aceites`) com a P1 no `public` |
+| 12/10 22:03 | W-A P1 | `0fbfd1f` | `e2e/hml01/banco.py --schema public` | produção | 12/12 | regressão só leitura: as 10 tabelas novas sem privilégio do visitante e sem TRUNCATE do logado |
+| 12/10 22:01 | W-A P1 | `0fbfd1f` | `e2e/wa/sql_wa.py --so-catalogo --schema public` | produção | 8/8 | P1 na produção: o catálogo das 3 migrations no `public` (K1–K8), só leitura, logo depois de aplicar |
 | 13/10 01:35 | hml-21a | `3cbad2c` | `e2e/hml21/api.py --sair` | staging | 4/4 | F7: o logout (scope=local) das 4 sessões guardadas (w5p-aluna, w13-dono, w5p-nutri, w7b-sozinho), 204 |
 | 13/10 01:35 | hml-21a | `3cbad2c` | `e2e/hml21/api.py --devolver-sino` | staging | 1/1 | F7: os 5 avisos da aluna de teste que estavam não lidos antes voltaram a não lidos (SQL só leitura: 5 de 5) |
 | 13/10 01:29 | hml-21a | `3cbad2c` | `e2e/hml21/telas.py --area app --base staging --prefixo staging2 --canal msedge` | staging | 17/18 | F7 (com `TREINO_SAIR_OUTRAS=w7b-sozinho`): prints `staging2_a_perfil/conta/conta_foto/agenda/meu_plano` iguais aos `local_a_*`; a foto de teste pela tela pelo link assinado e devolvida (sem foto, 0 arquivo); o Treino do w7b-sozinho: scope=others 204 + scope=local 204 (26 sessões → 0); o ❌ = o tempo do Perfil 0,54 > 0,22 + 0,3 (`## TEMPO perfil`, aceito pela sessão principal: 0,02 s acima do teto, dentro do ruído; o local deu 0,46) |
