@@ -114,11 +114,12 @@ export default function CardRotinas({ alunoId }: { alunoId: string }) {
     );
   };
 
+  const nVivas = d?.tem_login ? vivasDoAluno(d.rotinas).length : 0;
   return (
     <Cartao className="flex min-h-[240px] min-w-0 flex-col px-[18px] py-4" data-card-rotinas={estado} data-rotinas-pode-criar={podeCriar ? "1" : "0"}>
       <CabecalhoCartao
         titulo={TEXTOS.titulo}
-        extra={d?.tem_login && vivasDoAluno(d.rotinas).length > 0 ? <Chip tom="c">{vivasDoAluno(d.rotinas).length} VIVAS</Chip> : undefined}
+        extra={nVivas > 0 ? <Chip tom="c">{nVivas} {nVivas === 1 ? "VIVA" : "VIVAS"}</Chip> : undefined}
         acao={verTudo}
       />
       <div className="flex min-w-0 flex-1 flex-col">{corpo()}</div>

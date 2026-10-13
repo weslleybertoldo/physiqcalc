@@ -144,6 +144,15 @@ describe("W-A P6 — o card Rotinas do Resumo", () => {
     expect(document.querySelectorAll("[data-rotina-painel-abrir]")).toHaveLength(0);
   });
 
+  it("o selo da contagem concorda com o número: 1 VIVA (o print do E2E local mostrava '1 VIVAS')", async () => {
+    h.ler.mockResolvedValue({ ...LISTA, rotinas: LISTA.rotinas.slice(0, 1) });
+    montar();
+    await achar('[data-card-rotinas="lista"]');
+    const texto = document.querySelector("[data-card-rotinas]")!.textContent ?? "";
+    expect(texto).toContain("1 VIVA");
+    expect(texto).not.toContain("1 VIVAS");
+  });
+
   it("o erro da função: a frase do código e 'Tentar de novo' (relê)", async () => {
     // um código que não repete sozinho (o "rede" repetiria 1 vez — o retry da consulta — e a tela iria direto para a lista)
     h.ler.mockRejectedValueOnce(new ErroAlunoDia("sem_internet")).mockResolvedValueOnce(LISTA);
