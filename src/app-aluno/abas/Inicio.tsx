@@ -20,11 +20,11 @@ import { Esqueleto } from "@/ui/premium/Estados";
 import { Sino } from "@/ui/premium/Sino";
 
 /**
- * As linhas do Início na ordem da tela 1: o treino de hoje; a dieta e as metas lado a lado; a próxima consulta; o peso. Cada card
- * é um arquivo em src/app-aluno/inicio/<Card>.tsx (registro por convenção — spec 11.1) e decide sozinho se aparece (módulo do
- * aluno). Card novo de outra worktree entra no fim, numa linha só dele.
+ * As linhas do Início na ordem da tela 1: o treino de hoje; a dieta e as metas lado a lado; as rotinas de hoje (W-A P3 — spec §4.3);
+ * a próxima consulta; o peso. Cada card é um arquivo em src/app-aluno/inicio/<Card>.tsx (registro por convenção — spec 11.1) e decide
+ * sozinho se aparece (módulo do aluno). Card novo de outra worktree entra no fim, numa linha só dele.
  */
-const LINHAS: string[][] = [["CardTreinoHoje"], ["CardDietaHoje", "CardMetasHoje"], ["CardProximaConsulta"], ["CardPeso"]];
+const LINHAS: string[][] = [["CardTreinoHoje"], ["CardDietaHoje", "CardMetasHoje"], ["CardRotinasHoje"], ["CardProximaConsulta"], ["CardPeso"]];
 
 /**
  * hml-18b (H-54, F): quem aparece para quem — a MESMA regra da 1ª linha de cada card (useOQueOAlunoTem: módulos e situação, já
@@ -36,6 +36,8 @@ const APARECE: Record<string, (t: OQueTem) => boolean> = {
   CardTreinoHoje: (t) => t.treino,
   CardDietaHoje: (t) => t.nutricao,
   CardMetasHoje: (t) => t.comNutricionista,
+  // W-A P3 (P9): todo aluno, inclusive o do app sem profissional — o card some sozinho para quem não tem matrícula
+  CardRotinasHoje: () => true,
   CardProximaConsulta: (t) => !t.semProfissional,
   CardPeso: (t) => !t.semProfissional,
 };
@@ -45,6 +47,7 @@ const ESQUELETO: Record<string, string> = {
   CardTreinoHoje: "h-[212px] rounded-[26px]",
   CardDietaHoje: "h-[150px] rounded-[22px]",
   CardMetasHoje: "h-[150px] rounded-[22px]",
+  CardRotinasHoje: "h-[168px] rounded-[22px]",
   CardProximaConsulta: "h-[66px] rounded-[22px]",
   CardPeso: "h-[84px] rounded-[22px]",
 };

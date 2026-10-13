@@ -43,6 +43,8 @@ const h = vi.hoisted(() => {
     ev: null as null | Record<string, unknown>,
     perfil: null as null | Record<string, unknown>,
     agenda: [] as unknown[],
+    // W-A P3: as rotinas do card "Rotinas de hoje" (a função aluno-dia, falsa)
+    rotinas: { ok: true, hoje: "2026-09-30", rotinas: [] as unknown[], feitas: [] as unknown[] },
     marcarMeta: vi.fn(async () => {}),
     db: {
       getAll: vi.fn(async () => []),
@@ -72,6 +74,11 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: h.authUser, isStaff:
 vi.mock("@/nutricao/app/useDieta", () => ({ useDieta: () => h.dieta }));
 vi.mock("@/evolucao/useEvolucaoDoAluno", () => ({ useEvolucaoDoAluno: () => h.ev }));
 vi.mock("@/app-aluno/perfil/pecas/api", () => ({ meuPerfilAluno: async () => h.perfil, minhaAgenda: async () => h.agenda }));
+vi.mock("@/aluno-dia/api", async (orig) => ({
+  ...(await orig<typeof import("@/aluno-dia/api")>()),
+  lerMinhasRotinas: async () => h.rotinas,
+  marcarRotina: async () => ({ ok: true, feita: true }),
+}));
 vi.mock("@/ui/premium/Sino", () => ({ Sino: () => <button type="button">Avisos</button> }));
 vi.mock("@/app-aluno/AppAlunoLayout", () => ({ AvisosDoTopo: () => <div data-testid="avisos-topo" /> }));
 vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: () => false }, registerPlugin: () => ({}) }));
@@ -192,6 +199,7 @@ beforeEach(() => {
   h.agenda = [{ id: "ag1", paciente_id: "m1", titulo: "Retorno", inicio: "2026-10-02T13:00:00Z", fim: "2026-10-02T14:00:00Z", dia_inteiro: false, status: "confirmado",
     modulo: "nutricao", profissional: "Camila Rocha", papel: "nutricionista" }];
   h.marcarMeta.mockClear();
+  h.rotinas = { ok: true, hoje: "2026-09-30", rotinas: [], feitas: [] };
   h.buscaCarregando = false;
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   Element.prototype.scrollIntoView = vi.fn();
@@ -236,7 +244,9 @@ describe("aba Início (W12 — tela 1)", () => {
     expect(card("data-dieta-hoje-refeicoes")?.textContent).toBe("2 de 3 refeições");
     expect(card("data-dieta-hoje-pct")?.textContent).toBe("53%");
 
-    // metas de hoje: as 3 que valem na quarta, 2 com ✓ (a de sábado fica de fora)
+    // metas de hoje: as 3 que valem na quarta, 2 com ✓ (a de sábado fica de fora). W-A P3: cada card é um pedaço preguiçoso com o seu
+    // Suspense e o React revela em lotes — o das metas pode chegar num lote depois do da dieta (o card das rotinas mudou os lotes): esperar
+    await waitFor(() => expect(card("data-card-metas-hoje")).not.toBeNull(), { timeout: 4000 });
     const metas = card("data-card-metas-hoje")!;
     expect(metas.getAttribute("data-metas-hoje")).toBe("3");
     expect(metas.getAttribute("data-metas-hoje-feitas")).toBe("2");
@@ -249,11 +259,39 @@ describe("aba Início (W12 — tela 1)", () => {
     expect(card("data-consulta-quando")?.textContent).toBe("Nutricionista · sex, 02/10 · 10:00");
     expect(card("data-consulta-em")?.textContent).toBe("Em 2 dias");
 
-    // peso: o card Peso da Evolução no 6M (84,2 kg; 89,1 → 84,2 = −4,9 kg em 6 meses)
+    // peso: o card Peso da Evolução no 6M (84,2 kg; 89,1 → 84,2 = −4,9 kg em 6 meses) — também pode chegar num lote depois: esperar
+    await waitFor(() => expect(card('data-card-peso="dados"')).not.toBeNull(), { timeout: 4000 });
     const peso = card('data-card-peso="dados"')!;
     expect(peso.textContent).toContain("84,2 kg");
     expect(peso.querySelector("[data-peso-linha]")?.textContent).toBe("4,9 kg em 6 meses");
     expect(peso.getAttribute("data-peso-periodo")).toBe("6m");
+  });
+
+  it("W-A P3: o card 'Rotinas de hoje' entra logo depois da linha Dieta/Metas e antes da próxima consulta (todo aluno)", async () => {
+    h.rotinas = {
+      ok: true, hoje: "2026-09-30", feitas: [],
+      rotinas: [{ id: "r1", origem: "profissional", paciente_id: "m1", nome: "Creatina", detalhe: "5 g", tipo: "suplemento", horario: "08:00",
+        dias_semana: [1, 2, 3, 4, 5, 6, 7], lembrete: true, ordem: 0, criada_em: "2026-09-01T00:00:00Z", alterada_em: "2026-09-01T00:00:00Z", arquivada_em: null }],
+    };
+    abrir();
+    await waitFor(() => expect(card('data-card-rotinas-hoje="lista"')).not.toBeNull());
+    await waitFor(() => expect(card('data-card-consulta="proxima"')).not.toBeNull());
+    await waitFor(() => expect(card("data-card-metas-hoje")).not.toBeNull());
+    const rotinas = card("data-card-rotinas-hoje")!;
+    expect(rotinas.textContent).toContain("Creatina");
+    expect(rotinas.textContent).toContain("do seu profissional");
+    const antes = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(antes(card("data-card-metas-hoje")!, rotinas)).toBe(true);
+    expect(antes(rotinas, card("data-card-consulta")!)).toBe(true);
+  });
+
+  it("W-A P3: o aluno do app sem profissional também tem o card (P9) — vazio, com 'Criar rotina'", async () => {
+    h.situacao = { master: false, contas: [], matriculas: [matricula(["treino", "nutricao"], { app: true, app_plano: "app_treino_alimentacao" })],
+      modulos_aluno: ["treino", "nutricao"], nome: "Diego Almeida" };
+    abrir();
+    await waitFor(() => expect(card('data-card-rotinas-hoje="vazio"')).not.toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: /Criar rotina/ }));
+    expect(screen.getByTestId("rota").textContent).toBe("/perfil/rotinas?nova=1");
   });
 
   it("marcar a meta de hoje usa a MESMA mutação da aba Dieta (aluno_marcar_meta)", async () => {
