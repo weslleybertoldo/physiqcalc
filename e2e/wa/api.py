@@ -548,6 +548,16 @@ def foto() -> dict:
     return {**r, "refeicao": pl[0]["refeicao"], "item": pl[0]["item"], "treino_user_id": t[0]["treino_user_id"], "series_antes": t[0]["series_travadas"]}
 
 
+def master_do_staging() -> dict:
+    """SÓ LEITURA: o profile do w27-master no staging (o id e o papel de ANTES da rodada). Desde a hml-18a (10/10) nenhuma conta de TESTE é
+    master fixo no staging: cada E2E dá o papel só durante a rodada e devolve no fim (o molde do e2e/w2/api.py)."""
+    r = B.ler(f"""select p.id::text as uid, p.role from {S}.profiles p
+                   where p.id = (select id from auth.users where lower(email) = {B.txt(B.CONTAS['w27-master'])})""")
+    if not r:
+        raise SystemExit("o w27-master sem profile no staging (a Task 0 do plano diz o que conferir) — nada foi gravado")
+    return r[0]
+
+
 def massa_basica(rod: Rodada, f: dict) -> dict:
     """As matrículas 'sem login' (personal + nutri) e 'só nutri' na conta A — na Massa do _base.py (o id vai ao estado ANTES do insert; o
     --limpar do _base.py também desfaz) — e o alimento 'fora do plano' da nutri (no estado da rodada, ANTES do insert). Só no staging."""
@@ -748,6 +758,8 @@ def grupo_r(x: dict) -> None:
                      select count(*) from {S}.rotinas where dono_user_id = {B.txt(f['aluna'])} and arquivada_em is null))::int) g""")
     st, r, _h = chamar(AD, tk["w5p-aluna"], {"acao": "rotina_salvar", "dados": {"nome": f"{m} a 31ª"}})
     caso("R14", "§5.5: a 31ª rotina viva", st, r, 409, r.get("erro") == "limite")
+    # as "cheias" saem logo depois do R14 — senão a aluna fica no teto de 30 e o X3 (a rotina do personal na conta A) recebe `limite`
+    B.escrever(f"delete from {S}.rotinas where dono_user_id = {B.txt(f['aluna'])} and nome like {B.txt(m + ' cheia %')}")
     for i, (corpo, erro) in enumerate((
         ({"acao": "rotina_salvar", "dados": {"nome": f"{m} {'x' * 60}"}}, "dados_invalidos"),   # o erro PROVOCADO do grupo B (a marca nunca no log)
         ({"acao": "rotinas_ordenar", "ids": [str(uuid.uuid4()) for _ in range(31)]}, "dados_invalidos"),
@@ -921,11 +933,15 @@ def rodada_staging(grupos: set[str]) -> None:
     if rod.e:
         raise SystemExit(f"há o estado de uma rodada anterior ({ESTADO}): rode python3 e2e/wa/api.py --limpar antes")
     f = foto()
+    mu = master_do_staging()
     rid = time.strftime("%m%d-%H%M")
     rod.e = {"inicio": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "rodada": rid, "marca": f"{B.MARCA} {rid}",
              "aluna": f["aluna"], "sozinho": f["sozinho"], "pac_a": f["pac_a"], "config_a": f["config_a"], "acessos_a": f["acessos_a"],
-             "treino_user_id": f["treino_user_id"], "series_antes": f["series_antes"], "alimentos": []}
+             "treino_user_id": f["treino_user_id"], "series_antes": f["series_antes"], "alimentos": [],
+             "master_uid": mu["uid"], "master_papel": mu["role"]}
     rod.guardar()
+    # o w27-master vira master SÓ durante a rodada (A2.1 e A12.x); o --limpar devolve o papel de antes e o Z confere
+    B.escrever(f"update {S}.profiles set role = 'master' where id = {B.txt(mu['uid'])} and role is distinct from 'master'")
     logins = B.Logins()
     try:
         tk = {k: logins.token(k) for k in ("w5p-nutri", "w5p-personal", "w5p-aluna", "w7b-sozinho", "w13-dono", "w27-master")}
@@ -966,7 +982,11 @@ def conferir_sobras(e: dict) -> dict:
                            as config_diferente""")[0]
     t = B.C.ler(B.TREINO_REF, f"""select (series_travadas is distinct from {'true' if e.get('series_antes') else 'false'})::int as series_diferente
                                    from {S}.physiq_profiles where id = {B.txt(e.get('treino_user_id'))}""")
-    return {**{k: int(v) for k, v in r.items()}, "series_diferente": int(t[0]["series_diferente"]) if t else 0}
+    mestre = 0
+    if e.get("master_uid"):
+        mestre = int(B.ler(f"""select ((select role from {S}.profiles where id = {B.txt(e['master_uid'])})
+                                       is distinct from {B.txt(e.get('master_papel'))})::int as d""")[0]["d"])
+    return {**{k: int(v) for k, v in r.items()}, "series_diferente": int(t[0]["series_diferente"]) if t else 0, "master_diferente": mestre}
 
 
 def limpar(rod: Rodada | None = None) -> dict:
@@ -993,6 +1013,8 @@ def limpar(rod: Rodada | None = None) -> dict:
         ]
         if e.get("alimentos"):
             comandos.append(f"delete from {S}.alimentos where id = any(array[{', '.join(B.txt(i) for i in e['alimentos'])}]::uuid[]) and nome like {marca}")
+        if e.get("master_uid") and e.get("master_papel") != "master":
+            comandos.append(f"update {S}.profiles set role = {B.txt(e['master_papel'])} where id = {B.txt(e['master_uid'])} and role = 'master'")
         for c in comandos:
             B.escrever(c)
         if e.get("treino_user_id") and isinstance(e.get("series_antes"), bool):
