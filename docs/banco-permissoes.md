@@ -224,3 +224,48 @@ sem `revoke … from public` e `from anon`, sem dizer o que faz com o logado (`r
 authenticated`), ou qualquer definer sem `SET search_path`. Troca de função que já existe (mesmo nome e nº de argumentos) mantém os
 grants e só precisa do `search_path`. Definer que o visitante chama de propósito entra na lista `ANONIMAS_DE_PROPOSITO` do script
 (decisão escrita no PR). O estado do banco vivo continua com o `e2e/hml01/banco.py`.
+
+## Principal: os acessos do aluno, as rotinas e a dieta livre (W-A P1, 12/10/2026 · jeito 2)
+- **10 tabelas novas, gravadas SÓ pelas RPCs:** `aluno_acessos`, `aluno_acessos_log`, `rotinas`, `rotinas_feitas`, `rotinas_historico`,
+  `aluno_alimentos`, `aluno_receitas`, `aluno_receita_itens`, `aluno_dia_refeicoes`, `aluno_dia_itens`. RLS ligado, **nenhuma policy de
+  escrita**; o logado só tem `SELECT` e o RLS decide: nas do aluno, o dono (`dono_user_id = auth.uid()`); em `aluno_acessos`, quem vê o aluno
+  (`pode_ver_aluno`) e o próprio aluno (`wa_minha_matricula` — as matrículas vivas dele); em `aluno_acessos_log`, só quem vê o aluno. O
+  visitante não tem nada; o `physiq_backup` lê (o default da hml-07). Escrita direta = 42501.
+- **Quem grava:** RPCs `SECURITY DEFINER` com `search_path = ''`, o 2º jeito da tabela "Funções" (`revoke … from public, anon` + `grant execute
+  … to authenticated, service_role`), chamadas pelas funções `acessos` e `aluno-dia` (P2) COMO A PESSOA (o token dela; nenhuma chave secreta).
+  Erro = `{ ok: false, erro: <código> }` — nunca texto livre, nunca nome de rotina ou alimento.
+  - Do aluno (o dono vem do token): `minhas_rotinas`, `rotina_salvar` (criar só quem é aluno — a regra do `meu_paciente_id`; mudar qualquer
+    rotina viva dele, inclusive a do profissional), `rotina_arquivar`, `rotina_marcar` (hoje/ontem de São Paulo, no dia da semana dela),
+    `rotinas_ordenar`, `meu_dia` (lê mesmo travada), `dia_adicionar`, `dia_tirar`, `dia_desfazer`, `dia_extra_salvar`, `dia_extra_excluir`,
+    `dia_extra_marcar` (o dia exige a Dieta liberada da matrícula do dia: a da refeição; na extra, a do plano ativo — o servidor decide, nunca o
+    corpo), `meus_alimentos`, `meu_alimento_salvar`, `meu_alimento_excluir`, `minha_receita_salvar`, `minha_receita_excluir` (exigem a Dieta
+    liberada em alguma matrícula), `buscar_alimentos_do_aluno` (TACO, os dos planos dele, os dele e as receitas dele).
+  - Do profissional (a matrícula da rota pela `w14_matricula_da_rota`; muda quem a `w14_pode_editar` deixa — master, dono, responsáveis, a
+    nutri dona): `acessos_ler`, `acessos_salvar` (`acesso_app`/`diario_alimentar`/`acesso_link` pela `aluno_salvar_ajustes` de hoje; a Dieta em
+    `aluno_acessos`; liberar → 1 aviso `geral` por aluno e dia), `acessos_registrar_series` (só o histórico; a verdade das séries fica no Treino),
+    `rotinas_do_aluno` (as do aluno + as de profissional das matrículas que ele vê), `rotina_prof_salvar` e `rotina_prof_arquivar` (só as de
+    profissional DESTA matrícula; a do aluno → `so_do_aluno`), `dia_do_aluno` (o dia a dia, só leitura; o personal também — Q1).
+- **Internas (só o servidor):** `aluno_dieta_liberada`, `wa_nutricao_de_verdade`, `wa_rota`, `wa_aviso_aluno`, `wa_acessos_json`,
+  `wa_rotina_campos`, `wa_rotina_json`, `wa_rotina_gravar`, `wa_rotina_arquivar`, `wa_matriculas_dieta`, `wa_plano_ativo`, `wa_refeicao_do_dia`,
+  `wa_alimento_visivel`, `wa_macros_da_receita`, `wa_dieta_liberada_alguma`, `wa_dia_item_json`, `wa_dados_do_aluno`, `wa_uuid`, `wa_numero`,
+  `wa_texto`. De gatilho: `wa_log_acessos_pacientes` (`trg_pacientes_wa_log_acessos`, AFTER UPDATE em `pacientes` SEM lista de colunas, com
+  WHEN — compara o valor EFETIVO de `ajustes_do_aluno`: pega o caminho antigo, o APK velho e o `acesso_app` que a P15 liga quando nasce o login)
+  e `wa_log_aluno_acessos`.
+- **Chaves estrangeiras:** `dono_user_id` → `auth.users` ON DELETE CASCADE; os autores (`criada_por`, `alterada_por`, `arquivada_por`, `por`,
+  `alterado_por`) → SET NULL; o que aponta para tabela da nutri (`refeicoes`, `itens_refeicao`, `alimentos`) → SET NULL com o RETRATO na linha
+  (a nutri apaga de verdade — `refeicao_excluir`, `item_excluir`, o copiar semana, a lixeira — e nada dela trava).
+- **LGPD:** `exportar_dados_aluno` (o corpo vivo da hml-12, com `'aceites'`) leva as 8 tabelas do aluno e os acessos das matrículas dele, sem
+  os ids de quem mudou; `excluir_dados_aluno` e a parte de aluno da `excluir_conta_profissional` (o corpo vivo de CADA schema — no staging o da
+  hml-02b, com `diario-staging`) contam (`apaga.rotinas_e_dieta`) e apagam na mesma transação (`wa_dados_do_aluno`). Seguem só do servidor.
+- **As funções da P2 e os contratos** (POST, `Authorization: Bearer <token do principal>`, `x-schema: public|staging`, `{ acao, … }`; toda
+  leitura é `acao: "ler"`): `acessos` (principal, verify_jwt true, freio 120/min — `ler { aluno }` · `salvar { aluno, chave, valor }`),
+  `aluno-dia` (principal, verify_jwt true, freio 240/min — `ler { q: rotinas | dia | biblioteca | alimentos | aluno_rotinas | aluno_dia, … }` e
+  as gravações do aluno e do profissional) e `treino-acessos` (Treino, verify_jwt false — o token é do principal; o molde da `treino-leitura`
+  com o vínculo de `physiq_identidades` e o `treinoVisivelPelaConta`; grava SÓ `physiq_profiles.series_travadas` do `treino_user_id` que o
+  principal devolveu, com a chave automática do projeto, e registra pela `acessos_registrar_series`). Erros: 400 `dados_invalidos`/`acao_invalida`
+  · 401 `sem_login` · 403 `sem_acesso` · 404 `nao_encontrado`/`aluno_inexistente`/`sem_treino` · 409 `dieta_travada`/`sem_login_do_aluno`/
+  `sem_nutricao`/`sem_modulo`/`so_do_aluno`/`limite` · 413 · 429 `muitas_acoes` · 500 `erro_interno` · 502 `principal_indisponivel` (Treino).
+- Migrations `20261012200000_wa1_acessos`, `20261012210000_wa2_rotinas` e `20261012220000_wa3_dieta_livre` (a wa3 com bloco compartilhado:
+  no `public`, `--so public` e DEPOIS `--compartilhado`; no staging só `--so staging`); reversas em `supabase-principal/reversas/` (wa3 → wa2 →
+  wa1; tabela com linha vira `<nome>_reversa_waN`). Prova: `python3 e2e/wa/sql_wa.py` (staging, blocos desfeitos) e
+  `python3 e2e/wa/sql_wa.py --so-catalogo --schema staging|public` (só leitura).

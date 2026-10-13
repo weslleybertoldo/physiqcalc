@@ -1,5 +1,5 @@
 // Tipos do BANCO PRINCIPAL (Supabase hkxvtsbwctxkrqzkkdoz, schema public — o staging tem o mesmo desenho).
-// Gerado pela Management API (GET /v1/projects/<ref>/types/typescript?included_schemas=public) depois da migração W2.
+// Gerado pela Management API (GET /v1/projects/<ref>/types/typescript?included_schemas=public) depois da migração W-A P1.
 // Não editar à mão: gerar de novo quando uma migração do principal mudar tabelas.
 export type Json =
   | string
@@ -433,6 +433,124 @@ export type Database = {
         }
         Relationships: []
       }
+      aluno_acessos: {
+        Row: {
+          alterado_em: string
+          alterado_por: string | null
+          chave: string
+          nivel: string
+          paciente_id: string
+        }
+        Insert: {
+          alterado_em?: string
+          alterado_por?: string | null
+          chave: string
+          nivel: string
+          paciente_id: string
+        }
+        Update: {
+          alterado_em?: string
+          alterado_por?: string | null
+          chave?: string
+          nivel?: string
+          paciente_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aluno_acessos_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aluno_acessos_log: {
+        Row: {
+          chave: string
+          de: string
+          em: string
+          id: string
+          paciente_id: string
+          para: string
+          por: string | null
+        }
+        Insert: {
+          chave: string
+          de: string
+          em?: string
+          id?: string
+          paciente_id: string
+          para: string
+          por?: string | null
+        }
+        Update: {
+          chave?: string
+          de?: string
+          em?: string
+          id?: string
+          paciente_id?: string
+          para?: string
+          por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aluno_acessos_log_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aluno_alimentos: {
+        Row: {
+          alterado_em: string
+          busca: string | null
+          carboidrato_g: number
+          criado_em: string
+          deleted_at: string | null
+          dono_user_id: string
+          energia_kcal: number
+          fibra_g: number
+          id: string
+          lipidio_g: number
+          nome: string
+          porcao_g: number
+          proteina_g: number
+        }
+        Insert: {
+          alterado_em?: string
+          busca?: string | null
+          carboidrato_g?: number
+          criado_em?: string
+          deleted_at?: string | null
+          dono_user_id: string
+          energia_kcal?: number
+          fibra_g?: number
+          id?: string
+          lipidio_g?: number
+          nome: string
+          porcao_g?: number
+          proteina_g?: number
+        }
+        Update: {
+          alterado_em?: string
+          busca?: string | null
+          carboidrato_g?: number
+          criado_em?: string
+          deleted_at?: string | null
+          dono_user_id?: string
+          energia_kcal?: number
+          fibra_g?: number
+          id?: string
+          lipidio_g?: number
+          nome?: string
+          porcao_g?: number
+          proteina_g?: number
+        }
+        Relationships: []
+      }
       aluno_assinaturas: {
         Row: {
           atualizado_em: string
@@ -492,6 +610,275 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      aluno_dia_itens: {
+        Row: {
+          alimento_id: string | null
+          aluno_alimento_id: string | null
+          aluno_receita_id: string | null
+          carboidrato_g: number
+          criado_em: string
+          deleted_at: string | null
+          dia: string
+          dono_user_id: string
+          energia_kcal: number
+          extra_id: string | null
+          fibra_g: number
+          id: string
+          item_refeicao_id: string | null
+          lipidio_g: number
+          nome: string
+          paciente_id: string
+          porcoes: number | null
+          proteina_g: number
+          quantidade_g: number | null
+          refeicao_id: string | null
+          refeicao_nome: string
+          tipo: string
+        }
+        Insert: {
+          alimento_id?: string | null
+          aluno_alimento_id?: string | null
+          aluno_receita_id?: string | null
+          carboidrato_g?: number
+          criado_em?: string
+          deleted_at?: string | null
+          dia: string
+          dono_user_id: string
+          energia_kcal?: number
+          extra_id?: string | null
+          fibra_g?: number
+          id?: string
+          item_refeicao_id?: string | null
+          lipidio_g?: number
+          nome: string
+          paciente_id: string
+          porcoes?: number | null
+          proteina_g?: number
+          quantidade_g?: number | null
+          refeicao_id?: string | null
+          refeicao_nome: string
+          tipo: string
+        }
+        Update: {
+          alimento_id?: string | null
+          aluno_alimento_id?: string | null
+          aluno_receita_id?: string | null
+          carboidrato_g?: number
+          criado_em?: string
+          deleted_at?: string | null
+          dia?: string
+          dono_user_id?: string
+          energia_kcal?: number
+          extra_id?: string | null
+          fibra_g?: number
+          id?: string
+          item_refeicao_id?: string | null
+          lipidio_g?: number
+          nome?: string
+          paciente_id?: string
+          porcoes?: number | null
+          proteina_g?: number
+          quantidade_g?: number | null
+          refeicao_id?: string | null
+          refeicao_nome?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aluno_dia_itens_alimento_id_fkey"
+            columns: ["alimento_id"]
+            isOneToOne: false
+            referencedRelation: "alimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aluno_dia_itens_aluno_alimento_id_fkey"
+            columns: ["aluno_alimento_id"]
+            isOneToOne: false
+            referencedRelation: "aluno_alimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aluno_dia_itens_aluno_receita_id_fkey"
+            columns: ["aluno_receita_id"]
+            isOneToOne: false
+            referencedRelation: "aluno_receitas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aluno_dia_itens_extra_id_fkey"
+            columns: ["extra_id"]
+            isOneToOne: false
+            referencedRelation: "aluno_dia_refeicoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aluno_dia_itens_item_refeicao_id_fkey"
+            columns: ["item_refeicao_id"]
+            isOneToOne: false
+            referencedRelation: "itens_refeicao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aluno_dia_itens_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aluno_dia_itens_refeicao_id_fkey"
+            columns: ["refeicao_id"]
+            isOneToOne: false
+            referencedRelation: "refeicoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aluno_dia_refeicoes: {
+        Row: {
+          alterado_em: string
+          concluida_em: string | null
+          criado_em: string
+          deleted_at: string | null
+          dia: string
+          dono_user_id: string
+          horario: string | null
+          id: string
+          nome: string
+          paciente_id: string
+        }
+        Insert: {
+          alterado_em?: string
+          concluida_em?: string | null
+          criado_em?: string
+          deleted_at?: string | null
+          dia: string
+          dono_user_id: string
+          horario?: string | null
+          id?: string
+          nome: string
+          paciente_id: string
+        }
+        Update: {
+          alterado_em?: string
+          concluida_em?: string | null
+          criado_em?: string
+          deleted_at?: string | null
+          dia?: string
+          dono_user_id?: string
+          horario?: string | null
+          id?: string
+          nome?: string
+          paciente_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aluno_dia_refeicoes_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aluno_receita_itens: {
+        Row: {
+          alimento_id: string | null
+          aluno_alimento_id: string | null
+          carboidrato_g: number
+          energia_kcal: number
+          fibra_g: number
+          id: string
+          lipidio_g: number
+          nome: string
+          ordem: number
+          proteina_g: number
+          quantidade_g: number
+          receita_id: string
+        }
+        Insert: {
+          alimento_id?: string | null
+          aluno_alimento_id?: string | null
+          carboidrato_g?: number
+          energia_kcal?: number
+          fibra_g?: number
+          id?: string
+          lipidio_g?: number
+          nome: string
+          ordem?: number
+          proteina_g?: number
+          quantidade_g: number
+          receita_id: string
+        }
+        Update: {
+          alimento_id?: string | null
+          aluno_alimento_id?: string | null
+          carboidrato_g?: number
+          energia_kcal?: number
+          fibra_g?: number
+          id?: string
+          lipidio_g?: number
+          nome?: string
+          ordem?: number
+          proteina_g?: number
+          quantidade_g?: number
+          receita_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aluno_receita_itens_alimento_id_fkey"
+            columns: ["alimento_id"]
+            isOneToOne: false
+            referencedRelation: "alimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aluno_receita_itens_aluno_alimento_id_fkey"
+            columns: ["aluno_alimento_id"]
+            isOneToOne: false
+            referencedRelation: "aluno_alimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aluno_receita_itens_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "aluno_receitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aluno_receitas: {
+        Row: {
+          alterado_em: string
+          criado_em: string
+          deleted_at: string | null
+          dono_user_id: string
+          id: string
+          nome: string
+          porcoes: number
+        }
+        Insert: {
+          alterado_em?: string
+          criado_em?: string
+          deleted_at?: string | null
+          dono_user_id: string
+          id?: string
+          nome: string
+          porcoes?: number
+        }
+        Update: {
+          alterado_em?: string
+          criado_em?: string
+          deleted_at?: string | null
+          dono_user_id?: string
+          id?: string
+          nome?: string
+          porcoes?: number
+        }
+        Relationships: []
       }
       analises_farmaco: {
         Row: {
@@ -4952,6 +5339,141 @@ export type Database = {
           },
         ]
       }
+      rotinas: {
+        Row: {
+          alterada_em: string
+          alterada_por: string | null
+          arquivada_em: string | null
+          arquivada_por: string | null
+          criada_em: string
+          criada_por: string | null
+          detalhe: string | null
+          dias_semana: number[]
+          dono_user_id: string
+          horario: string | null
+          id: string
+          lembrete: boolean
+          nome: string
+          ordem: number
+          origem: string
+          paciente_id: string | null
+          tipo: string
+        }
+        Insert: {
+          alterada_em?: string
+          alterada_por?: string | null
+          arquivada_em?: string | null
+          arquivada_por?: string | null
+          criada_em?: string
+          criada_por?: string | null
+          detalhe?: string | null
+          dias_semana?: number[]
+          dono_user_id: string
+          horario?: string | null
+          id?: string
+          lembrete?: boolean
+          nome: string
+          ordem?: number
+          origem: string
+          paciente_id?: string | null
+          tipo?: string
+        }
+        Update: {
+          alterada_em?: string
+          alterada_por?: string | null
+          arquivada_em?: string | null
+          arquivada_por?: string | null
+          criada_em?: string
+          criada_por?: string | null
+          detalhe?: string | null
+          dias_semana?: number[]
+          dono_user_id?: string
+          horario?: string | null
+          id?: string
+          lembrete?: boolean
+          nome?: string
+          ordem?: number
+          origem?: string
+          paciente_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rotinas_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rotinas_feitas: {
+        Row: {
+          dia: string
+          feita_em: string
+          rotina_id: string
+        }
+        Insert: {
+          dia: string
+          feita_em?: string
+          rotina_id: string
+        }
+        Update: {
+          dia?: string
+          feita_em?: string
+          rotina_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rotinas_feitas_rotina_id_fkey"
+            columns: ["rotina_id"]
+            isOneToOne: false
+            referencedRelation: "rotinas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rotinas_historico: {
+        Row: {
+          antes: Json | null
+          depois: Json | null
+          em: string
+          id: string
+          o_que: string
+          por: string | null
+          quem: string
+          rotina_id: string
+        }
+        Insert: {
+          antes?: Json | null
+          depois?: Json | null
+          em?: string
+          id?: string
+          o_que: string
+          por?: string | null
+          quem: string
+          rotina_id: string
+        }
+        Update: {
+          antes?: Json | null
+          depois?: Json | null
+          em?: string
+          id?: string
+          o_que?: string
+          por?: string | null
+          quem?: string
+          rotina_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rotinas_historico_rotina_id_fkey"
+            columns: ["rotina_id"]
+            isOneToOne: false
+            referencedRelation: "rotinas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transacoes: {
         Row: {
           categoria_id: string | null
@@ -5116,6 +5638,15 @@ export type Database = {
         }
         Returns: Json
       }
+      acessos_ler: { Args: { p_aluno: string }; Returns: Json }
+      acessos_registrar_series: {
+        Args: { p_aluno: string; p_de: string; p_para: string }
+        Returns: Json
+      }
+      acessos_salvar: {
+        Args: { p_aluno: string; p_chave: string; p_valor: string }
+        Returns: Json
+      }
       agenda_garantir_bases: { Args: { p_prof: string }; Returns: undefined }
       agenda_garantir_tags: { Args: never; Returns: Json }
       agenda_horarios: {
@@ -5228,6 +5759,7 @@ export type Database = {
         }
         Returns: Json
       }
+      aluno_dieta_liberada: { Args: { p_paciente: string }; Returns: boolean }
       aluno_enviar_plano: {
         Args: { p_aluno: string; p_modulos: string[] }
         Returns: Json
@@ -5315,6 +5847,10 @@ export type Database = {
         Args: { p_motivo: string; p_pacientes: string[] }
         Returns: number
       }
+      buscar_alimentos_do_aluno: {
+        Args: { p_pagina: number; p_termo: string }
+        Returns: Json
+      }
       cadastro_link_enviar: {
         Args: { p_codigo: string; p_dados: Json }
         Returns: Json
@@ -5375,6 +5911,19 @@ export type Database = {
         Args: { p_aluno: string; p_profissional: string }
         Returns: Json
       }
+      dia_adicionar: { Args: { p_dados: Json; p_dia: string }; Returns: Json }
+      dia_desfazer: { Args: { p_id: string }; Returns: Json }
+      dia_do_aluno: {
+        Args: { p_aluno: string; p_ate: string; p_de: string }
+        Returns: Json
+      }
+      dia_extra_excluir: { Args: { p_id: string }; Returns: Json }
+      dia_extra_marcar: {
+        Args: { p_feita: boolean; p_id: string }
+        Returns: Json
+      }
+      dia_extra_salvar: { Args: { p_dados: Json; p_id: string }; Returns: Json }
+      dia_tirar: { Args: { p_dia: string; p_item: string }; Returns: Json }
       diario_enviar: {
         Args: {
           p_codigo: string
@@ -5722,9 +6271,16 @@ export type Database = {
       mensagens_desligadas: { Args: never; Returns: Json }
       mensagens_ligar_para_todos: { Args: { p_ids: string[] }; Returns: Json }
       mensalidade_recalcular: { Args: { p_paciente: string }; Returns: string }
+      meu_alimento_excluir: { Args: { p_id: string }; Returns: Json }
+      meu_alimento_salvar: {
+        Args: { p_dados: Json; p_id: string }
+        Returns: Json
+      }
+      meu_dia: { Args: { p_dia: string }; Returns: Json }
       meu_paciente_id: { Args: never; Returns: string }
       meu_perfil_aluno: { Args: never; Returns: Json }
       meu_plano_app: { Args: never; Returns: Json }
+      meus_alimentos: { Args: never; Returns: Json }
       minha_agenda: { Args: { p_desde?: string }; Returns: Json }
       minha_agenda_lista: {
         Args: { p_limite?: number; p_offset?: number; p_tipo: string }
@@ -5733,9 +6289,15 @@ export type Database = {
       minha_dieta: { Args: { p_dia?: string }; Returns: Json }
       minha_evolucao: { Args: never; Returns: Json }
       minha_nutricionista_id: { Args: never; Returns: string }
+      minha_receita_excluir: { Args: { p_id: string }; Returns: Json }
+      minha_receita_salvar: {
+        Args: { p_dados: Json; p_id: string }
+        Returns: Json
+      }
       minha_senha_definida: { Args: never; Returns: boolean }
       minha_situacao: { Args: never; Returns: Json }
       minhas_regras_agenda: { Args: never; Returns: Json }
+      minhas_rotinas: { Args: { p_ate: string; p_de: string }; Returns: Json }
       modulos_do_plano: { Args: { p_plano: string }; Returns: string[] }
       mp_automaticas_vivas: { Args: { p_conta: string }; Returns: number }
       mp_contas_renovar_disparar: { Args: never; Returns: number }
@@ -5948,6 +6510,25 @@ export type Database = {
         }
         Returns: Json
       }
+      rotina_arquivar: { Args: { p_id: string }; Returns: Json }
+      rotina_marcar: {
+        Args: { p_dia: string; p_feita: boolean; p_id: string }
+        Returns: Json
+      }
+      rotina_prof_arquivar: {
+        Args: { p_aluno: string; p_id: string }
+        Returns: Json
+      }
+      rotina_prof_salvar: {
+        Args: { p_aluno: string; p_dados: Json; p_id: string }
+        Returns: Json
+      }
+      rotina_salvar: { Args: { p_dados: Json; p_id: string }; Returns: Json }
+      rotinas_do_aluno: {
+        Args: { p_aluno: string; p_ate: string; p_de: string }
+        Returns: Json
+      }
+      rotinas_ordenar: { Args: { p_ids: string[] }; Returns: Json }
       saude_vigente: { Args: { p_uid: string }; Returns: boolean }
       situacao_da_conta_em: {
         Args: {
@@ -6105,6 +6686,68 @@ export type Database = {
         Args: { p_conta: string; p_pacientes: string[] }
         Returns: Json
       }
+      wa_acessos_json: { Args: { p_paciente: string }; Returns: Json }
+      wa_alimento_visivel: {
+        Args: { p_alimento: string; p_uid: string }
+        Returns: boolean
+      }
+      wa_aviso_aluno: {
+        Args: { p_link: string; p_titulo: string; p_user: string }
+        Returns: boolean
+      }
+      wa_dados_do_aluno: {
+        Args: { p_apagar: boolean; p_uid: string }
+        Returns: number
+      }
+      wa_dia_item_json: {
+        Args: { i: Database["public"]["Tables"]["aluno_dia_itens"]["Row"] }
+        Returns: Json
+      }
+      wa_dieta_liberada_alguma: { Args: { p_uid: string }; Returns: boolean }
+      wa_macros_da_receita: { Args: { p_receita: string }; Returns: Json }
+      wa_matriculas_dieta: { Args: { p_uid: string }; Returns: string[] }
+      wa_minha_matricula: { Args: { p_paciente: string }; Returns: boolean }
+      wa_numero: {
+        Args: { p: Json; p_max: number; p_min: number }
+        Returns: number
+      }
+      wa_nutricao_de_verdade: { Args: { p_paciente: string }; Returns: boolean }
+      wa_plano_ativo: { Args: { p_uid: string }; Returns: string }
+      wa_refeicao_do_dia: {
+        Args: { p_dia: string; p_refeicao: string; p_uid: string }
+        Returns: Json
+      }
+      wa_rota: { Args: { p_aluno: string }; Returns: Json }
+      wa_rotina_arquivar: {
+        Args: { p_id: string; p_quem: string }
+        Returns: Json
+      }
+      wa_rotina_campos: {
+        Args: {
+          p_base: Database["public"]["Tables"]["rotinas"]["Row"]
+          p_dados: Json
+        }
+        Returns: Json
+      }
+      wa_rotina_gravar: {
+        Args: {
+          p_dados: Json
+          p_dono: string
+          p_id: string
+          p_paciente: string
+          p_quem: string
+        }
+        Returns: Json
+      }
+      wa_rotina_json: {
+        Args: { r: Database["public"]["Tables"]["rotinas"]["Row"] }
+        Returns: Json
+      }
+      wa_texto: {
+        Args: { p: Json; p_max: number; p_min: number }
+        Returns: string
+      }
+      wa_uuid: { Args: { p: string }; Returns: string }
       whatsapp_destino: { Args: { p_telefone: string }; Returns: string }
       whatsapp_destravar_fila: { Args: never; Returns: Json }
       whatsapp_enfileirar: { Args: never; Returns: Json }

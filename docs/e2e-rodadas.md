@@ -29,6 +29,13 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 12/10 21:49 | W-A P1 | `a28fc3f` | `e2e/wa/sql_wa.py` | staging | 53/53 | a reversa ida e volta (wa3 → wa2 → wa1 `--so staging`: 0 tabela e 0 função da W-A; os 6 corpos da LGPD com o md5 de antes) e as 3 reaplicadas: 45 casos + K1–K8 |
+| 12/10 21:46 | W-A P1 | `a28fc3f` | `e2e/w10/api.py` | staging | 22/22 | regressão com as 3 migrations no staging |
+| 12/10 21:45 | W-A P1 | `a28fc3f` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | regressão: as 10 tabelas novas sem privilégio do visitante e sem TRUNCATE do logado |
+| 12/10 21:44 | W-A P1 | `a28fc3f` | `e2e/wa/sql_wa.py` | staging | 53/53 | P1 no staging: as 3 migrations (wa1, wa2, wa3 `--so staging`); 45 casos + K1–K8; `public` intocado |
+| 12/10 21:35 | W-A P1 | `a28fc3f` | `e2e/wa/sql_wa.py --casos D5` | staging | 1/1 | o D5 sozinho depois do ❌ das 21:33 (+ 5/5 no diagnóstico com as partes do `matricula`) |
+| 12/10 21:33 | W-A P1 | `a28fc3f` | `e2e/wa/sql_wa.py` | staging | 52/53 | D5 com `matricula: null` (esperado `true`; o resto certo) — intermitente: ~1 min depois dos 502 da Management API (degradação do Supabase); nenhuma linha lida pelo D5 mudou; não se repetiu nas rodadas seguintes; causa não achada |
+| 12/10 21:30 | W-A P1 | `a28fc3f` | `e2e/wa/sql_wa.py --grupo acessos` | staging | 0/10 | o vermelho antes das migrations (`staging.aluno_acessos` não existe) |
 | 12/10 19:48 | hml-20d | `5599d21` | `e2e/hml20/rede.py --area dieta --base staging --canal msedge` | staging | 78/78 | F6 regressão: a 20c igual (0 leitura direta da área nas 14 telas; o Financeiro do Dashboard pela `financeiro`); massa limpa (0 linha, 0 arquivo) |
 | 12/10 19:44 | hml-20d | `5599d21` | `e2e/hml20/rede.py --area aluno --base staging --canal msedge` | staging | 22/22 | F6 regressão: a 20a igual; logout do Treino do app 204 |
 | 12/10 19:42 | hml-20d | `5599d21` | `e2e/hml20/api.py --area financeiro --base staging` | staging | 40/40 | F6 (a `financeiro` v6): o P das 12 consultas = o SQL fixo das libs do `ed0d72e` como a pessoa; N1–N9 (o N8 não se aplica); massa limpa (0 linha) |
