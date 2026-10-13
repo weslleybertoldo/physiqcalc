@@ -16,7 +16,8 @@
 //     o laço que a lib fazia no navegador, agora NO SERVIDOR, num item só; passou de 20 → muitas_linhas (a lib diz a frase de hoje).
 // Sem Storage (as leituras do Financeiro não assinam URL). O que este catálogo repete do da nutricao (as constantes de página e o INT4)
 // fica repetido nesta W (o da nutricao não pode mudar: a nutricao publicada é a da main).
-import type { ConsultaLeitura, EmbutidoLeitura } from "./leitura-lote.ts";
+import type { CatalogoLeitura, ConsultaLeitura, EmbutidoLeitura, FiltroLeitura } from "./leitura-lote.ts";
+import type { CatalogoDoServidor } from "./leitura-servidor.ts";
 
 /** O teto de linhas de uma lista (o max_rows do PostgREST: acima, ele cortava calado a leitura direta). */
 export const TETO_LISTA = 1000;
@@ -88,6 +89,8 @@ export function filtroEmAbertoOuNoPeriodo(o: OuEmAbertoOuNoPeriodo, params: Reco
   return `${o.status.coluna}.in.(${o.status.valores.join(",")}),and(${o.periodo.coluna}.gte.${de},${o.periodo.coluna}.lte.${ate})`;
 }
 
+/** hml-21c: os ★ de recibo da Ferramentas › Modelos (o .limit(500) do favoritosDe da tela). */
+export const MODELOS_RECIBO_FAVORITOS_MAX = 500;
 const aluno = { tipo: "uuid", obrigatorio: true } as const;
 const conta = { tipo: "uuid", obrigatorio: true } as const;
 const dataObrigatoria = { tipo: "data", obrigatorio: true } as const;
@@ -201,6 +204,19 @@ export const CONSULTAS_FINANCEIRO = {
     params: {},
     fonte: { rpc: "financeiro_do_aluno" },
   },
+
+  // ───── hml-21c (H-112): a Ferramentas › Modelos — os ★ de quem chama nos modelos de recibo ─────
+  // o favoritosDe da tela (src/ferramentas/modelos/dados.ts:30, 87): as colunas dela, favorito = true (fixo, nunca do corpo), o dono = o user
+  // do token, fora da lixeira, até 500. Consulta PRÓPRIA (PADRÃO da 21c): o filtro no fin_modelos_recibo não dá as colunas (a tela lê o
+  // updated_at) nem o teto da lib (500 × 1000) — o fin_modelos_recibo do Financeiro segue byte a byte
+  fin_modelos_recibo_favoritos: {
+    params: {},
+    fonte: {
+      tabela: "modelos_recibo", colunas: ["id", "updated_at", "titulo", "conteudo"], teto: MODELOS_RECIBO_FAVORITOS_MAX, fixos: [{ coluna: "favorito", valor: true }],
+      vivas: true,
+    },
+    dono: "nutricionista_id",
+  },
 } as const satisfies Record<string, ConsultaFinanceiro>;
 
 export type ConsultaDoFinanceiro = keyof typeof CONSULTAS_FINANCEIRO;
@@ -211,3 +227,24 @@ export function consultaDoFinanceiro(q: unknown): ConsultaFinanceiro | null {
   return typeof q === "string" && Object.prototype.hasOwnProperty.call(CONSULTAS_FINANCEIRO, q) ? CONSULTAS_FINANCEIRO[q as ConsultaDoFinanceiro] : null;
 }
 
+// ───────────────────────── hml-21c (H-112): o catálogo da financeiro para o motor comum ─────────────────────────
+/**
+ * O "em aberto OU no período" das cobranças do Resumo como filtro a mais do motor (o .or() montado com as 2 datas JÁ LIDAS pelo motor; vai
+ * no fim dos filtros do plano — o lugar em que o filtrosDaConsulta do módulo de hoje o punha); sem a declaração, nenhum.
+ */
+export function filtrosExtrasDoFinanceiro(consulta: ConsultaLeitura, params: Record<string, unknown>): FiltroLeitura[] {
+  const o = (consulta as ConsultaFinanceiro).emAbertoOuNoPeriodo;
+  const ou = o ? filtroEmAbertoOuNoPeriodo(o, params) : null;
+  return ou === null ? [] : [{ op: "ou", filtro: ou }];
+}
+
+/**
+ * O catálogo da função financeiro para o motor comum (_shared/leitura-servidor.ts — o functions/financeiro/leituras.ts passa a ser ele): as
+ * consultas + o { ok: false, erro } de propósito das RPCs da conta como o erro do item (erroNoValorDaRpc) + o "em aberto OU no período"
+ * (filtrosExtras). É o MESMO objeto que a diferencial da hml-21a montava à mão (src/integrations/leituraServidor.test.ts). Sem Storage.
+ */
+export const CATALOGO_FINANCEIRO: CatalogoDoServidor = {
+  consultas: CONSULTAS_FINANCEIRO as unknown as CatalogoLeitura,
+  erroNoValorDaRpc: true,
+  filtrosExtras: filtrosExtrasDoFinanceiro,
+};

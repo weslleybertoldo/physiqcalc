@@ -27,6 +27,9 @@
 // Precisa no banco, no schema do pedido: a migration 20261011120000_hml19d_financeiro_atomicas.sql (as 3 RPCs; sem ela só as sementes e
 // o emitir/excluir recibo falham — o CRUD usa as tabelas e as policies de hoje). As leituras (hml-20d) não precisam de migration: as RPCs
 // de leitura (hml-14b/14d, W6), as policies de leitura e os grants de hoje — cada pessoa lê o que já lia, agora pela função.
+// hml-21c (H-112 · H-109, 13/10/2026): o `ler` passa ao motor comum (leituras.ts = _shared/leitura-servidor.ts + CATALOGO_FINANCEIRO, com os
+// ★ de recibo da Ferramentas › Modelos por acréscimo) e o token do `ler` é conferido pelo JWKS do principal na porta (jwtLeitura: "jwks",
+// como a conta), sem a ida ao Auth; as gravações seguem no getUser. Sem migration.
 import { json, servirComoPessoa, type ContextoPessoa } from "../_shared/porta-pessoa.ts";
 import {
   CATEGORIAS_PADRAO, VOLTA_RECIBO, acaoDoFinanceiro, erroDoFinanceiro, lerPadroes, lerReciboEmitir, lerReciboExcluir, lerTags, modeloPadraoDoRecibo,
@@ -152,7 +155,7 @@ async function salvarTags(c: ContextoPessoa): Promise<Resposta> {
   return { ok: true };
 }
 
-servirComoPessoa("financeiro", { freio: 240 }, async (c) => {
+servirComoPessoa("financeiro", { freio: 240, jwtLeitura: "jwks" }, async (c) => {
   // hml-20d: o `ler` vai ao módulo das leituras ANTES da lista das gravações (o acaoDoFinanceiro não o conhece; as 14 de antes seguem o
   // caminho de antes)
   if (c.corpo.acao === "ler") {

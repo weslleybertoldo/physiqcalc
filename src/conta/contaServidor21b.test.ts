@@ -232,8 +232,13 @@ describe("hml-21b — o catálogo da conta (as consultas do bloco 21b da §2.2)"
       const f = c.fonte as FonteTabela;
       return !!(f.fixos || f.colunasSe || f.recorte?.modelo === "meu_ou_da_conta" || (f.filtros ?? []).some((x) => x.op === "gt"));
     };
+    // hml-21c (H-112; a regra da DECISÃO 03:25 — a lista ganha os itens novos por acréscimo; o que o caso prova das consultas de antes não
+    // muda): os ★ da Ferramentas › Modelos — as consultas NOVAS da 21c no fim dos 2 catálogos — usam o `fixos` (o .eq(favorito, true) da lib);
+    // as da 20a–21a seguem sem nenhuma das 4 (o plano delas não muda)
+    const DA_21C = [...Object.keys(CONSULTAS_NUTRICAO).slice(-9), "fin_modelos_recibo_favoritos"];
+    expect(DA_21C.slice(0, 9).every((q) => q.startsWith("modelos_favoritos_"))).toBe(true);
     for (const [nome, cat] of [["nutricao", CONSULTAS_NUTRICAO], ["financeiro", CONSULTAS_FINANCEIRO], ["conta 21a", CONSULTAS_CONTA]] as const) {
-      for (const [q, c] of Object.entries(cat as CatalogoLeitura)) expect(usa(c), `${nome}.${q}`).toBe(false);
+      for (const [q, c] of Object.entries(cat as CatalogoLeitura)) expect(usa(c), `${nome}.${q}`).toBe(DA_21C.includes(q));
     }
     expect(CONSULTAS_DA_21B.filter((q) => usa((CATALOGO_CONTA.consultas as CatalogoLeitura)[q]))).toEqual([
       "agenda_calendarios", "agenda_agendamentos", "agenda_bloqueios", "agenda_bloqueios_futuros", "agenda_travas", "agenda_alunos", "aluno_do_seletor",

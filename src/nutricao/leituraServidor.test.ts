@@ -506,11 +506,18 @@ describe("hml-20a — a ação `ler` de ponta a ponta no módulo (cliente falso 
 });
 
 describe("hml-20a — o módulo lê como a pessoa (fonte)", () => {
-  const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/leituras.ts"), "utf-8");
+  // hml-21c (H-112): o módulo passou a ser o motor comum com o catálogo da nutricao — o código que este caso lê mora no motor
+  // (_shared/leitura-servidor.ts); o módulo só o chama com o CATALOGO_NUTRICAO. O que o caso prova não muda.
+  const modulo = readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/leituras.ts"), "utf-8");
+  const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/_shared/leitura-servidor.ts"), "utf-8");
   it("sem chave secreta; tudo pelo c.comoPessoa; o select vem do planoDaTabela (o dono = c.userId) e a assinatura só dos caminhos lidos", () => {
+    expect(modulo).toContain("return atenderNoMotor(c, CATALOGO_NUTRICAO);");
+    expect(modulo).not.toMatch(/SERVICE_ROLE|service_role|createClient\(/);
     expect(fonte).not.toMatch(/SERVICE_ROLE|service_role|createClient\(/);
     expect(fonte).toMatch(/c\.comoPessoa\.rpc\(fonte\.rpc, argsDaRpc\(fonte, item\.params\)\)/);
-    expect(fonte).toMatch(/planoDaTabela\(consulta, item\.params, c\.userId\)/);
+    // (no motor, o plano passa pelo planoComExtras — o planoDaTabela com o c.userId do pedido + os filtros a mais do catálogo, nenhum na nutricao)
+    expect(fonte).toMatch(/planoComExtras\(catalogo, consulta, item\.params, c\.userId\)/);
+    expect(fonte).toMatch(/const plano = planoDaTabela\(consulta, params, userId\);/);
     expect(fonte).toMatch(/c\.comoPessoa\.storage\.from\(bucket\)\.createSignedUrls\(caminhos, validadeDaAssinatura\(a\)\)/);
     expect(fonte).not.toMatch(/createSignedUrls\(caminhos, a\.validade\)/);
     expect(fonte).toMatch(/caminhosParaAssinar\(/);
@@ -547,6 +554,8 @@ describe("hml-20a (revisão) — o teto da validade da URL assinada vale para TO
         CONSULTAS_NUTRICAO: CONSULTAS,
         consultaDaNutricao: (q: unknown) =>
           typeof q === "string" && Object.prototype.hasOwnProperty.call(CONSULTAS, q) ? CONSULTAS[q as keyof typeof CONSULTAS] : null,
+        // hml-21c (H-112): o módulo lê pelo CATALOGO_NUTRICAO (o motor comum + o catálogo): o catálogo de teste entra nele também
+        CATALOGO_NUTRICAO: { ...real.CATALOGO_NUTRICAO, consultas: CONSULTAS },
       };
     });
     try {
@@ -724,7 +733,8 @@ describe("hml-20b — o motor: os campos opcionais (página, total, laço, 1 lin
 describe("hml-20b — o catálogo do Painel › Aluno (forma, dono, colunas = as do tipo, códigos de propósito)", () => {
   it("as consultas da 20b — o conjunto do contrato (só acrescentou: 20a + 20b = o catálogo; hml-20c: + o bloco da 20c depois, conferido abaixo)", () => {
     expect(CONSULTAS_DA_NUTRICAO.slice(3, 3 + CONSULTAS_20B.length)).toEqual([...CONSULTAS_20B]);
-    expect(CONSULTAS_DA_NUTRICAO).toHaveLength(3 + CONSULTAS_20B.length + CONSULTAS_20C.length);
+    // hml-21c (H-112; a regra da DECISÃO 03:25 da 21b — por acréscimo, no fim): + os 9 ★ da Ferramentas › Modelos (modelos_favoritos_<tipo>)
+    expect(CONSULTAS_DA_NUTRICAO).toHaveLength(3 + CONSULTAS_20B.length + CONSULTAS_20C.length + 9);
   });
 
   it("as colunas de cada tabela = as do Row do tipo gerado (o select('*') de hoje, escrito coluna a coluna); o PDF e o profiles, os recortes", () => {
@@ -1078,7 +1088,8 @@ describe("hml-20b — cada consulta nova no módulo (como a pessoa, com o RLS si
 });
 
 describe("hml-20b — o módulo lê como a pessoa (fonte): a página, o laço e a URL de 1 arquivo só do que a consulta leu", () => {
-  const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/leituras.ts"), "utf-8");
+  // hml-21c (H-112): o código mora no motor comum (o módulo é o motor + o CATALOGO_NUTRICAO); o que o caso prova não muda
+  const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/_shared/leitura-servidor.ts"), "utf-8");
   it("o count pelo select, o .range pela página/laço, o createSignedUrl só do caminho lido (caminhosParaAssinar da linha) e o nome pelo nomeDoDownload", () => {
     expect(fonte).toMatch(/select\(plano\.colunas, \{ count: "exact" \}\)/);
     expect(fonte).toMatch(/montar\(\)\.range\(extras\.intervalo\[0\], extras\.intervalo\[1\]\)/);
@@ -1381,7 +1392,8 @@ describe("hml-20c — o porDia do diário = a regra do diasQuePodemContinuar da 
 
 describe("hml-20c — o catálogo da Dieta, das Dietas, da Pré-consulta e do Dashboard (forma, dono, colunas = as do tipo)", () => {
   it("as 34 da 20c — o conjunto do contrato, no bloco da 20c, depois da 20a e da 20b (só acrescentou)", () => {
-    expect(CONSULTAS_DA_NUTRICAO.slice(3 + CONSULTAS_20B.length)).toEqual([...CONSULTAS_20C]);
+    // hml-21c (a mesma regra): o bloco da 20c segue o mesmo; os 9 ★ da 21c vêm depois dele
+    expect(CONSULTAS_DA_NUTRICAO.slice(3 + CONSULTAS_20B.length, 3 + CONSULTAS_20B.length + CONSULTAS_20C.length)).toEqual([...CONSULTAS_20C]);
     expect(new Set(CONSULTAS_20C).size).toBe(34);
   });
 
@@ -1916,7 +1928,8 @@ describe("hml-20c — as consultas compostas no módulo: a página do diário co
 });
 
 describe("hml-20c — o módulo lê como a pessoa (fonte): o HEAD, o recorte, o porDia e a série RPC → ids, sem chave secreta", () => {
-  const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/nutricao/leituras.ts"), "utf-8");
+  // hml-21c (H-112): o código mora no motor comum (o módulo é o motor + o CATALOGO_NUTRICAO); o que o caso prova não muda
+  const fonte = readFileSync(resolve(RAIZ, "supabase-principal/functions/_shared/leitura-servidor.ts"), "utf-8");
   it("o HEAD pelo select head, o .or() do plano (montado com o c.userId no planoDaTabela), a releitura pelos ids como a pessoa", () => {
     expect(fonte).toMatch(/c\.comoPessoa\.from\(tabela\)\.select\(colunas, \{ count: "exact", head: true \}\)/);
     expect(fonte).toMatch(/busca\.or\(f\.filtro, \{ referencedTable: f\.tabela \}\)/);
