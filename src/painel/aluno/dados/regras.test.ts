@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CobrancaVista, FinanceiroProfissional } from "@/financeiro/tipos";
 import {
-  AJUSTES, ajustesVisiveis, alturaEmMetros, ATALHOS_FLUXO, bloqueadoPorPagamento, cadastroParaTreino, corpoDoAluno, faixaDeIdade, formDoPerfil, idadeDe,
+  AJUSTES, alturaEmMetros, ATALHOS_FLUXO, bloqueadoPorPagamento, cadastroParaTreino, corpoDoAluno, faixaDeIdade, formDoPerfil, idadeDe,
   linhaDoCabecalho, linhaDoPerfil, linkLigado, MENSAGEM_MENOR_DE_16, mensagemErroPerfil, mudancas, objetivoDoAluno, observacaoDoAjuste, resumoDaTrava, rotaDoAtalho,
   textoDoLink, validarCPF, validarForm, whatsappDoAluno,
 } from "./regras";
@@ -95,23 +95,20 @@ describe("hml-12 (H-30) — a faixa de idade da regra dos menores", () => {
   });
 });
 
-describe("W14 (F2, R12) — os 4 ajustes", () => {
-  it("o texto do link fala do envio de fotos (F1); diário e link só com Nutrição", () => {
-    expect(AJUSTES.find((a) => a.chave === "acesso_link")?.rotulo).toBe("Envio de fotos pelo link");
-    expect(ajustesVisiveis(perfil()).map((a) => a.chave)).toEqual(["acesso_app", "mensagens_automaticas", "diario_alimentar", "acesso_link"]);
-    expect(ajustesVisiveis(perfil({ modulos: ["treino"] })).map((a) => a.chave)).toEqual(["acesso_app", "mensagens_automaticas"]);
+describe("W14 (F2, R12) — os ajustes; W-A P4: no Resumo fica só o das mensagens automáticas", () => {
+  it("o card 'Mensagens automáticas' tem só o WhatsApp (o acesso ao app, o diário e o link foram para a aba Acessos)", () => {
+    expect(AJUSTES.map((a) => a.chave)).toEqual(["mensagens_automaticas"]);
+    expect(AJUSTES[0].rotulo).toBe("Mensagens automáticas no WhatsApp");
   });
-  it("o aviso de cada ajuste para ESTE aluno", () => {
-    expect(observacaoDoAjuste("acesso_app", perfil({ tem_login: false }))).toMatch(/não tem login/);
+  it("o aviso do ajuste para ESTE aluno: sem telefone, nenhuma mensagem sai", () => {
     expect(observacaoDoAjuste("mensagens_automaticas", perfil({ telefone: null }))).toMatch(/Sem telefone/);
-    expect(observacaoDoAjuste("acesso_link", perfil({ ajustes: { ...perfil().ajustes, diario_alimentar: false } }))).toMatch(/diário/);
-    expect(observacaoDoAjuste("acesso_app", perfil())).toBeNull();
+    expect(observacaoDoAjuste("mensagens_automaticas", perfil())).toBeNull();
   });
-  it("o link do diário só funciona com o diário e o envio pelo link ligados", () => {
+  it("o link do diário só funciona com o diário e o envio pelo link liberados — o motivo aponta para a aba Acessos", () => {
     const a = perfil().ajustes;
     expect(linkLigado(a)).toEqual({ ligado: true, motivo: null });
-    expect(linkLigado({ ...a, diario_alimentar: false }).ligado).toBe(false);
-    expect(linkLigado({ ...a, acesso_link: false }).motivo).toMatch(/pelo link/);
+    expect(linkLigado({ ...a, diario_alimentar: false })).toEqual({ ligado: false, motivo: "O diário alimentar está desligado na aba Acessos." });
+    expect(linkLigado({ ...a, acesso_link: false }).motivo).toBe("O envio de fotos pelo link está desligado na aba Acessos.");
     expect(textoDoLink("Rafael Moura", "https://x/d/abc")).toBe("Oi, Rafael! Este é o link do seu diário alimentar: mande por ele as fotos das suas refeições.\nhttps://x/d/abc");
   });
 });

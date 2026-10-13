@@ -10,7 +10,8 @@ import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/ui/premium/Estados"
 
 /**
  * Perfil do aluno › Treino (W15 — spec 4.5, tela 8 lado esquerdo; C37–C39, C41, C45, C84, NF1, NF2, NF7): o editor do treino
- * (treinos A/B/C, exercícios com séries, repetições, descanso e carga, observação, cadeado, descanso padrão, alternado) e, em
+ * (treinos A/B/C, exercícios com séries, repetições, descanso e carga, observação, descanso padrão, alternado — o cadeado das séries foi
+ * para a aba Acessos, W-A P4) e, em
  * volta, a semana do aluno com os extras, o nº de séries padrão × por exercício e a troca do treino, o volume semanal, o
  * histórico e o relatório do mês (PDF e Excel) com o PDF do treino. Grava no Banco do Treino (o aluno vê pelo PowerSync).
  * Substitui os grupos Treino e Configuração do "Configurar aluno" antigo (os componentes antigos ficam até a W28).
@@ -36,9 +37,9 @@ export default function Treino({ alunoId }: { alunoId: string }) {
         texto={
           est.temLogin
             ? "O aluno ainda não abriu o app. Assim que ele entrar pela primeira vez, você monta o treino aqui."
-            : "O aluno ainda não tem acesso ao app. Crie o acesso no Resumo (Acesso do aluno) e, depois do 1º login dele, monte o treino aqui."
+            : "O aluno ainda não tem acesso ao app. Crie o acesso na aba Acessos (Login do aluno) e, depois do 1º login dele, monte o treino aqui."
         }
-        acao={!est.temLogin ? <Link to={base} className="text-[13px] font-semibold text-violeta-3">Ir para o Resumo</Link> : undefined}
+        acao={!est.temLogin ? <Link to={`${base}/acessos`} className="text-[13px] font-semibold text-violeta-3">Ir para Acessos</Link> : undefined}
       />
     );
   }

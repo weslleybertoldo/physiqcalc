@@ -2,7 +2,8 @@
 """Physiq W14 — smoke de PRODUÇÃO (https://physiqcalc.com.br, schema public), SÓ LEITURA.
 
   painel   a conta de teste do Calc (admin.teste.claude, dona da "Admin Teste") abre o aluno dela: cabeçalho da tela 7
-           (Mensagem, Nova avaliação, ⋯, linha e chips) e os cards novos do Resumo — nada é clicado que grave
+           (Mensagem, Nova avaliação, ⋯, linha e chips) e os cards novos do Resumo — nada é clicado que grave; W-A P4: o card de login e o
+           "Acesso ao app" moram na aba Acessos (o Resumo fica com "Mensagens automáticas")
   app      o aluno de teste do Calc (teste@teste.com) abre o app normalmente: a P15 não fechou o acesso de quem tem login
   p        /p/abc abre o /d/ do site antigo (a página do diário) — F1
   versao   o site mostra a versão esperada (--versao, ex. 3.17)
@@ -56,16 +57,23 @@ def painel(nav) -> None:
         ok = c.esperar(lambda: c.tem("[data-cabecalho-w14] [data-cabecalho-nome]") and c.tem("[data-card-dados-aluno]"), 90)
         p.check(ok, "[painel] o perfil do aluno abre com o cabeçalho novo e o card Dados do aluno")
         p.check(c.tem("[data-acao-mensagem]") and c.tem("[data-menu-perfil]"), "[painel] Mensagem e ⋯ no topo (tela 7)")
-        p.check(all(c.tem(s) for s in ("[data-card-acesso-aluno]", "[data-card-ajustes-aluno]", "[data-card-resumo-privado]")),
-                "[painel] cards Acesso, Ajustes e Resumo privado")
+        p.check(all(c.tem(s) for s in ("[data-card-ajustes-aluno]", "[data-card-resumo-privado]")),
+                "[painel] cards Mensagens automáticas e Resumo privado")
+        p.check(not c.tem("[data-card-acesso-aluno]") and not c.tem('[data-ajuste="acesso_app"]'),
+                "[painel] W-A P4: o card de login e o \"Acesso ao app\" saíram do Resumo (moram na aba Acessos)")
         p.check(not c.tem("[data-fallback-aluno]"), "[painel] o \"Dados\" antigo saiu do Resumo")
-        ligado = c.pg.locator('[data-ajuste="acesso_app"]').get_attribute("data-ajuste-ligado") if c.tem('[data-ajuste="acesso_app"]') else None
-        p.check(ligado == "1", f"[painel] P15: o aluno com login está com o \"Acesso ao app\" LIGADO ({ligado})")
         c.pg.wait_for_timeout(1500)
         foto(c, "resumo_topo")
         c.pg.locator("[data-card-ajustes-aluno]").scroll_into_view_if_needed()
         c.pg.wait_for_timeout(700)
         foto(c, "resumo_cards")
+        # W-A P4: a aba Acessos (SÓ LEITURA: abrir só lê pela função acessos — `acao: "ler"`)
+        c.ir(f"/painel/alunos/{rota}/acessos")
+        ok = c.esperar(lambda: c.tem('[data-aba-acessos="pronto"]') and c.tem("[data-card-acesso-aluno]"), 90)
+        p.check(ok, "[painel] W-A P4: a aba Acessos abre com as linhas e o Login do aluno")
+        nivel = c.pg.locator('[data-acessos-linha="acesso_app"]').get_attribute("data-acessos-nivel") if c.tem('[data-acessos-linha="acesso_app"]') else None
+        p.check(nivel == "liberado", f"[painel] P15: o aluno com login está com o \"Acesso ao app\" LIBERADO na aba Acessos ({nivel})")
+        foto(c, "acessos")
     finally:
         c.fim()
 

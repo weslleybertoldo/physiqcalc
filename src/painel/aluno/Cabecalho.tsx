@@ -1,5 +1,5 @@
 import { Suspense, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { DropdownMenu } from "radix-ui";
 import {
   Ban, ClipboardCheck, Dumbbell, Ellipsis, FileDown, KeyRound, Lock, LockOpen, MessageCircle, PauseCircle, Pencil, RotateCcw, Salad, Users, UserX,
@@ -49,7 +49,6 @@ function destinoNovaAvaliacao(base: string): string | null {
 
 function AcoesDoCabecalho({ perfil, alunoId, aoEditar }: { perfil: PerfilAluno; alunoId: string; aoEditar: () => void }) {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const celular = useIsMobile();
   const treinoPronto = useTreinoPronto();
   const atualizar = useAtualizarAluno(alunoId);
@@ -84,13 +83,8 @@ function AcoesDoCabecalho({ perfil, alunoId, aoEditar }: { perfil: PerfilAluno; 
     }
   };
 
-  const irParaAcesso = () => {
-    const rolar = () => document.querySelector("[data-card-acesso-aluno]")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (pathname.replace(/\/+$/, "") !== base) {
-      navigate(base);
-      window.setTimeout(rolar, 600);
-    } else rolar();
-  };
+  // W-A P4 (spec §4.2): o login do aluno mora na aba Acessos (era o card do Resumo)
+  const irParaAcesso = () => navigate(`${base}/acessos`);
 
   const mensagem = zap ? (
     celular ? (
@@ -164,8 +158,8 @@ function AcoesDoCabecalho({ perfil, alunoId, aoEditar }: { perfil: PerfilAluno; 
 
 /**
  * Cabeçalho do perfil do aluno (tela 7 — W14, encaixe da W1 no lugar do CabecalhoPadrao): trilha "Alunos › nome"; à direita
- * Mensagem (WhatsApp do aluno — P24), Nova avaliação e ⋯ (editar dados, PDFs "Dados & Evolução" e "Treino", Acesso do aluno,
- * Bloquear, Desativar, Remover — as ações da W13, com a regra nova); no cartão, foto, nome, "28 anos · 1,78 m · objetivo:
+ * Mensagem (WhatsApp do aluno — P24), Nova avaliação e ⋯ (editar dados, PDFs "Dados & Evolução" e "Treino", Acesso do aluno — a aba
+ * Acessos, W-A P4 —, Bloquear, Desativar, Remover — as ações da W13, com a regra nova); no cartão, foto, nome, "28 anos · 1,78 m · objetivo:
  * definição · aluno desde mar/2026", os chips TREINO · <personal> e NUTRIÇÃO · <nutri> e os números de src/painel/aluno/kpis/.
  * Os dados são da matrícula no banco principal (vale para quem veio do Calc e do Nutri); altura e peso de quem tem treino vêm
  * do Banco do Treino.

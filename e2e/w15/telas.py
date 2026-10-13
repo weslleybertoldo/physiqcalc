@@ -4,7 +4,8 @@
 Positivo (Lucas, dono + personal do Rafael): o editor abre com A/B/C, "+" e Modelos; o professor digita a prescrição dos 5
 exercícios do treino A (séries × repetições · descanso · carga — NF1) e a observação (NF2) e o banco do schema do teste guarda
 exatamente nas colunas que o app lê; arrasta, adiciona da biblioteca e tira exercício (direto no treino só do Rafael); no
-treino compartilhado a lista vira cópia só do Rafael; Modelos dá e tira treino; "+" cria treino; cadeado, descanso padrão,
+treino compartilhado a lista vira cópia só do Rafael; Modelos dá e tira treino; "+" cria treino; descanso padrão (W-A P4: o cadeado
+das séries saiu do editor — vai para a aba Acessos, e2e/wa/telas_acessos.py),
 semana (dias, alternado), padrão N (a prescrição fica), troca do treino (NF7), volume, histórico, relatório (PDF e Excel) e PDF
 do treino baixam. O card Treino do Resumo mostra o MESMO "N de M na semana" do app e as MESMAS séries por grupo da aba.
 Negativo: o Bruno (2º personal, não é o responsável) não abre o Rafael; a Camila (nutricionista) vê a aba como "do módulo
@@ -133,7 +134,7 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
         p.check(rot == ["A · Peito e tríceps", "B · Costas", "C · Pernas"], f"abas A/B/C na ordem da semana ({rot})")
         p.check(c.tem("[data-treino-novo]") and c.tem("[data-treino-modelos]"), "'+' e Modelos no cabeçalho")
         p.check(c.pg.locator("[data-chip-exercicios]").inner_text().strip() == "5 EXERCÍCIOS", "chip 5 EXERCÍCIOS")
-        p.check(c.pg.locator("[data-chip-cadeado]").get_attribute("data-chip-cadeado") == "travado", "chip ALUNO NÃO MUDA AS SÉRIES")
+        p.check(c.pg.locator("[data-chip-cadeado]").count() == 0, "W-A P4: o cadeado das séries não está mais no editor (mora na aba Acessos)")
         p.check("DESCANSO PADRÃO 60 S" in c.pg.locator("[data-chip-descanso]").inner_text(), "chip DESCANSO PADRÃO 60 S")
         p.check("TREINO ALTERNADO: NÃO" in c.pg.locator("[data-chip-alternado]").inner_text(), "chip TREINO ALTERNADO: NÃO")
         p.check(c.pg.locator("[data-treino-adicionar]").inner_text().strip() == "Adicionar exercício da biblioteca (81 com GIF)", "botão da biblioteca (81 com GIF)")
@@ -223,12 +224,8 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
                 "a aba segue 'B · Costas', agora com o exercício novo")
         abrir_aba(c, "A · Peito e tríceps")
 
-        # ── cadeado e descanso padrão ──
-        B.saude_ok("cadeado/descanso/modelos")
-        c.pg.locator("[data-chip-cadeado]").click()
-        p.check(bool(B.esperar(lambda: config(rafael)["series_travadas"] is False, 20, 1.5)), "cadeado: o aluno pode mudar as séries (banco)")
-        c.pg.locator("[data-chip-cadeado]").click()
-        p.check(bool(B.esperar(lambda: config(rafael)["series_travadas"] is True, 20, 1.5)), "cadeado de volta: ALUNO NÃO MUDA AS SÉRIES (banco)")
+        # ── descanso padrão (W-A P4: o cadeado das séries foi para a aba Acessos — e2e/wa/telas_acessos.py) ──
+        B.saude_ok("descanso/modelos")
         c.pg.locator("[data-chip-descanso]").click()
         c.esperar(lambda: c.tem("[data-folha-descanso]"), 10)
         c.pg.locator('[data-descanso-atalho="90"]').click()

@@ -267,44 +267,36 @@ export function mensagemErroPerfil(codigo: string | null | undefined): string {
   return "Não deu certo agora. Tente de novo.";
 }
 
-// ───────────────────────── Ajustes do aluno (R12) ─────────────────────────
+// ───────────────────────── Mensagens automáticas (R12; W-A P4) ─────────────────────────
 
 export interface DefAjuste {
   chave: ChaveAjuste;
   rotulo: string;
   ajuda: string;
-  /** só aparece para aluno com Nutrição (o diário é da nutricionista) */
-  soNutricao?: boolean;
 }
 
-/** Os 4 ajustes do site antigo, agora valendo (R12); o do link fala do envio de fotos (F1, R13). */
+/**
+ * O ajuste que ficou no Resumo — o card "Mensagens automáticas" (R12). W-A P4 (P2/P3 do Weslley, 12/10/2026): o acesso ao app, o diário
+ * alimentar com fotos e o envio de fotos pelo link (F1, R13) foram para a aba Acessos (src/painel/aluno/acessos/regras.ts).
+ */
 export const AJUSTES: DefAjuste[] = [
-  { chave: "acesso_app", rotulo: "Acesso ao app", ajuda: "Desligado, o app abre fechado: \"Seu acesso ao app está desligado. Fale com seu profissional\"." },
   { chave: "mensagens_automaticas", rotulo: "Mensagens automáticas no WhatsApp", ajuda: "Lembretes de consulta, aniversário e cobrança pelo WhatsApp conectado em Mensagens." },
-  { chave: "diario_alimentar", rotulo: "Diário alimentar com fotos", ajuda: "O aluno manda fotos das refeições (no app e pelo link) e você reage.", soNutricao: true },
-  { chave: "acesso_link", rotulo: "Envio de fotos pelo link", ajuda: "O aluno manda as fotos pelo link do diário, sem entrar no app.", soNutricao: true },
 ];
 
 export function temNutricao(p: Pick<PerfilAluno, "modulos">): boolean {
   return p.modulos.includes("nutricao");
 }
 
-export function ajustesVisiveis(p: Pick<PerfilAluno, "modulos">): DefAjuste[] {
-  return AJUSTES.filter((a) => !a.soNutricao || temNutricao(p));
-}
-
 /** Aviso embaixo do ajuste (o que muda de verdade para ESTE aluno). */
-export function observacaoDoAjuste(chave: ChaveAjuste, p: Pick<PerfilAluno, "tem_login" | "telefone" | "ajustes">): string | null {
-  if (chave === "acesso_app" && !p.tem_login) return "Ele ainda não tem login: crie o acesso no card Acesso do aluno.";
+export function observacaoDoAjuste(chave: ChaveAjuste, p: Pick<PerfilAluno, "telefone">): string | null {
   if (chave === "mensagens_automaticas" && !whatsappDoAluno(p.telefone)) return "Sem telefone no cadastro: nenhuma mensagem sai.";
-  if (chave === "acesso_link" && !p.ajustes.diario_alimentar) return "Vale quando o diário alimentar estiver ligado.";
   return null;
 }
 
-/** O link do diário funciona? (os 2 ajustes ligados) */
+/** O link do diário funciona? (o diário e o envio pelo link liberados — W-A P4: na aba Acessos) */
 export function linkLigado(a: AjustesAluno): { ligado: boolean; motivo: string | null } {
-  if (!a.diario_alimentar) return { ligado: false, motivo: "O diário alimentar está desligado nos ajustes." };
-  if (!a.acesso_link) return { ligado: false, motivo: "O envio de fotos pelo link está desligado nos ajustes." };
+  if (!a.diario_alimentar) return { ligado: false, motivo: "O diário alimentar está desligado na aba Acessos." };
+  if (!a.acesso_link) return { ligado: false, motivo: "O envio de fotos pelo link está desligado na aba Acessos." };
   return { ligado: true, motivo: null };
 }
 
