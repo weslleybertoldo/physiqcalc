@@ -20,6 +20,12 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 2. **Da família que a worktree tocou** (criam massa no staging e limpam): `h5` (cadastro/agenda) · `w11` (diário/dieta) · `w15`
    (treinos do admin) · `w16` (nutri/membros) · `w18` (clínicos/anexos) · `w20` (agenda) · `w21` (pré-consulta) · `w23` (modelos) ·
    `w24` (diário/dietas) · `w26` (lixeira). Rodar o `api.py` da família e o `telas.py` correspondente.
+   **W-A** (acessos do aluno, rotinas, dieta liberada, o painel das rotinas e do dia a dia — `e2e/wa/`): `wa/api.py` (as 3 funções, por
+   papel; `--so-leitura` na produção) e o `telas_*.py` da tela tocada — `telas_acessos.py` (a aba Acessos), `telas_rotinas.py` (as rotinas no
+   app), `telas_dieta.py` (a Dieta liberada no app), `telas_painel.py` (o card Rotinas do Resumo e o Dia a dia da Dieta da ficha); cada um com
+   `--base local|staging|prod` (prod SÓ LEITURA), `--loja`, `--seco` e `--limpar` (a massa leva a marca "WA E2E"; as sobras têm de dar 0;
+   `python3 e2e/wa/_base.py --limpar` desfaz a Massa compartilhada). O `wa/sql_wa.py` (o banco) e o `wa/apk_rotinas.py` (o aparelho) só
+   quando a parte mexe neles.
 3. **Fora da rotina** (só com a massa do dono da worktree, e sabendo o que fazem): os que criam massa e NÃO limpam — `h4`, `w06`,
    `w07b`, `w13`, `w27`, `w28` (os 3 do Mercado Pago usam o sandbox).
 4. **Nunca na rotina** (escrevem em produção): `--schema public` do `w08b`, `w20c` e `w14`; `*/prova_real.py`; `w07b/smoke_prod.py`;
@@ -29,6 +35,16 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 13/10 20:43 | W-A P6 | `5391138c` | `e2e/wa/telas_acessos.py --base staging --canal msedge` | staging | 36/36 | regressão da aba Acessos (P4): a dica das rotinas aponta para o card Rotinas do Resumo (a P6 o criou) |
+| 13/10 20:39 | W-A P6 | `5391138c` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging --casos secoes` | staging | 17/18 | regressão da família w16: "[secoes] as 8 seções (Plano, Dia a dia, …)" ✅; o ❌ é VELHO e fora da P6 — "[atalhos] … Registrar consulta segue no site antigo": o atalho foi para o Prontuário novo na W28 (#115); passado à homologação |
+| 13/10 20:33 | W-A P6 | `5391138c` | `e2e/wa/telas_painel.py --base staging --canal msedge` | staging | 40/40 | telas no staging (Vercel): o mesmo roteiro do local; sobras 0 |
+| 13/10 20:20 | W-A P6 | `e864989d` | `e2e/wa/telas_painel.py --base staging --canal msedge` | staging | 39/40 | 1ª rodada no staging (`e864989`): o P9 conferia o item do dia antes de ele ser relido (a faixa "Só ver" chega ~1 s antes; o print, 1 instante depois, mostra a tela certa) → o teste passou a esperar os dois (`5391138`); sobras 0 |
+| 13/10 20:12 | W-A P6 | `69dc8bed` | `e2e/wa/telas_painel.py --base local --loja --canal msedge` | local | 20/20 | telas da loja (5173, build:loja): o card Rotinas, o Dia a dia da nutri e o do personal (só lendo, com a massa pelas funções); sobras 0 |
+| 13/10 20:09 | W-A P6 | `69dc8bed` | `e2e/wa/telas_painel.py --base local --canal msedge` | local | 40/40 | telas do painel (5173, build de staging): o card Rotinas do Resumo (o ✓ da aluna, só leitura), criar e mudar a do profissional (o sino e a página do app), a apagada pelo aluno e o histórico, a conta B sem ver nem mudar a da conta A, o Dia a dia da nutri (o ✓, o riscado, o posto, a extra, a refeição tirada do plano, o total, as rotinas), travada com a faixa, o personal embaixo da adesão, sem login, 390 px; sobras 0 |
+| 13/10 19:33 | W-A P5 | `a69f03b` | `e2e/wa/api.py --so-leitura --desde 2026-10-13T22:21:35Z` | produção | 23/23 | produção depois do merge da P5 (só leitura) |
+| 13/10 19:33 | W-A P5 | `a69f03b` | `e2e/w07/smoke_prod.py telas --versao 3.118 --canal msedge` | produção | 13/13 | produção depois do merge da P5 (só leitura) |
+| 13/10 19:32 | W-A P5 | `a69f03b` | `e2e/wa/telas_rotinas.py --base prod --canal msedge` | produção | 5/5 | produção depois do merge da P5 (só leitura) |
+| 13/10 19:32 | W-A P5 | `a69f03b` | `e2e/wa/telas_dieta.py --base prod --canal msedge` | produção | 3/3 | produção depois do merge da P5 (só leitura) |
 | 13/10 19:12 | W-A P5 | `2853586` | `e2e/wa/telas_dieta.py --base staging --canal msedge` | staging | 37/37 | telas no staging com o fix `2853586` (a linha do fim da folha da extra quebra quando não cabe): o mesmo roteiro + "D6 os 2 botões do fim da folha da extra cabem em 390 px" (21–369 px); sobras 0 |
 | 13/10 19:05 | W-A P5 | `8902594` | `e2e/wa/telas_dieta.py --base staging --canal msedge` | staging | 36/37 | VERMELHO DE PROPÓSITO: o staging SEM o fix (`8902594`) com a verificação nova do D6 — o "Apagar refeição" da folha da extra ia de 245 a 418 px em 390 (o print `d_extra` da rodada das 18:56 mostrou); as outras 36 ✅; sobras 0 |
 | 13/10 18:58 | W-A P5 | `8902594` | `e2e/hml20/rede.py --area aluno --base staging --canal msedge` | staging | 22/22 | regressão da rede do app (família hml-20, --area aluno): 0 gravação ao abrir; a Dieta com as 2 leituras novas da aluno-dia (dia, rotinas) |
