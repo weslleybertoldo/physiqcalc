@@ -67,7 +67,8 @@ TITULO_DIETA = "Sua dieta foi liberada: agora você pode pôr e tirar alimentos 
 TRAVADA = "A dieta está em “Só ver” (Acessos)."
 SEM_LOGIN = "Ele precisa de login para receber rotinas — crie o acesso na aba Acessos."
 # na produção (a Guarda), as gravações que já existem ao abrir e não são da W-A (o molde do telas_acessos.py da P4)
-BARRADAS_ACEITAS = {"POST rpc:aluno_acesso", "POST fn:nutricao"}
+# 13/10: a hml-21c leva o card de login para a função `conta` (ação acesso_ler) — a Guarda vê `POST fn:conta`; aceitas as 2 formas, antes e depois da 21c
+BARRADAS_ACEITAS = {"POST rpc:aluno_acesso", "POST fn:nutricao", "POST fn:conta"}
 
 # --seco: o arquivo → o que tem de estar nele (seletores e textos que o E2E usa)
 NO_CODIGO = {
