@@ -359,6 +359,7 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
     divisões (as de antes saem pela FK em cascata) e devolve o MESMO id. Só o master grava (o RLS de hoje).
   - `modelo_ordenar(p_grupo uuid, p_ids uuid[]) → integer`: a ordem de todos os exercícios do modelo de uma vez (antes, 1 pedido por
     exercício — achado 4); um id que não é do modelo → `nao_encontrado` e nada muda (antes, os outros mudavam).
+- **⚠️ Desvio do gate (F7 da hml-21d):** o gate de latência reprovou as leituras pela `treinos` (o Meus treinos p50 2,65 s × 2,04 s lendo direto; com a função quente empatam, mas a 1ª abertura com ela ociosa — ≥ 10 min sem pedido — levou 4,6–12,6 s). O front **não usa** as leituras abaixo: o Painel › Treinos, os Modelos › Treinos, a Busca, o editor, o Master e os treinos prontos do aluno seguem lendo DIRETO (como antes, com o RLS de hoje); o catálogo de leituras fica publicado na `treinos` (provado no E2E) para quando o frio da função for resolvido. As GRAVAÇÕES (abaixo) vão pela `treinos`.
 - **Leituras (`acao: "ler"`, em lote; o motor é a CÓPIA do comum do principal — `_shared/leitura-lote.ts` e `_shared/leitura-servidor.ts`,
   iguais byte a byte, o Vitest confere):** o catálogo `_shared/treinos-leituras.ts`, as mesmas linhas que as libs liam no navegador, como a
   pessoa: Meus treinos (a RPC `modelos_da_lista` e os detalhes da página — as linhas com o exercício citado e os vínculos de pasta, numa
@@ -376,12 +377,12 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
   policy exige esse nome, sem a pasta do user) e assina o link de upload como a pessoa (upsert); o navegador sobe o arquivo nesse link (o PUT
   do `uploadToSignedUrl` — é gravação e fica); `exercicio_editar` só grava como foto nova a URL pública DESTE exercício neste bucket com o
   arquivo lá (outra → `dados_invalidos`; sem o arquivo → `nao_encontrado`), a que já estava, ou nenhuma.
-- **A `conta` (principal) v4:** + a consulta `aluno_treino` (o editor do Aluno › Treino: a RPC `aluno_treino` de hoje pelo EXECUTE do
+- **A `conta` (principal) v4:** + a consulta `aluno_treino` (publicada; o front não usa — o desvio do gate; o editor do Aluno › Treino: a RPC `aluno_treino` de hoje pelo EXECUTE do
   `authenticated`, com a recusa da matrícula da rota).
 - **Ficam como estão:** o login e a sessão (`auth.*` e a troca de token), as funções do Treino de antes (`admin-*`, `treino-leitura`,
-  `painel-resumo-treino` — o desvio 22), o PowerSync (desvio 3) e a parte do Treino do Início/Evolução (desvio 23). O fetch repete o `ler`
-  da `treinos` 1 vez e as ações não repetem; as 3 RPCs de leitura que saíram do navegador (`modelos_da_lista`, `exercicios_da_lista`,
-  `aluno_treino`) saíram do `RPC_SO_LEITURA` (`src/integrations/repeticao.ts`); a `BASE` da `semBancoNoNavegador.test.ts` diminuiu.
+  `painel-resumo-treino` — o desvio 22), o PowerSync (desvio 3) e a parte do Treino do Início/Evolução (desvio 23). As ações da `treinos`
+  não repetem; as 3 RPCs de leitura (`modelos_da_lista`, `exercicios_da_lista`,
+  `aluno_treino`) seguem no navegador e no `RPC_SO_LEITURA` (`src/integrations/repeticao.ts`) — o desvio do gate; a `BASE` da `semBancoNoNavegador.test.ts` diminuiu só nas gravações.
 - Nenhum grant de tabela nem policy muda (decisão 12 da spec hml-21: a função usa a sessão da pessoa; os APKs antigos ainda chamam direto).
   Ordem: a migration no staging do Treino ANTES de publicar a `treinos` (as ações chamam as RPCs) e na produção ANTES do merge (o front
   antigo não chama as RPCs novas). Prova: `python3 e2e/hml21/sql_treinos.py` (staging do Treino, como a pessoa, blocos desfeitos).
