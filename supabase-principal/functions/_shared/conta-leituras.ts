@@ -166,6 +166,13 @@ export const FILTROS_DOS_ALUNOS = [
 ] as const;
 /** O teto de cada filtro (o termo da busca é o maior; o resto são palavras curtas e instantes). */
 export const FILTRO_ALUNOS_MAX = 200;
+/**
+ * hml-21b (a varredura das recusas conhecidas — decisão da sessão principal 13/10 06:31): os códigos que a w14_matricula_da_rota LEVANTA de
+ * propósito (migration 20260930160000_w14_ajustes.sql:727 — sem login; o aluno existe e a pessoa não pode; o aluno não existe). A
+ * aluno_compromissos e a aluno_definir_pacote começam por ela: a recusa volta como o código (o que a tela recebia hoje), não como
+ * erro_interno com o aviso de erro inesperado.
+ */
+export const ERROS_DA_MATRICULA_DA_ROTA = ["sem_login", "sem_acesso", "aluno_inexistente"] as const;
 const filtroDoAluno = { tipo: "texto", max: FILTRO_ALUNOS_MAX } as const;
 /** Cada filtro como texto com teto (os que não estão aqui caem — o p_filtros nunca leva chave de fora). */
 const CAMPOS_DOS_FILTROS = Object.fromEntries(FILTROS_DOS_ALUNOS.map((k) => [k, filtroDoAluno])) as Record<(typeof FILTROS_DOS_ALUNOS)[number], typeof filtroDoAluno>;
@@ -238,7 +245,7 @@ export const CONSULTAS_AGENDA = {
     fonte: { tabela: "pacientes", colunas: COLUNAS_DA_AGENDA.alunos, teto: 1, vivas: true, filtros: [{ param: "id", coluna: "id", op: "eq" }] },
   },
   // o card "Próximos compromissos" e o pacote do aluno (Aluno › Resumo)
-  aluno_compromissos: { params: { aluno: uuidObrigatorio }, fonte: { rpc: "aluno_compromissos", args: { p_aluno: "aluno" } } },
+  aluno_compromissos: { params: { aluno: uuidObrigatorio }, fonte: { rpc: "aluno_compromissos", args: { p_aluno: "aluno" }, erros: ERROS_DA_MATRICULA_DA_ROTA } },
 
   // ───── a Agenda do aluno (app › Perfil › Agenda) ─────
   // as regras e o pacote de cada profissional do aluno

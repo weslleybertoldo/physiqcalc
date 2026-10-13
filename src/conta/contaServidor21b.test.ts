@@ -16,11 +16,11 @@ import { ehRpc, planoDaTabela, type CatalogoLeitura, type ConsultaLeitura, type 
 import { atenderLeitura } from "../../supabase-principal/functions/_shared/leitura-servidor";
 import {
   BLOQUEIOS_FUTUROS_MAX, CATALOGO_CONTA, COLUNAS_DA_AGENDA, COLUNAS_DOS_ALUNOS, CONSULTAS_AGENDA, CONSULTAS_ALUNOS, CONSULTAS_CONTA, CONSULTAS_DA_21B,
-  CONSULTAS_DA_CONTA, FILTROS_DOS_ALUNOS, TODAS_AS_CONSULTAS, consultaDaConta,
+  CONSULTAS_DA_CONTA, ERROS_DA_MATRICULA_DA_ROTA, FILTROS_DOS_ALUNOS, TODAS_AS_CONSULTAS, consultaDaConta,
 } from "../../supabase-principal/functions/_shared/conta-leituras";
 import {
   ACOES_DA_AGENDA, ACOES_DA_CASCA, ACOES_DA_CONTA, ACOES_DO_APP, ACOES_DOS_ALUNOS, CORPOS_DA_21B, CORPOS_DAS_ACOES, ERROS_DAS_TAGS, lerCamposDaAcao,
-  lerCorpoDaAcao, moduloDoPedido, type AcaoDaAgenda,
+  lerCorpoDaAcao, moduloDoPedido, statusDoErroConta, type AcaoDaAgenda,
 } from "../../supabase-principal/functions/_shared/conta-regras";
 import { CONSULTAS_NUTRICAO } from "../../supabase-principal/functions/_shared/nutricao-leituras";
 import { CONSULTAS_FINANCEIRO } from "../../supabase-principal/functions/_shared/financeiro-leituras";
@@ -209,7 +209,7 @@ describe("hml-21b — o catálogo da conta (as consultas do bloco 21b da §2.2)"
       .map(([q, f]) => [q, (f as FonteRpc).rpc, (f as FonteRpc).args ?? {}, (f as FonteRpc).erros ?? []]);
     expect(rpcs).toEqual([
       ["agenda_horarios", "agenda_horarios", { p_calendario: "calendario", p_de: "dia", p_ate: "dia", p_duracao: "duracao", p_ignorar: "ignorar" }, ["sem_login"]],
-      ["aluno_compromissos", "aluno_compromissos", { p_aluno: "aluno" }, []],
+      ["aluno_compromissos", "aluno_compromissos", { p_aluno: "aluno" }, ["sem_login", "sem_acesso", "aluno_inexistente"]],
       ["minhas_regras_agenda", "minhas_regras_agenda", {}, []],
       ["aluno_agenda_horarios", "aluno_agenda_horarios", { p_agendamento: "agendamento", p_profissional: "profissional", p_de: "de", p_ate: "ate" }, ["agendamento_inexistente", "sem_login"]],
       ["alunos_da_conta", "alunos_da_conta", { p_conta: "conta", p_filtros: "filtros", p_offset: "offset", p_limite: "limite" }, []],
@@ -405,6 +405,20 @@ describe("hml-21b — as leituras dos Alunos e do Dashboard no motor", () => {
     ]);
     const ruins = await ler([{ q: "aluno_convites" }, { q: "equipe_da_conta", conta: "x" }, { q: "alunos_novos_por_mes", conta: CONTA, meses: 0 }, { q: "aluno_compromissos" }]);
     expect(ruins.itens.every((i) => i.ok === false && i.erro === "dados_invalidos")).toBe(true);
+  });
+
+  it("aluno_compromissos: a recusa da w14_matricula_da_rota (sem_acesso, aluno_inexistente, sem_login) volta como o código no item, sem o aviso de erro inesperado; o raise desconhecido segue erro_interno (controle)", async () => {
+    // a varredura das recusas conhecidas (decisão da sessão principal 06:31): hoje a tela recebia o código pelo error.message (dados.ts:385-386 do d357719)
+    expect([...ERROS_DA_MATRICULA_DA_ROTA]).toEqual(["sem_login", "sem_acesso", "aluno_inexistente"]);
+    for (const codigo of ERROS_DA_MATRICULA_DA_ROTA) {
+      const r = await ler([{ q: "aluno_compromissos", aluno: A1 }], { rpc: () => ({ data: null, error: { code: "P0001", message: codigo } }) });
+      expect(r.itens, codigo).toEqual([{ ok: false, erro: codigo }]);
+      expect(r.log.excecao, codigo).not.toHaveBeenCalled();
+    }
+    const desconhecido = await ler([{ q: "aluno_compromissos", aluno: A1 }], { rpc: () => ({ data: null, error: { code: "P0001", message: "boom" } }) });
+    expect(desconhecido.itens).toEqual([{ ok: false, erro: "erro_interno" }]);
+    expect(desconhecido.log.excecao).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(desconhecido.r)).not.toContain("boom");
   });
 
   it("N1 (o RLS): outra conta → as listas vazias / o { ok: false, erro } da RPC dela (sem_acesso, conta_inexistente) como valor; nunca a mensagem", async () => {
@@ -688,6 +702,21 @@ describe("hml-21b — as gravações dos Alunos", () => {
       expect(await atenderAlunos(k3.c as never, "pacote_definir"), JSON.stringify(corpo)).toEqual({ ok: false, erro: "dados_invalidos" });
       expect(k3.rpcs).toEqual([]);
     }
+  });
+
+  it("pacote_definir: a recusa da w14_matricula_da_rota (o aluno de quem não pode — o N1 da etapa 2 — e o que não existe) volta como o código, sem o aviso de erro inesperado; o desconhecido segue erro_interno (controle)", async () => {
+    // medido no staging (etapa 2, 06:26): a OUTRA conta → 500 erro_interno + log.excecao; hoje a tela recebia o código (dados.ts:399-400 do d357719)
+    const status: Record<string, number> = {};
+    for (const codigo of ERROS_DA_MATRICULA_DA_ROTA) {
+      const k = contexto({ acao: "pacote_definir", aluno: A1, profissional: OUTRA, total: 4 }, { rpc: () => ({ data: null, error: { code: "P0001", message: codigo } }) });
+      expect(await atenderAlunos(k.c as never, "pacote_definir"), codigo).toEqual({ ok: false, erro: codigo });
+      expect(k.log.excecao, codigo).not.toHaveBeenCalled();
+      status[codigo] = statusDoErroConta(codigo);
+    }
+    expect(status).toEqual({ sem_login: 401, sem_acesso: 403, aluno_inexistente: 400 });
+    const k = contexto({ acao: "pacote_definir", aluno: A1, profissional: OUTRA, total: 4 }, { rpc: () => ({ data: null, error: { code: "P0001", message: "boom" } }) });
+    expect(await atenderAlunos(k.c as never, "pacote_definir")).toEqual({ ok: false, erro: "erro_interno" });
+    expect(k.log.excecao).toHaveBeenCalledTimes(1);
   });
 });
 
