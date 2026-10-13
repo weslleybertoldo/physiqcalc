@@ -601,9 +601,11 @@ describe("hml-21a — a fonte da função conta: como a pessoa, a porta com o JW
       if (rel !== "conta/index.ts") expect(fonte, rel).not.toMatch(/from "[^"]*porta-pessoa/);
     }
     // hml-21b (decisão da sessão principal 13/10 03:25): + os módulos conta/agenda.ts e conta/alunos.ts (a mesma conferência cobre os 2)
+    // hml-21c (a mesma regra da DECISÃO 03:25 — a lista ganha os módulos novos por acréscimo; o que o caso prova não muda): + aluno.ts,
+    // configuracoes.ts, lixeira.ts e mensagens.ts
     expect(arquivos.sort()).toEqual([
-      "_shared/conta-leituras.ts", "_shared/conta-regras.ts", "conta/agenda.ts", "conta/alunos.ts", "conta/app.ts", "conta/casca.ts", "conta/comum.ts",
-      "conta/index.ts",
+      "_shared/conta-leituras.ts", "_shared/conta-regras.ts", "conta/agenda.ts", "conta/aluno.ts", "conta/alunos.ts", "conta/app.ts", "conta/casca.ts",
+      "conta/comum.ts", "conta/configuracoes.ts", "conta/index.ts", "conta/lixeira.ts", "conta/mensagens.ts",
     ]);
   });
 });

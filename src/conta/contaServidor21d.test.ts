@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 import { type FonteRpc, type RespostaDeItem } from "../../supabase-principal/functions/_shared/leitura-lote";
 import { atenderLeitura } from "../../supabase-principal/functions/_shared/leitura-servidor";
 import {
-  CATALOGO_CONTA, CONSULTAS_DA_21D, CONSULTAS_TREINO_DA_CONTA, ERROS_DA_MATRICULA_DA_ROTA, TODAS_AS_CONSULTAS, consultaDaConta,
+  CATALOGO_CONTA, CONSULTAS_DA_21C, CONSULTAS_DA_21D, CONSULTAS_TREINO_DA_CONTA, ERROS_DA_MATRICULA_DA_ROTA, TODAS_AS_CONSULTAS, consultaDaConta,
 } from "../../supabase-principal/functions/_shared/conta-leituras";
 
 const RAIZ = resolve(__dirname, "../..");
@@ -37,7 +37,9 @@ describe("hml-21d — a conta: q=aluno_treino (o editor do Aluno › Treino)", (
   it("a consulta da 21d: a RPC aluno_treino com o p_aluno do param (o que a lib mandava) e os códigos da w14_matricula_da_rota", () => {
     expect(Object.keys(CONSULTAS_TREINO_DA_CONTA)).toEqual(["aluno_treino"]);
     expect(CONSULTAS_DA_21D).toEqual(["aluno_treino"]);
-    expect(TODAS_AS_CONSULTAS.at(-1)).toBe("aluno_treino");
+    // hml-21c (a mesma regra da DECISÃO 03:25 da 21b — a ordem de TODAS_AS_CONSULTAS ganhou as da 21c no fim, por acréscimo): a 21d é a
+    // última ANTES do bloco da 21c
+    expect(TODAS_AS_CONSULTAS.at(-1 - CONSULTAS_DA_21C.length)).toBe("aluno_treino");
     const f = CONSULTAS_TREINO_DA_CONTA.aluno_treino.fonte as FonteRpc;
     expect([f.rpc, f.args, f.erros]).toEqual(["aluno_treino", { p_aluno: "aluno" }, ERROS_DA_MATRICULA_DA_ROTA]);
     expect([...ERROS_DA_MATRICULA_DA_ROTA]).toEqual(["sem_login", "sem_acesso", "aluno_inexistente"]);

@@ -15,6 +15,8 @@
 // a Busca) e a parte não saúde do Dashboard — CONSULTAS_AGENDA e CONSULTAS_ALUNOS (o bloco 21b da §2.2), no fim deste arquivo.
 // hml-21d (13/10/2026): + o aluno_treino (o editor do Aluno › Treino acha o usuário do Treino do aluno da rota antes das funções do Treino)
 // — CONSULTAS_TREINO_DA_CONTA, no fim. Por ACRÉSCIMO: as consultas da 21a e da 21b não mudam.
+// hml-21c (13/10/2026): + o Aluno › Resumo (a pré-checagem do e-mail/CPF, o responsável), as Configurações (o Perfil), a Mensagens (o
+// perfil, o resumo — também o número do menu da casca —, a fila e a faixa da casca) e a Lixeira — CONSULTAS_21C, no fim. Por ACRÉSCIMO.
 import type { CatalogoLeitura, ConsultaLeitura } from "./leitura-lote.ts";
 import type { CatalogoDoServidor } from "./leitura-servidor.ts";
 
@@ -302,8 +304,79 @@ export const CONSULTAS_TREINO_DA_CONTA = {
   aluno_treino: { params: { aluno: uuidObrigatorio }, fonte: { rpc: "aluno_treino", args: { p_aluno: "aluno" }, erros: ERROS_DA_MATRICULA_DA_ROTA } },
 } as const satisfies Record<string, ConsultaLeitura>;
 
-/** Todas as consultas da função: a 21a (a casca e o app do aluno) + a 21b (a Agenda e os Alunos) + a 21d (o aluno_treino do editor). */
-const TODAS = { ...CONSULTAS_CONTA, ...CONSULTAS_AGENDA, ...CONSULTAS_ALUNOS, ...CONSULTAS_TREINO_DA_CONTA };
+// ───────────────────────── hml-21c — o Aluno › Resumo, as Configurações, a Mensagens (+ o número do menu e a faixa da casca) e a Lixeira ─────────────────────────
+// As MESMAS leituras que as libs faziam no navegador no c6e795b (v3.118) — src/nucleo/dadoLivre.ts, src/publico/legal/responsavel/api.ts, o
+// buscarPerfil do src/painel/configuracoes/Perfil.tsx, src/painel/mensagens/api.ts (o resumo, a fila e o perfil), o buscarMensagensDesligadas
+// de src/painel/aluno/dados/api.ts e src/ferramentas/lixeira/dados.ts —, com as mesmas linhas:
+//   · "minha" só onde a lib filtra pelo id de quem está logado: o profiles próprio (o Perfil e a Mensagens: .eq("id", uid)) — aqui o dono
+//     "id" = o user do token, nunca um id do corpo; em 2 consultas, cada uma com as colunas da SUA tela (PADRÃO do progresso);
+//   · as RPCs (definer, cada uma pelo auth.uid() lá dentro) com os MESMOS args que a lib manda (o null que ela manda = o arg de fora: as 4
+//     têm DEFAULT null no arg que pode ir null — conferido no catálogo vivo) — o { ok: false, erro } delas vai à lib como veio;
+//   · nenhuma delas levanta de propósito (a aluno_responsavel pega o raise da w14_matricula_da_rota e devolve { ok: false }): sem `erros`;
+//   · a Lixeira vai `sozinha` (a pesada — §2.6: o lote da tela não espera por ela).
+// O login do aluno (a aluno_acesso lê e confere quem pode) é AÇÃO (acesso_ler — decisão 13) e o ZIP da exclusão também (a RPC precisa do
+// p_conta null explícito) — conta/aluno.ts e conta/configuracoes.ts.
+/** O e-mail e o CPF da pré-checagem (o teto do abuso: a RPC normaliza e confere; a lib manda o e-mail normalizado e só os dígitos). */
+export const DADO_LIVRE_MAX = 320;
+/** O termo da busca da Lixeira (a RPC tira os acentos e quebra em palavras) e a aba (a RPC escolhe a 1ª com itens se a aba não existe). */
+export const BUSCA_LIXEIRA_MAX = 500;
+/** As páginas que as RPCs da Mensagens e da Lixeira aceitam (as 2 cortam o limite em 100; a tela pede 20/30). */
+export const LIMITE_PAGINA_21C_MAX = 100;
+/** As colunas do profiles próprio de cada tela (o select da lib; nenhum "*"). */
+export const COLUNAS_DO_PERFIL = {
+  /** Configurações › Perfil (src/painel/configuracoes/Perfil.tsx:52, buscarPerfil) */
+  perfil_profissional: ["nome", "email", "tipo_perfil", "area_outra", "dados_profissionais"],
+  /** Mensagens (src/painel/mensagens/api.ts:137, lerPerfilWhatsapp) */
+  perfil_mensagens: ["nome", "dados_profissionais", "config"],
+} as const;
+/** Os escopos e os filtros da fila do WhatsApp (EscopoFila e FiltroFila de src/painel/mensagens/filaUtil.ts). */
+export const ESCOPOS_DA_FILA = ["meus", "conta"] as const;
+export const FILTROS_DA_FILA = ["todas", "fila", "enviadas", "falhas"] as const;
+const textoAte = (max: number) => ({ tipo: "texto", max }) as const;
+
+export const CONSULTAS_21C = {
+  // ───── o Aluno › Resumo ─────
+  // a pré-checagem do e-mail/CPF ao sair do campo (o "Editar dados", o Novo aluno e o Ligar aluno): só booleanos, sem dizer de quem
+  dado_livre: {
+    params: { email: textoAte(DADO_LIVRE_MAX), cpf: textoAte(DADO_LIVRE_MAX), paciente: { tipo: "uuid" } },
+    fonte: { rpc: "paciente_dado_livre", args: { p_email: "email", p_cpf: "cpf", p_paciente: "paciente" } },
+  },
+  // o consentimento do responsável do aluno da rota (a faixa de idade, quem pode editar e o registro vigente)
+  aluno_responsavel: { params: { aluno: uuidObrigatorio }, fonte: { rpc: "aluno_responsavel", args: { p_aluno: "aluno" } } },
+  // ───── as Configurações ─────
+  // o Perfil de quem chama (o profiles dele: id = o user do token) — as colunas do form
+  perfil_profissional: { params: {}, fonte: { tabela: "profiles", colunas: COLUNAS_DO_PERFIL.perfil_profissional, teto: 1 }, dono: "id" },
+  // ───── a Mensagens (e o número do menu da casca — contadores/Mensagens.ts — e a faixa) ─────
+  // o perfil de quem chama na Mensagens: o nome, o WhatsApp do Perfil (dados_profissionais) e a config das automáticas (config.whatsapp)
+  perfil_mensagens: { params: {}, fonte: { tabela: "profiles", colunas: COLUNAS_DO_PERFIL.perfil_mensagens, teto: 1 }, dono: "id" },
+  // o resumo da Mensagens e o número do menu (as falhas novas): da conta ativa (o dono vê a conta; sem ela, o seu)
+  whatsapp_resumo: { params: { conta: contaOpcional }, fonte: { rpc: "whatsapp_resumo", args: { p_conta: "conta" } } },
+  // a fila (o Histórico): o escopo, o filtro, a página e o cursor (a última linha da página: created_at + id)
+  whatsapp_fila: {
+    params: {
+      conta: contaOpcional, escopo: { tipo: "enum", valores: ESCOPOS_DA_FILA }, filtro: { tipo: "enum", valores: FILTROS_DA_FILA },
+      limite: { tipo: "inteiro", min: 1, max: LIMITE_PAGINA_21C_MAX }, antes: { tipo: "instante" }, antes_id: { tipo: "uuid" },
+    },
+    fonte: {
+      rpc: "whatsapp_fila", args: { p_conta: "conta", p_escopo: "escopo", p_filtro: "filtro", p_limite: "limite", p_antes: "antes", p_antes_id: "antes_id" },
+    },
+  },
+  // a faixa "Mensagens desligadas" da casca (os alunos com telefone e as automáticas desligadas; o aviso visto)
+  mensagens_desligadas: { params: {}, fonte: { rpc: "mensagens_desligadas" } },
+  // ───── a Lixeira ─────
+  // UMA página de uma aba da conta ativa (a aba, a busca, o offset e o limite que a lib manda) — a pesada: num lote só dela
+  lixeira: {
+    params: {
+      conta: uuidObrigatorio, tipo: textoAte(TEXTO_CURTO_MAX), busca: textoAte(BUSCA_LIXEIRA_MAX),
+      offset: { tipo: "inteiro", min: 0, max: INT4_MAX, obrigatorio: true }, limite: { tipo: "inteiro", min: 1, max: LIMITE_PAGINA_21C_MAX, obrigatorio: true },
+    },
+    fonte: { rpc: "lixeira_da_conta", args: { p_conta: "conta", p_tipo: "tipo", p_busca: "busca", p_offset: "offset", p_limite: "limite" } },
+    sozinha: true,
+  },
+} as const satisfies Record<string, ConsultaLeitura>;
+
+/** Todas as consultas da função: a 21a (a casca e o app do aluno) + a 21b (a Agenda e os Alunos) + a 21d (o aluno_treino do editor) + a 21c. */
+const TODAS = { ...CONSULTAS_CONTA, ...CONSULTAS_AGENDA, ...CONSULTAS_ALUNOS, ...CONSULTAS_TREINO_DA_CONTA, ...CONSULTAS_21C };
 
 export type ConsultaDaConta = keyof typeof TODAS;
 /** As consultas da 21a (a casca e o app do aluno) — a lista que o teste da 21a fixa. */
@@ -312,13 +385,15 @@ export const CONSULTAS_DA_CONTA = Object.keys(CONSULTAS_CONTA) as Array<keyof ty
 export const CONSULTAS_DA_21B = [...Object.keys(CONSULTAS_AGENDA), ...Object.keys(CONSULTAS_ALUNOS)] as ConsultaDaConta[];
 /** hml-21d: a consulta do editor do Aluno › Treino. */
 export const CONSULTAS_DA_21D = Object.keys(CONSULTAS_TREINO_DA_CONTA) as ConsultaDaConta[];
-/** Todas as consultas da função, na ordem (21a, 21b e 21d). */
+/** hml-21c: as consultas do Resumo, das Configurações, da Mensagens (+ o número do menu e a faixa) e da Lixeira. */
+export const CONSULTAS_DA_21C = Object.keys(CONSULTAS_21C) as ConsultaDaConta[];
+/** Todas as consultas da função, na ordem (21a, 21b, 21d e 21c). */
 export const TODAS_AS_CONSULTAS = Object.keys(TODAS) as ConsultaDaConta[];
 
-/** O catálogo da conta para o motor comum (sem Storage, sem filtros a mais, o valor das RPCs como veio) — as 21a, as 21b e a 21d. */
+/** O catálogo da conta para o motor comum (sem Storage, sem filtros a mais, o valor das RPCs como veio) — as 21a, as 21b, a 21d e as 21c. */
 export const CATALOGO_CONTA: CatalogoDoServidor = { consultas: TODAS as unknown as CatalogoLeitura };
 
-/** A consulta, se está no catálogo (21a, 21b ou 21d); senão null. */
+/** A consulta, se está no catálogo (21a, 21b, 21d ou 21c); senão null. */
 export function consultaDaConta(q: unknown): ConsultaLeitura | null {
   return typeof q === "string" && Object.prototype.hasOwnProperty.call(TODAS, q) ? (TODAS as Record<string, ConsultaLeitura>)[q] : null;
 }
