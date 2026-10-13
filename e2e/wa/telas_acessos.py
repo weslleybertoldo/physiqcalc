@@ -535,6 +535,8 @@ def caso_resumo_depois(o, nav, R: Rodada) -> None:
         o.ok("Mensagens automáticas" in card and t.n("[data-card-ajustes-aluno] [data-ajuste]") == 1
              and t.attr("[data-card-ajustes-aluno] [data-ajuste]", "data-ajuste") == ["mensagens_automaticas"],
              "C10 o card 'Mensagens automáticas' só com o WhatsApp")
+        if ok:  # o card fica abaixo dos 6 de cima: o print (só a janela) rola até ele — senão mostra só o topo do Resumo
+            t.pg.eval_on_selector("[data-card-ajustes-aluno]", "e => e.scrollIntoView({ block: 'center' })")
         R.print(t, f"{R.prefixo_print}a_resumo_depois")
         t.clicar("[data-menu-perfil]")
         t.esperar(lambda: t.tem('[data-acao-perfil="acesso"]'), 10)
@@ -582,6 +584,8 @@ def caso_prod(o, nav, R: Rodada) -> None:
         t.ir(f"/painel/alunos/{rota}")
         ok = t.esperar(lambda: t.tem("[data-card-ajustes-aluno]"), 60)
         o.ok(ok and not t.tem("[data-card-acesso-aluno]"), "P2 produção: o Resumo sem o card de login; 'Mensagens automáticas' no lugar dos Ajustes")
+        if ok:  # o print (só a janela) rola até o card novo, abaixo dos 6 de cima
+            t.pg.eval_on_selector("[data-card-ajustes-aluno]", "e => e.scrollIntoView({ block: 'center' })")
         R.print(t, "prod_a_resumo")
         # o card de login lê E garante pela aluno_acesso (H-43 — a hml-21c leva ao servidor): a Guarda a barra (o molde BARRADAS_ACEITAS da
         # hml-20, e2e/hml20/dieta_tela.py) e o card mostra o erro dele; fora ela (e o garantir da nutricao), nenhuma gravação
