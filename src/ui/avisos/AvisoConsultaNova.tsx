@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ROTA_AGENDA, consultasParaAvisar, gravarAvisadas, idDaNotificacao, lerAvisadas, textoDoAviso } from "@/agenda/avisoLocal";
 import { minhaAgenda } from "@/app-aluno/perfil/pecas/api";
 import { inicioDaAgenda } from "@/app-aluno/perfil/pecas/regras";
+import { ouvirAcoesDeNotificacao } from "@/lib/acoesDeNotificacao";
 import { useSessao } from "@/nucleo/sessao";
 import { pushAtivoNoAparelho } from "@/push/regras";
 
@@ -84,20 +85,24 @@ export default function AvisoConsultaNova() {
     };
     document.addEventListener("visibilitychange", aoVoltar);
     let estado: Promise<{ remove: () => void }> | null = null;
-    let toque: Promise<{ remove: () => void }> | null = null;
+    let pararDeOuvir: (() => void) | null = null;
     if (nativo()) {
       estado = CapApp.addListener("appStateChange", ({ isActive }) => {
         if (isActive) void conferir();
       });
-      toque = LocalNotifications.addListener("localNotificationActionPerformed", (e) => {
+      // W-A P3: o toque pelo ouvinte ÚNICO do app (src/lib/acoesDeNotificacao.ts) — com o app fechado, o plugin entrega o toque só ao 1º
+      // ouvinte que se registra, e as rotinas também ouvem
+      pararDeOuvir = ouvirAcoesDeNotificacao((e) => {
         const rota = (e.notification?.extra as { rota?: string } | undefined)?.rota;
-        if (rota === ROTA_AGENDA) navigate(ROTA_AGENDA);
+        if (rota !== ROTA_AGENDA) return false;
+        navigate(ROTA_AGENDA);
+        return true;
       });
     }
     return () => {
       document.removeEventListener("visibilitychange", aoVoltar);
       void estado?.then((l) => l.remove());
-      void toque?.then((l) => l.remove());
+      pararDeOuvir?.();
     };
   }, [conferir, navigate]);
 
