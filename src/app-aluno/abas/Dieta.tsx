@@ -27,9 +27,18 @@ import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto, EstadoErro, EstadoSemInternet, EstadoVazio } from "@/ui/premium/Estados";
 import { fotoDaRefeicao } from "@/ui/premium/fotos";
 import { useOnline } from "@/ui/premium/useOnline";
+import { desfazerNoDia, tirarDoDia } from "@/aluno-dia/api";
+import { FOLHAS_DO_DIA, linhaDaRefeicaoNoDia, resumoDoDiaLivre, totaisDaRefeicaoNoDia, type FolhaDoDia } from "@/dieta-livre/regras";
+import { TEXTOS as TEXTOS_DO_DIA } from "@/dieta-livre/textos";
+import { useDiaLivre } from "@/dieta-livre/useDiaLivre";
+import { BotoesDoDia, ExtrasDoDia, FolhasDoDia } from "@/dieta-livre/ui/DiaLivre";
+import { ItensDoDia } from "@/dieta-livre/ui/ItensDoDia";
+import { ehAlunoDasRotinas } from "@/rotinas/regras";
+import { RotinasDeHoje } from "@/rotinas/ui/RotinasDeHoje";
 
-type Folha = "orientacoes" | "metas" | "diario" | "plano" | "dia" | "refeicao";
-const FOLHAS: Folha[] = ["orientacoes", "metas", "diario", "plano", "dia", "refeicao"];
+// W-A P5: + as 3 folhas da Dieta "Pode mexer" (adicionar, extra, meus — src/dieta-livre/ui/DiaLivre.tsx)
+type Folha = "orientacoes" | "metas" | "diario" | "plano" | "dia" | "refeicao" | FolhaDoDia;
+const FOLHAS: Folha[] = ["orientacoes", "metas", "diario", "plano", "dia", "refeicao", ...FOLHAS_DO_DIA];
 const SEM_INTERNET = "A dieta aparece quando a internet voltar.";
 
 /**
@@ -39,23 +48,37 @@ const SEM_INTERNET = "A dieta aparece quando a internet voltar.";
  * refeição com os substitutos, o PDF e os planos anteriores, o calendário para ver outro dia, as orientações, as metas com ✓ e a
  * foto pro diário. O aluno sem profissional no Treino + Alimentação vê os pratos prontos (W7b). Online (9A): sem internet, o aviso.
  * As folhas abrem pelo `?ver=` (orientacoes, metas, diario — os links antigos /app/* do Nutri caem aqui), e o Voltar do aparelho fecha.
+ * W-A P5 (spec §4.3, §4.4): com a Dieta "Pode mexer" (a matrícula do plano liberada — src/dieta-livre), hoje e no plano atual, ele tira itens
+ * do plano só no dia, põe alimentos e receitas, cria refeições extras e os próprios alimentos e receitas; o anel conta o que ele comeu. "Só
+ * ver" = tudo como antes. No fim da aba (nutri e pratos prontos), a seção "Rotinas de hoje" (a mesma lista do Início — P3).
  */
 export default function Dieta() {
   const { situacao } = useSessao();
   const doApp = matriculaDoApp(situacao);
   const temNutricionista = (situacao?.matriculas ?? []).some((m) => !m.app && m.modulos.includes("nutricao"));
-  if (!temNutricionista && temAlimentacaoDoApp(doApp)) return <DietaDoApp />;
-  return <DietaDaNutricionista />;
+  const comRotinas = ehAlunoDasRotinas(situacao);
+  if (!temNutricionista && temAlimentacaoDoApp(doApp)) return <DietaDoApp comRotinas={comRotinas} />;
+  return <DietaDaNutricionista comRotinas={comRotinas} />;
+}
+
+/** "Rotinas de hoje" no fim da aba (spec §4.3; P9: todo aluno com matrícula). */
+function RotinasDaDieta() {
+  return (
+    <div className="mt-4" data-dieta-rotinas>
+      <RotinasDeHoje origem="dieta" />
+    </div>
+  );
 }
 
 /** Aluno sem profissional no plano Treino + Alimentação: os pratos prontos pelo objetivo (W7b), agora na aba Dieta. */
-function DietaDoApp() {
+function DietaDoApp({ comRotinas }: { comRotinas: boolean }) {
   return (
     <div className={CLASSE_PAGINA_APP} data-aba-dieta="pratos">
       <div className="mt-1 flex items-center justify-between gap-3">
         <TituloApp>Dieta</TituloApp>
       </div>
       <PratosProntos />
+      {comRotinas && <RotinasDaDieta />}
     </div>
   );
 }
@@ -86,7 +109,7 @@ function EsqueletoDieta() {
   );
 }
 
-function DietaDaNutricionista() {
+function DietaDaNutricionista({ comRotinas }: { comRotinas: boolean }) {
   const d = useDieta();
   const online = useOnline();
   const navigate = useNavigate();
@@ -128,6 +151,9 @@ function DietaDaNutricionista() {
   const diario = dados?.diario ?? [];
   const varia = planoVariaPorDia(plano);
   const desligado = !online;
+  // W-A P5: a Dieta "Pode mexer" (null = travada: tudo como antes)
+  const livre = useDiaLivre({ plano, ehAtual, hoje, marcavelHoje, concluidas, aoTravar: fechar });
+  const resumoDaTela = livre.aplicado ? resumoDoDiaLivre(livre.aplicado) : resumo;
 
   const fotoDe = (r: RefeicaoDoPlano): { foto: string; padrao: string } => {
     const padrao = fotoDaRefeicao(r.nome, r.horario);
@@ -151,6 +177,7 @@ function DietaDaNutricionista() {
   };
 
   const refeicaoAberta = folha === "refeicao" ? refeicoes.find((r) => r.id === params.get("r")) ?? null : null;
+  const noDiaAberta = refeicaoAberta ? livre.noDia.get(refeicaoAberta.id) ?? null : null;
   const estadoDe = (r: RefeicaoDoPlano): EstadoRefeicao => {
     if (!refeicaoMarcavel(r)) return "vazia";
     if (!marcavelHoje) return "leitura";
@@ -213,7 +240,7 @@ function DietaDaNutricionista() {
               nutricionista={nutricionista}
               foto={matricula?.nutricionista.foto_url ?? null}
               atualizadoEm={diaMesCurto(plano.updated_at)}
-              resumo={resumo.marcaveis > 0 ? resumo : null}
+              resumo={resumoDaTela.marcaveis > 0 ? resumoDaTela : null}
               aviso={refeicoes.length === 0 ? `O seu plano não tem refeição para ${rotuloDoDia(dia, hoje)}.` : resumo.marcaveis === 0 ? "As refeições deste dia ainda não têm alimentos." : null}
               leitura={!marcavelHoje}
               aoAbrir={() => abrir("plano")}
@@ -250,13 +277,15 @@ function DietaDaNutricionista() {
                   const hora = fmtHorario(r.horario);
                   const itens = r.itens.length ? resumoDaRefeicao(r.itens) : "Sem alimentos";
                   const { foto, padrao } = fotoDe(r);
+                  const noDia = livre.noDia.get(r.id);
+                  const doDia = noDia ? linhaDaRefeicaoNoDia(noDia) : null;
                   return (
                     <LinhaRefeicao
                       key={r.id}
                       id={r.id}
                       nome={r.nome}
-                      linha={[hora, itens].filter(Boolean).join(" · ")}
-                      kcal={r.itens.length ? fmtKcal(totaisDosItens(r.itens).energia_kcal) : "—"}
+                      linha={doDia ? doDia.linha : [hora, itens].filter(Boolean).join(" · ")}
+                      kcal={doDia ? doDia.kcal : r.itens.length ? fmtKcal(totaisDosItens(r.itens).energia_kcal) : "—"}
                       foto={foto}
                       fotoPadrao={padrao}
                       estado={estadoDe(r)}
@@ -268,6 +297,13 @@ function DietaDaNutricionista() {
                   );
                 })}
               </div>
+            )}
+            {livre.aplicado && (
+              <>
+                <ExtrasDoDia extras={livre.aplicado.extras} ocupado={livre.ocupado} desligado={desligado} gravar={livre.gravar}
+                  aoAbrir={(id) => abrir("extra", { e: id })} />
+                <BotoesDoDia extra={livre.extra} desligado={desligado} aoNovaRefeicao={() => abrir("extra")} aoMeus={() => abrir("meus")} />
+              </>
             )}
           </>
         )}
@@ -290,7 +326,7 @@ function DietaDaNutricionista() {
   }
 
   return (
-    <div className={CLASSE_PAGINA_APP} data-aba-dieta={marca} data-dieta-dia={dia} data-dieta-hoje={hoje}>
+    <div className={CLASSE_PAGINA_APP} data-aba-dieta={marca} data-dieta-dia={dia} data-dieta-hoje={hoje} data-dieta-dia-livre={livre.estado}>
       <div className="mt-1 flex items-center justify-between gap-3">
         <TituloApp>Dieta</TituloApp>
         {dados && matriculas.length > 0 && (
@@ -302,6 +338,8 @@ function DietaDaNutricionista() {
       </div>
 
       {conteudo}
+
+      {comRotinas && <RotinasDaDieta />}
 
       {dados && (
         <>
@@ -322,7 +360,21 @@ function DietaDaNutricionista() {
                   }
                 : null
             }
+            conteudoDoDia={
+              noDiaAberta ? (
+                <ItensDoDia itensDoPlano={noDiaAberta.itens} adicionados={noDiaAberta.adicionados} ocupado={livre.ocupado} desligado={desligado}
+                  podeAdicionar={refeicaoMarcavel(noDiaAberta.refeicao)} aviso={refeicaoMarcavel(noDiaAberta.refeicao) ? null : TEXTOS_DO_DIA.semAlimentoNoPlano}
+                  aoTirarDoPlano={(item) => void livre.gravar({ chave: `tirar:${item}`, fazer: () => tirarDoDia(hoje, item) })}
+                  aoVoltar={(id) => void livre.gravar({ chave: `voltar:${id}`, fazer: () => desfazerNoDia(id) })}
+                  aoAdicionar={() => abrir("adicionar", { r: noDiaAberta.refeicao.id }, true)} />
+              ) : undefined
+            }
+            totaisDoDia={noDiaAberta ? totaisDaRefeicaoNoDia(noDiaAberta) : undefined}
           />
+          {livre.aplicado && (
+            <FolhasDoDia folha={folha} params={params} abrir={abrir} fechar={fechar} aplicado={livre.aplicado} hoje={hoje} desligado={desligado}
+              gravar={livre.gravar} ocupado={livre.ocupado} />
+          )}
           <SheetPlano
             aberto={folha === "plano"}
             aoMudar={mudarFolha("plano")}

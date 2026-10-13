@@ -1,14 +1,17 @@
+import type { ReactNode } from "react";
 import { Camera, Check, Repeat, Undo2 } from "lucide-react";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
-import { descricaoQuantidade, descricaoSubstituto, fmtHorario, fmtKcal, fmtQtd, lerSubstitutos, macrosDoItem, totaisDosItens } from "../dietaUtil";
+import { descricaoQuantidade, descricaoSubstituto, fmtHorario, fmtKcal, fmtQtd, lerSubstitutos, macrosDoItem, totaisDosItens, type Totais } from "../dietaUtil";
 import { textoDias, normalizarDias } from "../metasUtil";
 import type { RefeicaoDoPlano } from "../tipos";
 
 /**
  * Folha da refeição (N-49): os alimentos com a quantidade (medida caseira ou gramas) e as kcal, os substitutos de cada alimento
  * ("ou 78 g de Pão, trigo, forma, integral" — até 6 por alimento, como o site antigo), as observações, os macros da refeição e,
- * embaixo, o ✓ (só hoje, no plano atual, com alimento) e a foto dela para o diário.
+ * embaixo, o ✓ (só hoje, no plano atual, com alimento) e a foto dela para o diário. W-A P5 (a Dieta "Pode mexer"): a lista do DIA entra no
+ * lugar da lista do plano (`conteudoDoDia` — src/dieta-livre/ui/ItensDoDia.tsx: "Tirar hoje", "Voltar", o que ele pôs e "Adicionar alimento")
+ * e as kcal e os macros passam a ser os do dia (`totaisDoDia`); sem os 2 (travada), a folha é a de antes.
  */
 export function SheetRefeicao({
   refeicao,
@@ -20,6 +23,8 @@ export function SheetRefeicao({
   desligado,
   aoMarcar,
   aoFoto,
+  conteudoDoDia,
+  totaisDoDia,
 }: {
   refeicao: RefeicaoDoPlano | null;
   aoFechar: () => void;
@@ -31,11 +36,16 @@ export function SheetRefeicao({
   desligado?: boolean;
   aoMarcar: (concluida: boolean) => void;
   aoFoto: (() => void) | null;
+  /** W-A P5: a lista do dia (só com a Dieta "Pode mexer") no lugar da lista do plano */
+  conteudoDoDia?: ReactNode;
+  /** W-A P5: os totais da refeição no dia (sem o que ele tirou, com o que pôs) */
+  totaisDoDia?: Totais | null;
 }) {
-  const t = refeicao ? totaisDosItens(refeicao.itens) : null;
+  const t = totaisDoDia ?? (refeicao ? totaisDosItens(refeicao.itens) : null);
+  const temItens = conteudoDoDia ? (t?.itens ?? 0) > 0 : !!refeicao?.itens.length;
   const hora = refeicao ? fmtHorario(refeicao.horario) : "";
   const dias = refeicao ? normalizarDias(refeicao.dias_semana) : [];
-  const partes = [hora, t && refeicao?.itens.length ? `${fmtKcal(t.energia_kcal)} kcal` : null, dias.length ? textoDias(dias) : null].filter(Boolean);
+  const partes = [hora, t && temItens ? `${fmtKcal(t.energia_kcal)} kcal` : null, dias.length ? textoDias(dias) : null].filter(Boolean);
   return (
     <PainelDeslizante
       aberto={!!refeicao}
@@ -62,7 +72,7 @@ export function SheetRefeicao({
       {refeicao && (
         <div className="flex flex-col gap-3" data-folha-refeicao={refeicao.id}>
           {foto && <img src={foto} alt="" aria-hidden className="h-40 w-full rounded-2xl border border-linha object-cover" data-folha-foto-diario />}
-          {refeicao.itens.length === 0 ? (
+          {conteudoDoDia ?? (refeicao.itens.length === 0 ? (
             <p className="rounded-2xl border border-linha bg-superficie px-3.5 py-3 text-[13px] italic text-texto-3" data-refeicao-vazia>
               Sem alimentos nesta refeição.
             </p>
@@ -91,8 +101,8 @@ export function SheetRefeicao({
                 );
               })}
             </ul>
-          )}
-          {t && refeicao.itens.length > 0 && (
+          ))}
+          {t && temItens && (
             <div className="grid grid-cols-3 gap-2" data-folha-macros>
               {[
                 ["Proteína", t.proteina_g],
