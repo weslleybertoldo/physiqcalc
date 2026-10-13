@@ -248,18 +248,20 @@ FUNCOES_CONHECIDAS = {
 # (a volta do OAuth do MP: o GET que grava a conexão) gravam — se um dia saírem do navegador, é gravação.
 # hml-21a (decisão F): a conta (jeito 2 do resto do principal: a casca e o app do aluno) grava em TODA ação, como a nutricao e a financeiro.
 # W-A P2 (LINUX 3, 13/10): as 3 da W-A — acessos e aluno-dia (principal) e treino-acessos (Treino) — gravam em TODA ação, menos o ler pelo corpo.
+# hml-21d (decisão F): a treinos (Treino — o jeito 2 do cadastro do professor, do Master e dos treinos prontos) grava em TODA ação, menos o ler.
 FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno", "financeiro", "mp-conectar-retorno",
-                             "mp-contas-renovar", "conta", "acessos", "aluno-dia", "treino-acessos"}
+                             "mp-contas-renovar", "conta", "acessos", "aluno-dia", "treino-acessos", "treinos"}
 # hml-20a (decisão I da hml-20a, H-42): as LEITURAS do jeito 2 passam pelo CORPO — { "acao": "ler" } na nutricao e na financeiro e
 # { "action": "minha_evolucao" } na admin-avaliacoes. O campo é o que a FUNÇÃO lê (um { "action": "ler", "acao": "<gravação>" } na
 # nutricao grava → barrado); corpo ilegível, sem a ação ou com outra ação = gravação, como antes. Sem o corpo (quem só tem a ação), a
 # regra de antes. Teste: python3 e2e/hml19/guarda_teste.py.
 # hml-21a (decisão F): + o { "acao": "ler" } da conta (o campo que ela lê é o `acao`).
 # W-A P2: + o { "acao": "ler" } das 3 da W-A (o campo que as 3 leem é o acao).
+# hml-21d (decisão F): + o { "acao": "ler" } da treinos (o campo que ela lê é o `acao`; o host é o do Treino — o alvo() olha só o caminho).
 LEITURAS_PELO_CORPO = {"nutricao": ("acao", frozenset({"ler"})), "financeiro": ("acao", frozenset({"ler"})),
                        "admin-avaliacoes": ("action", frozenset({"minha_evolucao"})), "conta": ("acao", frozenset({"ler"})),
                        "acessos": ("acao", frozenset({"ler"})), "aluno-dia": ("acao", frozenset({"ler"})),
-                       "treino-acessos": ("acao", frozenset({"ler"}))}
+                       "treino-acessos": ("acao", frozenset({"ler"})), "treinos": ("acao", frozenset({"ler"}))}
 
 
 def corpo_de_leitura(nome: str, corpo: str | None) -> bool:
@@ -305,7 +307,7 @@ class Guarda:
     não lista; hml-19a: a nutricao inteira e QUALQUER função que a Guarda não conhece — funcao_grava; hml-19c: a admin-avaliacoes fora
     da "list"; hml-19d: a financeiro inteira; hml-20a: menos as LEITURAS pelo corpo — `ler` da nutricao/financeiro e minha_evolucao da
     admin-avaliacoes; W2: a mp-conectar-retorno e a mp-contas-renovar inteiras; W-A P2: a acessos, a aluno-dia e a treino-acessos
-    inteiras, menos o `ler` pelo corpo). O resto segue (fallback: a
+    inteiras, menos o `ler` pelo corpo; hml-21d: a treinos inteira, menos o `ler` pelo corpo). O resto segue (fallback: a
     queda da API, quando ligada, vem antes e aborta). Teste: python3 e2e/hml19/guarda_teste.py."""
 
     def __init__(self) -> None:

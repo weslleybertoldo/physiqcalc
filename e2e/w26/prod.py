@@ -33,8 +33,10 @@ B.ESTADO["schema"] = S
 p = B.p
 DOWNLOADS = B.SCRATCH / "downloads"
 # escrita = qualquer POST/PATCH/PUT/DELETE em tabela, as RPCs que gravam (as da W26 e o "visto" do aviso) e o Storage
+# hml-21d: + as 2 RPCs novas do Treino (modelo_ordenar e treino_pronto_salvar — só a treinos chama; direta = escrita; o nome não começa
+# por um dos verbos da lista, então entram pelo nome inteiro)
 ESCRITA_RPC = re.compile(r"/rest/v1/rpc/(lixeira_restaurar|lixeira_apagar|aluno_remover|marcar_aviso|marcar|salvar|criar|"
-                         r"registrar|aceitar|excluir|apagar|atualizar|enviar)")
+                         r"registrar|aceitar|excluir|apagar|atualizar|enviar|modelo_ordenar|treino_pronto_salvar)")
 ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 # hml-19a (risco 2 da spec hml-19 §8): a nutricao (jeito 2 — as gravações da nutrição pelo servidor) grava em TODA ação: o POST nela
 # é escrita, como o POST em tabela. hml-19d (decisão I): a financeiro também. W2: a mp-contas-renovar também. A mp-conectar-retorno
@@ -43,10 +45,11 @@ ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 # hml-21a (achado 5 da spec hml-21): a conta também — sem ela aqui, a w26 tratava a função DESCONHECIDA como leitura (o E2E "só leitura"
 # da produção gravaria o sino); o `ler` dela passa pelo corpo, como o da nutricao/financeiro.
 # W-A P2 (LINUX 3): as 3 da W-A também — acessos, aluno-dia e (no Treino) treino-acessos —; o `ler` delas passa pelo corpo.
-ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar|conta|acessos|aluno-dia|treino-acessos)(?:[/?#]|$)")
+# hml-21d (risco 4 da spec hml-21): a treinos (Treino) também — ANTES de qualquer E2E na produção; o `ler` dela passa pelo corpo.
+ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar|conta|acessos|aluno-dia|treino-acessos|treinos)(?:[/?#]|$)")
 # hml-20a (decisão I): as funções em que o corpo { "acao": "ler" } é LEITURA — só a nutricao e a financeiro. A mp-contas-renovar (W2) não
 # lê o `acao` (o corpo dela é { schema, forcar_conta? }: com o schema certo, a rodada roda e grava) → segue escrita.
-LEITURA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|conta|acessos|aluno-dia|treino-acessos)(?:[/?#]|$)")
+LEITURA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|conta|acessos|aluno-dia|treino-acessos|treinos)(?:[/?#]|$)")
 
 
 def leitura_da_funcao(corpo: str | None) -> bool:
