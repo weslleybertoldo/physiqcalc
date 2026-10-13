@@ -481,7 +481,7 @@ def caso_master_loja(o, nav, R: Rodada) -> None:
         o.ok(ok and "Conta master: use o site" in t.texto("[data-master-so-no-site]") and not t.tem("[data-aba-acessos]"),
              "C6 loja: o master não abre o painel no app — 'Conta master: use o site' (hml-08), sem a aba")
         R.print(t, f"{R.prefixo_print}a_master_use_o_site")
-        st = C.C.sair_local(token, "principal")
+        st = C.sair_local(token, "principal")
         o.ok(st in (401, 403), f"C6 loja: a sessão do master já saiu deste aparelho (o app fez o logout local; de novo: {st})")
         R.L.sessoes.esquecer(token)
     finally:
