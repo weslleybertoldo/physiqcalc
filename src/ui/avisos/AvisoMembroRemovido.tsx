@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserX } from "lucide-react";
+import { acaoConta } from "@/conta/gravar";
+import { lerConta } from "@/conta/ler";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { principal } from "@/integrations/principal/client";
 import { useSessao } from "@/nucleo/sessao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { useUltimoValor } from "@/ui/premium/useUltimoValor";
 import { CHAVE_AVISOS } from "@/ui/premium/useAvisos";
+import { TIPO_MEMBRO_REMOVIDO } from "../../../supabase-principal/functions/_shared/conta-leituras";
 
 interface AvisoRemovido {
   id: string;
@@ -18,6 +20,8 @@ interface AvisoRemovido {
  * "Você não faz mais parte desta conta" (W5, spec 9 — membro removido): quando o dono tira a pessoa da equipe, o banco grava
  * um aviso para ela (remover_membro); na próxima abertura ela vê a janela uma vez, em qualquer área. O acesso já saiu na hora
  * (banco principal) e sai no Treino pelo espelho.
+ * hml-21a (H-43 · jeito 2): a leitura e o "Entendi" passam pela função conta (q aviso_membro_removido; ação aviso_membro_ok — o lido_em
+ * só da linha da pessoa). O desfecho de hoje fica: a falha na leitura = nenhum aviso; o "Entendi" fecha na hora e o sino relê depois.
  */
 export default function AvisoMembroRemovido() {
   const { usuario } = useSessao();
@@ -31,16 +35,15 @@ export default function AvisoMembroRemovido() {
     staleTime: 5 * 60_000,
     retry: false,
     networkMode: "online",
+    // a falha na leitura = nenhum aviso (o queryFn devolve null — o desfecho de antes); nada sobe para a tela
+    throwOnError: false,
     queryFn: async (): Promise<AvisoRemovido | null> => {
-      const { data, error } = await principal
-        .from("avisos")
-        .select("id, titulo, criado_em")
-        .eq("tipo", "membro_removido")
-        .is("lido_em", null)
-        .order("criado_em", { ascending: false })
-        .limit(1);
-      if (error) return null;
-      return (data?.[0] as AvisoRemovido | undefined) ?? null;
+      try {
+        const r = await lerConta("aviso_membro_removido", { tipo: TIPO_MEMBRO_REMOVIDO });
+        return ((r.linhas ?? [])[0] as AvisoRemovido | undefined) ?? null;
+      } catch {
+        return null;
+      }
     },
   });
   const mostrar = !!q.data && !fechado;
@@ -49,10 +52,8 @@ export default function AvisoMembroRemovido() {
   if (!aviso) return null;
   const fechar = () => {
     setFechado(true);
-    void principal
-      .from("avisos")
-      .update({ lido_em: new Date().toISOString() })
-      .eq("id", aviso.id)
+    void acaoConta("aviso_membro_ok", { id: aviso.id })
+      .catch(() => undefined)
       .then(() => qc.invalidateQueries({ queryKey: CHAVE_AVISOS }));
   };
   return (

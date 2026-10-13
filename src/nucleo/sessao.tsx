@@ -12,6 +12,8 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { acaoConta } from "@/conta/gravar";
+import { lerConta } from "@/conta/ler";
 import { principal, PRINCIPAL_STORAGE_KEY } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
@@ -165,10 +167,10 @@ async function corpoDoErro(erro: unknown): Promise<Record<string, unknown> | nul
   return null;
 }
 
+/** hml-21a (H-43 · jeito 2): a situação pela função conta (q "situacao" = a minha_situacao() de hoje); o erro sobe (ErroLeitura). */
 async function buscarSituacao(): Promise<Situacao | null> {
-  const { data, error } = await principal.rpc("minha_situacao" as never);
-  if (error) throw error;
-  return normalizarSituacao(data);
+  const r = await lerConta("situacao");
+  return normalizarSituacao(r.valor);
 }
 
 // ───────────────────────── provedor ─────────────────────────
@@ -284,7 +286,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       // aviso fechado aqui e ainda não gravado no servidor (fechou sem internet ou saiu logo): vale o daqui e grava de novo
       if (nova?.aviso_mudanca && !nova.aviso_mudanca.visto && avisoVistoAqui(uid, nova.aviso_mudanca.versao || "1")) {
         nova = { ...nova, aviso_mudanca: { ...nova.aviso_mudanca, visto: true } };
-        void principal.rpc("marcar_aviso_mudanca" as never, { p_versao: nova.aviso_mudanca!.versao || "1" } as never);
+        void acaoConta("aviso_mudanca_marcar", { versao: nova.aviso_mudanca!.versao || "1" }).catch(() => undefined);
       }
       if (nova) {
         setSituacao(nova);
@@ -521,7 +523,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       return nova;
     });
     try {
-      await principal.rpc("marcar_aviso_mudanca" as never, { p_versao: versao } as never);
+      await acaoConta("aviso_mudanca_marcar", { versao });
     } catch {
       /* fica visto neste aparelho; a próxima abertura com internet grava */
     }

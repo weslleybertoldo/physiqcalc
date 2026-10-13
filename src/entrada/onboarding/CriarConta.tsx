@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Briefcase, CheckCircle2, Dumbbell, GraduationCap, Salad, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { principal } from "@/integrations/principal/client";
+import { acaoConta, resultadoDaAcao } from "@/conta/gravar";
 import { useSessao } from "@/nucleo/sessao";
 import { TESTE_DIAS, TESTE_MAX_ALUNOS, dataBR } from "@/nucleo/cobranca/regras";
 import { lembrarArea } from "@/ui/casca/area";
@@ -57,9 +57,9 @@ export default function CriarConta() {
     if (!tipo) return setErro(MENSAGENS.tipo_invalido);
     setEnviando(true);
     try {
-      const { data, error } = await principal.rpc("criar_minha_conta" as never, { p_nome: nome.trim(), p_tipo: tipo, p_registro: registro.trim() || null } as never);
-      if (error) throw error;
-      const r = (data ?? {}) as { ok?: boolean; erro?: string; teste_ate?: string | null; ja_existia?: boolean };
+      // hml-21a (H-43 · jeito 2): a criar_minha_conta pela função conta (os mesmos argumentos, como a pessoa); o { ok, erro } dela no resultado
+      const resposta = await acaoConta<{ resultado?: unknown }>("criar_minha_conta", { nome: nome.trim(), tipo, registro: registro.trim() || null });
+      const r = resultadoDaAcao(resposta) as { ok?: boolean; erro?: string; teste_ate?: string | null; ja_existia?: boolean };
       if (!r.ok) {
         setErro(MENSAGENS[r.erro ?? ""] ?? "Não foi possível criar a conta agora. Tente de novo.");
         return;

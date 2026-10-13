@@ -21,7 +21,12 @@ vi.mock("@/nucleo/sessao", () => ({
     usuario: { id: "u1", email: "rafa@gmail.com" }, sair: async () => {}, recarregarSituacao: h.recarregar,
   }),
 }));
-vi.mock("@/integrations/principal/client", () => ({ principal: { rpc: h.rpc } }));
+// hml-21a: o criar_minha_conta vai pela função conta (src/test/contaFalsa.ts roda o módulo de verdade), que chama a MESMA RPC (h.rpc)
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const banco = { rpc: (...a: unknown[]) => h.rpc(...a) };
+  return { principal: { ...banco, functions: { invoke: invocarComConta(banco) } } };
+});
 vi.mock("@/nucleo/captcha", () => ({ useCaptcha: () => ({ refCaixa: { current: null }, estado: "pronto", obterToken: h.token, usado: h.usado }) }));
 // W7: a prévia do código (nome, foto e tipo do profissional) antes do vínculo
 vi.mock("@/nucleo/vinculo", async (orig) => ({ ...(await orig<typeof import("@/nucleo/vinculo")>()), previaDoCodigo: (c: string) => h.previa(c) }));

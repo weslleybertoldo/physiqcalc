@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ updateUser: vi.fn(), rpc: vi.fn(), refresh: vi.fn() }));
-vi.mock("@/integrations/principal/client", () => ({
-  principal: { auth: { updateUser: h.updateUser, refreshSession: h.refresh }, rpc: h.rpc },
+// hml-21a: a minha_senha_definida vai pela função conta (src/test/contaFalsa.ts roda o módulo de verdade), que chama a MESMA RPC (h.rpc)
+vi.mock("@/integrations/principal/client", async () => ({
+  principal: {
+    auth: { updateUser: h.updateUser, refreshSession: h.refresh },
+    rpc: h.rpc,
+    functions: { invoke: (await import("@/test/contaFalsa")).invocarComConta({ rpc: (...a: unknown[]) => h.rpc(...a) }) },
+  },
 }));
 
 import { adiarNestaSessao, claimsDoToken, entrouComSenha, idDaSessao, precisaCriarSenha, salvarMinhaSenha, temSenhaProvisoria, textoErroSenha } from "./senha";

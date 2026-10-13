@@ -3,10 +3,12 @@
  * No site (web) nada disto roda. Sem o Firebase no APK (o google-services.json não entrou no build) também não: chamar o
  * register() sem o Firebase derruba o app — por isso o PushFirebase.disponivel() (plugin nativo do próprio app) vem antes.
  * Sem permissão ou sem Firebase, o app segue como antes: sino, e-mail e a notificação local.
+ * hml-21a (H-43 · jeito 2): o token vai ao banco pela função conta (ações push_registrar e push_esquecer = as RPCs de hoje, com os mesmos
+ * argumentos, como a pessoa); o desfecho de cada uma é o de antes (falhou → false / sair não espera).
  */
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { PushNotifications, type ActionPerformed, type PushNotificationSchema, type Token } from "@capacitor/push-notifications";
-import { principal } from "@/integrations/principal/client";
+import { acaoConta, resultadoDaAcao } from "@/conta/gravar";
 import { CANAL_AVISOS, NOME_CANAL_AVISOS, esquecerTokenGuardado, guardarToken, tokenGuardado, tokenValido, type Permissao } from "./regras";
 
 interface PushFirebasePlugin {
@@ -74,8 +76,8 @@ export async function registrar(): Promise<void> {
 export async function salvarToken(uid: string, token: string): Promise<boolean> {
   if (!uid || !tokenValido(token)) return false;
   try {
-    const { data, error } = await principal.rpc("push_registrar" as never, { p_token: token, p_plataforma: "android", p_versao: versaoDoApp() } as never);
-    if (error || (data as { ok?: boolean } | null)?.ok !== true) return false;
+    const r = await acaoConta<{ resultado?: unknown }>("push_registrar", { token, plataforma: "android", versao: versaoDoApp() });
+    if (resultadoDaAcao(r).ok !== true) return false;
     guardarToken(uid, token);
     return true;
   } catch {
@@ -92,7 +94,7 @@ export async function esquecerAparelhoPush(): Promise<void> {
   esquecerTokenGuardado();
   if (!guardado) return;
   const tarefas: Promise<unknown>[] = [
-    Promise.resolve(principal.rpc("push_esquecer" as never, { p_token: guardado.token } as never)).then(() => undefined, () => undefined),
+    acaoConta("push_esquecer", { token: guardado.token }).then(() => undefined, () => undefined),
   ];
   if (await pushDisponivel()) tarefas.push(PushNotifications.unregister().catch(() => undefined));
   await Promise.race([Promise.all(tarefas), new Promise((r) => setTimeout(r, 3000))]);

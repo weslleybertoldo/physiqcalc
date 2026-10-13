@@ -5,7 +5,11 @@
  *   minha_agenda_lista(p_tipo, p_offset, p_limite)   hml-14d: o "Ver todas" da Agenda (as próximas em páginas de 20, com o total)
  *   exportar-meus-dados       o JSON dos 2 bancos (a função junta o Banco do Treino servidor → servidor)
  *   excluir-minha-conta       conferir (simular) e excluir (P19)
+ * hml-21a (H-43 · jeito 2): as 3 leituras do banco (meu_perfil_aluno, minha_agenda, minha_agenda_lista) vão pela função conta (`ler`, no
+ * lote da tela: o Início pede o perfil, a agenda e o sino numa ida) — a mesma assinatura e o mesmo tipo; o erro vira ErroPerfil com o código
+ * (a rede que caiu = sem_internet; as telas só olham o isError).
  */
+import { codigoDaLeitura, lerConta } from "@/conta/ler";
 import { principal } from "@/integrations/principal/client";
 import { deslocamento, POR_PAGINA, type Pagina } from "@/lib/paginacao";
 import { nomeDoArquivo, PALAVRA_CONFIRMACAO } from "../../../../supabase-principal/functions/_shared/conta-aluno-regras";
@@ -71,10 +75,17 @@ async function chamar<T>(funcao: string, corpo: Record<string, unknown>): Promis
   return d as T;
 }
 
+/** A leitura pela conta; o erro vira ErroPerfil com o código (o mesmo tipo de erro de hoje). */
+async function lerDaConta(q: Parameters<typeof lerConta>[0], params?: Record<string, unknown>): Promise<unknown> {
+  try {
+    return (await lerConta(q, params)).valor ?? null;
+  } catch (e) {
+    throw new ErroPerfil(codigoDaLeitura(e));
+  }
+}
+
 export async function meuPerfilAluno(): Promise<PerfilAluno> {
-  const { data, error } = await principal.rpc("meu_perfil_aluno" as never);
-  if (error) throw new ErroPerfil("erro_interno", { mensagem: error.message });
-  const d = (data ?? {}) as Partial<PerfilAluno>;
+  const d = ((await lerDaConta("meu_perfil_aluno")) ?? {}) as Partial<PerfilAluno>;
   return {
     nome: d.nome ?? null,
     foto_url: d.foto_url ?? null,
@@ -86,8 +97,7 @@ export async function meuPerfilAluno(): Promise<PerfilAluno> {
 }
 
 export async function minhaAgenda(desde: Date): Promise<AgendamentoAluno[]> {
-  const { data, error } = await principal.rpc("minha_agenda" as never, { p_desde: desde.toISOString() } as never);
-  if (error) throw new ErroPerfil("erro_interno", { mensagem: error.message });
+  const data = await lerDaConta("minha_agenda", { desde: desde.toISOString() });
   return Array.isArray(data) ? (data as AgendamentoAluno[]) : [];
 }
 
@@ -96,8 +106,7 @@ export async function minhaAgenda(desde: Date): Promise<AgendamentoAluno[]> {
  * 'anteriores' (terminou ou foi desmarcada; da mais recente) — da mesma janela da minha_agenda, com o total. Erro do banco lança.
  */
 export async function minhaAgendaLista(tipo: "proximas" | "anteriores", pagina: number): Promise<Pagina<AgendamentoAluno>> {
-  const { data, error } = await principal.rpc("minha_agenda_lista" as never, { p_tipo: tipo, p_offset: deslocamento(pagina), p_limite: POR_PAGINA } as never);
-  if (error) throw new ErroPerfil("erro_interno", { mensagem: error.message });
+  const data = await lerDaConta("minha_agenda_lista", { tipo, offset: deslocamento(pagina), limite: POR_PAGINA });
   const d = (data ?? {}) as { ok?: boolean; itens?: unknown; total?: unknown };
   if (d.ok !== true || !Array.isArray(d.itens)) throw new ErroPerfil("erro_interno");
   return { itens: d.itens as AgendamentoAluno[], total: Number(d.total) || 0 };

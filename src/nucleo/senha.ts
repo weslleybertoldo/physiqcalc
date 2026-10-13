@@ -6,6 +6,7 @@
  * Configurações › Perfil também tira a marca (todos gravam por `salvarMinhaSenha`).
  */
 import type { Session, User } from "@supabase/supabase-js";
+import { acaoConta } from "@/conta/gravar";
 import { principal } from "@/integrations/principal/client";
 
 /** Payload do JWT (sem conferir assinatura: é só para a tela decidir o que mostrar; quem confere é o servidor). */
@@ -83,7 +84,9 @@ export async function salvarMinhaSenha(senha: string): Promise<{ ok: true } | { 
   const { error } = await principal.auth.updateUser({ password: senha });
   if (error) return { ok: false, erro: textoErroSenha(String(error.message ?? "")) };
   try {
-    await principal.rpc("minha_senha_definida" as never);
+    // hml-21a (H-43 · jeito 2): a marca sai pela função conta (ação senha_definida = a minha_senha_definida() de hoje); a falha não impede a
+    // sessão nova (como antes: o rpc não lançava)
+    await acaoConta("senha_definida").catch(() => undefined);
     await principal.auth.refreshSession();
   } catch {
     /* a senha já está gravada; a marca sai na próxima */
