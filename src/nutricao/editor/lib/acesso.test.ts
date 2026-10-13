@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acessoDaDieta, secaoDaUrl } from "./acesso";
+import { SECOES_DIETA, acessoDaDieta, secaoDaUrl } from "./acesso";
 
 const eu = (x: Partial<{ id: string; dono: boolean; personal: boolean; nutricionista: boolean; master: boolean }>) => ({
   id: "eu", dono: false, personal: false, nutricionista: false, master: false, ...x,
@@ -32,5 +32,11 @@ describe("seção da aba Dieta pela URL (atalhos do Fluxo de consulta — W14)",
     expect(s("novo=plano")).toBe("planejamento");
     expect(s("secao=qualquer")).toBe("planejamento");
     expect(s("")).toBe("planejamento");
+  });
+
+  it("W-A P6: o 'Dia a dia' é a 2ª seção (depois do Plano) e o ?secao=dia-a-dia o abre", () => {
+    expect(SECOES_DIETA.map((x) => x.id)).toEqual(["planejamento", "dia-a-dia", "acompanhamento", "calculo-energetico", "suplementos", "manipulados", "orientacoes", "metas"]);
+    expect(SECOES_DIETA[1].rotulo).toBe("Dia a dia");
+    expect(s("secao=dia-a-dia")).toBe("dia-a-dia");
   });
 });

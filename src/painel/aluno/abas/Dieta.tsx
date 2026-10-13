@@ -24,17 +24,24 @@ const Manipulados = lazy(() => import("@/nutricao/editor/secoes/Manipulados"));
 const Metas = lazy(() => import("@/nutricao/editor/secoes/Metas"));
 const Orientacoes = lazy(() => import("@/nutricao/editor/secoes/Orientacoes"));
 const Suplementos = lazy(() => import("@/nutricao/editor/secoes/Suplementos"));
+// W-A P6 (spec §4.5, P7/Q1): o "Dia a dia" — o que o aluno registrou no app (o que tirou e pôs, as extras, o ✓, as rotinas), pelo servidor
+const DiaADia = lazy(() => import("@/painel/aluno/diaADia/DiaADia"));
 
-function Secao({ secao }: { secao: SecaoDieta }) {
+/** O aluno da ficha para o "Dia a dia" (a rota, a matrícula e o nome). */
+type AlunoDoDia = { alunoId: string; pacienteId: string; nome: string | null };
+
+function Secao({ secao, aluno }: { secao: SecaoDieta; aluno: AlunoDoDia }) {
   return (
     <Carregavel nome={`dieta ${secao}`} esqueleto={<EstadoCarregando linhas={4} rotulo="Abrindo a seção" />}>
-      <SecaoPreguicosa secao={secao} />
+      <SecaoPreguicosa secao={secao} aluno={aluno} />
     </Carregavel>
   );
 }
 
-function SecaoPreguicosa({ secao }: { secao: SecaoDieta }) {
+function SecaoPreguicosa({ secao, aluno }: { secao: SecaoDieta; aluno: AlunoDoDia }) {
   switch (secao) {
+    case "dia-a-dia":
+      return <DiaADia {...aluno} />;
     case "acompanhamento":
       return <Acompanhamento />;
     case "calculo-energetico":
@@ -74,6 +81,8 @@ function AdesaoDoPlano({ pacienteId }: { pacienteId: string }) {
  * plano (por dia da semana, macros e fibras, substitutos, "Da receita", modelos ★, PDF) e as seções do site antigo do Nutri que são
  * da dieta — acompanhamento com os ✓ das refeições por dia, cálculo energético, suplementos, manipulados, orientações e metas.
  * Tudo no banco principal, nas mesmas tabelas que o site antigo edita (ele abre o que se grava aqui, e vice-versa, até a W28).
+ * W-A P6 (spec W-A §4.5; P7 e Q1 do Weslley): a seção "Dia a dia" (src/painel/aluno/diaADia/) — o que o aluno registrou no app; o personal
+ * (só o plano) a vê embaixo da adesão, só para ler.
  */
 export default function Dieta({ alunoId }: { alunoId: string }) {
   const q = usePerfilAluno(alunoId);
@@ -95,6 +104,7 @@ export default function Dieta({ alunoId }: { alunoId: string }) {
     if (id !== "planejamento") n.set("secao", id);
     setParams(n, { replace: true });
   };
+  const aluno: AlunoDoDia = { alunoId, pacienteId: perfil.paciente_id, nome: perfil.nome };
   const ctx = {
     paciente: { id: perfil.paciente_id, nome: perfil.nome, nascimento: perfil.nascimento, genero: perfil.genero ? String(perfil.genero) : null },
     recarregar: async () => {
@@ -141,13 +151,15 @@ export default function Dieta({ alunoId }: { alunoId: string }) {
           <>
             <Planejamento objetivo={perfil.objetivo} />
             {acesso === "so-plano" && <AdesaoDoPlano pacienteId={perfil.paciente_id} />}
+            {/* W-A P6 (Q1 do Weslley): o personal vê o dia a dia, só para ler, embaixo da adesão */}
+            {acesso === "so-plano" && <Secao secao="dia-a-dia" aluno={aluno} />}
           </>
         ) : acesso === "ver" ? (
           <SomenteLeitura data-dieta-leitura>
-            <Secao secao={secao} />
+            <Secao secao={secao} aluno={aluno} />
           </SomenteLeitura>
         ) : (
-          <Secao secao={secao} />
+          <Secao secao={secao} aluno={aluno} />
         )}
       </div>
     </PacienteProvider>

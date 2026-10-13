@@ -1,9 +1,13 @@
 // Physiq W16 — quem vê e quem muda a dieta do aluno no painel (spec 4.1) e as seções da aba Dieta (spec 4.5). Regras puras.
 import type { PerfilAluno } from "@/painel/aluno/dados/tipos";
 
-/** As seções da aba (spec 4.5 › Dieta): o editor da tela 8 e as 6 seções do prontuário do Nutri que são da dieta. */
+/**
+ * As seções da aba (spec 4.5 › Dieta): o editor da tela 8 e as 6 seções do prontuário do Nutri que são da dieta. W-A P6 (spec W-A §4.5, P7
+ * do Weslley): + o "Dia a dia" — o que o aluno registrou no app (lê pela função aluno-dia e pelas consultas da ficha; nada direto daqui).
+ */
 export const SECOES_DIETA = [
   { id: "planejamento", rotulo: "Plano" },
+  { id: "dia-a-dia", rotulo: "Dia a dia" },
   { id: "acompanhamento", rotulo: "Acompanhamento" },
   { id: "calculo-energetico", rotulo: "Cálculo energético" },
   { id: "suplementos", rotulo: "Suplementos" },

@@ -85,7 +85,8 @@ FORA_DO_CODIGO = {
 ARQUIVOS_QUE_SAIRAM = ["src/painel/aluno/resumo/CardAcessoAluno.tsx"]
 # na produção (a Guarda), as gravações que já existem ao abrir e não são da W-A: o aluno_acesso do card de login (lê e garante — H-43) e o
 # garantir da nutricao (o 1º acesso) — o molde de e2e/hml20/dieta_tela.py
-BARRADAS_ACEITAS = {"POST rpc:aluno_acesso", "POST fn:nutricao"}
+# 13/10: a hml-21c leva o card de login para a função `conta` (ação acesso_ler) — a Guarda vê `POST fn:conta`; aceitas as 2 formas, antes e depois da 21c
+BARRADAS_ACEITAS = {"POST rpc:aluno_acesso", "POST fn:nutricao", "POST fn:conta"}
 
 
 class Rodada:

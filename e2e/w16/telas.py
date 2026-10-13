@@ -321,7 +321,9 @@ def caso_secoes(nav) -> None:
         fechar_faixa(c)
         if not esperar_editor_dieta(c, "secoes"):
             return
-        p.check(c.pg.locator("[data-secao-dieta-botao]").count() == 7, "[secoes] as 7 seções (Plano, Acompanhamento, Cálculo, Suplementos, Manipulados, Orientações, Metas)")
+        # W-A P6: + o "Dia a dia" (a 2ª seção, depois do Plano — src/nutricao/editor/lib/acesso.ts)
+        p.check(c.pg.locator("[data-secao-dieta-botao]").count() == 8,
+                "[secoes] as 8 seções (Plano, Dia a dia, Acompanhamento, Cálculo, Suplementos, Manipulados, Orientações, Metas)")
         p.check(c.tem('[data-plano][data-favorito]') and c.tem("[data-btn-novo-plano]") and c.tem("[data-btn-modelo-plano]"), "[secoes] a lista de planos com Nova prescrição e Usar um modelo ★")
         c.print("aba_dieta")
         # acompanhamento: os ✓ de ontem e de hoje (F3)
