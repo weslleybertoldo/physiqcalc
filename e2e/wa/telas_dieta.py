@@ -13,7 +13,8 @@ Massa do _base.py) e w7b-sozinho (o app sem profissional com Alimentação: os p
   D5  d_receita        "Meus alimentos e receitas": o alimento "<marca> pão" (por 100 g, porção 50 g) e a receita "<marca> vitamina" (o pão +
                        um arroz da TACO, 2 porções); no banco: dela, com os ingredientes
   D6  d_extra          "Nova refeição" "<marca> lanche" ("Já comi" ligado) → abrir → "Adicionar alimento" → a receita (1 porção) e o pão dela
-                       em PORÇÕES (2 × 50 g); no banco a extra da matrícula A com a receita e o pão em 100 g
+                       em PORÇÕES (2 × 50 g); no banco a extra da matrícula A com a receita e o pão em 100 g; os 2 botões do fim da folha
+                       ("Mudar nome e horário", "Apagar refeição") inteiros na largura do celular
   D7  d_totais         a linha da 1ª refeição = a conta do banco (os itens do plano sem o tirado + o que ela pôs); ✓ nela → o anel sobe o mesmo
                        tanto (o que ela comeu); no banco a refeição feita hoje; desmarca no fim
   D8  d_rotinas        a seção "Rotinas de hoje" no fim da Dieta com a "<marca> Creatina" (pela função, como a aluna) · d_rotinas_pratos: nos
@@ -74,7 +75,7 @@ NO_CODIGO = {
                                           "data-item-posto={i.id}", "data-item-posto-tirar={i.id}", "data-dieta-adicionar"],
     "src/dieta-livre/ui/BuscaDeAlimentos.tsx": ["data-busca-termo", "data-busca-item={i.id}", "data-busca-tipo={i.tipo}", "data-busca-alimentos="],
     "src/dieta-livre/ui/FolhaAdicionar.tsx": ["data-folha-adicionar=", "data-quantidade", "data-escolha-por", "data-quantidade-macros="],
-    "src/dieta-livre/ui/FolhaExtra.tsx": ["data-folha-extra=", "data-extra-nome", "data-extra-salvar", "data-extra-feita="],
+    "src/dieta-livre/ui/FolhaExtra.tsx": ["data-folha-extra=", "data-extra-nome", "data-extra-salvar", "data-extra-feita=", "data-extra-mudar", "data-extra-apagar"],
     "src/dieta-livre/ui/FolhaMeusAlimentos.tsx": ["data-folha-meus={vista.tipo}", "data-meus-estado=\"lista\"", "data-meus-novo-alimento", "data-alimento-nome",
                                                   "data-alimento-porcao", "data-alimento-macro={m.chave}", "data-alimento-salvar", "data-meus-nova-receita",
                                                   "data-receita-nome", "data-receita-porcoes", "data-receita-adicionar", "data-receita-item-qtd={i.chave}",
@@ -479,6 +480,14 @@ def caso_extra(o, nav, R: Rodada) -> None:
         ok = t.esperar(lambda: t.n(f'[data-folha-extra="{eid}"] [data-item-posto]') == 2, 30)
         meus = [x for x in itens_do_dia(e) if x["extra_id"] == eid and not x["desfeito"] and x["receita_id"] is None]
         o.ok(ok and len(meus) == 1 and abs((meus[0]["gramas"] or 0) - 100) < 0.01, f"D6 o pão dela em porções (2 × 50 g) na extra; no banco: {[x['gramas'] for x in meus]} g")
+        # 13/10 (o print do staging): "Mudar nome e horário" + "Apagar refeição" lado a lado passavam de 390 px — o "Apagar refeição" ficava
+        # cortado na borda direita. Cada botão do fim da folha tem de caber inteiro na largura do celular.
+        caixas = t.pg.evaluate("""(sel) => [...document.querySelectorAll(sel)].map((b) => {
+                                   const r = b.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.right)]; })""",
+                               f'[data-folha-extra="{eid}"] [data-extra-mudar], [data-folha-extra="{eid}"] [data-extra-apagar]')
+        larg = t.pg.evaluate("() => window.innerWidth")
+        o.ok(len(caixas) == 2 and all(c[0] >= 0 and c[1] <= larg for c in caixas),
+             f"D6 os 2 botões do fim da folha da extra cabem em {larg} px (esquerda, direita de cada = {caixas})")
     finally:
         t.fim()
 

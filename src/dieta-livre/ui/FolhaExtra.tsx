@@ -118,7 +118,9 @@ export function FolhaExtra({
               <Interruptor ligado={extra.concluida} rotulo={TEXTOS.jaComi} desligado={travado} data-extra-feita={extra.concluida ? "1" : "0"}
                 aoMudar={(v) => void gravar({ chave: `extra-marcar:${extra.extra.id}`, fazer: () => marcarExtra(extra.extra.id, v) })} />
             </div>
-            <div className="flex gap-2.5">
+            {/* `flex-wrap`: "Mudar nome e horário" + "Apagar refeição" (o botão não quebra texto) não cabem lado a lado em 390 px — sem isso o
+                "Apagar refeição" ficava cortado na borda direita. Não cabendo, o 2º desce para a linha de baixo, cada um com a largura toda. */}
+            <div className="flex flex-wrap gap-2.5">
               <Botao variante="g" icone={Pencil} className="flex-1" onClick={() => setMudando(true)} disabled={travado} data-extra-mudar>{TEXTOS.mudarRefeicao}</Botao>
               <button type="button" onClick={() => void apagar()} disabled={travado} data-extra-apagar
                 className="pq-botao flex-1 border border-[var(--p-chip-r-borda)] bg-transparent text-rosa-3 disabled:opacity-45">
