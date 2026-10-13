@@ -1,0 +1,344 @@
+{
+  "uuid": "7053aa53-3d1c-523f-a954-2429e7ab92b2",
+  "nome": "Rosca Inversa com Barra",
+  "cena": "rosca_inversa_com_barra",
+  "grupo": "Bíceps / Braquial",
+  "subgrupo": "Braquiorradial · braquial · extensores do antebraço",
+  "padrao_movimento": "rosca_direta",
+  "equipamento": "barra",
+  "variacao": "pegada pronada",
+  "alvos": [
+    "antebraco",
+    "biceps"
+  ],
+  "auxiliares": [],
+  "camera": {
+    "az": 50,
+    "el": 8,
+    "dist": 4.4,
+    "alvo": [
+      0,
+      -0.1,
+      0.95
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, com os pés na largura dos ombros e os joelhos soltos, segura a barra por cima (pegada pronada: as palmas viradas para o corpo e o dorso das mãos para a frente), com as mãos na largura dos ombros, e deixa os braços quase esticados, com a barra na frente das coxas. Com os cotovelos parados junto do tronco, o tronco parado e o punho reto (a mão na linha do antebraço), dobra só os cotovelos e sobe a barra até a altura dos ombros, na frente deles — no meio do caminho as palmas ficam viradas para o chão e, em cima, para a frente; só no fim os cotovelos vão um pouco à frente. Desce devagar até quase esticar os braços de novo, sem deixar o punho dobrar.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética aberta, os 2 braços juntos",
+    "articulacoes": "cotovelos (flexão na subida, de ~16° a ~128°; extensão na descida) com o antebraço pronado o tempo todo e o punho reto (a mão na linha do antebraço); ombros quase parados — o braço fica junto do tronco até o antebraço passar da horizontal e só no fim vai ~8° à frente (leve flexão do ombro); escápulas um pouco pra trás e paradas; tronco, quadril, joelhos (soltos, ~7°) e pés parados",
+    "agonistas": "braquiorradial e braquial na flexão do cotovelo. A ExRx põe a rosca inversa no diretório do braquiorradial, com ele de alvo (\"Target: Brachioradialis\"); com o antebraço pronado o tendão do bíceps enrola no rádio e o braquiorradial trabalha mais (Kleiber 2015: \"a significant increased muscular activity of brachioradialis during elbow flexion in pronated compared to supinated and neutral hand position whereas activity of biceps brachii remains constant\" — no Boland 2008 a ativação dele não mudou com a posição do antebraço e, no Coratella 2023, foi maior com a supinada: o tamanho do aumento não é consenso). O braquial, preso na ulna, flexiona em qualquer pegada (NSCA: \"Brachialis • Flexes elbow joint • Works best with a pronated forearm\"; Yessis: \"in this exercise, it is the main muscle involved\"). No mapa do app o braquial faz parte do grupo \"biceps\" e o braquiorradial e os extensores do \"antebraco\": os 2 grupos ficam vermelhos (catálogo: \"Braquiorradial · braquial · extensores do antebraço\"). Concêntrica na subida e excêntrica na descida",
+    "sinergistas": "bíceps braquial (ExRx: \"Synergists: Brachialis, Biceps Brachii\"), em desvantagem com a pegada pronada (Yessis: \"the biceps tendon is wrapped halfway around the radius, which creates a very poor line of pull\"; Coratella 2023: a ativação do bíceps na subida foi a menor com a pegada pronada — \"the lowest biceps brachii excitation was found with the forearm pronated\")",
+    "estabilizadores": "extensores do punho, que seguram a mão na linha do antebraço (ExRx: \"Wrist Extensors\" entre os estabilizadores; Coratella 2023: \"the pronated grip is expected to require greater wrist stabilization, especially towards the wrist extension\"; Yessis: \"this exercise is also effective in developing the forearm muscles especially the wrist extensors\"); deltoide anterior, coracobraquial, trapézio (fibras de cima e do meio) e levantador da escápula (ExRx: \"Stabilizers: Deltoid, Anterior; Coracobrachialis; Trapezius, Upper; Trapezius, Middle; Levator Scapulae; Wrist Extensors\"; o deltoide anterior trabalhou mais com a pronada que com a supinada no Coratella 2023); abdominais e eretores da espinha seguram o tronco parado (Yessis: \"Be sure to hold an erect trunk position throughout the execution.\")",
+    "fases": "subida concêntrica até a barra na altura dos ombros (free-exercise-db: \"Continue the movement until your biceps are fully contracted and the bar is at shoulder level.\") e descida excêntrica controlada até quase esticar (ACE: \"Slowly lower the weight to return to the starting position.\"; Yessis: \"lower the weights under control back to the starting position\")"
+  },
+  "referencias": [
+    "Catálogo do app — scripts/conteudo/novos_61.json (o exercício é um dos 61 novos, sem dica no scripts/gifs_catalogo/catalogo.py): \"grupo_muscular\": \"Bíceps / Braquial\", \"subgrupo\": \"Braquiorradial · braquial · extensores do antebraço\", \"padrao_movimento\": \"rosca_direta\", \"equipamento\": \"barra\", \"variacao\": \"pegada pronada\", \"fonte_en\": \"Reverse Barbell Curl\"",
+    "ExRx.net — Barbell Reverse Curl (https://exrx.net/WeightExercises/Brachioradialis/BBReverseCurl, lido na cópia do Internet Archive de 13/08/2025 — http://web.archive.org/web/20250813080225/https://exrx.net/WeightExercises/Brachioradialis/BBReverseCurl —; o site responde 403 direto; lido em 11/10/2026): fica no diretório do braquiorradial (\"ExRx.net > Directory > Brachioradialis > Exercise\"); classificação \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Grasp bar with shoulder width overhand grip.\"; Execution: \"With elbows to side, raise bar until forearms are vertical. Lower until arms are fully extended. Repeat.\"; Comments: \"When elbows are fully flexed, they can travel forward slightly, allowing forearms to be no more than vertical. This additional movement allows for relative release of tension in muscles between repetitions.\"; músculos: Target \"Brachioradialis\", Synergists \"Brachialis\", \"Biceps Brachii\", Stabilizers \"Deltoid, Anterior\", \"Coracobrachialis\", \"Trapezius, Upper\", \"Trapezius, Middle\", \"Levator Scapulae\", \"Wrist Extensors\"",
+    "American Council on Exercise — Reverse Bicep Curl, Exercise Library 310 (https://www.acefitness.org/resources/everyone/exercise-library/310/reverse-bicep-curl/, \"Target Body Part: Arms\", \"Equipment: Barbell\", \"Difficulty: Intermediate\", lido em 11/10/2026): \"Hold the barbell about shoulder-width apart with the palms facing down and hands in a straight line with shoulders and elbows. Lift the bar towards the shoulders while bending at the elbows and keeping them down close to the sides of the body. Slowly lower the weight to return to the starting position.\"",
+    "free-exercise-db (lista aberta em domínio público, Unlicense — a de onde o catálogo tirou o nome: fonte_en \"Reverse Barbell Curl\") — Reverse Barbell Curl (https://github.com/yuhonas/free-exercise-db/blob/main/exercises/Reverse_Barbell_Curl.json, lido em 11/10/2026): \"Stand up with your torso upright while holding a barbell at shoulder width with the elbows close to the torso. The palm of your hands should be facing down (pronated grip). This will be your starting position.\"; \"While holding the upper arms stationary, curl the weights while contracting the biceps as you breathe out. Only the forearms should move. Continue the movement until your biceps are fully contracted and the bar is at shoulder level. Hold the contracted position for a second as you squeeze the muscle.\"; \"Slowly begin to bring the bar back to starting position as your breathe in.\"; \"primaryMuscles\": \"biceps\", \"secondaryMuscles\": \"forearms\"",
+    "Yessis M. — Reverse Biceps Curl (Dr. Yessis SportLab, https://doctoryessis.com/2013/01/01/reverse-biceps-curl/, lido em 11/10/2026): \"Assume a well-balanced standing position with your feet approximately shoulder-width apart. Hold a barbell with a pronated grip (palms facing down, toward the rear) and with the hands shoulder-width apart.\"; \"Your arms should hang down straight but not locked and your trunk should be erect with the shoulders back.\"; \"Hold the upper arms in place so that the elbows remain alongside the body as you raise the weights.\"; \"After reaching the uppermost position, hold for a count of two and then lower the weights under control back to the starting position.\"; \"Be sure to hold an erect trunk position throughout the execution. Do not drive the hips forward to get the weights moving especially if they are heavy.\"; \"In order to isolate the action to only elbow flexion, be sure that you hold the elbows in place. If you, instead, move the elbows forward you will bring in use of the anterior deltoid and it will decrease the emphasis on the brachialis muscle.\"; \"Because the biceps brachii is a strong supinator of the forearm, it cannot function in this action because of the pronated grip. In this grip, the biceps tendon is wrapped halfway around the radius, which creates a very poor line of pull\"; \"Be sure to use a barbell as it is more effective for insuring a pronated grip throughout execution.\"; \"The brachialis muscle is a true elbow joint flexor. Since it attaches to the ulna, it is equally effective whether the hand is pronated, supinated, or in a neutral position. This is why, in this exercise, it is the main muscle involved.\"; \"The muscles of the forearm play a very important role in stabilizing the elbow joint as well as the wrist. Thus, this exercise is also effective in developing the forearm muscles especially the wrist extensors. This is why you should maintain the hand in line with the forearm throughout execution. Do not allow the wrist to flex.\" (o Yessis diz que o braquiorradial \"does not play a major role\" na pronada — diverge da ExRx, que o põe de alvo)",
+    "Catalyst Athletics — Reverse EZ Curl (https://www.catalystathletics.com/exercise/873/Reverse-EZ-Curl/, lido em 11/10/2026; é com a barra W, não a reta): \"Hold an EZ curl bar with a pronated grip and curl completely, keeping the elbows close to the sides, then return under control to full extension.\"; \"The pronated grip emphasizes the brachioradialis and brachialis more than the biceps brachii relative to a supinated curl.\"",
+    "NSCA — não achei texto aberto da NSCA com a rosca inversa (pegada pronada). O mais perto: Smith A. Teaching for Skill Acquisition in Fitness — Best Practices for Fitness Pedagogy. NSCA Coach 7.4 (PDF da NSCA, https://www.nsca.com/contentassets/81c6350a45d344ceafd3d385108216ea/coach-7.4.4-teaching-for-skill-acquisition-in-fitness-best-practices-for-fitness-pedagogy.pdf, lido em 11/10/2026), tabela 4, a rosca com barra SUPINADA: \"Barbell biceps curl: stand with feet shoulder-width apart, knees slightly flexed to take pressure off the lower back. Holding a short bar at mid-thigh position with an underhand grip, squeeze your shoulder blades together and push your chest out. With control, slowly raise the weight up to chest-height by bending the elbows. Hold the upper arms close to the ribs and do not let them move forward. Pause at the top. With control, slowly lower the weight back down to the mid-thigh position.\"; itens críticos \"Soft knees\" e \"Elbows at the ribs\". O resumo do Essentials da NSCA no Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-2, lido em 11/10/2026), Barbell biceps curl: \"Major muscles involved: Biceps brachii, brachialis, brachioradialis\"; \"Stand with your feet shoulder-width apart and your knees slightly flexed.\"; \"Keep your torso and upper arms stationary.\" E o módulo de anatomia da NSCA (Essentials of Tactical Strength and Conditioning — Exam Prep Online, Module 3.0, © 2013 NSCA, https://www.nsca.com/contentassets/24f7e187e9aa4a588439c9612231c7fd/tsac-module-3.0--3.3.pdf, lido em 11/10/2026): \"Biceps Brachii • Flexes the elbow joint and supinates the forearm\"; \"Brachialis • Flexes elbow joint • Works best with a pronated forearm\"; \"Brachioradialis • Synergist in elbow flexion • Works best with a neutral forearm\"",
+    "Kleiber T, Kunz L, Disselhorst-Klug C. Muscular coordination of biceps brachii and brachioradialis in elbow flexion with respect to hand position. Front Physiol. 2015;6:215 (texto completo, PMC4526813, lido em 11/10/2026): \"Subjects were measured in standing position with shoulder neither flexed nor abducted.\"; flexão \"from full extension (approx. 0°) to maximal flexion (approx. 130°)\"; \"As in pronated, the muscular activity of brachioradialis is constantly higher than in supinated and neutral hand position whereas the percentage activity of biceps brachii is nearly the same in all hand positions.\"; \"But in pronated hand position the biceps tendon is wrapped by its insertion in tuberosida radii\"; conclusão: \"This has been shown by a significant increased muscular activity of brachioradialis during elbow flexion in pronated compared to supinated and neutral hand position whereas activity of biceps brachii remains constant.\"",
+    "Boland MR, Spigelman T, Uhl TL. The function of brachioradialis. J Hand Surg Am. 2008;33(10):1853-9 (resumo, PubMed 19084189, lido em 11/10/2026): \"No difference in muscular activation was found during elbow flexion tasks in the 3 forearm positions.\"; \"The greatest EMG activity recorded from the brachioradialis occurs during elbow flexion tasks regardless of forearm position indicating that the primary function of the brachioradialis is as a consistent elbow stabilizer during flexion tasks.\"",
+    "Coratella G, Tornatore G, Longo S, Toninelli N, Padovan R, Esposito F, Cè E. Biceps Brachii and Brachioradialis Excitation in Biceps Curl Exercise: Different Handgrips, Different Synergy. Sports (Basel). 2023;11(3):64 (texto completo, PMC10054060, lido em 11/10/2026): rosca em pé dos 2 braços, na polia com barra de 42,5 cm, com a pegada supinada, a pronada e a neutra — \"Each exercise was performed in a standing position. The arms were maintained parallel to the trunk, with no flexion of the humerus.\"; \"The participants were instructed to avoid sagittal oscillations of the trunk, any movement of the lower limbs, and exaggerated elevation of the scapulae\"; bíceps: \"a greater nRMS was observed with the supinated compared to the pronated [+19(7)%, p < 0.001, ES: 2.60]\"; \"the lowest biceps brachii excitation was found with the forearm pronated, while the excitation of brachioradialis was similar in the neutral and pronated condition\"; braquiorradial: \"nRMS was greater with the supinated compared to the pronated [+5(4)%, p = 0.007, ES: 1.01]\"; deltoide anterior: \"nRMS was greater with the pronated and neutral handgrip compared to the supinated condition\"; \"the pronated grip is expected to require greater wrist stabilization, especially towards the wrist extension, so as to involve further muscles such as the extensor carpi and other wrist extensors.\"; \"Brachialis is the most powerful flexor of the forearm and, unlike the biceps brachii and brachioradialis, does not insert on the radius, therefore not participating in the forearm supination.\"",
+    "Marcolin G, Panizzolo FA, Petrone N, Moro T, Grigoletto D, Piccolo D, Paoli A. Differences in electromyographic activity of biceps brachii and brachioradialis while performing three variants of curl. PeerJ. 2018;6:e5165 (texto completo, PMC6047503, lido em 11/10/2026): a pegada pronada NÃO é uma das 3 variações — \"Dumbbell curl (DC) and barbell curl in its two variants, straight (BC) or undulated bar (EZ)\"; o artigo só cita, de um manual de fisiculturismo, que \"performing barbell curls with a reverse handgrip resulted in an increase in brachioradialis activation (Hatfield, 1993)\"; \"A standing posture was maintained during the performance of the three exercises\"; \"Trunk movements together with knee flexions were visually monitored by the researchers to avoid possible cheating.\"; amplitude do cotovelo na rosca com barra reta \"BC = 117.3° ± 10.9°\"",
+    "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — valores de referência da AAOS (a mesma fonte do limites.py)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "barra na frente das coxas embaixo",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "equipamento": "barra",
+        "mm": [
+          3,
+          40
+        ],
+        "t": 0.0,
+        "fonte": "Yessis — Reverse Biceps Curl (\"Your arms should hang down straight but not locked\"); ExRx — Barbell Reverse Curl (\"Lower until arms are fully extended.\"); NSCA Coach 7.4 (rosca com barra) (\"Holding a short bar at mid-thigh position\"). Com a pegada pronada a barra fica do lado da palma, virado pras coxas: a cena estica o cotovelo até a barra parar ~8 mm na frente delas"
+      },
+      {
+        "nome": "barra longe do rosto e do pescoço",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "equipamento": "barra",
+        "mm": [
+          40,
+          5000
+        ],
+        "fonte": "free-exercise-db — Reverse Barbell Curl (\"the bar is at shoulder level\"); ACE — Reverse Bicep Curl (\"Lift the bar towards the shoulders\"): em cima a barra fica na altura dos ombros, na frente deles, sem chegar no queixo"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "mãos e antebraços não entram nas coxas nem no tronco",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+      },
+      {
+        "nome": "mãos longe do peito, dos ombros e do rosto em cima",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder"
+        ],
+        "cabelo": true,
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "pedido do Weslley (a mão × ombro/queixo em cima, medida à parte); free-exercise-db — Reverse Barbell Curl (\"the bar is at shoulder level\"): o dorso da mão fica virado pro ombro em cima"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "cotovelo quase esticado embaixo",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          0,
+          25
+        ],
+        "fonte": "Yessis — Reverse Biceps Curl (\"Your arms should hang down straight but not locked\"); ExRx — Barbell Reverse Curl (\"Lower until arms are fully extended.\"); Kleiber 2015 (\"from full extension (approx. 0°)\"). A cena desce até ~16°: quase esticado, com a barra ~8 mm na frente das coxas"
+      },
+      {
+        "nome": "cotovelo dobrado em cima",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 1.0,
+        "graus": [
+          115,
+          145
+        ],
+        "fonte": "free-exercise-db — Reverse Barbell Curl (\"Continue the movement until your biceps are fully contracted and the bar is at shoulder level.\"); ACE — Reverse Bicep Curl (\"Lift the bar towards the shoulders\"); Kleiber 2015 (\"to maximal flexion (approx. 130°)\"); Marcolin 2018 (amplitude da rosca com barra reta 117,3 ± 10,9°). A cena sobe até ~128°: a pele do antebraço encosta na do braço sem entrar além do vinco"
+      },
+      {
+        "nome": "tronco parado (sem balanço)",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "Yessis — Reverse Biceps Curl (\"Be sure to hold an erect trunk position throughout the execution. Do not drive the hips forward\"); free-exercise-db — Reverse Barbell Curl (\"Stand up with your torso upright\"); Coratella 2023 (\"avoid sagittal oscillations of the trunk\")"
+      },
+      {
+        "nome": "cotovelo junto ao tronco",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -5,
+          15
+        ],
+        "fonte": "ExRx — Barbell Reverse Curl (\"With elbows to side\"); ACE — Reverse Bicep Curl (\"keeping them down close to the sides of the body\"); free-exercise-db — Reverse Barbell Curl (\"with the elbows close to the torso\"); Yessis — Reverse Biceps Curl (\"the elbows remain alongside the body\")"
+      },
+      {
+        "nome": "cotovelo parado até o antebraço passar da horizontal",
+        "medida": "braco_frente",
+        "t": [
+          0.0,
+          0.5
+        ],
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "free-exercise-db — Reverse Barbell Curl (\"While holding the upper arms stationary\"; \"Only the forearms should move.\"); Yessis — Reverse Biceps Curl (\"be sure that you hold the elbows in place\"); NSCA Coach 7.4 (rosca com barra) (\"Hold the upper arms close to the ribs and do not let them move forward.\")"
+      },
+      {
+        "nome": "cotovelo só um pouco à frente em cima",
+        "medida": "braco_frente",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "ExRx — Barbell Reverse Curl (\"When elbows are fully flexed, they can travel forward slightly, allowing forearms to be no more than vertical.\"); Yessis — Reverse Biceps Curl (\"If you, instead, move the elbows forward you will bring in use of the anterior deltoid\"). A cena leva o braço de 8° a 16° à frente só depois que o antebraço passa da horizontal"
+      },
+      {
+        "nome": "antebraço perto da vertical em cima, sem passar dela",
+        "medida": "antebraco_vertical",
+        "t": 1.0,
+        "graus": [
+          15,
+          45
+        ],
+        "fonte": "ExRx — Barbell Reverse Curl (\"raise bar until forearms are vertical\"; \"allowing forearms to be no more than vertical\"). Em cima o antebraço fica ~36° da vertical: o cotovelo não dobra mais que ~128° (a pele do antebraço já encosta na do braço)"
+      },
+      {
+        "nome": "pegada pronada embaixo (palmas viradas pro corpo)",
+        "medida": "palma_frente",
+        "t": 0.0,
+        "graus": [
+          130,
+          180
+        ],
+        "fonte": "Yessis — Reverse Biceps Curl (\"Hold a barbell with a pronated grip (palms facing down, toward the rear)\"); ExRx — Barbell Reverse Curl (\"overhand grip\"); ACE — Reverse Bicep Curl (\"with the palms facing down\")"
+      },
+      {
+        "nome": "pegada pronada em cima (palmas viradas pra frente)",
+        "medida": "palma_frente",
+        "t": 1.0,
+        "graus": [
+          0,
+          60
+        ],
+        "fonte": "Yessis — Reverse Biceps Curl (\"Be sure to use a barbell as it is more effective for insuring a pronated grip throughout execution.\")"
+      },
+      {
+        "nome": "palma sem virar pro meio (sem virar martelo)",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          -20,
+          20
+        ],
+        "fonte": "Yessis — Reverse Biceps Curl (\"insuring a pronated grip throughout execution\"; \"The more you turn your hand toward the neutral position, the greater will be the contraction of this muscle\" — a neutra é a rosca martelo)"
+      },
+      {
+        "nome": "punho reto (a mão na linha do antebraço)",
+        "medida": "punho_flexao",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "Yessis — Reverse Biceps Curl (\"This is why you should maintain the hand in line with the forearm throughout execution. Do not allow the wrist to flex.\")"
+      },
+      {
+        "nome": "punho sem dobrar de lado",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "Yessis — Reverse Biceps Curl (\"maintain the hand in line with the forearm throughout execution\")"
+      },
+      {
+        "nome": "pegada na largura dos ombros",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          1.0,
+          1.5
+        ],
+        "fonte": "ExRx — Barbell Reverse Curl (\"Grasp bar with shoulder width overhand grip.\"); ACE — Reverse Bicep Curl (\"about shoulder-width apart [...] hands in a straight line with shoulders and elbows\"); free-exercise-db — Reverse Barbell Curl (\"at shoulder width\"); Yessis — Reverse Biceps Curl (\"with the hands shoulder-width apart\")"
+      },
+      {
+        "nome": "pés na largura dos ombros",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.3
+        ],
+        "fonte": "Yessis — Reverse Biceps Curl (\"your feet approximately shoulder-width apart\"); NSCA Coach 7.4 (rosca com barra) (\"stand with feet shoulder-width apart\")"
+      },
+      {
+        "nome": "joelhos soltos",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          2,
+          15
+        ],
+        "fonte": "NSCA Coach 7.4 (rosca com barra) (\"knees slightly flexed to take pressure off the lower back\"; item crítico \"Soft knees\")"
+      }
+    ]
+  }
+}

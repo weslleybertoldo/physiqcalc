@@ -1,0 +1,551 @@
+{
+ "uuid": "fa737f5d-42dc-59e9-96d6-fdd2c7417f50",
+ "nome": "Agachamento Goblet com Kettlebell",
+ "cena": "agachamento_goblet_com_kettlebell",
+ "grupo": "Quadríceps",
+ "subgrupo": "Quadríceps · glúteo máximo · adutores",
+ "padrao_movimento": "agachamento",
+ "equipamento": "kettlebell",
+ "variacao": "goblet",
+ "alvos": [
+  "quadriceps",
+  "gluteo",
+  "adutores"
+ ],
+ "auxiliares": [
+  "posterior",
+  "panturrilha",
+  "lombar",
+  "abdomen",
+  "obliquos",
+  "deltoide"
+ ],
+ "camera": {
+  "az": 30,
+  "el": 8,
+  "dist": 4.3,
+  "alvo": [
+   0,
+   -0.05,
+   0.82
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.9,
+  "alvo": [
+   0,
+   -0.05,
+   0.8
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Em pé, segurando um kettlebell de ferro com as duas mãos pelas laterais da alça (os \"horns\"), em pé (a bola embaixo) e encostado no peito, com o alto da alça logo abaixo do queixo: cada mão por fora da sua lateral, com a palma virada pro meio, os dedos dando a volta pela frente dela e o polegar fechando por trás; os cotovelos apontam pra baixo, perto das costelas. Pés na largura dos ombros ou um pouco mais, com as pontas um pouco pra fora. Desce entre as pernas, levando o quadril pra trás e deixando os joelhos irem pra frente, na direção das pontas dos pés, com o peito e a cabeça altos, as costas retas e os calcanhares no chão, até o fundo: o quadril bem abaixo dos joelhos, com o tronco quase em pé e os cotovelos descendo por dentro dos joelhos, encostando de leve na parte de dentro das coxas e empurrando os joelhos pra fora; sobe empurrando o chão, estendendo o quadril e os joelhos ao mesmo tempo, até ficar em pé. O kettlebell não sai do peito e o peso fica entre o calcanhar e a planta do pé.",
+ "cinesiologia": {
+  "plano": "sagital, cadeia cinética fechada; os braços ficam parados segurando o kettlebell no peito",
+  "articulacoes": "quadril (flexão na descida e extensão na subida), joelho (flexão até o fundo e extensão) e tornozelo (dorsiflexão na descida e flexão plantar na subida) — ExRx, dinâmico: \"Hip Extension; Knee Extension; Ankle Plantar Flexion\"; coluna neutra e parada; ombros (flexão), escápulas (elevação), cotovelos (flexão) e punhos parados segurando o kettlebell — ExRx, estático: \"Spine (Thoracic, Lumbar) Extension; Shoulder Flexion; Scapula & Clavicle Elevation; Elbow Flexion\"",
+  "agonistas": "quadríceps — vasto lateral, vasto medial, vasto intermédio e reto femoral — na extensão do joelho (free-exercise-db: primário \"quadriceps\"; NASM: \"Quadriceps – primary mover for knee extension during squat ascent\"; Collins 2021: \"the GBS can better target quadriceps activity\"); glúteo máximo e adutor magno na extensão do quadril (ExRx, Squat Analysis: \"Hips are extended by the Gluteus Maximus and Adductor Magnus\"; NASM: \"Glutes – assist in hip extension\"; ExRx, Weighted Front Squat: alvo \"Gluteus Maximus\")",
+  "sinergistas": "adutores (NASM: secundários \"Adductors\"; NSCA, agachamento frontal: \"Develop the quadriceps, thigh adductors, gluteals, and hamstrings\"; ExRx: \"A wider stance increases Hip Adductor involvement\") e sóleo (ExRx, Weighted Front Squat: \"Synergists: Quadriceps, Adductor Magnus, Soleus\")",
+  "estabilizadores": "isquiotibiais e gastrocnêmio (ExRx, Weighted Front Squat: \"Dynamic Stabilizers: Hamstrings, Gastrocnemius\"; free-exercise-db: secundários \"hamstrings\", \"calves\"); eretores da espinha (ExRx: \"Stabilizers: Erector Spinae\") e reto do abdome e oblíquos (ExRx: \"Antagonist Stabilizers: Rectus Abdominis, Obliques\"; NASM: \"Core Stabilizers\") segurando o tronco em pé com a carga na frente; deltoides, trapézio e bíceps segurando o kettlebell no peito (free-exercise-db: secundário \"shoulders\"; ExRx, Weighted Front Squat: \"Deltoid, Anterior\", \"Trapezius, Upper\", \"Biceps Brachii\")",
+  "fases": "descida excêntrica até o fundo (o quadril bem abaixo dos joelhos) e subida concêntrica até ficar em pé"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público), \"Goblet Squat\" — o fonte_en do catálogo, https://github.com/yuhonas/free-exercise-db/blob/main/exercises/Goblet_Squat.json (lido em 11/10/2026): \"Stand holding a light kettlebell by the horns close to your chest. This will be your starting position.\"; \"Squat down between your legs until your hamstrings are on your calves. Keep your chest and head up and your back straight.\"; \"At the bottom position, pause and use your elbows to push your knees out. Return to the starting position, and repeat for 10-20 repetitions.\"; primário \"quadriceps\", secundários \"calves\", \"glutes\", \"hamstrings\", \"shoulders\". As 2 fotos (em pé e embaixo, de frente): kettlebell de ferro em pé, seguro pelas laterais da alça, no peito, com o alto da alça logo abaixo do queixo; embaixo, os cotovelos por dentro dos joelhos",
+  "ExRx.net — Kettlebell Goblet Squat, https://exrx.net/WeightExercises/Kettlebell/KBGobletSquat (cópia do Internet Archive de 02/02/2026; o site responde 403 direto): \"Stand with shoulder width or wider stance. Hold kettleball by horns over chest with both hands.\"; \"Squat down by bending hips back while allowing knees to bend forward, keeping back straight and knees pointed same direction as feet. Descend until thighs are just past parallel to floor. Extend knees and hips until legs are straight.\"; \"Keep head facing forward, back straight, chest high, and feet flat on floor; equal distribution of weight through forefoot and heel. Knees should point same direction as feet throughout movement.\"; Force (Articulation), Dynamic: \"Hip Extension; Knee Extension; Ankle Plantar Flexion\", Static: \"Spine (Thoracic, Lumbar) Extension; Shoulder Flexion; Scapula & Clavicle Elevation; Elbow Flexion\" (a página não lista músculos)",
+  "ExRx.net — Weighted Front Squat (a página-irmã que o goblet manda ver: \"Also see Weighted Front Squat\"), https://exrx.net/WeightExercises/GluteusMaximus/WTFrontSquat (cópia do Internet Archive de 20/04/2021): \"Target: Gluteus Maximus\"; \"Synergists: Quadriceps, Adductor Magnus, Soleus\"; \"Dynamic Stabilizers: Hamstrings, Gastrocnemius\"; \"Stabilizers: Erector Spinae\" (+ deltoides, trapézio, peitoral, bíceps...); \"Antagonist Stabilizers: Rectus Abdominis, Obliques\"",
+  "ExRx.net — Squat Analysis (Kinesiology), https://exrx.net/Kinesiology/Squats (cópia do Internet Archive de 27/02/2026): \"Hips are extended by the Gluteus Maximus and Adductor Magnus.\"; \"A wider stance increases Hip Adductor involvement but does not appear to alter Quadriceps or Biceps Femoris involvement (McCaw and Melrose 1999).\"; \"Some suggest that the depth of the squat should stop just short of posterior pelvic rotation.\"; \"Torso must be angled more forward to maintain the center of gravity over feet, possibly requiring spinal flexion once maximal hip range of motion is achieved.\"",
+  "Dan John (o criador do goblet squat) — \"Dan John Goblet Squat\", trecho do livro Intervention, pp. 135-138 (On Target Publications), http://www.otpbooks.com/dan_john_goblet_squat/ (cópia do Internet Archive de 02/01/2016): \"Grab a dumbbell or kettlebell and hold it against your chest. With a kettlebell, hold at the horns\"; \"With the weight cradled against your chest, squat down with the goal of having your elbows slide past the inside of your knees. Your elbows are pointed down, and it’s okay to have them push against your knees, pushing your knees out as you descend.\"; \"let the elbows glide down by touching the inner knees and good things will happen.\"; \"At the bottom, the deepest you can go, push your knees out with your elbows. Relax…and go a bit deeper. Your feet should be flat on the floor.\"; \"You know the toes should be out a little, and most people look down and see the toes magically out. You don’t want to go east and west here, but you want some toe-out.\"",
+  "ACE Exercise Library — Goblet Squat (com halter), https://www.acefitness.org/resources/everyone/exercise-library/362/goblet-squat/: \"Stand with the feet about shoulder-width apart, and hold a dumbbell in a vertical position directly in front of the chest. Keep the elbows close to the rib cage and the back straight while lowering into a squat. Continue lowering until the hips are below the knees, then push both feet into the floor and to return back to the original standing position.\"",
+  "NASM Exercise Library — Goblet Squat, https://www.nasm.org/resource-center/exercise-library/goblet-squat: \"The goblet position encourages upright posture, reduces lower back stress, and facilitates deeper squat depth.\"; \"Descend until your thighs are approximately parallel to the floor or deeper if mobility allows.\"; \"Keep the weight secure at chest height during the entire movement.\"; \"Primary Muscles: Quadriceps – primary mover for knee extension during squat ascent; Glutes – assist in hip extension and provide power for standing\"; \"Secondary Muscles: Hip Stabilizers, Core Stabilizers, Hamstrings, Adductors\"; \"The anterior load in goblet squats requires upright torso positioning to maintain balance and control.\"; erros: \"Allowing knees to cave inward (valgus)\", \"Leaning excessively forward\"",
+  "Carr K. Prescribing Movement as Medicine (Human Kinetics), \"How to do a goblet squat\", https://us.humankinetics.com/blogs/excerpt/how-to-do-a-goblet-squat: \"Begin by standing with your feet shoulder-width apart or slightly wider with your toes pointing straight ahead. Hold a dumbbell or kettlebell tightly to your chest with both hands.\"; \"Maintain a tall posture with your chest as you lower yourself downward with control until your femurs are parallel to the floor and your elbows come to the inside of your knees.\"; \"The goblet squat strengthens the quadriceps, glutes, and hamstrings while reinforcing trunk strength in a bilateral stance.\"",
+  "NSCA — Basics of Strength and Conditioning Manual (2012), cap. 4 (sem goblet squat; o agachamento frontal, carga na frente): \"Exercise Objective: Develop the quadriceps, thigh adductors, gluteals, and hamstrings\"; \"Distribute bodyweight from the balls of the feet to the heels\"; \"Keep knees pointed out, aligned with feet\"; e do agachamento com a barra nas costas: \"Point toes out slightly from neutral to 30°\", \"Keep heels on the floor\", \"The torso should be held between 35 and 45° from vertical\"",
+  "Collins KS, Klawitter LA, Waldera RW, Mahoney SJ, Christensen BK. Differences in Muscle Activity and Kinetics Between the Goblet Squat and Landmine Squat in Men and Women. J Strength Cond Res. 2021;35(10):2661-2668 (só o resumo, PubMed 34341315): \"Conversely, the GBS can better target quadriceps activity and increase vertical loading.\"",
+  "Diggin D et al. A biomechanical analysis of front versus back squat: injury implications. ISBS 2011: \"the front squat allows for a more upright posture throughout\" (a carga na frente deixa o tronco mais em pé que a barra nas costas)",
+  "de Leva P. Adjustments to Zatsiorsky-Seluyanov's segment inertia parameters. J Biomech. 1996;29(9):1223-1230, tabela 4 (homens): frações de massa e centro de cada segmento — a conta do centro de massa (corpo + kettlebell) da cena",
+  "Kettlebell (a peça nova, equip3d.kettlebell): Titan Fitness, 16 KG Cast Iron Kettlebell, https://titan.fitness/products/16-kg-cast-iron-kettlebell: \"Overall Height 10-in.\", \"Handle Width 7.75-in.\", \"Handle Diameter 33 mm\", \"Base Width 4-in.\", \"Material Cast Iron\", \"Product Weight 16 KG / 35 lb.\"; Kettlebell Kings, Powder Coat Kettlebell (cópia do Internet Archive de 01/12/2024), \"Size guide\": \"16 KG | 33 mm | 127 mm | 193 mm | 241 mm\" (alça, entre as laterais por dentro, alça por fora, altura); o corpo (~170 mm) e a janela (~79 mm) medidos na foto de frente da Titan",
+  "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — amplitude normal pelos valores da AAOS (a tabela do lib/limites.py da fábrica: joelho até 145°, quadril até 130°, cotovelo até 150°, punho até 55°; desvio radial 20°, ulnar 30°)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "tecnica_padrao": {
+   "ponta_pe": [
+    15,
+    30
+   ],
+   "joelho_valgo": [
+    -20,
+    240
+   ],
+   "coluna": [
+    0,
+    10
+   ]
+  },
+  "tecnica_padrao_motivo": "Pontas dos pés um pouco pra fora (Dan John: \"you want some toe-out\"; NSCA, agachamento: \"Point toes out slightly from neutral to 30°\"). joelho_valgo (joelho × reta quadril → tornozelo, de lado a lado da pelve): no fundo de um agachamento profundo, com os pés virados e os joelhos indo na direção das pontas (e empurrados pra fora pelos cotovelos: free-exercise-db \"use your elbows to push your knees out\"; Dan John \"pushing your knees out as you descend\"), o joelho passa de +100 mm dessa reta sem valgo nenhum (o Agachamento Frontal com Barra já marcava 96 mm só até a paralela); o joelho na direção do pé é medido no referencial do próprio pé (joelho_plano_pe, abaixo). Coluna neutra mais estreita que a padrão (free-exercise-db: \"your back straight\"; ExRx: \"keeping back straight\").",
+  "zonas": [
+   {
+    "nome": "kettlebell encostado no peito, sem entrar",
+    "equipamento": "kettlebell",
+    "partes": [
+     "Spine2",
+     "Spine1",
+     "Spine"
+    ],
+    "mm": [
+     3,
+     15
+    ],
+    "fonte": "Dan John (\"hold it against your chest\"; \"With the weight cradled against your chest\"); free-exercise-db (\"close to your chest\"); Carr (\"tightly to your chest\"); NASM (\"Keep the weight secure at chest height during the entire movement\"). O corpo do kettlebell fica a ~6 mm da pele do peito (a checagem3d.quadro pede ≥ 3 mm do equipamento até o corpo fora das mãos)"
+   },
+   {
+    "nome": "kettlebell longe do pescoço, do queixo e do rosto",
+    "equipamento": "kettlebell",
+    "partes": [
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "fotos do free-exercise-db e do Dan John (o alto da alça logo abaixo do queixo, sem encostar); free-exercise-db (\"Keep your chest and head up\")"
+   },
+   {
+    "nome": "kettlebell longe das coxas e dos joelhos",
+    "equipamento": "kettlebell",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley (o kettlebell nunca entra nas coxas: embaixo ele continua no peito, entre as pernas)"
+   },
+   {
+    "nome": "mão esquerda na lateral da alça (encostando), sem entrar",
+    "equipamento": "kettlebell",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "free-exercise-db (\"holding a light kettlebell by the horns close to your chest\"); ExRx (\"Hold kettleball by horns over chest with both hands\"); Dan John (\"With a kettlebell, hold at the horns\"). As laterais da alça são os \"horns\"; a mão fecha em volta da sua (a pegada da checagem3d.quadro mede a volta e o encosto); aqui a mão inteira — palma, dedos e polegar — encosta e não entra (medido à parte, na malha de verdade do kettlebell, no info() da cena)"
+   },
+   {
+    "nome": "mão direita na lateral da alça (encostando), sem entrar",
+    "equipamento": "kettlebell",
+    "partes": [
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "as duas mãos podem se encostar, sem se atravessar",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "pedido do Weslley (1 kettlebell com as 2 mãos: as mãos podem encostar uma na outra, mas não se atravessam)"
+   },
+   {
+    "nome": "mãos não entram no peito, no pescoço nem na cabeça",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "com": [
+     "Spine2",
+     "Spine1",
+     "Neck",
+     "Head"
+    ],
+    "cabelo": true,
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "pedido do Weslley (corpo não atravessa o próprio corpo: as mãos ficam na frente do peito)"
+   },
+   {
+    "nome": "antebraços não entram no peito nem na barriga",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Spine2",
+     "Spine1",
+     "Spine",
+     "Hips"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "ACE (\"Keep the elbows close to the rib cage\"): perto, sem entrar"
+   },
+   {
+    "nome": "cotovelos por dentro dos joelhos, encostando de leve nas coxas sem entrar",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Dan John (\"let the elbows glide down by touching the inner knees\"; \"it’s okay to have them push against your knees\"); free-exercise-db (\"use your elbows to push your knees out\"); Carr (\"your elbows come to the inside of your knees\"). Encostar pode, a pele entrar não"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "pernas esticadas em pé",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ExRx (\"Extend knees and hips until legs are straight\")"
+   },
+   {
+    "nome": "o fundo: joelho bem dobrado embaixo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     128,
+     142
+    ],
+    "fonte": "Dan John (\"At the bottom, the deepest you can go\"); free-exercise-db (\"until your hamstrings are on your calves\"); o teto é o do boneco (lib/limites.py: joelho até 145°, AAOS + a panturrilha comprimindo)"
+   },
+   {
+    "nome": "quadril bem abaixo dos joelhos embaixo (coxas além da paralela)",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": 1.0,
+    "graus": [
+     -26,
+     -10
+    ],
+    "fonte": "ACE (\"Continue lowering until the hips are below the knees\"); ExRx (\"Descend until thighs are just past parallel to floor\" — o mínimo); NASM (\"approximately parallel to the floor or deeper if mobility allows\"). Medida: coxa (quadril → joelho) × horizontal, − = joelho acima do quadril"
+   },
+   {
+    "nome": "quadril bem dobrado embaixo, com a coluna neutra",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": 1.0,
+    "graus": [
+     110,
+     130
+    ],
+    "fonte": "ExRx, Squat Analysis (\"Torso must be angled more forward to maintain the center of gravity over feet, possibly requiring spinal flexion once maximal hip range of motion is achieved\"; \"Some suggest that the depth of the squat should stop just short of posterior pelvic rotation\"): o fundo fica abaixo do limite do quadril com a coluna reta (lib/limites.py: coxa × tronco até 130°) — a cena para em ~120°: mais que isso a raiz da coxa sobe até os cotovelos, que ficam pra baixo junto do corpo. Medida: coxa × tronco (quadril → base do pescoço)"
+   },
+   {
+    "nome": "joelho e quadril dobram juntos (no meio da descida)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.5,
+    "graus": [
+     45,
+     80
+    ],
+    "fonte": "ExRx (\"Squat down by bending hips back while allowing knees to bend forward\")"
+   },
+   {
+    "nome": "quadril e joelho dobram juntos (no meio da descida)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": 0.5,
+    "graus": [
+     35,
+     80
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "tronco em pé no começo",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "free-exercise-db (\"Keep your chest and head up\"); Carr (\"Maintain a tall posture with your chest\")"
+   },
+   {
+    "nome": "tronco quase em pé embaixo (peito alto)",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     8,
+     30
+    ],
+    "fonte": "NASM (\"The anterior load in goblet squats requires upright torso positioning to maintain balance and control\"; erro: \"Leaning excessively forward\"); ExRx (\"chest high\"); NSCA, agachamento com a barra nas costas (\"The torso should be held between 35 and 45° from vertical\") — aqui bem menos, com a carga na frente (Diggin 2011). O número sai do equilíbrio (centro de massa corpo + kettlebell em cima do meio do pé) com o quadril no limite. Medida: quadril → base do pescoço × vertical"
+   },
+   {
+    "nome": "tronco nunca passa da inclinação de baixo",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "costas retas (coluna neutra)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "free-exercise-db (\"your back straight\"); ExRx (\"keeping back straight\"); ACE (\"the back straight\")"
+   },
+   {
+    "nome": "cabeça olhando pra frente",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     25
+    ],
+    "fonte": "free-exercise-db (\"Keep your chest and head up\"); ExRx (\"Keep head facing forward\"). Medida: cabeça × tronco; o pescoço volta 90% da inclinação do tronco"
+   },
+   {
+    "nome": "joelho em cima da linha do pé, sem entrar (dobrando)",
+    "medida": "joelho_plano_pe",
+    "t": [
+     0.3,
+     1.0
+    ],
+    "mm": [
+     -15,
+     45
+    ],
+    "fonte": "ExRx (\"knees pointed same direction as feet\"; \"Knees should point same direction as feet throughout movement\"); NASM (erro: \"Allowing knees to cave inward (valgus)\"); embaixo os cotovelos empurram os joelhos um pouco pra fora (free-exercise-db: \"use your elbows to push your knees out\"; Dan John: \"pushing your knees out as you descend\"). Medida: centro do joelho × plano vertical do pé, − = joelho entrando (valgo)"
+   },
+   {
+    "nome": "pés na largura dos ombros ou um pouco mais",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     2.1,
+     2.8
+    ],
+    "fonte": "ExRx (\"shoulder width or wider stance\"); ACE (\"about shoulder-width apart\"); Carr (\"shoulder-width apart or slightly wider\"); Dan John (\"You don’t want to go east and west here\"). No boneco: tornozelos a 0,50 m (1,25 × os 0,40 m entre os ombros) = 2,36 × os 0,21 m entre as articulações do quadril (tecnica3d.pes_largura)"
+   },
+   {
+    "nome": "pontas dos pés um pouco pra fora",
+    "medida": "ponta_pe",
+    "t": "todos",
+    "graus": [
+     15,
+     30
+    ],
+    "fonte": "Dan John (\"some toe-out\"); NSCA (\"Point toes out slightly from neutral to 30°\")"
+   },
+   {
+    "nome": "calcanhares no chão e canela bem inclinada embaixo (os joelhos vão à frente)",
+    "medida": "tornozelo",
+    "t": 1.0,
+    "graus": [
+     93,
+     115
+    ],
+    "fonte": "ExRx (\"allowing knees to bend forward\"; \"feet flat on floor\"); Dan John (\"Your feet should be flat on the floor\"); NSCA (\"Keep heels on the floor\"). Medida da fábrica: canela × pé"
+   },
+   {
+    "nome": "cotovelos pra baixo",
+    "medida": "braco_elevacao",
+    "t": "todos",
+    "graus": [
+     0,
+     40
+    ],
+    "fonte": "Dan John (\"Your elbows are pointed down\"). Medida: braço × eixo do tronco (0 = pendurado)"
+   },
+   {
+    "nome": "cotovelos perto das costelas",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -10,
+     32
+    ],
+    "fonte": "ACE (\"Keep the elbows close to the rib cage\"). Medida: braço aberto pra fora do plano do tronco (0 = rente); embaixo o cotovelo abre um pouco por cima da parte de dentro da coxa (empurrando o joelho pra fora)"
+   },
+   {
+    "nome": "cotovelos dobrados segurando o kettlebell",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     115,
+     145
+    ],
+    "fonte": "ExRx, estático: \"Elbow Flexion\"; free-exercise-db (o kettlebell \"close to your chest\")"
+   },
+   {
+    "nome": "punho sem dobrar de lado demais",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "amplitude normal do punho, valores da AAOS (Norkin & White — a tabela do limites.py): desvio radial 20°, ulnar 30°. Medida: antebraço × 3º metacarpo no plano da palma, + = pro lado do polegar"
+   },
+   {
+    "nome": "punho sem dobrar demais pra frente ou pra trás",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -30,
+     30
+    ],
+    "fonte": "amplitude normal (AAOS, Norkin & White): a mão quase na linha do antebraço segurando o peso"
+   },
+   {
+    "nome": "palmas viradas pro meio (cada mão na sua lateral da alça)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     25,
+     90
+    ],
+    "fonte": "free-exercise-db (\"holding a light kettlebell by the horns close to your chest\"); ExRx (\"Hold kettleball by horns over chest with both hands\"); Dan John (\"With a kettlebell, hold at the horns\"). As laterais da alça são os \"horns\"; a mão fecha em volta da sua (a pegada da checagem3d.quadro mede a volta e o encosto); aqui a mão inteira — palma, dedos e polegar — encosta e não entra (medido à parte, na malha de verdade do kettlebell, no info() da cena)"
+   },
+   {
+    "nome": "pegada estreita (as 2 mãos nas laterais da alça)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.25,
+     0.65
+    ],
+    "fonte": "a alça do kettlebell de 16 kg tem 197 mm por fora (Titan: \"Handle Width 7.75-in.\"): as mãos ficam a ~16 cm uma da outra, ~0,4 × os ombros"
+   }
+  ]
+ }
+}

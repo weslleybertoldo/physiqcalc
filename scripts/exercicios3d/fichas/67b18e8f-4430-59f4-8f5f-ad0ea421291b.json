@@ -1,0 +1,226 @@
+{
+  "uuid": "67b18e8f-4430-59f4-8f5f-ad0ea421291b",
+  "nome": "Stiff com Halteres",
+  "cena": "stiff_com_halteres",
+  "grupo": "Posterior de Coxa",
+  "subgrupo": "Isquiotibiais · glúteo máximo · eretores",
+  "padrao_movimento": "terra_stiff",
+  "equipamento": "halteres",
+  "variacao": "pernas estendidas",
+  "alvos": [
+    "posterior",
+    "gluteo"
+  ],
+  "auxiliares": [
+    "lombar",
+    "adutores",
+    "trapezio",
+    "antebraco"
+  ],
+  "camera": {
+    "az": 75,
+    "el": 8,
+    "dist": 4.3,
+    "alvo": [
+      0,
+      0.0,
+      0.75
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.3,
+    "alvo": [
+      0,
+      0.0,
+      0.75
+    ]
+  },
+  "ida_s": 2.0,
+  "movimento": "Em pé, com os pés na largura do quadril e as pontas para a frente, segura um halter em cada mão na frente das coxas, com as palmas viradas para o corpo (pegada pronada) e os braços esticados e soltos; os joelhos ficam levemente dobrados, quase esticados, e PARADOS no mesmo ângulo o movimento todo. Leva o quadril para trás e inclina o tronco à frente com a coluna neutra (sem arredondar a lombar), a cabeça na linha da coluna olhando para o chão, e deixa os halteres descerem rentes às pernas, sem encostar, até logo abaixo dos joelhos — ou até sentir o posterior da coxa alongar —, com o peso indo do meio do pé um pouco para os calcanhares; volta estendendo o quadril até ficar em pé, com os halteres subindo rentes às pernas, devagar e sem tranco. Desça só até o alongamento do posterior da coxa: quanto mais longe do corpo o peso fica, mais a lombar trabalha.",
+  "cinesiologia": {
+    "plano": "sagital, cadeia cinética fechada",
+    "articulacoes": "quadril (flexão na descida — ~85° a partir de em pé, embaixo —, extensão na subida); joelhos quase estendidos (~12°) e parados; tornozelos indo um pouco para a flexão plantar embaixo (com o joelho quase esticado, a perna inteira inclina um pouco para trás junto com o quadril); coluna neutra (isometria); ombros com os braços pendurados (embaixo puxados um pouco para as pernas, os halteres rentes a elas), cotovelos esticados e punhos retos, parados",
+    "agonistas": "isquiotibiais (bíceps femoral, semitendíneo e semimembranáceo) e glúteo máximo na extensão do quadril (ExRx: alvo \"Hamstrings\"; free-exercise-db: músculo principal \"hamstrings\", secundários \"glutes\" e \"lower back\")",
+    "sinergistas": "glúteo máximo e adutor magno (ExRx: \"Synergists: Gluteus Maximus, Adductor Magnus\")",
+    "estabilizadores": "eretores da espinha, trapézio (médio, superior e inferior), romboides e levantador da escápula (ExRx: Stabilizers); reto do abdome e oblíquos como estabilizadores antagonistas (ExRx: Antagonist Stabilizers); flexores do antebraço segurando os halteres",
+    "fases": "descida excêntrica, devagar e sob controle (NSCA: \"lowering the bar slowly\"), subida concêntrica; sem pausa nem quique embaixo (ExRx: \"Do not pause or bounce at bottom of lift\")"
+  },
+  "referencias": [
+    "free-exercise-db (yuhonas), Stiff-Legged Dumbbell Deadlift — a lista aberta de onde veio o nome do catálogo (fonte_en), domínio público (The Unlicense). https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Stiff-Legged_Dumbbell_Deadlift.json (lido em 11/10/2026): \"Grasp a couple of dumbbells holding them by your side at arm's length.\" \"Stand with your torso straight and your legs spaced using a shoulder width or narrower stance. The knees should be slightly bent. This is your starting position.\" \"Keeping the knees stationary, lower the dumbbells to over the top of your feet by bending at the waist while keeping your back straight. Keep moving forward as if you were going to pick something from the floor until you feel a stretch on the hamstrings.\" \"Start bringing your torso up straight again by extending your hips and waist until you are back at the starting position.\" Músculos: primary \"hamstrings\"; secondary \"glutes\", \"lower back\"; level \"beginner\". As 2 fotos da mesma ficha (Stiff-Legged_Dumbbell_Deadlift/0.jpg e 1.jpg; o que eu vi, não é frase da fonte): em pé, cada halter fica NA FRENTE da sua coxa, o cabo atravessado e as palmas viradas pro corpo; embaixo, os halteres ficam na frente das canelas, perto delas, do terço de cima ao meio da canela, com os joelhos levemente dobrados e o quadril bem pra trás — por isso os halteres ficam na frente das coxas (o \"by your side\" do texto fica como nota).",
+    "ExRx.net — Dumbbell Straight-back Straight-leg Deadlift (Hamstrings). https://exrx.net/WeightExercises/Hamstrings/DBStrBackStrLegDeadlift (o site responde 403: lido na cópia do Internet Archive de 06/02/2026, https://web.archive.org/web/20260206131242/https://exrx.net/WeightExercises/Hamstrings/DBStrBackStrLegDeadlift, em 11/10/2026): \"Stand with shoulder width or narrower stance. Grasp dumbbells to each side.\" \"With knees straight, lower dumbbells by bending hips until hamstrings are tight, or just before lower back bends. Lift dumbbells by extending hips until straight. Pull shoulders back slightly at top of lift if rounded.\" \"Throughout lift, keep arms, knees, and back straight. Do not pause or bounce at bottom of lift. Do not lower weight beyond mild stretch. Full range of motion will vary from person to person depending on flexibility.\" Músculos: Target Hamstrings; Synergists Gluteus Maximus, Adductor Magnus; Stabilizers Erector Spinae, Trapezius Middle, Rhomboids, Trapezius Upper, Levator Scapulae, Trapezius Lower; Antagonist Stabilizers Rectus Abdominis, Obliques. (O joelho travado do ExRx ficou de fora: a ACE 2025 chama a perna toda estendida de \"extremely advanced\" e o free-exercise-db, a NSCA e a ACE mandam o joelho levemente dobrado.)",
+    "ExRx.net — Dumbbell Straight Leg Deadlift (Low Back; a versão em que a lombar dobra — outro exercício, só pelo caminho do halter). Cópia do Internet Archive de 31/05/2023, https://web.archive.org/web/20230531181806/https://exrx.net/WeightExercises/ErectorSpinae/DBStraightLegDeadlift (lida em 11/10/2026): \"Throughout lift keep arms and knees straight. Keep dumbbells close to legs. Do not pause or bounce at bottom of lift.\"",
+    "National Strength and Conditioning Association. Exercise Technique Manual for Resistance Training, 3ª ed. (Human Kinetics), Romanian Deadlift (RDL) — trecho oficial no site da NSCA (Kinetic Select), https://www.nsca.com/education/articles/kinetic-select/romanian-deadlift-rdl/ (403 hoje; lido na cópia do Internet Archive de 12/12/2025 em 11/10/2026): \"Grasp the bar with a closed, pronated grip.\" \"The knees are slightly flexed and remain in this position throughout the downward and upward movements.\" \"Begin the downward movement by lowering the bar slowly, making sure that the bar remains as close as possible to the body.\" \"As the bar is lowered, the hips flex and move backward.\" \"Keep the arms straight and relaxed to allow the lower body to handle the load.\" \"The shoulders move forward as the hips move backward and remain directly over, or in front of, the bar.\" \"The balance of the foot (center of mass) starts in the midfoot and, as the bar is lowered, begins to move toward the heel.\" \"Lower the bar just below the knees to the tibial tuberosity, or until a neutral spine cannot be maintained.\" \"The hips move forward as they extend, while the shoulders move backward as the torso moves toward the vertical position.\"",
+    "National Strength and Conditioning Association. Basics of Strength and Conditioning Manual (2012), 2. Barbell Romanian Deadlift (RDL), p. 51: \"Stand in an erect position with feet shoulder-width apart, toes pointed straight ahead, and knees slightly flexed\"; \"Keep chest high by pulling shoulder blades together\"; \"Slowly push hips backward, let the bar slide down the thighs, and transfer weight onto the heels\"; \"Maintain a flat back and continue descent until the bar reaches the top of the knees\"; \"Maintain the starting back, chest, and knee positions throughout the entire range of motion\"; \"The bar should remain in contact with the legs throughout the entire lift\".",
+    "National Strength and Conditioning Association. Essentials of Strength Training and Conditioning — Romanian deadlift (RDL) e Stiff-leg deadlift (com barra), pelo resumo do preparatório do CSCS da Achievable (15.5 Exercise list part 4), https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-4 (lido em 11/10/2026): \"slightly to moderately flex the knees and keep them in this position throughout this exercise.\" \"Maintain a rigid torso and neutral spine, and keep the shoulders retracted until the barbell is aligned with the patella tendon and the torso is parallel to floor.\" \"Keep a normal lordotic position throughout the movement.\" (RDL) \"Lower the bar until the plates touch the floor, the back can’t be held in the neutral position, the knees fully extend, or the heels rise off the floor.\"",
+    "McCall P. The ACE Do It Better Series: The Romanian Deadlift. ACE Certified, maio/2025. https://www.acefitness.org/continuing-education/certified/may-2025/8865/the-ace-do-it-better-series-the-romanian-deadlift/ (lido em 11/10/2026): \"Use a pronated (palms-down) grip to firmly grasp a barbell with the hands approximately shoulder-width apart. Maintain a slight bend in the knees with the feet hip-width apart and allow the bar to rest along the front of the thighs. You can also use dumbbells; adjust the instructions to reflect holding one dumbbell in each hand.\" \"Lift the chest and pull the shoulder blades down toward the back pockets to maintain extension of the spine before pushing the tailbone in the posterior direction to hinge at the hips. Cue the client to keep their chin tucked into the neck as if holding an egg.\" \"Do NOT allow the client to round the back or extend the knees while lowering the weight.\" \"Coach the client to lower until tension is felt in the back of the thighs—probably when the bar gets to about knee height or, if the client has more flexibility in the hamstrings, to about mid-shin. Instruct the client to look toward the floor\" \"Keep the spine long and maintain a slight bend in the knees throughout the movement.\" \"Note: There is another version of the RDL that focuses on keeping the legs straight with knees fully extended. This is an extremely advanced version\" \"the farther the bar hovers away from the body, the greater the stress placed on the lower back.\" \"cue your clients to keep their neck in a neutral position and look toward the floor while hinging forward at the hips.\" Músculos: \"the erector spinae, gluteus maximus, hamstrings and adductors\".",
+    "American Council on Exercise (ACE) — Exercise Library, Romanian Deadlift (nº 317, com barra). https://www.acefitness.org/resources/everyone/exercise-library/317/romanian-deadlift/ (lido em 11/10/2026): \"Holding a barbell with both hands so that it rests on the front of the thighs, keep a slight bend in both knees and a straight back. Push the hips back while lowering the weight towards the floor until feeling some tension along the back of the legs. To return to standing, push the heels into the floor and pull the knees backwards, keeping the bar very close to the body while standing.\"",
+    "Lee S, Schultz J, Timgren J, Staelgraeve K, Miller M, Liu Y. An electromyographic and kinetic comparison of conventional and Romanian deadlifts. J Exerc Sci Fit. 2018;16(3):87-93. doi:10.1016/j.jesf.2018.08.001 (texto completo, PMC6323186, CC BY-NC-ND, lido em 11/10/2026): \"The SLD involves keeping the legs almost straight as the bar is brought straight down to the floor.\" \"A medium stance (100% of pelvic width) and a double overhand grip were used for both deadlift trials.\" \"the RD can be performed with the knee flexion of 15–33° while the SLD is performed with a near full extension of the knee.\" Tabela 3 (RDL, descendo até onde dava rumo ao chão): flexão do quadril 79,97 ± 15,85°, do joelho 33,86 ± 12,59°; \"some participants were unable to perform it during the RD. It may be due to the tightness of the hamstrings\".",
+    "McAllister MJ, Hammond KG, Schilling BK, Ferreria LC, Reed JP, Weiss LW. Muscle activation during various hamstring exercises. J Strength Cond Res. 2014;28(6):1573-1580 (texto completo, lido em 11/10/2026): \"The RDL was performed with a York Olympic barbell held with a pronated grip at the anterior aspect of the thighs and slight bend in the knee (near full extension).\" \"hamstring activity was maximized in the RDL and glute-ham raise.\"",
+    "Schoenfeld BJ, Contreras B, Tiryaki-Sonmez G, Wilson JM, Kolber MJ, Peterson MD. Regional differences in muscle activation during hamstrings exercise. J Strength Cond Res. 2015;29(1):159-164 (só o resumo, PubMed 24978835, lido em 11/10/2026; não diz se o stiff foi com barra ou halteres): \"the stiff-legged deadlift (SLDL), a hip-dominant exercise, and the lying leg curl (LLC), a knee-dominant exercise.\" \"Results showed that the LLC elicited significantly greater normalized mean activation of the lower lateral and lower medial hamstrings compared with the SLDL (p ≤ 0.05).\"",
+    "Martín-Fuentes I, Oliva-Lozano JM, Muyor JM. Electromyographic activity in deadlift exercise and its variants. A systematic review. PLoS One. 2020;15(2):e0229507 (texto completo, PMC7046193, lido em 11/10/2026): \"posterior thigh muscles would show greater muscle activity when performing exercises that holds the knees on a fixed and extended position (e.g. Romanian Deadlift or Straight Leg Deadlift ).\" \"Erector spinae showed the greatest muscle activation during the Stiff Leg Deadlift exercise\".",
+    "Amplitude normal do tornozelo: Alazzawi S et al. World J Orthop 2017;8(1):21-29, tabela 5 (flexão plantar 0–50°, dorsiflexão 0–20°), a do lib/tecnica3d.py (medida tornozelo: o boneco em pé mede ~76°; flexão plantar de 0 a 50° = ~76° a ~26°).",
+    "Halteres, mão e polegar novo: os 2 halteres de 29 mm (e3.halter, anilhas de 11 cm) e o polegar dando a volta das outras cenas com 2 halteres (Remada Curvada com Halteres, Subida no Banco com Halteres); o equilíbrio (centro de massa corpo + peso em cima do meio do pé, indo rumo ao calcanhar) e o tronco girando inteiro em volta do quadril (coluna neutra) do Bom Dia com Barra; o quadril pra trás e o peso rente às pernas medidos na pele posada do Levantamento Terra Romeno (Stiff)."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "tecnica_padrao": {
+      "ponta_pe": [
+        -5,
+        15
+      ],
+      "coluna": [
+        0,
+        10
+      ]
+    },
+    "tecnica_padrao_fonte": "NSCA, Basics of Strength and Conditioning Manual, Barbell Romanian Deadlift (\"toes pointed straight ahead\"); free-exercise-db, Stiff-Legged Dumbbell Deadlift (o fonte_en) (\"while keeping your back straight\"); NSCA, Exercise Technique Manual for Resistance Training, 3ª ed., Romanian Deadlift (\"until a neutral spine cannot be maintained\"); NSCA, Essentials (pelo resumo do CSCS da Achievable), stiff-leg deadlift (\"Keep a normal lordotic position throughout the movement\")",
+    "zonas": [
+      {
+        "nome": "halter esquerdo rente às pernas (sem encostar)",
+        "equipamento": "halter_Left",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          3,
+          30
+        ],
+        "fonte": "ExRx, Dumbbell Straight Leg Deadlift (Low Back) (\"Keep dumbbells close to legs\"); NSCA, Exercise Technique Manual for Resistance Training, 3ª ed., Romanian Deadlift (\"making sure that the bar remains as close as possible to the body\"); ACE 2025, The ACE Do It Better Series: The Romanian Deadlift (\"the farther the bar hovers away from the body, the greater the stress placed on the lower back\"). Medido da anilha até a pele das pernas; 3 mm é a folga mínima de peso × corpo da checagem"
+      },
+      {
+        "nome": "halter direito rente às pernas (sem encostar)",
+        "equipamento": "halter_Right",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          3,
+          30
+        ],
+        "fonte": "idem"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "tronco em pé no começo",
+        "medida": "tronco",
+        "t": 0.0,
+        "graus": [
+          0,
+          8
+        ],
+        "fonte": "free-exercise-db, Stiff-Legged Dumbbell Deadlift (o fonte_en) (\"Stand with your torso straight\"); ExRx, Dumbbell Straight-back Straight-leg Deadlift (\"Lift dumbbells by extending hips until straight\")"
+      },
+      {
+        "nome": "tronco inclinado embaixo, até alongar o posterior da coxa",
+        "medida": "tronco",
+        "t": 1.0,
+        "graus": [
+          65,
+          80
+        ],
+        "fonte": "free-exercise-db, Stiff-Legged Dumbbell Deadlift (o fonte_en) (\"until you feel a stretch on the hamstrings\"); ExRx, Dumbbell Straight-back Straight-leg Deadlift (\"until hamstrings are tight, or just before lower back bends\"; \"Do not lower weight beyond mild stretch\"); NSCA, Essentials (pelo resumo do CSCS da Achievable), stiff-leg deadlift (\"until the barbell is aligned with the patella tendon and the torso is parallel to floor\")"
+      },
+      {
+        "nome": "joelhos quase estendidos, levemente dobrados e parados, o movimento todo",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          8,
+          16
+        ],
+        "fonte": "free-exercise-db, Stiff-Legged Dumbbell Deadlift (o fonte_en) (\"The knees should be slightly bent.\"; \"Keeping the knees stationary\"); NSCA, Exercise Technique Manual for Resistance Training, 3ª ed., Romanian Deadlift (\"The knees are slightly flexed and remain in this position throughout the downward and upward movements.\"); ACE 2025, The ACE Do It Better Series: The Romanian Deadlift (\"maintain a slight bend in the knees throughout the movement\"); McAllister et al. 2014 (\"slight bend in the knee (near full extension)\"); Lee et al. 2018 (\"the SLD is performed with a near full extension of the knee\"). No boneco em pé, no repouso, o joelho já mede ~7°"
+      },
+      {
+        "nome": "flexão do quadril embaixo (limite do posterior da coxa com o joelho quase esticado)",
+        "medida": "flexao",
+        "junta": "UpLeg",
+        "t": 1.0,
+        "graus": [
+          85,
+          100
+        ],
+        "fonte": "Lee et al. 2018, Tabela 3 (RDL descendo até onde dava: flexão do quadril 79,97 ± 15,85°, com o joelho a ~34°); ExRx, Dumbbell Straight-back Straight-leg Deadlift (\"Do not lower weight beyond mild stretch. Full range of motion will vary from person to person depending on flexibility.\"). No boneco a medida (coxa × linha quadril → pescoço) já dá ~11° em pé: 96° embaixo = ~85° de flexão a partir de em pé"
+      },
+      {
+        "nome": "braços esticados e soltos (cotovelo sem travar)",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          3,
+          15
+        ],
+        "fonte": "NSCA, Exercise Technique Manual for Resistance Training, 3ª ed., Romanian Deadlift (\"Keep the arms straight and relaxed to allow the lower body to handle the load.\"); ExRx, Dumbbell Straight-back Straight-leg Deadlift (\"Throughout lift, keep arms, knees, and back straight.\")"
+      },
+      {
+        "nome": "pés na largura do quadril",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.0,
+          1.6
+        ],
+        "fonte": "ACE 2025, The ACE Do It Better Series: The Romanian Deadlift (\"feet hip-width apart\"); free-exercise-db, Stiff-Legged Dumbbell Deadlift (o fonte_en) e ExRx, Dumbbell Straight-back Straight-leg Deadlift (\"shoulder width or narrower stance\"); Lee et al. 2018 (\"A medium stance (100% of pelvic width)\"). No boneco: tornozelos a 0,28 m um do outro, com as articulações do quadril a 0,21 m"
+      },
+      {
+        "nome": "pegada pronada: palmas pro corpo, não uma pra outra",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          -20,
+          20
+        ],
+        "fonte": "ACE 2025, The ACE Do It Better Series: The Romanian Deadlift (\"Use a pronated (palms-down) grip\"; \"You can also use dumbbells; adjust the instructions to reflect holding one dumbbell in each hand.\"); NSCA, Exercise Technique Manual for Resistance Training, 3ª ed., Romanian Deadlift (\"Grasp the bar with a closed, pronated grip.\"); as fotos do free-exercise-db (os halteres atravessados na frente das coxas, palmas pro corpo)"
+      },
+      {
+        "nome": "cabeça na linha da coluna, olhando o chão",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -15,
+          8
+        ],
+        "fonte": "ACE 2025, The ACE Do It Better Series: The Romanian Deadlift (\"Cue the client to keep their chin tucked into the neck as if holding an egg.\"; \"cue your clients to keep their neck in a neutral position and look toward the floor while hinging forward at the hips.\"). A foto do free-exercise-db mostra a cabeça erguida, olhando à frente: valeu a ACE"
+      },
+      {
+        "nome": "punho reto (neutro)",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "NSCA, Exercise Technique Manual for Resistance Training, 3ª ed., Romanian Deadlift (\"Keep the arms straight and relaxed\")"
+      },
+      {
+        "nome": "joelho em cima do pé (na direção dele)",
+        "medida": "joelho_plano_pe",
+        "t": "todos",
+        "mm": [
+          -25,
+          20
+        ],
+        "fonte": "regra padrão da fábrica (tecnica3d: joelho na direção do pé). Com os pés um pouco mais abertos que o quadril, a perna desce inclinada pra fora: o joelho fica ~1 cm pra dentro do plano do pé sem valgo (joelho_valgo ~+5 mm)"
+      },
+      {
+        "nome": "tornozelo dentro da amplitude normal (a perna inclina um pouco pra trás embaixo)",
+        "medida": "tornozelo",
+        "t": "todos",
+        "graus": [
+          26,
+          96
+        ],
+        "fonte": "Alazzawi et al. 2017 (flexão plantar 0–50°, dorsiflexão 0–20°; no boneco ~26° a ~96°)"
+      }
+    ]
+  }
+}

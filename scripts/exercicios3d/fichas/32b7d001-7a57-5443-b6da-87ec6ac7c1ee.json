@@ -1,0 +1,1260 @@
+{
+ "uuid": "32b7d001-7a57-5443-b6da-87ec6ac7c1ee",
+ "nome": "Escalador",
+ "cena": "escalador",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal · flexores do quadril · ombros (estabilização)",
+ "padrao_movimento": "prancha",
+ "equipamento": "peso_corporal",
+ "variacao": "escalador",
+ "alvos": [
+  "abdomen"
+ ],
+ "auxiliares": [
+  "quadriceps",
+  "tensor",
+  "deltoide",
+  "obliquos"
+ ],
+ "camera": {
+  "az": 70,
+  "el": 10,
+  "dist": 3.3,
+  "alvo": [
+   0.0,
+   0.08,
+   0.3
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   0.08,
+   0.3
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Escalador: o movimento é cíclico (as pernas trocam sem parar, como uma corrida no lugar) — t = 0 → 1 é UM ciclo (a perna esquerda vai pra trás e a direita vem; depois a direita vai e a esquerda vem) e a pose em t = 1 é igual à de t = 0; o app repete o ciclo (LoopRepeat) em vez de ir e voltar. ida_s = 1,5 s = 1 ciclo = 2 trocas na cadência do FM 7-22 (\"Cadence: MODERATE\"; \"MODERATE–80 counts per minute\"; cada contagem é uma troca: \"1. Push upward with the feet and quickly change the positions of the legs. 2. Return to the starting position.\") → 0,75 s por troca. Cada troca leva 0,30 s, com os 2 pés no ar (ACE #258: \"Both feet leave the ground\"), e os 2 pés ficam 0,45 s parados no chão. As outras cadências lidas: música a 96 batidas/min num Tabata (Reppa et al. 2023, que não diz se é 1 troca por batida) e 58,67 ± 8,49 repetições em 2 min num teste máximo (Lockie et al. 2018, ~2,0 s por ciclo, com cansaço). fps = 60 (90 quadros no ciclo): a ponta do pé que troca chega a ~4 m/s e o salto entre 2 quadros (regra de 80 mm) foi medido em 77,1 mm a 50 quadros/s e 64 mm a 60 (a regra continua a mesma; só tem mais quadros no mesmo 1,5 s).",
+ "fps": 60,
+ "ida_s": 1.5,
+ "movimento": "Na prancha alta, no chão: as mãos espalmadas um pouco mais abertas que os ombros, com os dedos apontando para a frente, e os ombros bem em cima das mãos; os braços esticados, sem travar, e parados o tempo todo; as costas retas, quase na horizontal, com o quadril mais ou menos na altura dos ombros, e a cabeça alinhada com a coluna, olhando para o chão um pouco à frente das mãos. Começa com o pé esquerdo à frente, embaixo do quadril, apoiado na ponta (na bola do pé, com o calcanhar para cima), o joelho dobrado vindo em direção ao peito por dentro dos braços, e a perna direita esticada para trás, também na ponta do pé. Num pulinho curto e rápido os 2 pés saem do chão juntos e trocam de lugar — a perna da frente estica para trás e a de trás dobra e vem para a frente — e pousam juntos na ponta, sem escorregar; fica um instante parado e troca de novo, como uma corrida no lugar. As pernas vão e voltam retas, na largura do quadril; o quadril não sobe nem cai, e o tronco, os braços e as mãos não se mexem.",
+ "cinesiologia": {
+  "plano": "sagital, cíclico e alternado (as 2 pernas trocam ao mesmo tempo), em cadeia cinética fechada no apoio — as mãos e as pontas dos pés no chão — com um voo curto das pernas na troca; o tronco, os braços e as mãos ficam parados (trabalho isométrico)",
+  "articulacoes": "quadril (flexão: de ~17° na perna esticada atrás a ~115° na da frente, com o pé embaixo do quadril), joelho (de ~3° na perna de trás a ~126° na da frente) e tornozelo em flexão dorsal na bola do pé (canela × pé ~90–93°), com os dedos dos pés dobrados no chão; na troca o joelho que vem dobra mais e o pé sobe uns centímetros. Parados: ombros com o braço quase em pé (~80° de flexão), cotovelos esticados sem travar (~5°), punhos estendidos com a mão espalmada (~86°), escápulas um pouco protraídas, coluna neutra e pelve nivelada, sem girar",
+  "agonistas": "flexores do quadril — iliopsoas (o alvo do ExRx, Suspended Mountain Climber: \"Iliopsoas\") e reto femoral — puxando o joelho para a frente; o quadríceps (o \"primaryMuscles\" do free-exercise-db) e os extensores do quadril (glúteo máximo e isquiotibiais — \"hamstrings\" nos secundários do free-exercise-db) levando a perna para trás, esticada",
+  "sinergistas": "tensor da fáscia lata, pectíneo, sartório e os adutores longo e curto (ExRx, Suspended Mountain Climber); \"chest\" e \"shoulders\" nos secundários do free-exercise-db",
+  "estabilizadores": "reto do abdômen e oblíquos seguram a pelve e a lombar paradas, sem dobrar a coluna (ExRx, Suspended Mountain Climber: \"With no waist flexion, Rectus Abdominis and External Oblique will only act to stabilize pelvis and waist during hip flexion.\"; Lockie et al. 2018: \"Mountain climbers involve isometric work for the trunk musculature and dynamic hip and knee flexion and extension\"); deltoide, peitoral maior, serrátil anterior e tríceps seguram os braços esticados e as escápulas (o catálogo: ombros em estabilização; ExRx, Mountain Climber: \"Static: Scapula & Clavicle Protraction · Shoulder Transverse Flexion · Elbow Extension\"); eretores da espinha, trapézio médio e inferior e romboides como estabilizadores antagonistas (ExRx, Suspended Mountain Climber)",
+  "fases": "apoio (0,45 s: os 2 pés parados no chão, na bola do pé — um embaixo do quadril e o outro atrás, com a perna esticada) e troca (0,30 s: os 2 pés saem do chão juntos, a perna da frente estica para trás e a de trás dobra e vem, e os 2 pousam juntos); 2 trocas por ciclo de 1,5 s (FM 7-22: \"MODERATE–80 counts per minute\", 1 troca por contagem)"
+ },
+ "referencias": [
+  "free-exercise-db (Yuhonas, domínio público) — Mountain Climbers, o fonte_en do catálogo (categoria \"plyometrics\"). https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Mountain_Climbers.json (lido em 11/10/2026): \"Begin in a pushup position, with your weight supported by your hands and toes. Flexing the knee and hip, bring one leg until the knee is approximately under the hip. This will be your starting position.\"; \"Explosively reverse the positions of your legs, extending the bent leg until the leg is straight and supported by the toe, and bringing the other foot up with the hip and knee flexed. Repeat in an alternating fashion for 20-30 seconds.\"; \"primaryMuscles\": [\"quadriceps\"], \"secondaryMuscles\": [\"chest\", \"hamstrings\", \"shoulders\"]. As 2 fotos: no chão, sem colchonete, o pé da frente na ponta, mais ou menos embaixo do quadril.",
+  "ExRx.net — Mountain Climber (Cardio). https://exrx.net/Aerobic/Exercises/MountainClimber (lido na cópia do Internet Archive de 25/06/2025; o site direto bloqueia a leitura automática): \"Place hands on floor, slightly wider than shoulder width. On forefeet, position one leg forward bent underbody and extend other leg back.\"; \"While holding upper body in place, alternate leg positions by pushing hips up while immediately extending forward leg back and pulling rear leg forward underbody, landing on both forefeet simultaneously.\"; \"Intensity can be increased by stepping faster.\"; Force (Articulation): \"Dynamic: Hip Extension, Flexion · Knee Extension · Ankle Plantar Flexion · Spine Rotation\" e \"Static: Scapula & Clavicle Protraction · Shoulder Transverse Flexion · Elbow Extension\". O \"pushing hips up\" ficou de fora: a NSCA e o FM 7-22 proíbem o quadril subir.",
+  "ExRx.net — Suspended Mountain Climber (Hip Flexors; os pés em alças — outra variação, usada só pelos músculos). https://exrx.net/WeightExercises/HipFlexors/STMountainClimber (cópia do Internet Archive de 23/04/2021): \"Attempt to straighten hip each stroke, while maintaining approximate height of hips from floor throughout movement.\"; \"Rectus Abdominis and Obliques only contract dynamically if actual waist flexion occurs. With no waist flexion, Rectus Abdominis and External Oblique will only act to stabilize pelvis and waist during hip flexion.\"; músculos: alvo Iliopsoas; sinergistas Tensor Fasciae Latae, Pectineus, Sartorius, Adductor Longus, Adductor Brevis; estabilizadores Rectus Abdominis, Obliques, Quadriceps, Pectoralis Major, Serratus Anterior, Triceps Brachii; estabilizador dinâmico Rectus Femoris; estabilizadores antagonistas Erector Spinae, Trapezius Middle, Trapezius Lower, Rhomboids.",
+  "American Council on Exercise (ACE) — Mountain Climbers (Exercise Library #258). https://www.acefitness.org/resources/everyone/exercise-library/258/mountain-climbers/ (lido em 11/10/2026): \"Slowly lean forward to place your hands on the floor slightly in front of your shoulders, fingers pointing forwards.\"; \"Flex your left hip, bringing your left thigh to your chest, placing your left foot on the floor, heel slighlty lifted and toes pointing forward.\"; \"Lift your right knee off the ground, fully extending your right leg behind you, with your foot in dorsi flexion, (toes pointing towards your shins, heel up).\"; \"Stiffen your abdominal muscles (“brace”) to stabilize your spine\"; \"Keeping your hands firmly on the ground, abs engaged and shoulder strong, simultaneously switch leg positions. Both feet leave the ground as your drive your right knee forward and extend your left leg back.\"; \"Keep your weight evenly distributed on both legs. Do not shift all your weight foward into your front foot.\" As 3 fotos: no chão, as costas quase na horizontal com o quadril na altura dos ombros; na troca os 2 pés no ar.",
+  "National Strength and Conditioning Association (NSCA) — Kinetic Select, Football-Specific Speed Drills (maio de 2017; trecho do livro Developing Speed, NSCA Sport Performance Series, Human Kinetics). https://www.nsca.com/education/articles/kinetic-select/football-specific-speed-drills/ (lido na cópia do Internet Archive de 18/01/2026): \"Action: The athlete assumes a push-up position with hands and toes on the ground and the arms extended, the back flat, and the knees and hips extended. Then the athlete flexes one leg at the knee and hip and positions that foot on the ground under the hips. The hips do not rise away from the ground. This is the start position. On the coach’s command, the athlete drives the lead leg back to a fully extended position and moves the extended leg forward to the bent-knee and bent-hip position (Figures 2.1 and 2.2). The hips should not bounce or rise during this movement.\"; \"The back is flat, head neutral, and hips and knees fully extended\"; \"Athletes switch both legs at the same time and keep the drive knee between the arms\". As figuras 2.1 e 2.2: as costas retas, quase na horizontal, o quadril na altura dos ombros e o pé da frente na ponta, embaixo do quadril — a profundidade usada na cena.",
+  "U.S. Army. FM 7-22, Army Physical Readiness Training (26/10/2012, domínio público), Conditioning Drill 1, Exercise 3: Mountain Climber (p. 9-8 e 6-100) e a cadência (p. 7-11). https://armyrotc.siu.edu/_common/documents/fm-7-22.pdf (lido em 11/10/2026): \"Starting Position: Front leaning rest position with the left foot below the chest and between the arms.\"; \"Cadence: MODERATE\"; \"1. Push upward with the feet and quickly change the positions of the legs. 2. Return to the starting position.\"; \"The hands are directly below the shoulders with the fingers spread (middle fingers pointing straight ahead) with the elbows straight, not locked.\"; \"To prevent the trunk from sagging, contract and hold the abdominals throughout the exercise. Do not raise the hips and buttocks when moving throughout the exercise.\"; \"Align the head with the spine and direct the eyes to a point about two feet in front of the body.\"; \"Throughout the exercise, remain on the balls of the feet.\"; \"Move the legs straight forward and backward, not at angles.\"; p. 7-11: \"Cadence speed is described as SLOW or MODERATE. The speed of each cadence is listed below: SLOW–50 counts per minute. MODERATE–80 counts per minute.\"",
+  "National Academy of Sports Medicine (NASM) — blog \"Finishing Touches: Mountain Climbers & Other Quick-Burning Workout Finishers\" (Kinsey Mahaffey). https://blog.nasm.org/finishing-touches-mountain-climbers-other-quick-burning-workout-finishers (lido na cópia do Internet Archive de 12/01/2024): \"Start on your hands and toes in a high plank position. Make sure the shoulders stay over the wrists and the core stays tight, keeping the back flat. Pull one knee in toward the chest with the foot lifted off the ground and rapidly switch legs. Keep the feet light and trunk movement minimal.\" O pé da frente no ar é só do NASM: as outras 5 fontes (ExRx, ACE, NSCA, FM 7-22 e as fotos do free-exercise-db) pousam o pé da frente no chão.",
+  "Lockie RG, Dawes JJ, Balfany K, Gonzales CE, Beitzel MM, Dulla JM, Orr RM. Physical Fitness Characteristics That Relate to Work Sample Test Battery Performance in Law Enforcement Recruits. Int J Environ Res Public Health. 2018;15(11):2477 (PMC6266286, CC BY): \"Mountain climbers involve isometric work for the trunk musculature and dynamic hip and knee flexion and extension\"; \"Recruits started in the standard “up” position for the push-up, and maintained the position with the arms extended throughout the test. The back was required to remain in neutral alignment, and recruits alternated flexing the hip and knee for each leg in movements that brought the knee close to the chest and the foot underneath the body within each repetition. The recruits completed as many repetitions as possible in 120 s.\"; tabela 1: \"Mountain Climbers (repetitions) | 58.67 ± 8.49\".",
+  "Reppa CM, Bogdanis GC, Stavrou NAM, Psychountaki M. The Effect of Aerobic Fitness on Psychological, Attentional and Physiological Responses during a Tabata High-Intensity Interval Training Session in Healthy Young Women. Int J Environ Res Public Health. 2023;20(2):1005 (PMC9859086, CC BY): \"Music at a rhythm of 96 beats per minute (bpm) was played from a sound system at 57 Watts (47.5 dBm) with songs especially modified and adapted to match the tempo of the Tabata protocol.\" — uma cadência alternativa (não diz se é 1 troca por batida); a cena usa a do FM 7-22.",
+  "A prancha alta (as referências da Flexão de Braço, lote 7): ACE — Push-up (#41), https://www.acefitness.org/resources/everyone/exercise-library/41/push-up/: \"Slowly shift your weight forward until your shoulders are positioned directly over your hands.\"; ExRx.net — Push-up (BWPushup, cópia do Internet Archive de 22/02/2026): \"Lie prone with forefeet on floor and hands slightly wider than shoulder width. Raise body up off floor by extending arms with body straight.\"; NASM — Push-Up, https://www.nasm.org/resource-center/exercise-library/push-up: \"Start in a plank position with hands positioned slightly wider than shoulder-width apart and feet together or hip-width apart.\"; Contreras B, Schoenfeld B, Mike J, Tiryaki-Sonmez G, Cronin J, Vaino E. The Biomechanics of the Push-up: Implications for Resistance Training Programs. Strength Cond J. 2012;34(5):41-46 (manuscrito aceito): \"The standard push-up requires a general stiffening of the knee joints, hip joints, pelvis, and spine to keep the body in a straight line from head to feet\"; tabela 1: \"Relative Load | 69% of bodyweight in top position\".",
+  "Polovinets O, Wolf A, Wollstein R. Force transmission through the wrist during performance of push-ups on a hyperextended and a neutral wrist. J Hand Ther. 2018;31(3):322-330. doi:10.1016/j.jht.2017.04.005 — o resumo (a mesma referência da Flexão de Braço): \"Push-ups are used ubiquitously to evaluate and strengthen the upper body. They are usually performed in 1 of 2 main ways: with the wrist in hyperextension and with the wrist in a neutral position.\" A mão espalmada no chão é a do punho em hiperextensão.",
+  "Amplitude normal das juntas: Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry (valores da AAOS; a referência do limites.py): flexão do joelho 0–135°, flexão do quadril até 120°, extensão do punho 0–70°. Tornozelo: Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29, tabela 5 (flexão plantar 0–50°, dorsiflexão 0–20°) — a referência do tecnica3d.tornozelo."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pe_na_ponta": [
+   "E",
+   "D"
+  ],
+  "pe_na_ponta_motivo": "Os 2 pés ficam na bola do pé com o calcanhar pra cima o ciclo todo (FM 7-22: \"Throughout the exercise, remain on the balls of the feet.\"; ExRx: \"On forefeet\"; ACE #258: \"heel up\"), como na Flexão de Braço.",
+  "pe_fora_do_chao": [
+   "E",
+   "D"
+  ],
+  "pe_fora_do_chao_fonte": "Os 2 pés saem do chão juntos em cada troca (ACE #258: \"Both feet leave the ground as your drive your right knee forward and extend your left leg back.\"; ExRx: \"landing on both forefeet simultaneously\"): sem a regra do chão nos 2 (as chaves valem pro ciclo todo). O chão é medido POR FASE nas alturas abaixo: no apoio a pele do pé (bola e dedos) encostando no chão (−1,5 a +1,5 mm), na troca os 2 pés no ar (≥ 3 mm).",
+  "pe_no_ar": [
+   "E",
+   "D"
+  ],
+  "pe_no_ar_fonte": "Os 2 pés MEXEM fora do chão na troca (checagem3d, lote 8, como no Coice de Glúteo na Polia): sem a regra do pé escorregando nos 2. O pé parado no chão do pouso até a troca é medido nos ângulos abaixo (bola_do_pe_quadril, ± 1,5 mm em cada apoio) e no info da cena (quanto a bola do pé andou desde o pouso).",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base (tecnica3d.PADRAO_PES_NO_CHAO: largura dos pés, ponta do pé, os 2 pés virados igual, um pé à frente do outro, joelho na direção do pé, coluna até 20°) foram feitas pra quem está em pé com os pés chapados. Aqui o apoio é nas mãos e na bola dos pés, quase em pé (a ponta_pe perde o sentido), e um pé fica ~0,5 m à frente do outro de propósito, trocando a cada meio ciclo (ExRx: \"position one leg forward bent underbody and extend other leg back\"). As que valem estão abaixo, por fase: pés na largura do quadril, pernas retas pra frente e pra trás, coluna neutra (até 8°), pelve e ombros nivelados e parados.",
+  "limites_juntas": {
+   "punhoE": [
+    0,
+    92
+   ],
+   "punhoD": [
+    0,
+    92
+   ]
+  },
+  "limites_juntas_fonte": "Punhos das mãos espalmadas no chão, sem segurar peso: com a palma chapada no chão e o ombro bem em cima da mão (NASM: \"Make sure the shoulders stay over the wrists\"; FM 7-22: \"The hands are directly below the shoulders\") o antebraço fica quase em pé e o punho ~86° estendido — é o apoio \"with the wrist in hyperextension\" da flexão de braço (Polovinets et al. 2018), o mesmo da Flexão de Braço (lote 7, a mesma faixa). O teto de 55° do limites.py é pra mão segurando peso sem dobrar o punho e o de 70° (AAOS, Norkin & White) é a extensão ativa sem carga.",
+  "zonas": [],
+  "alturas": [
+   {
+    "nome": "palma da mão esquerda espalmada no chão",
+    "partes": [
+     "LeftHand"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "FM 7-22, Mountain Climber (\"The hands are directly below the shoulders with the fingers spread\"); ACE, Mountain Climbers (#258) (\"Keeping your hands firmly on the ground\"); pedido: a palma encostando, sem afundar mais que ~1 mm e sem escorregar (a mão fica parada: o tronco não mexe)"
+   },
+   {
+    "nome": "dedo indicador da mão esquerda no chão",
+    "partes": [
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo médio da mão esquerda no chão",
+    "partes": [
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo anelar da mão esquerda no chão",
+    "partes": [
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo mínimo da mão esquerda no chão",
+    "partes": [
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "polegar da mão esquerda no chão",
+    "partes": [
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "palma da mão direita espalmada no chão",
+    "partes": [
+     "RightHand"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "FM 7-22, Mountain Climber (\"The hands are directly below the shoulders with the fingers spread\"); ACE, Mountain Climbers (#258) (\"Keeping your hands firmly on the ground\"); pedido: a palma encostando, sem afundar mais que ~1 mm e sem escorregar (a mão fica parada: o tronco não mexe)"
+   },
+   {
+    "nome": "dedo indicador da mão direita no chão",
+    "partes": [
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo médio da mão direita no chão",
+    "partes": [
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo anelar da mão direita no chão",
+    "partes": [
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "dedo mínimo da mão direita no chão",
+    "partes": [
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "polegar da mão direita no chão",
+    "partes": [
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ]
+   },
+   {
+    "nome": "antebraços nunca entram no chão (a pele do punho, no pé da mão, encosta junto com a palma)",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     5000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o chão), como na Flexão de Braço"
+   },
+   {
+    "nome": "pé esquerdo no chão na frente (bola do pé e dedos encostando)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"Flex your left hip, bringing your left thigh to your chest, placing your left foot on the floor, heel slighlty lifted\"); NSCA (\"positions that foot on the ground under the hips\"); FM 7-22 (\"Throughout the exercise, remain on the balls of the feet.\"); ExRx (\"On forefeet\")"
+   },
+   {
+    "nome": "pé esquerdo no chão na frente (bola do pé e dedos encostando)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"Flex your left hip, bringing your left thigh to your chest, placing your left foot on the floor, heel slighlty lifted\"); NSCA (\"positions that foot on the ground under the hips\"); FM 7-22 (\"Throughout the exercise, remain on the balls of the feet.\"); ExRx (\"On forefeet\")"
+   },
+   {
+    "nome": "pé esquerdo no chão atrás (bola do pé e dedos encostando)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "free-exercise-db (\"extending the bent leg until the leg is straight and supported by the toe\"); ACE, Mountain Climbers (#258) (\"fully extending your right leg behind you, with your foot in dorsi flexion, (toes pointing towards your shins, heel up)\"); FM 7-22 (\"remain on the balls of the feet\")"
+   },
+   {
+    "nome": "pé direito no chão na frente (bola do pé e dedos encostando)",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"Flex your left hip, bringing your left thigh to your chest, placing your left foot on the floor, heel slighlty lifted\"); NSCA (\"positions that foot on the ground under the hips\"); FM 7-22 (\"Throughout the exercise, remain on the balls of the feet.\"); ExRx (\"On forefeet\")"
+   },
+   {
+    "nome": "pé direito no chão atrás (bola do pé e dedos encostando)",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "free-exercise-db (\"extending the bent leg until the leg is straight and supported by the toe\"); ACE, Mountain Climbers (#258) (\"fully extending your right leg behind you, with your foot in dorsi flexion, (toes pointing towards your shins, heel up)\"); FM 7-22 (\"remain on the balls of the feet\")"
+   },
+   {
+    "nome": "pé direito no chão atrás (bola do pé e dedos encostando)",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "free-exercise-db (\"extending the bent leg until the leg is straight and supported by the toe\"); ACE, Mountain Climbers (#258) (\"fully extending your right leg behind you, with your foot in dorsi flexion, (toes pointing towards your shins, heel up)\"); FM 7-22 (\"remain on the balls of the feet\")"
+   },
+   {
+    "nome": "os 2 pés no ar na troca",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.162,
+     0.33799999999999997
+    ],
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"Both feet leave the ground as your drive your right knee forward and extend your left leg back.\"); ExRx, Mountain Climber (\"alternate leg positions by pushing hips up while immediately extending forward leg back and pulling rear leg forward underbody, landing on both forefeet simultaneously\"); FM 7-22 (\"Push upward with the feet and quickly change the positions of the legs\"); NSCA (\"Athletes switch both legs at the same time\")"
+   },
+   {
+    "nome": "os 2 pés no ar na troca",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.662,
+     0.838
+    ],
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"Both feet leave the ground as your drive your right knee forward and extend your left leg back.\"); ExRx, Mountain Climber (\"alternate leg positions by pushing hips up while immediately extending forward leg back and pulling rear leg forward underbody, landing on both forefeet simultaneously\"); FM 7-22 (\"Push upward with the feet and quickly change the positions of the legs\"); NSCA (\"Athletes switch both legs at the same time\")"
+   },
+   {
+    "nome": "pés nunca entram no chão",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     5000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o chão)"
+   },
+   {
+    "nome": "joelhos e pernas nunca encostam no chão (o joelho passa por baixo do corpo na troca)",
+    "partes": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "pedido (o escalador é na prancha alta: só as mãos e as bolas dos pés apoiam); na troca a coxa que vem pra frente passa pela vertical embaixo do quadril e o joelho fica no ponto mais baixo"
+   },
+   {
+    "nome": "quadril parado: não sobe nem cai (pele mais baixa da pelve)",
+    "partes": [
+     "Hips"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     365,
+     385
+    ],
+    "fonte": "NSCA (\"The hips do not rise away from the ground.\"; \"The hips should not bounce or rise during this movement.\"); FM 7-22 (\"Do not raise the hips and buttocks when moving throughout the exercise.\"; \"To prevent the trunk from sagging, contract and hold the abdominals throughout the exercise.\"); NASM (\"Keep the feet light and trunk movement minimal.\"); ExRx, Suspended Mountain Climber (\"while maintaining approximate height of hips from floor throughout movement\"). A pele da pelve perto da virilha anda uns 2 mm com as coxas"
+   },
+   {
+    "nome": "tronco longe do chão",
+    "partes": [
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftArm",
+     "RightArm"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     200,
+     5000
+    ],
+    "fonte": "prancha alta (NASM: \"Start on your hands and toes in a high plank position\"): só as mãos e os pés encostam no chão"
+   },
+   {
+    "nome": "cabeça longe do chão",
+    "partes": [
+     "Head"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     200,
+     5000
+    ]
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos longe da cabeça (sem encostar no rosto nem no cabelo)",
+    "partes": [
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     20,
+     2000
+    ]
+   },
+   {
+    "nome": "antebraços e mãos sem entrar no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "o joelho que vem não encosta nos braços (passa por dentro deles)",
+    "partes": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "com": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "RightHand",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "NSCA (\"keep the drive knee between the arms\"); FM 7-22 (\"with the left foot below the chest and between the arms\"); pedido (o joelho não entra no braço)"
+   },
+   {
+    "nome": "o joelho e a canela da frente não entram na barriga nem no peito",
+    "partes": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "com": [
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "pedido (o joelho que vem pra frente não entra no tronco)"
+   },
+   {
+    "nome": "o pé esquerdo não encosta na perna direita",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "com": [
+     "RightUpLeg",
+     "RightLeg",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "FM 7-22 (\"Move the legs straight forward and backward, not at angles.\"): as pernas passam uma do lado da outra na troca"
+   },
+   {
+    "nome": "o pé direito não encosta na perna esquerda",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg",
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "FM 7-22 (\"Move the legs straight forward and backward, not at angles.\")"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braços esticados, sem travar, o ciclo todo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "FM 7-22 (\"with the elbows straight, not locked\"); Lockie et al. 2018 (\"maintained the position with the arms extended throughout the test\"); ExRx, Mountain Climber (\"While holding upper body in place\"; \"Static: ... Elbow Extension\")"
+   },
+   {
+    "nome": "ombros bem em cima das mãos (braço em pé)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "Hand"
+    ],
+    "t": "todos",
+    "graus": [
+     78,
+     90
+    ],
+    "fonte": "NASM (\"Make sure the shoulders stay over the wrists\"); FM 7-22 (\"The hands are directly below the shoulders\"). Com as mãos um pouco mais abertas que os ombros o braço inclina uns 9° pro lado"
+   },
+   {
+    "nome": "mãos um pouco mais abertas que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.2,
+     1.6
+    ],
+    "fonte": "ExRx, Mountain Climber (\"Place hands on floor, slightly wider than shoulder width\"); FM 7-22 (\"on his hands (shoulder width)\", na prancha de partida) no limite de baixo. A medida divide pela distância entre as cabeças do úmero (no boneco ~1,2 = mãos na largura dos ombros)"
+   },
+   {
+    "nome": "dedos das mãos pra frente",
+    "medida": "dedos_mao_dentro",
+    "t": "todos",
+    "graus": [
+     -10,
+     10
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"fingers pointing forwards\"); FM 7-22 (\"fingers spread (middle fingers pointing straight ahead)\")"
+   },
+   {
+    "nome": "palmas viradas pro chão",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     165,
+     180
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"place your hands on the floor\")"
+   },
+   {
+    "nome": "escápulas um pouco protraídas e paradas",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     5,
+     35
+    ],
+    "fonte": "ExRx, Mountain Climber (\"Static: Scapula & Clavicle Protraction\"); a mesma da Flexão de Braço em cima (lote 7)"
+   },
+   {
+    "nome": "costas retas (coluna neutra) e paradas",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "NSCA (\"The back is flat\"); NASM (\"keeping the back flat\"); ACE, Mountain Climbers (#258) (\"Stiffen your abdominal muscles (“brace”) to stabilize your spine\"); Lockie et al. 2018 (\"The back was required to remain in neutral alignment\")"
+   },
+   {
+    "nome": "a lombar não afunda nem arredonda",
+    "medida": "coluna_sinal",
+    "t": "todos",
+    "graus": [
+     -4,
+     4
+    ],
+    "fonte": "FM 7-22 (\"To prevent the trunk from sagging, contract and hold the abdominals throughout the exercise.\"); NSCA (\"The back is flat\")"
+   },
+   {
+    "nome": "costas quase na horizontal, com o quadril na altura dos ombros, paradas",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     78,
+     92
+    ],
+    "fonte": "NSCA, fig. 2.1 e 2.2; FM 7-22, fig. 9-4; ACE #258, fotos 1 e 3 (observação nas fotos: as costas retas, quase horizontais, o quadril na altura dos ombros); NSCA (\"The hips do not rise away from the ground\"). Mais baixo não dá: a coxa da frente passa pela vertical embaixo do quadril na troca (coxa do boneco 42,4 cm) e o joelho bateria no chão. 90 = tronco na horizontal"
+   },
+   {
+    "nome": "cabeça alinhada com a coluna",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -18,
+     -4
+    ],
+    "fonte": "FM 7-22 (\"Align the head with the spine and direct the eyes to a point about two feet in front of the body.\"); NSCA (\"head neutral\"). O boneco em pé, no repouso, mede ~−11°"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "NASM (\"Keep the feet light and trunk movement minimal.\"); FM 7-22 (\"Move the legs straight forward and backward, not at angles.\")"
+   },
+   {
+    "nome": "pelve sem girar",
+    "medida": "pelve_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "NASM (\"trunk movement minimal\")"
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ExRx, Mountain Climber (\"While holding upper body in place\")"
+   },
+   {
+    "nome": "pés na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.6
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"positioning your knees and feet hip-width apart\"); a medida divide pela distância entre as articulações do quadril. No boneco musculoso os pés ficam a ~1,3 × essa distância: mais juntos, uma coxa entra na outra quando as 2 passam juntas na troca (a mesma conta da Flexão de Braço)"
+   },
+   {
+    "nome": "as pernas vão e voltam retas (sem abrir nem cruzar)",
+    "medida": "coxa_abducao",
+    "t": "todos",
+    "graus": [
+     -2,
+     7
+    ],
+    "fonte": "FM 7-22 (\"Move the legs straight forward and backward, not at angles.\"); NSCA (\"keep the drive knee between the arms\"). O boneco em pé, no repouso, mede ~+4,5"
+   },
+   {
+    "nome": "joelhos na amplitude normal",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     135
+    ],
+    "fonte": "AAOS (Norkin & White): flexão do joelho 0–135° (limites.py)"
+   },
+   {
+    "nome": "tornozelos na amplitude normal (flexão dorsal até 20°)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     60,
+     96
+    ],
+    "fonte": "Alazzawi et al. 2017, tabela 5 (flexão plantar 0–50°, dorsiflexão 0–20°; no boneco ~26° a ~96°)"
+   },
+   {
+    "nome": "perna esquerda esticada atrás",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "E",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "NSCA (\"The back is flat, head neutral, and hips and knees fully extended\"); free-exercise-db (\"extending the bent leg until the leg is straight and supported by the toe\"); ACE, Mountain Climbers (#258) (\"fully extending your right leg behind you\")"
+   },
+   {
+    "nome": "tornozelo esquerdo de trás dobrado, o calcanhar pra cima",
+    "medida": "tornozelo",
+    "lado": "E",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"with your foot in dorsi flexion, (toes pointing towards your shins, heel up)\"); a mesma faixa da Flexão de Braço (lote 7); o limite da flexão dorsal é 20° (Alazzawi 2017) = ~96° no boneco"
+   },
+   {
+    "nome": "quadril na reta ombro → tornozelo esquerdo de trás (com o quadril na altura dos ombros)",
+    "medida": "quadril_linha_ombro_tornozelo_lado",
+    "lado": "E",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "mm": [
+     70,
+     125
+    ],
+    "fonte": "NSCA, fig. 2.1 e 2.2 e FM 7-22, fig. 9-4 (observação: o quadril na altura dos ombros e a perna de trás descendo até o pé); NSCA (\"The hips do not rise away from the ground\"). A reta do corpo da Flexão de Braço (0 ± 25 mm) não serve: com o quadril nela (0,42 m do chão) a coxa da frente não passa pela vertical na troca sem o joelho bater no chão; aqui o quadril fica ~+95 mm, parado (sem subir nem cair). + = o quadril acima da reta"
+   },
+   {
+    "nome": "bola do pé esquerdo parada no chão atrás (sem escorregar)",
+    "medida": "bola_do_pe_quadril",
+    "lado": "E",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "mm": [
+     -741.5,
+     -738.5
+    ],
+    "fonte": "pedido (\"quando ele pousa, não escorrega\"); ExRx, Mountain Climber (\"landing on both forefeet simultaneously\"): a bola do pé fica no mesmo ponto do chão do pouso até a troca (o tronco fica parado)"
+   },
+   {
+    "nome": "joelho esquerdo dobrado embaixo do corpo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "E",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "graus": [
+     115,
+     135
+    ],
+    "fonte": "free-exercise-db (\"Flexing the knee and hip, bring one leg until the knee is approximately under the hip\"); NSCA (\"flexes one leg at the knee and hip and positions that foot on the ground under the hips\"); AAOS (Norkin & White): até 135°"
+   },
+   {
+    "nome": "quadril esquerdo dobrado: o joelho em direção ao peito",
+    "medida": "quadril_sinal",
+    "lado": "E",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "graus": [
+     100,
+     122
+    ],
+    "fonte": "pedido (\"os joelhos alternam vindo pra frente, em direção ao peito\"); Lockie et al. 2018 (\"brought the knee close to the chest and the foot underneath the body\"); NASM (\"Pull one knee in toward the chest\"); a flexão do quadril vai até 120° (AAOS)"
+   },
+   {
+    "nome": "tornozelo esquerdo da frente dobrado, na bola do pé",
+    "medida": "tornozelo",
+    "lado": "E",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "FM 7-22 (\"Throughout the exercise, remain on the balls of the feet.\"); ExRx (\"On forefeet\"); Alazzawi 2017 (dorsiflexão até 20° = ~96° no boneco)"
+   },
+   {
+    "nome": "pé esquerdo pousa embaixo do quadril",
+    "medida": "bola_do_pe_quadril",
+    "lado": "E",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "mm": [
+     -260,
+     -150
+    ],
+    "fonte": "NSCA (\"positions that foot on the ground under the hips\"); ExRx, Mountain Climber (\"position one leg forward bent underbody\"); Lockie et al. 2018 (\"the foot underneath the body\"). − = a bola do pé atrás da articulação do quadril (a pelve vai até ~10 cm atrás dela)"
+   },
+   {
+    "nome": "bola do pé esquerdo parada no chão na frente (sem escorregar)",
+    "medida": "bola_do_pe_quadril",
+    "lado": "E",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "mm": [
+     -211.1,
+     -208.1
+    ],
+    "fonte": "pedido (\"quando ele pousa, não escorrega\"); ExRx, Mountain Climber (\"landing on both forefeet simultaneously\")"
+   },
+   {
+    "nome": "joelho esquerdo dobrado embaixo do corpo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "E",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "graus": [
+     115,
+     135
+    ],
+    "fonte": "free-exercise-db (\"Flexing the knee and hip, bring one leg until the knee is approximately under the hip\"); NSCA (\"flexes one leg at the knee and hip and positions that foot on the ground under the hips\"); AAOS (Norkin & White): até 135°"
+   },
+   {
+    "nome": "quadril esquerdo dobrado: o joelho em direção ao peito",
+    "medida": "quadril_sinal",
+    "lado": "E",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "graus": [
+     100,
+     122
+    ],
+    "fonte": "pedido (\"os joelhos alternam vindo pra frente, em direção ao peito\"); Lockie et al. 2018 (\"brought the knee close to the chest and the foot underneath the body\"); NASM (\"Pull one knee in toward the chest\"); a flexão do quadril vai até 120° (AAOS)"
+   },
+   {
+    "nome": "tornozelo esquerdo da frente dobrado, na bola do pé",
+    "medida": "tornozelo",
+    "lado": "E",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "FM 7-22 (\"Throughout the exercise, remain on the balls of the feet.\"); ExRx (\"On forefeet\"); Alazzawi 2017 (dorsiflexão até 20° = ~96° no boneco)"
+   },
+   {
+    "nome": "pé esquerdo pousa embaixo do quadril",
+    "medida": "bola_do_pe_quadril",
+    "lado": "E",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "mm": [
+     -260,
+     -150
+    ],
+    "fonte": "NSCA (\"positions that foot on the ground under the hips\"); ExRx, Mountain Climber (\"position one leg forward bent underbody\"); Lockie et al. 2018 (\"the foot underneath the body\"). − = a bola do pé atrás da articulação do quadril (a pelve vai até ~10 cm atrás dela)"
+   },
+   {
+    "nome": "bola do pé esquerdo parada no chão na frente (sem escorregar)",
+    "medida": "bola_do_pe_quadril",
+    "lado": "E",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "mm": [
+     -211.1,
+     -208.1
+    ],
+    "fonte": "pedido (\"quando ele pousa, não escorrega\"); ExRx, Mountain Climber (\"landing on both forefeet simultaneously\")"
+   },
+   {
+    "nome": "perna direita esticada atrás",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "D",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "NSCA (\"The back is flat, head neutral, and hips and knees fully extended\"); free-exercise-db (\"extending the bent leg until the leg is straight and supported by the toe\"); ACE, Mountain Climbers (#258) (\"fully extending your right leg behind you\")"
+   },
+   {
+    "nome": "tornozelo direito de trás dobrado, o calcanhar pra cima",
+    "medida": "tornozelo",
+    "lado": "D",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"with your foot in dorsi flexion, (toes pointing towards your shins, heel up)\"); a mesma faixa da Flexão de Braço (lote 7); o limite da flexão dorsal é 20° (Alazzawi 2017) = ~96° no boneco"
+   },
+   {
+    "nome": "quadril na reta ombro → tornozelo direito de trás (com o quadril na altura dos ombros)",
+    "medida": "quadril_linha_ombro_tornozelo_lado",
+    "lado": "D",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "mm": [
+     70,
+     125
+    ],
+    "fonte": "NSCA, fig. 2.1 e 2.2 e FM 7-22, fig. 9-4 (observação: o quadril na altura dos ombros e a perna de trás descendo até o pé); NSCA (\"The hips do not rise away from the ground\"). A reta do corpo da Flexão de Braço (0 ± 25 mm) não serve: com o quadril nela (0,42 m do chão) a coxa da frente não passa pela vertical na troca sem o joelho bater no chão; aqui o quadril fica ~+95 mm, parado (sem subir nem cair). + = o quadril acima da reta"
+   },
+   {
+    "nome": "bola do pé direito parada no chão atrás (sem escorregar)",
+    "medida": "bola_do_pe_quadril",
+    "lado": "D",
+    "t": [
+     0.0,
+     0.15
+    ],
+    "mm": [
+     -740.6,
+     -737.6
+    ],
+    "fonte": "pedido (\"quando ele pousa, não escorrega\"); ExRx, Mountain Climber (\"landing on both forefeet simultaneously\"): a bola do pé fica no mesmo ponto do chão do pouso até a troca (o tronco fica parado)"
+   },
+   {
+    "nome": "perna direita esticada atrás",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "D",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "NSCA (\"The back is flat, head neutral, and hips and knees fully extended\"); free-exercise-db (\"extending the bent leg until the leg is straight and supported by the toe\"); ACE, Mountain Climbers (#258) (\"fully extending your right leg behind you\")"
+   },
+   {
+    "nome": "tornozelo direito de trás dobrado, o calcanhar pra cima",
+    "medida": "tornozelo",
+    "lado": "D",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "ACE, Mountain Climbers (#258) (\"with your foot in dorsi flexion, (toes pointing towards your shins, heel up)\"); a mesma faixa da Flexão de Braço (lote 7); o limite da flexão dorsal é 20° (Alazzawi 2017) = ~96° no boneco"
+   },
+   {
+    "nome": "quadril na reta ombro → tornozelo direito de trás (com o quadril na altura dos ombros)",
+    "medida": "quadril_linha_ombro_tornozelo_lado",
+    "lado": "D",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "mm": [
+     70,
+     125
+    ],
+    "fonte": "NSCA, fig. 2.1 e 2.2 e FM 7-22, fig. 9-4 (observação: o quadril na altura dos ombros e a perna de trás descendo até o pé); NSCA (\"The hips do not rise away from the ground\"). A reta do corpo da Flexão de Braço (0 ± 25 mm) não serve: com o quadril nela (0,42 m do chão) a coxa da frente não passa pela vertical na troca sem o joelho bater no chão; aqui o quadril fica ~+95 mm, parado (sem subir nem cair). + = o quadril acima da reta"
+   },
+   {
+    "nome": "bola do pé direito parada no chão atrás (sem escorregar)",
+    "medida": "bola_do_pe_quadril",
+    "lado": "D",
+    "t": [
+     0.85,
+     1.0
+    ],
+    "mm": [
+     -740.6,
+     -737.6
+    ],
+    "fonte": "pedido (\"quando ele pousa, não escorrega\"); ExRx, Mountain Climber (\"landing on both forefeet simultaneously\"): a bola do pé fica no mesmo ponto do chão do pouso até a troca (o tronco fica parado)"
+   },
+   {
+    "nome": "joelho direito dobrado embaixo do corpo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "D",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "graus": [
+     115,
+     135
+    ],
+    "fonte": "free-exercise-db (\"Flexing the knee and hip, bring one leg until the knee is approximately under the hip\"); NSCA (\"flexes one leg at the knee and hip and positions that foot on the ground under the hips\"); AAOS (Norkin & White): até 135°"
+   },
+   {
+    "nome": "quadril direito dobrado: o joelho em direção ao peito",
+    "medida": "quadril_sinal",
+    "lado": "D",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "graus": [
+     100,
+     122
+    ],
+    "fonte": "pedido (\"os joelhos alternam vindo pra frente, em direção ao peito\"); Lockie et al. 2018 (\"brought the knee close to the chest and the foot underneath the body\"); NASM (\"Pull one knee in toward the chest\"); a flexão do quadril vai até 120° (AAOS)"
+   },
+   {
+    "nome": "tornozelo direito da frente dobrado, na bola do pé",
+    "medida": "tornozelo",
+    "lado": "D",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "graus": [
+     84,
+     96
+    ],
+    "fonte": "FM 7-22 (\"Throughout the exercise, remain on the balls of the feet.\"); ExRx (\"On forefeet\"); Alazzawi 2017 (dorsiflexão até 20° = ~96° no boneco)"
+   },
+   {
+    "nome": "pé direito pousa embaixo do quadril",
+    "medida": "bola_do_pe_quadril",
+    "lado": "D",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "mm": [
+     -260,
+     -150
+    ],
+    "fonte": "NSCA (\"positions that foot on the ground under the hips\"); ExRx, Mountain Climber (\"position one leg forward bent underbody\"); Lockie et al. 2018 (\"the foot underneath the body\"). − = a bola do pé atrás da articulação do quadril (a pelve vai até ~10 cm atrás dela)"
+   },
+   {
+    "nome": "bola do pé direito parada no chão na frente (sem escorregar)",
+    "medida": "bola_do_pe_quadril",
+    "lado": "D",
+    "t": [
+     0.35,
+     0.65
+    ],
+    "mm": [
+     -212.1,
+     -209.1
+    ],
+    "fonte": "pedido (\"quando ele pousa, não escorrega\"); ExRx, Mountain Climber (\"landing on both forefeet simultaneously\")"
+   }
+  ]
+ }
+}

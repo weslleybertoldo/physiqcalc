@@ -1,0 +1,418 @@
+{
+  "uuid": "2cf80827-b005-5cab-ae11-b5c101db965d",
+  "nome": "Levantamento Terra Sumô com Barra",
+  "cena": "levantamento_terra_sumo_com_barra",
+  "grupo": "Posterior de Coxa",
+  "subgrupo": "Glúteo máximo · adutores · quadríceps · isquiotibiais",
+  "padrao_movimento": "terra_stiff",
+  "equipamento": "barra",
+  "variacao": "sumô",
+  "alvos": [
+    "gluteo",
+    "adutores",
+    "quadriceps",
+    "posterior"
+  ],
+  "auxiliares": [
+    "lombar",
+    "trapezio",
+    "dorsal",
+    "antebraco",
+    "panturrilha",
+    "tibial"
+  ],
+  "camera": {
+    "az": 35,
+    "el": 8,
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.05,
+      0.75
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.3,
+    "alvo": [
+      0,
+      -0.05,
+      0.75
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé atrás da barra apoiada no chão, com os pés bem afastados (bem mais que os ombros) e as pontas viradas uns 40° pra fora, a barra em cima do meio dos pés, junto às canelas. Desce o quadril, com os joelhos indo na direção das pontas dos pés, e segura a barra com as palmas viradas para o corpo (pegada pronada), as mãos POR DENTRO das pernas, mais ou menos na largura dos ombros (mais fechadas que no terra convencional), com os braços esticados embaixo dos ombros; o quadril fica baixo, as canelas quase em pé, o tronco mais em pé que no terra convencional, a coluna neutra, o peito alto e o olhar à frente. Sobe empurrando o chão e levando o peito pra cima: joelhos e quadril estendem juntos, com os joelhos sempre na direção das pontas dos pés, e a barra sobe reta e rente às canelas e às coxas; depois que ela passa dos joelhos, o quadril vai à frente até ficar em pé, com os joelhos e o quadril estendidos e os ombros para trás, sem inclinar o tronco para trás. Desce o caminho inverso, levando o quadril pra trás e os joelhos pra fora, com o peito alto e as costas retas.",
+  "cinesiologia": {
+    "plano": "pernas num plano entre o sagital e o frontal, na direção das pontas dos pés (base larga, pés ~42° pra fora); tronco no sagital; cadeia cinética fechada",
+    "articulacoes": "quadril (extensão na subida, flexão na descida, com a coxa aberta e girada pra fora — abdução e rotação externa), joelho (extensão na subida, junto com o quadril), tornozelo (muda pouco: a canela já começa quase em pé); coluna neutra (isometria); ombros, cotovelos e punhos parados, com os braços esticados segurando a barra",
+    "agonistas": "glúteo máximo (extensão do quadril), adutor magno (extensão do quadril com a base larga) e quadríceps (extensão do joelho: o sumô usa mais o quadríceps que o terra convencional)",
+    "sinergistas": "sóleo; isquiotibiais perto do fim da subida (quando o joelho estende antes do quadril)",
+    "estabilizadores": "isquiotibiais e gastrocnêmio como estabilizadores dinâmicos; eretores da espinha (menos que no terra convencional: o tronco fica mais em pé), reto abdominal e oblíquos; trapézio médio e superior, elevador da escápula e romboides (escápulas), latíssimo do dorso (barra junto ao corpo), flexores do antebraço (pegada) e tibial anterior (mais ativo que no terra convencional)",
+    "fases": "subida concêntrica (do chão até em pé), descida excêntrica"
+  },
+  "referencias": [
+    "free-exercise-db (domínio público), Sumo Deadlift — o \"fonte_en\" do catálogo. https://github.com/yuhonas/free-exercise-db/blob/main/exercises/Sumo_Deadlift.json (lido em 11/10/2026): \"Begin with a bar loaded on the ground. Approach the bar so that the bar intersects the middle of the feet. The feet should be set very wide, near the collars. Bend at the hips to grip the bar. The arms should be directly below the shoulders, inside the legs, and you can use a pronated grip, a mixed grip, or hook grip. Relax the shoulders, which in effect lengthens your arms.\"; \"Take a breath, and then lower your hips, looking forward with your head with your chest up. Drive through the floor, spreading your feet apart, with your weight on the back half of your feet. Extend through the hips and knees.\"; \"As the bar passes through the knees, lean back and drive the hips into the bar, pulling your shoulder blades together.\"; \"Return the weight to the ground by bending at the hips and controlling the weight on the way down.\"; músculos: \"primaryMuscles\": [\"hamstrings\"], \"secondaryMuscles\": [\"adductors\", \"forearms\", \"glutes\", \"lower back\", \"middle back\", \"quadriceps\", \"traps\"]. Duas coisas dele ficaram de fora, pelas outras fontes: a base \"near the collars\" (os pés perto das travas, ~1,2 m: o Escamilla mediu 70 ± 11 cm em campeonato) e o \"lean back\" no fim (IPF, Escamilla, Hanen e ExRx terminam em pé com o tronco reto; a dica do Levantamento Terra pede \"sem inclinar para trás\").",
+    "ExRx.net — Barbell Sumo Deadlift (Weight Exercises › Glute), https://exrx.net/WeightExercises/GluteusMaximus/BBSumoDeadlift (cópia do Internet Archive de 24/09/2022 — o site responde 403 —, lida em 11/10/2026): Preparation \"Position feet under bar with very wide stance. Squat down and grasp bar between legs with shoulder width mixed grip. Face forward while positioning shoulders upward with arms straight, chest high, hips low, and back straight.\"; Execution \"Pull bar up by driving feet outward, while pulling chest up. Extend knees when bar passes knees. At top of lift, when torso is upright, drive shoulders back and chest up. Return weight to floor by bending hips back and knees pointed outward, while keeping chest high and back straight.\"; Comments \"Use shoulder width grip since narrower than shoulder width grip will make it more difficult to lockout at top. Throughout lift, keep hips low, shoulders high, arms and back straight, and knees pointed out same direction as feet. Also, keep bar close to body to improve mechanical leverage. With wide stance, push feet out to sides and not down to prevent knees from buckling inward. Pushing knees out will allow hips to travel toward bar more quickly while improving leverage.\", \"Heavy barbell deadlifts significantly engages Latissmus Dorsi.\"; músculos: Target \"Gluteus Maximus\"; Synergists \"Quadriceps, Adductor Magnus, Soleus\"; Dynamic Stabilizers \"Hamstrings, Gastrocnemius\"; Stabilizers \"Erector Spinae, Trapezius, Middle, Trapezius, Upper, Levator Scapulae, Rhomboids\"; Antagonist Stabilizers \"Rectus Abdominis, Obliques\".",
+    "ExRx.net — Deadlift Analysis, seção \"Sumo Deadlift vs Conventional Deadlift\", https://exrx.net/Kinesiology/Deadlift (cópia do Internet Archive de 13/08/2022 — a de 2025 não tem mais a seção do sumô —, lida em 11/10/2026): \"The wide stance of the Sumo Deadlifts allows the bar to be positioned closer to the hips. The sumo position, along with the lower positioning of the hips, allows the torso to begin in a slightly more upright posture.\"; \"The wide stances of the Sumo Deadlift also positions the body slightly lower to the ground thereby reducing the need to bend over as far.\"; \"The Sumo Deadlift has a greater reliance on the powerful hip musculature with relatively less emphasis on the spinal musculature.\"; \"The wider stance and deeper initial squatting position relies heavily on the Gluteus Maximus and particularly the Adductor Magnus. Like the Squat, the hamstrings act as Dynamic Stabilizers moving through the hips and knee with little change in length. The hamstring may act as a Synergist nearer the top of the lift if the knees extend significantly sooner than the hips\"; \"Although the knees do not extend as far beyond the ankle with the wide stance with knees pointing outward, significant knee torque is still generated by the bilateral forces angled slightly outward and downward, eliciting quadriceps evolvement.\"; \"The Erector Spinae and their antagonist stabilizers, Rectus Abdominis and Obliques, while still heavily involved in stabilizing the spine are proportionally less evolved in the Sumo Deadlift due to the more upright posture of the torso\"; \"placing the arms narrower than shoulder width creates unneeded torque near the top of the motion potentially interfering with a full upright lockout\".",
+    "Escamilla RF, Francisco AC, Fleisig GS, Barrentine SW, Welch CM, Kayes AV, Speer KP, Andrews JR. A three-dimensional biomechanical analysis of sumo and conventional style deadlifts. Med Sci Sports Exerc. 2000;32(7):1265-1275 (texto completo pela cópia do Internet Archive de 12/02/2018 — a LWW responde 403 e as tabelas, que são imagens, ficaram sem cópia —, lido em 11/10/2026): \"At LO and KP, thigh position was 11–16° more horizontal for the sumo group, whereas the knees and hips extended approximately 12° more for the conventional group. The sumo group had 5–10° greater vertical trunk and thigh positions, employed a wider stance (70 ± 11 cm vs 32 ± 8 cm), turned their feet out more (42 ± 8° vs 14 ± 6°), and gripped the bar with their hands closer together (47 ± 4 cm vs 55 ± 10 cm).\"; \"the arms are positioned inside the knees for the sumo style and outside the knees for the conventional style\"; \"Stance width was defined as the linear distance between the left and right ankle centers, whereas hand width was defined as the linear distance between the left and right hand centers.\"; \"Compared with the conventional group, at LO the sumo group maintained a more upright trunk, positioned the thigh closer to the horizontal, and positioned the shank closer to the vertical. At KP and at minimal bar velocity, the sumo group had greater hip and knee flexion (i.e., smaller relative hip and knee angles), whereas the conventional group positioned the shank closer to the vertical and the thigh closer to the horizontal. From LO to KP, the conventional group extended their hips, knees, and shank through a greater range of motion than the sumo group. Throughout the lift, the feet were turned outward 10–15° for the conventional group and 40–45° for the sumo group.\"; \"lower extremity movements occurred in a plane midway between the sagittal and frontal planes of the lifter in the direction the feet were pointing, whereas trunk movements occurred in the sagittal plane\"; no sticking point, logo depois do KP, \"The trunk was slightly more upright in the deadlift (approximately 50°)\" (do horizontal) \"and the knees and hips were extended more in the deadlift (approximately 152–164° and 111–123°, respectively)\"; o fim: \"the lifter was in an upright position with the knees and hips fully extended and the shoulders pulled back\"; \"the primary lower extremity muscles involved during the sumo deadlifts are the gluteus maximus, hamstrings, quadriceps, and tibialis anterior\"; \"Hip extensor, knee extensor, and ankle dorsiflexor moments were generated for the sumo group\"; \"the more upright trunk position observed during the sumo deadlift may decrease spinal loads\".",
+    "Escamilla RF, Francisco AC, Kayes AV, Speer KP, Moorman CT 3rd. An electromyographic analysis of sumo and conventional style deadlifts. Med Sci Sports Exerc. 2002;34(4):682-688 (resumo no PubMed 11932579, lido em 11/10/2026; o texto completo dá 403): \"Overall EMG activity from the vastus medialis, vastus lateralis, and tibialis anterior were significantly greater in the sumo deadlift, whereas overall EMG activity from the medial gastrocnemius was significantly greater in the conventional deadlift.\"; \"Quadriceps, tibialis anterior, hip adductor, gluteus maximus, L3 and T12 paraspinal, and middle trapezius activity were significantly greater in higher knee flexion intervals\".",
+    "Martín-Fuentes I, Oliva-Lozano JM, Muyor JM. Electromyographic activity in deadlift exercise and its variants. A systematic review. PLoS One. 2020;15(2):e0229507 (PMC7046193, lido em 11/10/2026): o único estudo do sumô na revisão é o Escamilla 2002 — Tabela 1 \"Greater vastus medialis, vastus lateralis and tibialis anterior activation during sumo deadlift. Greater medialis gastrocnemius activation during deadlift.\"; Tabela 2 (% da contração máxima, sumô): glúteo máximo 37 ± 28, bíceps femoral 29 ± 19, semitendíneo 31 ± 23, vasto lateral 48 ± 24, vasto medial 44 ± 27, reto femoral 18 ± 13.",
+    "Hanen NC, Ben Mansour K, Ertel GN, Duchene Y, Gauchard GC. Biomechanical analysis of conventional and sumo deadlift. Front Bioeng Biotechnol. 2025;13:1597209 (acesso aberto, lido em 11/10/2026; 30 homens treinados a 85% de 1RM): \"In the SDL, the main difference was the wider foot placement, with the toes pointed outward (Figure 1b). The hands gripped the barbell inside the knees. For both deadlift variations, an overhand grip was consistently used, although the grip width was adjusted according to the individual preferences of each participant. A trial was considered successful if, at the end of the concentric phase, the participant stood upright with fully extended knees and hips, a straight torso, and retracted shoulders.\"; \"hip abduction and external rotation were greater in SDL compared to CDL\"; \"SDL emphasizes anterior chain involvement and induces greater mediolateral stabilization demands.\"; Tabela 1 (sumô, sagital, [mín máx] da fase): joelho fase 1 [−59,1 −20,9], fase 2 [−22,0 −2,9]; quadril fase 1 [46,6 86,5], fase 2 [2,7 46,6]. Diverge do Escamilla no joelho (\"with an earlier extension observed in SDL\"): a cena segue o Escamilla e o ExRx.",
+    "International Powerlifting Federation. Technical Rulebook (em vigor desde 01/03/2026, v3), 4.3 Deadlift (https://www.powerlifting.sport/rules/codes/info/technical-rules, lido em 11/10/2026): \"The lifter shall face the front of the platform with the bar laid horizontally in front of the lifter’s feet, gripped with an optional grip in both hands and lifted until the lifter is standing erect.\"; \"On completion of the lift the knees shall be locked in a straight position.\"; desqualificação: \"Failure to stand erect with the shoulders back.\", \"Supporting the bar on the thighs during the performance of the lift. If the bar edges up the thigh but is not supported this is not a reason for disqualification.\" As regras não falam da largura dos pés nem das mãos: o sumô e o convencional valem igual.",
+    "NSCA (Essentials pelo resumo do CSCS da Achievable, Basics of Strength and Conditioning Manual 2012, Kinetic Select) e ACE (biblioteca de exercícios): não têm o terra sumô (conferido pelo agente de fontes, 11/10/2026).",
+    "Barra e anilhas: as do Levantamento Terra (lote 7; ficha d716cf5f-…): IPF \"Distance between the collar faces is not to exceed 1.32 m or be less than 1.31 m\", \"Diameter of the bar is not to exceed 29 mm or be less than 28 mm\"; IWF \"The diameter of the largest discs: 450 mm with a tolerance of ± 1 mm\". Base de sumô: a do Agachamento Sumô com Barra (lote 8; ficha 2ba6fa20-…), com a largura e o ângulo do Escamilla 2000.",
+    "Amplitude normal do tornozelo: Alazzawi S et al. World J Orthop 2017;8(1):21-29, tabela 5 (flexão plantar 0–50°, dorsiflexão 0–20°), a do lib/tecnica3d.py (medida tornozelo: o boneco em pé mede ~76°)."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "Base do sumô de propósito: os pés a ~70 cm (centros dos tornozelos) e virados ~42° pra fora (Escamilla 2000: \"employed a wider stance (70 ± 11 cm vs 32 ± 8 cm), turned their feet out more (42 ± 8° vs 14 ± 6°)\"; \"Throughout the lift, the feet were turned outward ... 40–45° for the sumo group\"), então as faixas padrão de largura (até 2,6×) e de ponta do pé (até 30°) não servem; e com a base larga e a perna dobrada o joelho_valgo padrão (joelho × reta quadril → tornozelo) passa de +10 cm sem erro nenhum (o joelho vai pra fora, em cima do pé). As outras regras padrão (os dois pés virados igual, um pé não à frente do outro e coluna neutra) estão abaixo, mais estreitas, e o joelho na direção do pé é medido no referencial do próprio pé (tecnica3d.joelho_plano_pe), como no Agachamento Sumô com Barra.",
+    "zonas": [
+      {
+        "nome": "barra rente às canelas e aos joelhos",
+        "equipamento": "barra",
+        "t": [
+          0.0,
+          0.55
+        ],
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          3,
+          20
+        ],
+        "fonte": "free-exercise-db (\"Approach the bar so that the bar intersects the middle of the feet\"); ExRx, Barbell Sumo Deadlift (\"keep bar close to body to improve mechanical leverage\"). Medida: barra (eixo, travas e anilhas) × pele das pernas (a do Levantamento Terra)"
+      },
+      {
+        "nome": "barra perto das coxas (polegar e dedos entre a barra e a coxa)",
+        "equipamento": "barra",
+        "t": [
+          0.55,
+          1.0
+        ],
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          3,
+          35
+        ],
+        "fonte": "ExRx, Barbell Sumo Deadlift (\"keep bar close to body\"); IPF (\"If the bar edges up the thigh but is not supported this is not a reason for disqualification\"). Da metade da subida em diante as mãos (por dentro das pernas, ~47 cm entre elas) ficam na frente das coxas e o polegar, que dá a volta na barra, e os dedos ficam entre a barra e a coxa: a barra fica o que a mão precisa a mais pra frente (até ~2 cm além dos 6 mm de folga da pele)"
+      },
+      {
+        "nome": "a barra e as anilhas longe dos pés",
+        "equipamento": "barra",
+        "partes": [
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          50,
+          1000000000000000.0
+        ],
+        "fonte": "pedido do Weslley (as anilhas não entram nos pés: com a base larga e as pontas pra fora os pés ficam mais perto das anilhas)"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "mãos não entram nas coxas nem nos joelhos",
+        "partes": [
+          "LeftHand",
+          "RightHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          1,
+          5000
+        ],
+        "fonte": "pedido do Weslley (os braços ficam POR DENTRO das pernas: mão, antebraço e braço não entram nas coxas nem nos joelhos); Escamilla 2000 (\"the arms are positioned inside the knees for the sumo style\"); Hanen 2025 (\"The hands gripped the barbell inside the knees\"). No fim os dedos ficam entre a barra e a coxa, encostando sem entrar"
+      },
+      {
+        "nome": "antebraços e braços não encostam nas pernas",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftArm",
+          "RightArm"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          8,
+          5000
+        ],
+        "fonte": "pedido do Weslley (braço e antebraço por dentro dos joelhos, sem encostar); free-exercise-db (\"The arms should be directly below the shoulders, inside the legs\")"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "joelho bem dobrado com a barra no chão (mais fundo que no terra convencional)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": 0.0,
+        "graus": [
+          80,
+          100
+        ],
+        "fonte": "ExRx, Deadlift Analysis (\"The wider stance and deeper initial squatting position\"); Escamilla 2000 (\"at LO the sumo group ... positioned the thigh closer to the horizontal\"); o Levantamento Terra começa com 83°"
+      },
+      {
+        "nome": "coxa perto da horizontal com a barra no chão (quadril baixo, pouco acima dos joelhos)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "t": 0.0,
+        "graus": [
+          2,
+          14
+        ],
+        "fonte": "Escamilla 2000 (\"At LO and KP, thigh position was 11–16° more horizontal for the sumo group\"); ExRx, Barbell Sumo Deadlift (\"chest high, hips low, and back straight\"); ExRx, Deadlift Analysis (\"the lower positioning of the hips\"). O Levantamento Terra começa com a coxa a 22° da horizontal"
+      },
+      {
+        "nome": "canela quase em pé com a barra no chão",
+        "medida": "inclinacao",
+        "segmento": [
+          "Leg",
+          "Foot"
+        ],
+        "t": 0.0,
+        "graus": [
+          80,
+          88
+        ],
+        "fonte": "Escamilla 2000 (\"at LO the sumo group ... positioned the shank closer to the vertical\"); o Levantamento Terra começa com a canela a 75° da horizontal (15° da vertical)"
+      },
+      {
+        "nome": "tronco mais em pé que no terra convencional com a barra no chão",
+        "medida": "tronco",
+        "t": 0.0,
+        "graus": [
+          44,
+          56
+        ],
+        "fonte": "Escamilla 2000 (\"at LO the sumo group maintained a more upright trunk\"; \"5–10° greater vertical trunk\"); ExRx, Deadlift Analysis (\"allows the torso to begin in a slightly more upright posture\"; \"reducing the need to bend over as far\"); o Levantamento Terra começa com 64°. Com o tronco a 50° os ombros ficam ~2 cm à frente da barra, os braços quase na vertical (free-exercise-db \"The arms should be directly below the shoulders\")"
+      },
+      {
+        "nome": "joelho ainda dobrado quando a barra passa os joelhos (mais que no convencional)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": [
+          0.37,
+          0.44
+        ],
+        "graus": [
+          45,
+          65
+        ],
+        "fonte": "Escamilla 2000 (\"At KP ... the sumo group had greater hip and knee flexion\"; \"the knees and hips extended approximately 12° more for the conventional group\"); ExRx, Barbell Sumo Deadlift (\"Extend knees when bar passes knees\"); o Levantamento Terra passa os joelhos com ~36°. A barra passa os joelhos entre os quadros desta faixa"
+      },
+      {
+        "nome": "tronco mais em pé quando a barra passa os joelhos",
+        "medida": "tronco",
+        "t": [
+          0.37,
+          0.44
+        ],
+        "graus": [
+          28,
+          45
+        ],
+        "fonte": "Escamilla 2000 (no sticking point, logo depois do KP, \"The trunk was slightly more upright in the deadlift (approximately 50°)\" do horizontal, ~40° da vertical, média dos 2 estilos; o sumô mais em pé); o Levantamento Terra passa os joelhos com o tronco a ~53°"
+      },
+      {
+        "nome": "joelhos travados em pé",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": 1.0,
+        "graus": [
+          0,
+          8
+        ],
+        "fonte": "IPF (\"On completion of the lift the knees shall be locked in a straight position\"); Escamilla 2000 (\"the knees and hips fully extended\")"
+      },
+      {
+        "nome": "tronco em pé no fim, sem inclinar para trás",
+        "medida": "tronco",
+        "t": 1.0,
+        "graus": [
+          0,
+          6
+        ],
+        "fonte": "pedido do Weslley e dica do Levantamento Terra (\"Trave no topo sem inclinar para trás\"); IPF (\"Failure to stand erect with the shoulders back\"); Hanen 2025 (\"a straight torso\"); ExRx (\"when torso is upright\")"
+      },
+      {
+        "nome": "quadril estendido sem passar da linha no fim",
+        "medida": "quadril_sinal",
+        "t": 1.0,
+        "graus": [
+          -3,
+          8
+        ],
+        "fonte": "Escamilla 2000 (\"upright position with the knees and hips fully extended\"); Hanen 2025 (\"fully extended knees and hips\"); a mesma faixa do Levantamento Terra"
+      },
+      {
+        "nome": "braços esticados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ExRx, Barbell Sumo Deadlift (\"arms straight\"; \"keep ... arms and back straight\")"
+      },
+      {
+        "nome": "braços pendurados perto do corpo",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -5,
+          15
+        ],
+        "fonte": "free-exercise-db (\"The arms should be directly below the shoulders\"); ExRx (\"keep bar close to body\")"
+      },
+      {
+        "nome": "pés bem afastados (base de sumô)",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          2.8,
+          3.8
+        ],
+        "fonte": "Escamilla 2000 (\"employed a wider stance (70 ± 11 cm vs 32 ± 8 cm)\", entre os centros dos tornozelos; \"a foot stance that was 2–3 times wider than the conventional group\"); ExRx (\"very wide stance\"). No boneco: tornozelos a 0,70 m = 3,3 × os 0,21 m entre as articulações do quadril (59–81 cm = 2,8–3,8×); o Levantamento Terra usa 1,13"
+      },
+      {
+        "nome": "pontas dos pés ~40–45° pra fora",
+        "medida": "ponta_pe",
+        "t": "todos",
+        "graus": [
+          34,
+          50
+        ],
+        "fonte": "Escamilla 2000 (\"turned their feet out more (42 ± 8° vs 14 ± 6°)\"; \"Throughout the lift, the feet were turned outward ... 40–45° for the sumo group\"); Hanen 2025 (\"with the toes pointed outward\")"
+      },
+      {
+        "nome": "os dois pés virados igual",
+        "medida": "ponta_pe_diferenca",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "regra padrão da fábrica (tecnica3d), mais estreita"
+      },
+      {
+        "nome": "um pé não fica à frente do outro",
+        "medida": "pes_alinhados",
+        "t": "todos",
+        "mm": [
+          0,
+          20
+        ],
+        "fonte": "regra padrão da fábrica (tecnica3d), mais estreita"
+      },
+      {
+        "nome": "joelho em cima da linha do pé (dobrado)",
+        "medida": "joelho_plano_pe",
+        "t": [
+          0.0,
+          0.5
+        ],
+        "mm": [
+          -15,
+          25
+        ],
+        "fonte": "ExRx, Barbell Sumo Deadlift (\"knees pointed out same direction as feet\"; \"push feet out to sides and not down to prevent knees from buckling inward\"). Medida: centro do joelho × plano vertical do pé (− = entrando). Com a perna quase esticada e a base larga o joelho fica entre o quadril e o tornozelo (não alcança o plano do pé), como no Agachamento Sumô"
+      },
+      {
+        "nome": "tornozelo na amplitude normal (a canela vai pro calcanhar no fim)",
+        "medida": "tornozelo",
+        "t": "todos",
+        "graus": [
+          26,
+          96
+        ],
+        "fonte": "Alazzawi et al. 2017 (flexão plantar 0–50°, dorsiflexão 0–20°; o boneco em pé mede ~76°); Hanen 2025, Tabela 1 (sumô: o tornozelo vai de dorsiflexão a flexão plantar, fase 2 [−12,0 −6,0]°)"
+      },
+      {
+        "nome": "coluna neutra",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          10
+        ],
+        "fonte": "ExRx, Barbell Sumo Deadlift (\"back straight\"; \"keeping chest high and back straight\")"
+      },
+      {
+        "nome": "cabeça neutra, olhando à frente",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -15,
+          20
+        ],
+        "fonte": "ExRx, Barbell Sumo Deadlift (\"Face forward\"); free-exercise-db (\"looking forward with your head with your chest up\"). Medida: cabeça × tronco no plano sagital (o boneco em pé mede ~−11°)"
+      },
+      {
+        "nome": "pegada na largura dos ombros, por dentro das pernas",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          1.0,
+          1.25
+        ],
+        "fonte": "Escamilla 2000 (\"gripped the bar with their hands closer together (47 ± 4 cm vs 55 ± 10 cm)\"); ExRx (\"Use shoulder width grip since narrower than shoulder width grip will make it more difficult to lockout at top\"); free-exercise-db (\"The arms should be directly below the shoulders, inside the legs\"). No boneco: 47 cm entre os meios das mãos = 1,13 × a distância entre os ombros; o Levantamento Terra usa 1,36, por fora das pernas"
+      }
+    ]
+  }
+}

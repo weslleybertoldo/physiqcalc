@@ -1,0 +1,365 @@
+{
+ "uuid": "74449d5c-499a-57d2-b549-cbb036eb0d18",
+ "nome": "Panturrilha em Pé no Smith",
+ "cena": "panturrilha_em_pe_no_smith",
+ "grupo": "Panturrilha",
+ "subgrupo": "Gastrocnêmio · sóleo",
+ "padrao_movimento": "panturrilha",
+ "equipamento": "smith",
+ "variacao": "em pé",
+ "alvos": [
+  "panturrilha"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 125,
+  "el": 8,
+  "dist": 5.0,
+  "alvo": [
+   0.0,
+   -0.15,
+   1.0
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.8,
+  "alvo": [
+   0.0,
+   -0.1,
+   1.05
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Em pé embaixo da barra do Smith, com a barra apoiada em cima do trapézio, atrás do pescoço, e as 2 mãos fechadas nela, bem por fora dos ombros, com as palmas para a frente; os pés na largura do quadril e com as pontas para a frente, só a ponta dos pés (os dedos e a parte da frente da sola, embaixo da base dos dedos) apoiada na borda de trás de um step solto no chão, colocado embaixo da barra, e os calcanhares para fora dele. Começa com os calcanhares embaixo, abaixo da altura do step, a panturrilha alongada, e sobe os calcanhares o máximo que conseguir, ficando na ponta dos pés, com uma pausa no alto; desce devagar, controlando, até a panturrilha alongar de novo. Só o tornozelo trabalha: os dedos ficam apoiados no step, os joelhos e o quadril esticados e o corpo inteiro sobe e desce reto junto com a barra, que só anda na vertical, presa nos trilhos. A barra fica em cima da ponta dos pés: embaixo, com o calcanhar longe, atrás, o corpo fica um pouco inclinado para a frente e, na subida, o tornozelo anda para a frente embaixo da barra e o corpo endireita um pouco.",
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "em pé no step, embaixo da barra do Smith, só a ponta dos pés fica em cima dele (a 15 cm do chão) e os calcanhares ficam pra fora, descendo e subindo (ExRx — Smith Standing Leg Calf Raise: \"Position toes and balls of feet on calf block with arches and heels extending off\"): as regras de pé chapado no chão (planta e calcanhar a 0 ± 5 mm, sem escorregar) e as de técnica medidas no plano do chão não servem; quem confere os pés são as zonas da ponta do pé no step em todo quadro, a altura do calcanhar embaixo e os ângulos do tornozelo, da largura e da ponta dos pés abaixo (os dedos ficam parados no step: a cena prende a base deles)",
+  "zonas": [
+   {
+    "nome": "barra apoiada no trapézio",
+    "equipamento": "smith_barra",
+    "partes": [
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -4,
+     5
+    ],
+    "fonte": "ExRx — Smith Standing Leg Calf Raise (\"Position back of shoulders under bar\"); free-exercise-db — Smith Machine Calf Raise (\"place the bar on the back of your shoulders\"); ACE — Calf Raises (\"so that it rests behind the neck across the top of the back and shoulder blades\"): a barra do Smith fica em cima do trapézio, atrás do pescoço, o movimento todo (a mesma posição do Agachamento no Smith); é APOIO do corpo (encostar é o certo)"
+   },
+   {
+    "nome": "ponta do pé esquerdo (metatarsos e dedos) apoiada no step, sem entrar nele",
+    "equipamento": "step",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     -6,
+     2.5
+    ],
+    "fonte": "ExRx — Smith Standing Leg Calf Raise (\"Position toes and balls of feet on calf block with arches and heels extending off.\") e free-exercise-db — Smith Machine Calf Raise (\"step onto the plates with the balls of your feet\"): os dedos e a planta embaixo das cabeças dos metatarsos apoiados no step em todo quadro, sem entrar nele; a planta afunda uns milímetros na borracha (o coxim do antepé). Esta medida é por malha (a borracha de 6 mm e o tampo embaixo dela são malhas separadas): quanto a pele fica abaixo do TOPO do step (até 5 mm) quem confere é a regra de altura dos pés abaixo e o info da cena. Em cima, com o corpo subindo até 2,8 mm pra dobra da malha embaixo dos dedos do pé esquerdo não entrar mais que 4,8 mm no step, os dedos do pé direito ficam até ~2 mm acima dele"
+   },
+   {
+    "nome": "ponta do pé direito (metatarsos e dedos) apoiada no step, sem entrar nele",
+    "equipamento": "step",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     -6,
+     2.5
+    ],
+    "fonte": "ExRx — Smith Standing Leg Calf Raise (\"Position toes and balls of feet on calf block with arches and heels extending off.\") e free-exercise-db — Smith Machine Calf Raise (\"step onto the plates with the balls of your feet\"): os dedos e a planta embaixo das cabeças dos metatarsos apoiados no step em todo quadro, sem entrar nele; a planta afunda uns milímetros na borracha (o coxim do antepé). Esta medida é por malha (a borracha de 6 mm e o tampo embaixo dela são malhas separadas): quanto a pele fica abaixo do TOPO do step (até 5 mm) quem confere é a regra de altura dos pés abaixo e o info da cena. Em cima, com o corpo subindo até 2,8 mm pra dobra da malha embaixo dos dedos do pé esquerdo não entrar mais que 4,8 mm no step, os dedos do pé direito ficam até ~2 mm acima dele"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pés em cima do step da metade pra cima: a pele mais baixa deles no máximo 5 mm abaixo do topo (150 mm) e encostando",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     145,
+     152
+    ],
+    "t": [
+     0.5,
+     1.0
+    ],
+    "fonte": "a ponta do pé apoia no step sem entrar nele (ExRx — Smith Standing Leg Calf Raise: \"Position toes and balls of feet on calf block\"); da metade do movimento pra cima o calcanhar já está acima do topo e a pele mais baixa do pé é a de baixo dos dedos, em cima do step. Com a base dos dedos dobrada ~37° em cima, a malha do pé esquerdo dobra pra baixo embaixo dos dedos (a mesma dobra da Panturrilha no Step e da Panturrilha em Pé na Máquina): a cena sobe o corpo — e a barra junto — o que passar de 4,8 mm (até 2,8 mm, só perto do topo)"
+   },
+   {
+    "nome": "calcanhares abaixo do topo do step no começo (alongado): 2 a 5 cm abaixo dele, que fica a 15 cm do chão",
+    "partes": [
+     "LeftFoot",
+     "RightFoot"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     100,
+     130
+    ],
+    "t": 0.0,
+    "fonte": "ExRx — Smith Standing Leg Calf Raise (\"Lower heels by bending ankles until calves are stretched\"; \"heels extending off\"): o calcanhar desce abaixo do topo do step (a pele mais baixa do pé a ~12 cm do chão, ~3,2 cm abaixo do topo). Desce menos que na Panturrilha em Pé na Máquina (~6 cm) com o mesmo tornozelo: com a barra em cima da ponta dos pés o corpo fica inclinado ~9° pra frente e parte da flexão dorsal vem da canela inclinada"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "barra longe do cabelo",
+    "equipamento": "smith_barra",
+    "de": "cabelo",
+    "mm": [
+     30,
+     1000000000000000.0
+    ],
+    "fonte": "a barra fica no trapézio, abaixo da nuca, sem encostar no cabelo (regra da fábrica: o peso nunca entra no corpo; a barra só apoia no trapézio): ~87 mm em todo quadro (a barra é rígida com o tronco)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços longe da cabeça, do cabelo e do pescoço",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Neck",
+     "Head"
+    ],
+    "cabelo": true,
+    "mm": [
+     30,
+     2000
+    ],
+    "fonte": "ExRx — Smith Standing Leg Calf Raise (\"grasp bar to sides\"): as mãos fecham na barra bem por fora dos ombros, longe das orelhas, do cabelo e do pescoço (o corpo não encosta no próprio corpo, regra da fábrica)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tornozelo em flexão dorsal embaixo, calcanhar abaixo do step (20°)",
+    "medida": "tornozelo",
+    "t": 0.0,
+    "graus": [
+     94,
+     98
+    ],
+    "fonte": "Kinoshita et al. 2023, legenda da figura 1 (as posturas da panturrilha em pé e sentada, \"with the knee joint 0° and 90° for the standing and seated conditions, respectively, and the ankle joint angle ranging from 20° dorsiflexed to 30° plantarflexed positions for both conditions\"); ExRx — Smith Standing Leg Calf Raise (\"Lower heels by bending ankles until calves are stretched\"); neutro do boneco 75,95° (tecnica3d.tornozelo, o pé chapado em pé): 20° de flexão dorsal = 95,95°"
+   },
+   {
+    "nome": "tornozelo em flexão plantar em cima, na ponta dos pés (30°)",
+    "medida": "tornozelo",
+    "t": 1.0,
+    "graus": [
+     43,
+     49
+    ],
+    "fonte": "Kinoshita et al. 2023 (idem: 30° de flexão plantar = 45,95° no boneco); ExRx — Smith Standing Leg Calf Raise (\"Raise heels by extending ankles as high as possible\"); free-exercise-db — Smith Machine Calf Raise (\"Raise your heels as high as possible by pushing off of the balls of your feet\")"
+   },
+   {
+    "nome": "tornozelo dentro da amplitude normal o movimento todo",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     25.9,
+     96.5
+    ],
+    "fonte": "Alazzawi et al. 2017, tabela 5 (\"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"): 75,95° + 20° = 95,95° (+0,5° de tolerância, como no limites.py) e 75,95° − 50° = 25,95°"
+   },
+   {
+    "nome": "joelhos estendidos o movimento todo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "free-exercise-db — Smith Machine Calf Raise (\"Your knees should remain extended.\"); ExRx — Smith Standing Leg Calf Raise (\"Keep knees straight throughout exercise or bend knees slightly only during stretch.\"); NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"Keep your knees fully extended (not locked)\"): a perna reta do boneco em pé mede ~7,5° e fica parada (não dobra embaixo)"
+   },
+   {
+    "nome": "quadril estendido (em pé)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Smith Standing Leg Calf Raise (\"Stand erect by extending knees and hips.\"): o quadril fica como em pé (o boneco mede ~5°)"
+   },
+   {
+    "nome": "corpo reto, inclinado no tornozelo com a barra em cima da ponta dos pés",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     5,
+     12
+    ],
+    "fonte": "ExRx — Smith Standing Leg Calf Raise (\"place calf block under bar\"; \"Stand erect by extending knees and hips.\"); free-exercise-db — Smith Machine Calf Raise (\"Place a block or weight plate below the bar on the Smith machine.\"); ExRx, Calf Exercise Analyses (\"Axis: Ball of Foot\"); NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"Keep your knees extended and your body upright.\"): o corpo fica reto (tronco, quadril e joelhos parados) e inclina em volta do tornozelo só o que leva a barra do trapézio até a linha dos trilhos, em cima da base dos dedos — com o corpo em pé ela ficaria 22 cm atrás, em cima do calcanhar, fora do step. A barra só anda na vertical (Cotterman et al. 2005: \"vertical motion of bar on fixed path\"): quando o tornozelo anda pra frente embaixo dela o corpo endireita, de ~9° embaixo a ~7° em cima"
+   },
+   {
+    "nome": "coluna neutra, parada",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"body upright\"); ACE — Calf Raises (\"to maintain a straight back throughout the entire movement\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   },
+   {
+    "nome": "pés na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.7
+    ],
+    "fonte": "ACE — Calf Raises (\"placing both feet approximately hip-width apart\"); NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"legs hip-width apart\"): distância de lado a lado entre os tornozelos ÷ entre as articulações do quadril (~1,56: as coxas musculosas do boneco já se tocam)"
+   },
+   {
+    "nome": "pontas dos pés pra frente",
+    "medida": "ponta_pe",
+    "t": "todos",
+    "graus": [
+     -5,
+     10
+    ],
+    "fonte": "ACE — Calf Raises (\"with the toes pointed forward\"); Kinoshita et al. 2023 (\"Participants were instructed to place/keep their foot in a neutral position\")"
+   },
+   {
+    "nome": "os dois pés virados igual",
+    "medida": "ponta_pe_diferenca",
+    "t": "todos",
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "joelho na linha do pé (sem entrar pra dentro)",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     -20,
+     20
+    ],
+    "fonte": "perna reta: o joelho fica na reta quadril–tornozelo (o boneco em pé, no repouso, mede ~−11 mm)"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "o corpo sobe reto, sem pender pro lado (a barra do Smith fica na horizontal)"
+   },
+   {
+    "nome": "ombros nivelados",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "mãos por fora dos ombros na barra",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.5,
+     2.6
+    ],
+    "fonte": "ExRx — Smith Standing Leg Calf Raise (\"grasp bar to sides\"); free-exercise-db — Smith Machine Calf Raise (\"Take the bar with both hands facing forward.\"); ACE — Calf Raises (\"grip the bar with the hands just outside the shoulders\"): a pegada do Agachamento no Smith (meia pegada de 0,43 m, as mãos bem por fora dos ombros), ~2,1× a largura dos ombros"
+   },
+   {
+    "nome": "cotovelos dobrados embaixo da barra, as mãos fechadas nela",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     110,
+     135
+    ],
+    "fonte": "as mãos seguram a barra no trapézio (ExRx — Smith Standing Leg Calf Raise: \"grasp bar to sides\"): o cotovelo fica dobrado ~123° e parado o movimento todo (a mão é rígida com a barra e com o tronco), como no Agachamento no Smith em pé"
+   }
+  ]
+ },
+ "cinesiologia": {
+  "plano": "sagital (flexão plantar e flexão dorsal do tornozelo). Com a ponta do pé no step, a base dos dedos é o eixo (ExRx, Calf Exercise Analyses: \"Axis: Ball of Foot\"; \"Motive Force: Bodyweight plus added weight transferred through ankle\"): quando o calcanhar sobe, o tornozelo gira em volta dela e o corpo inteiro (reto, rígido do tornozelo pra cima) sobe junto com a barra, que só anda na vertical, presa nos trilhos do Smith (Cotterman et al. 2005: \"vertical motion of bar on fixed path\")",
+  "articulacoes": "tornozelo (flexão plantar na ida, de 20° de flexão dorsal — calcanhar abaixo do step — até 30° de flexão plantar; flexão dorsal na volta); base dos dedos (metatarsofalângica) estendendo na subida, com os dedos apoiados no step; joelho e quadril estendidos e parados; tronco, coluna e cabeça parados (o corpo inteiro só sobe e desce, endireitando ~2,5° em volta do tornozelo porque a barra não anda pra frente); ombros, cotovelos e punhos parados segurando a barra no trapézio",
+  "agonistas": "gastrocnêmio (ExRx — Smith Standing Leg Calf Raise: Target \"Gastrocnemius\"; NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise): \"Major muscles involved : Gastrocnemius, soleus\"), em contração concêntrica na subida e excêntrica na descida; com o joelho estendido ele trabalha alongado (ExRx, Calf Exercise Analyses: \"For the biarticulate gastrocnemius to plantarflex through the ankle, it must be at least partially stretched across a straight or nearly straight knee.\"; NSCA, PTQ 8.4: \"Research shows that doing calf raises (i.e., ankle plantar flexion) with a straight knee creates superior gastrocnemius muscle activity\")",
+  "sinergistas": "sóleo (ExRx — Smith Standing Leg Calf Raise: Synergists \"Soleus\"; ExRx, Calf Exercise Analyses: \"Calf exercises like the Standing Calf Raise or Calf Press, both with the knees straight, activate both the Gastrocnemius and Soleus.\"). No mapa do app gastrocnêmio e sóleo são o mesmo grupo (panturrilha), marcado como alvo; não há auxiliar marcado (o grupo \"tibial\" do mapa é o tibial anterior, o antagonista)",
+  "estabilizadores": "o ExRx não lista estabilizadores no Smith (ExRx — Smith Standing Leg Calf Raise: Stabilizers \"No significant stabilizers\"; na Lever Standing Calf Raise ele lista o trapézio e o levantador da escápula) e o free-exercise-db não dá músculo secundário (\"secondaryMuscles\": []): a barra presa nos trilhos não pede equilíbrio de lado; as mãos só seguram a barra no trapézio",
+  "fases": "concêntrica (sobe os calcanhares o máximo — ExRx — Smith Standing Leg Calf Raise: \"Raise heels by extending ankles as high as possible\"; free-exercise-db — Smith Machine Calf Raise: \"Hold the contracted position for a second before you start to go back down.\") e excêntrica (desce devagar até alongar — ExRx — Smith Standing Leg Calf Raise: \"Lower heels by bending ankles until calves are stretched\"; free-exercise-db — Smith Machine Calf Raise: \"Return slowly to the starting position as you breathe in while lowering your heels.\"; NSCA, PTQ 8.4: \"Do not bounce; control the lowering (eccentric) portion\"); a pausa em cima é só o tempo (o app faz a ida e a volta). Antes de começar, a barra é destravada girando ela pra trás (ExRx — Smith Standing Leg Calf Raise: \"Disengage bar by rotating bar back.\"; free-exercise-db — Smith Machine Calf Raise: \"Rotate the bar to unrack it.\"; Cybex, Plate Loaded Smith Press: \"Lift bar rotate to release catch.\"), com as travas de segurança logo abaixo do ponto mais baixo da barra"
+ },
+ "referencias": [
+  "ExRx.net — Smith Standing Leg Calf Raise (https://exrx.net/WeightExercises/Gastrocnemius/SMStandingCalfRaise, lido na cópia do Internet Archive de 02/02/2026; o site responde 403 direto), lido em 12/10/2026: \"Utility: Basic\", \"Mechanics: Isolated\", \"Force: Push\"; Preparation: \"Position bar on upper chest height and place calf block under bar. Position back of shoulders under bar and grasp bar to sides. Position toes and balls of feet on calf block with arches and heels extending off. Disengage bar by rotating bar back. Stand erect by extending knees and hips.\"; Execution: \"Raise heels by extending ankles as high as possible. Lower heels by bending ankles until calves are stretched. Repeat.\"; Comments: \"Keep knees straight throughout exercise or bend knees slightly only during stretch. Quadriceps serve as synergist muscle if knees are bent slightly during stretch.\"; músculos: Target \"Gastrocnemius\", Synergists \"Soleus\", Stabilizers \"No significant stabilizers\"",
+  "ExRx.net — Calf Exercise Analyses (https://exrx.net/Kinesiology/CalfExercises, a análise que a página do exercício indica; cópia do Internet Archive de 06/02/2026, lida em 12/10/2026): \"Calf Raises, although essentially similar to the Calf Press, could be classified as a 2nd class lever: Axis: Ball of Foot Motive Force: Bodyweight plus added weight transferred through ankle\"; \"Positioning the load slightly back relative to the feet increases the required tension nearer the top of the motion by increasing the horizontal lever arm distance.\"; \"Conversely placing the load, slightly forward relative the feet allow for something closer to a lockout where the ankle is more above the ball of the foot.\" (aqui a barra fica no meio-termo: em cima da base dos dedos); \"Unless the heel rests momentarily on the floor or exercise apparatus, the plantar flexors (namely the Gastrocnemius and Soleus) must maintain tension.\"; \"Calf exercises like the Standing Calf Raise or Calf Press, both with the knees straight, activate both the Gastrocnemius and Soleus.\"; \"For the biarticulate gastrocnemius to plantarflex through the ankle, it must be at least partially stretched across a straight or nearly straight knee.\"",
+  "free-exercise-db (yuhonas, domínio público) — Smith Machine Calf Raise (https://github.com/yuhonas/free-exercise-db, exercises/Smith_Machine_Calf_Raise.json, a fonte do nome em inglês do catálogo; lido em 11/10/2026 e conferido em 12/10/2026): \"Place a block or weight plate below the bar on the Smith machine. Set the bar to a position that best matches your height. Once the correct height is chosen and the bar is loaded, step onto the plates with the balls of your feet and place the bar on the back of your shoulders.\"; \"Take the bar with both hands facing forward. Rotate the bar to unrack it. This will be your starting position.\"; \"Raise your heels as high as possible by pushing off of the balls of your feet, flexing your calf at the top of the contraction. Your knees should remain extended. Hold the contracted position for a second before you start to go back down.\"; \"Return slowly to the starting position as you breathe in while lowering your heels.\"; \"primaryMuscles\": [\"calves\"], \"secondaryMuscles\": []",
+  "ACE — Calf Raises (exercise library 51, acefitness.org, lido em 11/10/2026 e conferido em 12/10/2026; a versão da ACE com a barra nas costas, no chão — a ACE não tem a do Smith): \"Place a barbell in a rack at about shoulder-height. Dip under the bar so that it rests behind the neck across the top of the back and shoulder blades, and grip the bar with the hands just outside the shoulders. Raise the chest and squeeze the shoulder blades together to maintain a straight back throughout the entire movement.\"; \"placing both feet approximately hip-width apart and squarely set on the floor with the toes pointed forward\"; \"Keep a slight bend in knees\"",
+  "NSCA — Achievable CSCS, cap. 15 (Exercise technique for free weight and machine training, exercise list part 2), Standing calf (heel) raise (machine) (app.achievable.me, lido em 11/10/2026 e conferido em 12/10/2026; a NSCA não tem a versão no Smith): \"Major muscles involved : Gastrocnemius, soleus\"; \"Stand with your shoulders under the pads and your feet on the step, legs hip-width apart.\"; \"Keep your knees fully extended (not locked) and your heels lowered.\"; \"Push up onto your toes as high as possible.\"; \"Keep your knees extended and your body upright.\"; \"Lower your heels slowly to the stretched position.\"",
+  "NSCA — Personal Training Quarterly 8.4, Tumminello N., \"How to Improve Ankle Dorsiflexion and Calf Strength for Better Performance\" (PDF em nsca.com, lido em 11/10/2026): \"Research shows that doing calf raises (i.e., ankle plantar flexion) with a straight knee creates superior gastrocnemius muscle activity\"; \"Do not bounce; control the lowering (eccentric) portion\"",
+  "Kinoshita M, Maeo S, Kobayashi Y, Eihara Y, Ono M, Sato M, Sugiyama T, Kanehisa H, Isaka T. Triceps surae muscle hypertrophy is greater after standing versus seated calf-raise training. Front Physiol. 2023;14:1272106. doi:10.3389/fphys.2023.1272106 (texto completo, PMC10753835, conferido em 12/10/2026): legenda da figura 1, \"with the knee joint 0° and 90° for the standing and seated conditions, respectively, and the ankle joint angle ranging from 20° dorsiflexed to 30° plantarflexed positions for both conditions\"; \"Participants were instructed to place/keep their foot in a neutral position\"",
+  "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29 (PMC5241541), tabela 5 conferida em 12/10/2026: \"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"",
+  "Cotterman ML, Darby LA, Skelly WA. Comparison of muscle force production using the Smith machine and free weights for bench press and squat exercises. J Strength Cond Res. 2005;19(1):169-176 — lido só o resumo (Europe PMC, PMID 15705030): \"The Smith machine (SM) (vertical motion of bar on fixed path; fixed-form exercise)\"",
+  "O Smith — Titan Fitness, Smith Machine (cópia do Internet Archive de 18/08/2025, lida em 11/10/2026): \"Barbell Shaft Diameter 30mm\", \"Two adjustable safety catches act as spotters\", \"Counterbalance system\"; Basic-Fit, Smith Machine Safety Information (rede de academias, lido em 11/10/2026): \"If applicable, set safety stops to appropriate height.\", \"ALWAYS set both adjustable stops to the same height when using this machine.\"; Cybex, Plate Loaded Smith Press Owner's Manual (16121-999-4 AC, 2018, o manual que a Life Fitness linka pros Smith Press 16120 e 16121; cópia do Internet Archive lida em 12/10/2026): \"Adjust bar stops to appropriate height for exercise.\", \"Lift bar rotate to release catch.\", \"Lock bar by rotating until catch is fully engaged.\", \"Unloaded bar weight = 15 lbs (7kg).\" (nenhum dos 3 dá a altura da trava); a altura das travas segue o ExRx da barra e da máquina (Barbell Standing Calf Raise: \"Position rack just below lowest range of motion.\"; Lever Standing Calf Raise: \"If possible, position lever just below lowest range of motion.\"): as 2 travas na mesma altura, ~3 cm abaixo do carrinho com a barra embaixo (o padrão da equip3d.smith). O step é o da Panturrilha no Step (Reebok Step \"3 adjustable heights - 15, 20 and 25 cm\", na mais baixa); o ExRx aceita step como degrau (Barbell Standing Calf Raise: \"Exercise step that will not overturn can be used as calf block.\")",
+  "Base das dicas das outras panturrilhas em pé (conferidas, sem mexer no catálogo — este exercício não tem dica): Kassiano W et al. J Strength Cond Res. 2023;37(9):1746-1753 (resumo, PMID 37015016): \"FULL ROM (ankle: -25° to +25°)\"; \"calf training performed at longer muscle lengths may optimize gastrocnemius muscle hypertrophy in young women\"; Nunes JP et al. J Strength Cond Res. 2020;34(8):2347-2351 (resumo, PMID 32735428): \"Positioning FPO potentiated the increases in MT of the medial gastrocnemius head, whereas FPI provided greater gains for the lateral gastrocnemius head.\" — o 3D usa os pés pra frente (neutro), como a ACE e o Kinoshita"
+ ]
+}

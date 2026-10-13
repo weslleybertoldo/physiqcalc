@@ -1,0 +1,496 @@
+{
+  "uuid": "526bd9e5-b7c9-5ed9-aa4e-0c412a957501",
+  "nome": "Remada Alta na Polia",
+  "cena": "remada_alta_na_polia",
+  "grupo": "Deltóide",
+  "subgrupo": "Deltoide lateral · trapézio superior · bíceps",
+  "padrao_movimento": "remada_alta",
+  "equipamento": "polia",
+  "variacao": "em pé, polia baixa",
+  "alvos": [
+    "deltoide",
+    "trapezio"
+  ],
+  "auxiliares": [
+    "biceps"
+  ],
+  "camera": {
+    "az": 58,
+    "el": 8,
+    "dist": 4.5,
+    "alvo": [
+      0,
+      -0.15,
+      1.0
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.2,
+      1.0
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, de frente para a polia baixa e perto dela (as pontas dos pés logo atrás da base da torre), com os pés paralelos e afastados na largura dos ombros, os joelhos levemente dobrados e o tronco ereto (peito alto e ombros para trás), segura a barra reta da polia por cima (pegada pronada: as palmas viradas para as coxas), com as mãos na largura dos ombros ou um pouco mais fechadas, e deixa os braços esticados, com a barra na frente das coxas, quase encostando nelas. Puxa a barra para cima rente ao corpo — pela barriga e pelo peito, quase raspando — levando os cotovelos para cima e para os lados, sempre mais altos que os punhos, que vão dobrando conforme a barra sobe, até os cotovelos chegarem na altura dos ombros (o braço paralelo ao chão), sem passar dela — a barra para no peito; os ombros sobem só um pouco junto com os braços, sem ir para a frente. Segura 1 segundo em cima e desce devagar até os braços esticarem de novo. O cabo sobe da polia, quase em pé, até o gancho no meio da barra, passando entre as pernas e na frente do tronco; o tronco e os joelhos ficam parados (sem inclinar para trás, sem balançar o corpo nem subir na ponta dos pés) e a cabeça fica alinhada com a coluna, olhando para a frente.",
+  "cinesiologia": {
+    "plano": "frontal/escapular (o braço sobe pelo lado, um pouco à frente do plano do corpo, em rotação interna), cadeia cinética aberta, os 2 braços juntos; a resistência vem do cabo, que sai da polia baixa na frente dos pés e puxa a barra para baixo e um pouco para a frente (perto da torre o cabo fica quase em pé)",
+    "articulacoes": "ombros (glenoumeral): abdução até 90° (o braço paralelo ao chão) num plano ~10° à frente do plano do corpo, com rotação interna (o antebraço pendurado do cotovelo pra barra); cintura escapular: rotação para cima da escápula e uma elevação pequena da clavícula (10°: o ombro sobe ~25 mm) junto com o braço, com as escápulas um pouco para trás (3°); cotovelos: flexão de ~16° embaixo a ~136° em cima; antebraços pronados (a pronação aumenta ~32° do começo ao fim); punhos: retos embaixo e, em cima, ~22° de flexão e ~26° de desvio ulnar (a barra fica oblíqua na palma: com as mãos a 37 cm o antebraço chega mais deitado na mão que na barra livre); tronco, quadril, joelhos (levemente dobrados, ~7°) e pés parados",
+    "agonistas": "deltoide lateral (ExRx, Cable Upright Row: \"Target: Deltoid, Lateral\"; Schoenfeld 2011: \"to target the middle deltoid and upper trapezius musculature\") e trapézio superior (o free-exercise-db do cabo o põe de principal: \"primaryMuscles\": [\"traps\"], \"secondaryMuscles\": [\"shoulders\"]; NSCA/Achievable: \"Major muscles involved: Deltoids, upper trapezius\"; Schoenfeld 2011, com a EMG de Andersen 2008: \"the upright row elicits considerable activation of the upper trapezius and middle deltoid at 85 ± 5% and 78 ± 6% maximum voluntary contraction, respectively\"), na abdução do ombro e na elevação/rotação para cima da escápula. Concêntrica na subida e excêntrica na descida",
+    "sinergistas": "deltoide anterior, supraespinal, braquial, braquiorradial, bíceps braquial, trapézio médio e inferior, serrátil anterior (digitações de baixo), infraespinal e redondo menor (ExRx, Cable Upright Row: \"Synergists: Deltoid, Anterior; Supraspinatus; Brachialis; Brachioradialis; Biceps Brachii; Trapezius, Middle; Trapezius, Lower; Serratus Anterior, Inferior Digitations; Infraspinatus; Teres Minor\"). O bíceps (auxiliar no app, como no catálogo) trabalha mais quanto mais fechada a pegada (McAllister 2013: \"The main findings of this investigation are increased deltoid and trapezius activity with increasing grip width, and correspondingly less BB activity.\")",
+    "estabilizadores": "o ExRx põe o trapézio superior e o levantador da escápula como estabilizadores (\"Stabilizers: Trapezius, Upper; Levator Scapulae\") — o free-exercise-db do cabo, a NSCA e Schoenfeld o põem entre os principais, e o app o pinta de alvo; eretores da espinha e abdominais seguram o tronco parado contra o puxão do cabo para a frente (free-exercise-db: \"keep your torso stationary\"; NSCA: \"Keep the torso and knees in the same position.\"); flexores dos dedos e do punho seguram a barra com o punho dobrado",
+    "fases": "subida concêntrica puxando pelos cotovelos (free-exercise-db: \"Your elbows should drive the motion\"; Schoenfeld 2011: \"it is important to pull through the elbows, not the wrist\"), pausa de 1 s em cima (free-exercise-db: \"pause for a second at the top of the movement\") e descida excêntrica devagar (free-exercise-db: \"Lower the bar back down slowly to the starting position.\"; Catalyst: \"then lower under control\")"
+  },
+  "referencias": [
+    "Catálogo do app — scripts/conteudo/novos_61.json (o exercício é um dos 61 novos, sem dica no scripts/gifs_catalogo/catalogo.py): \"grupo_muscular\": \"Deltóide\", \"subgrupo\": \"Deltoide lateral · trapézio superior · bíceps\", \"padrao_movimento\": \"remada_alta\", \"equipamento\": \"polia\", \"variacao\": null, \"fonte_en\": \"Upright Cable Row\" (a variação \"em pé, polia baixa\" sai do nome e do fonte_en, confirmada nas fontes abaixo: free-exercise-db \"a straight bar cable attachment that is attached to a low pulley\", ExRx \"Stand close to pulley.\", Catalyst \"a low cable attachment\" e as fotos/animação, em pé de frente pra polia baixa)",
+    "free-exercise-db (yuhonas, domínio público) — Upright Cable Row (a de onde o catálogo tirou o fonte_en). https://github.com/yuhonas/free-exercise-db (exercises/Upright_Cable_Row.json, lido em 11/10/2026 e conferido na cópia em 12/10/2026): \"Grasp a straight bar cable attachment that is attached to a low pulley with a pronated (palms facing your thighs) grip that is slightly less than shoulder width. The bar should be resting on top of your thighs. Your arms should be extended with a slight bend at the elbows and your back should be straight. This will be your starting position.\"; \"Use your side shoulders to lift the cable bar as you exhale. The bar should be close to the body as you move it up. Continue to lift it until it nearly touches your chin. Tip: Your elbows should drive the motion. As you lift the bar, your elbows should always be higher than your forearms. Also, keep your torso stationary and pause for a second at the top of the movement.\"; \"Lower the bar back down slowly to the starting position. Inhale as you perform this portion of the movement.\"; \"primaryMuscles\": [\"traps\"], \"secondaryMuscles\": [\"shoulders\"] (na barra livre, Upright Barbell Row, é o contrário: \"primaryMuscles\": [\"shoulders\"], \"secondaryMuscles\": [\"traps\"]). As 2 fotos do exercício: em pé logo atrás da polia baixa, o cabo quase em pé",
+    "ExRx.net — Cable Upright Row (Weight Exercises › Deltoid, Lateral). https://exrx.net/WeightExercises/DeltoidLateral/CBUprightRow (lido em 11/10/2026 na cópia do Internet Archive de 30/07/2026: https://web.archive.org/web/20260730094115/https://exrx.net/WeightExercises/DeltoidLateral/CBUprightRow; o site responde 403 direto): classificação \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Pull\"; Preparation \"Grasp cable bar with shoulder width or slightly narrower overhand grip. Stand close to pulley.\"; Execution \"Pull bar to neck with elbows leading. Allow wrists to flex as bar rises. Lower and repeat.\"; Comments \"See Upright Row Safety.\"; músculos: Target \"Deltoid, Lateral\", Synergists \"Deltoid, Anterior\", \"Supraspinatus\", \"Brachialis\", \"Brachioradialis\", \"Biceps Brachii\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\", \"Infraspinatus\", \"Teres Minor\", Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\". A versão com corda (Cable Upright Row (with rope attachment), cópia de 29/01/2025) repete \"Stand close to pulley.\" A animação (CBUprightRow.gif, © 2012 ExRx.net): de frente pra polia baixa, bem perto dela, o cabo quase em pé",
+    "ExRx.net — Weight Training Safety, Upright Row Safety (ligado pela página do exercício). https://exrx.net/WeightTraining/Safety (cópia do Internet Archive de 23/02/2026, lida em 11/10/2026): \"A shoulder width grip is suggested when performing the upright row.\"; \"The greater internal rotation required for a close grip upright row decreases the subacromial space\"; \"For the same reason, when performing a one arm upright row, keep the elbow pointing directly to the side, instead of angling it slightly to the front.\"; \"Shoulders should be kept back since scapula protraction can decrease width of subacromical space, possibly increasing risk of subacromical impingement (Solem-Bertift E 1993).\"; \"An upright posture with chest high and shoulders back, bar kept close to the body, and a medium to slightly wide grip can facilitate a more ideal shoulder posture.\"",
+    "Catalyst Athletics (Greg Everett) — Cable Upright Row (exercício acessório do levantamento olímpico; site comercial). https://catalystathletics.com/exercise/814/Cable-Upright-Row/ (lido em 11/10/2026): \"Stand holding a straight handle with a low cable attachment with the hands as close to each other as possible. Letting the hands and bar hang down, lift the elbows as high as possible, allowing yourself to shrug up and back naturally with the motion, then lower under control.\"; \"The cable upright row builds the delts, upper back and neck. The cable variation allows some adjustment to the exact angle of force—for example, stepping back more from the machine.\"; \"Generally sets of 10-30 are appropriate.\"",
+    "National Strength and Conditioning Association — Exercise Technique Manual for Resistance Training, 4ª ed. (Human Kinetics), item \"3.25 Upright Row\" (só o sumário é aberto; cópia do Internet Archive de 16/06/2026, lida em 11/10/2026) e o resumo do Essentials da NSCA no curso da prova CSCS da Achievable, cap. 15, \"Exercise list part 5\", Barbell upright row (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-5, lido em 11/10/2026; a NSCA não tem a remada alta no cabo): \"Major muscles involved: Deltoids, upper trapezius\"; \"Grasp the bar with a closed, pronated grip approximately shoulder-width apart or slightly wider.\"; \"Stand erect with feet shoulder-width apart and knees slightly flexed.\"; \"Rest the bar on the front of the thighs with the elbows fully extended and pointing out to the sides.\"; \"Pull the bar up along the abdomen and chest toward the chin.\"; \"Keep the elbows pointed out to the sides as the bar brushes against the body.\"; \"Keep the torso and knees in the same position.\"; \"Don’t rise up on the toes or swing the bar upward.\"; \"At the highest bar position, the elbows should be level with or slightly higher than the shoulders and wrists.\"; \"Allow the bar to slowly descend back to the starting position.\"",
+    "Schoenfeld B, Kolber MJ, Haimes JE. The Upright Row: Implications for Preventing Subacromial Impingement. Strength Cond J. 2011;33(5):25-28 (PDF do artigo publicado, https://www.lookgreatnaked.com/articles/upright_row_implications_for_preventing_subacromial_impingement.pdf, lido em 11/10/2026): \"The upright row is a popular exercise often employed both by athletes as well as by the general public to target the middle deltoid and upper trapezius musculature\"; \"Performance of the upright row requires elevation of the arm at an angle that is slightly anterior to the coronal plane (bringing the arm straight out to the side).\"; \"The traditionally prescribed technique for executing the lift requires individuals to internally rotate their shoulder during elevation as a means of targeting the middle deltoid\"; \"Electromyographic studies indicate that the upright row elicits considerable activation of the upper trapezius and middle deltoid at 85 ± 5% and 78 ± 6% maximum voluntary contraction, respectively\"; \"the bar should be pulled as close to the body as possible throughout the movement so as to maintain optimal stress on the middle deltoid. In addition, it is important to pull through the elbows, not the wrist, so as to maximize muscle activity at the shoulder.\"; \"studies indicate that impingement typically peaks between 70° and 120° of glenohumeral elevation (7,14,15,20,25), thus the authors recommend that asymptomatic individuals elevate their arms during the upright row to just below 90° (shoulder height) (Figure 2). Similar recommendations have been put forth by other authors (21), who suggest limiting shoulder abduction to approximately parallel with the floor.\"; \"This risk may be mitigated through instruction of the individual to avoid elevation of the elbows above the shoulder height.\" (o artigo não fala da largura da pegada nem do cabo)",
+    "McAllister MJ, Schilling BK, Hammond KG, Weiss LW, Farney TM. Effect of grip width on electromyographic activity during the upright row. J Strength Cond Res. 2013;27(1):181-7 (resumo no PubMed, 22362088, lido em 11/10/2026; o texto completo é pago; o resumo não diz se foi na barra livre ou no cabo): \"Sixteen weight-trained men completed 2 repetitions each in the URR with 3 grip conditions: 50, 100, and 200% of the biacromial breadth (BAB).\"; \"The main findings of this investigation are increased deltoid and trapezius activity with increasing grip width, and correspondingly less BB activity.\"; \"Therefore, those who seek to maximize involvement of the deltoid and trapezius muscles during the URR should use a wide grip.\"",
+    "Andersen LL, Kjaer M, Andersen CH, Hansen PB, Zebis MK, Hansen K, Sjøgaard G. Muscle activation during selected strength exercises in women with chronic neck muscle pain. Phys Ther. 2008;88(6):703-11 (resumo no PubMed, 18339796; é a ref. 3 de Schoenfeld para a EMG): \"For the trapezius muscle, the highest level of muscle activation was found during the shrug (102+/-11% of MVC), lateral raise (97+/-6% of MVC), and upright row (85+/-5% of MVC) exercises\"",
+    "Body-Solid (fabricante de equipamentos; site comercial, pesa menos) — Upright Row, o exemplo numa polia baixa de estação doméstica. https://www.bodysolid.com/exercises/article/12/upright_row (o endereço direto hoje redireciona pra página de manutenção; lido em 12/10/2026 nas cópias do Internet Archive de 28/02/2016 e 19/06/2025, com o mesmo texto: https://web.archive.org/web/20250619055747/https://www.bodysolid.com/exercises/article/12/upright_row): \"Our example is shown with a G2 Home Gym lower pulley cable.\"; \"START by attaching a straight bar to the lower cable of your home gym or pulley machine. Face the weight stack and grab the bar with an overhand grip. Stand about two feet away from the pulley and hold the bar at arm's length, in front of your thighs.\"; \"Pull the bar up until your upper arms are parrallel to the floor. Pause, then slowly lower the bar to the starting position.\" (é a única fonte com a distância em número)",
+    "American Council on Exercise (ACE) — a biblioteca de exercícios não tem a remada alta, nem na barra nem no cabo (conferida por \"Shoulders\", por \"Barbell\" e a lista de cabos em 11/10/2026): nada citado do ACE. Nenhum estudo compara a remada alta no cabo com a barra livre (busca no Europe PMC em 11/10/2026: \"upright row\" AND (cable OR pulley), 65 resultados)",
+    "Polia e barra: a estação de cabo da Rosca Direta na Polia (ficha 219faa59-9426-5ef1-bdd8-29eeb169307a: roldana baixa a 0,22 m, coluna de 2,15 m) e a barra reta curta da polia, a do Tríceps Pulley (ficha 3f6e172a-9b35-4f8c-ad22-ddd942d7d667; equip3d.barra_polia: Synergee Straight Bar Cable Attachment, lengths \"20\"\", Rubber Grip Diameters \"1.2\"\", \"a 360-degree swivel\"). O corpo é o da Remada Alta com Barra (ficha 36428654-7208-557d-b2f6-de02c076bcaf): as mesmas fontes de técnica (o ExRx e o free-exercise-db repetem no cabo o texto da barra livre)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "embaixo a barra fica na frente das coxas, com os dedos encostando nelas",
+        "equipamento": "barra_polia",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          8,
+          30
+        ],
+        "t": 0.0,
+        "fonte": "free-exercise-db — Upright Cable Row (\"The bar should be resting on top of your thighs.\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Rest the bar on the front of the thighs with the elbows fully extended and pointing out to the sides.\"): com a barra de 20\" as mãos ficam na frente das coxas (na barra livre ficam por fora delas) e os dedos dão a volta por trás da barra, entre ela e as coxas — quem encosta nas coxas são os dedos (a regra de contato de baixo) e a barra fica ~18 mm na frente delas"
+      },
+      {
+        "nome": "barra rente ao corpo o caminho todo (passa reta pela dobra do quadril)",
+        "equipamento": "barra_polia",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          3,
+          45
+        ],
+        "t": "todos",
+        "fonte": "free-exercise-db — Upright Cable Row (\"The bar should be close to the body as you move it up.\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Pull the bar up along the abdomen and chest toward the chin.\"; \"Keep the elbows pointed out to the sides as the bar brushes against the body.\"); Schoenfeld, Kolber & Haimes 2011 (\"the bar should be pulled as close to the body as possible throughout the movement\"); ExRx — Upright Row Safety (\"bar kept close to the body\"). A barra é reta e rígida: sobe numa reta das coxas ao peito, com a borracha e a luva do gancho a 6 mm dos pontos mais salientes da barriga e do peito; na dobra entre a coxa e a barriga ela passa por cima, a até ~4 cm da pele (o máximo da faixa; na barra livre é ~3 cm: aqui a barra sai ~18 mm na frente das coxas, com os dedos entre ela e as coxas)"
+      },
+      {
+        "nome": "barra rente ao peito em cima",
+        "equipamento": "barra_polia",
+        "partes": [
+          "Spine1",
+          "Spine2"
+        ],
+        "mm": [
+          3,
+          15
+        ],
+        "t": 1.0,
+        "fonte": "NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Pull the bar up along the abdomen and chest toward the chin.\"; \"Keep the elbows pointed out to the sides as the bar brushes against the body.\")"
+      },
+      {
+        "nome": "barra longe do queixo e do pescoço (para no peito)",
+        "equipamento": "barra_polia",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "mm": [
+          100,
+          5000
+        ],
+        "t": "todos",
+        "fonte": "NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"At the highest bar position, the elbows should be level with or slightly higher than the shoulders and wrists.\"); Schoenfeld, Kolber & Haimes 2011 (\"the authors recommend that asymptomatic individuals elevate their arms during the upright row to just below 90° (shoulder height)\"; \"This risk may be mitigated through instruction of the individual to avoid elevation of the elbows above the shoulder height.\"): com o cotovelo na altura do ombro a barra para no peito, abaixo do queixo — o \"Continue to lift it until it nearly touches your chin.\" do free-exercise-db (e o \"Pull bar to neck\" do ExRx) pede o cotovelo bem acima do ombro, a técnica \"tradicional\" que Schoenfeld desaconselha"
+      },
+      {
+        "nome": "o cabo passa entre as pernas e na frente do tronco, sem encostar",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase",
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder"
+        ],
+        "mm": [
+          50,
+          5000
+        ],
+        "t": "todos",
+        "fonte": "pedido do Weslley (o cabo, o gancho e o mosquetão nunca passam por dentro das coxas, dos joelhos, das canelas, dos pés, do tronco nem do queixo); medido da pele (a faixa é da cena)"
+      },
+      {
+        "nome": "perto da polia: as pontas dos pés logo atrás da base da torre, sem encostar",
+        "equipamento": "polia_torre",
+        "partes": [
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          10,
+          120
+        ],
+        "t": "todos",
+        "fonte": "ExRx — Cable Upright Row (\"Stand close to pulley.\"); as fotos do free-exercise-db e a animação do ExRx: em pé logo atrás da polia baixa, o cabo quase em pé. A roldana fica a 40 cm do meio do corpo (19 cm na frente das pontas dos pés) e a chapa da base da torre ~7 cm na frente delas: o cabo vai de ~18° da vertical embaixo a ~10° em cima e fica livre em qualquer distância (passa entre as pernas e na frente do tronco) — quem limita a aproximação é a chapa da base. A Body-Solid — Upright Row (polia baixa) manda ficar mais longe (\"START by attaching a straight bar to the lower cable of your home gym or pulley machine. Face the weight stack and grab the bar with an overhand grip. Stand about two feet away from the pulley and hold the bar at arm's length, in front of your thighs.\": ~61 cm, com o cabo a ~35° embaixo); ficou o \"Stand close to pulley.\" do ExRx, a fonte de técnica (a Catalyst trata o passo pra trás como ajuste do ângulo da força: \"The cable upright row builds the delts, upper back and neck. The cable variation allows some adjustment to the exact angle of force—for example, stepping back more from the machine.\")"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "o cabo não entra no cabelo",
+        "equipamento": "polia_cabo",
+        "de": "cabelo",
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro da cabeça)"
+      },
+      {
+        "nome": "a barra e o gancho não entram no cabelo",
+        "equipamento": "barra_polia",
+        "de": "cabelo",
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra na cabeça)"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "mãos e antebraços não entram no tronco nem nas coxas",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = PENETRA_MM"
+      },
+      {
+        "nome": "embaixo os dedos ficam rente às coxas (a barra apoiada nelas)",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          15
+        ],
+        "t": 0.0,
+        "fonte": "free-exercise-db — Upright Cable Row (\"The bar should be resting on top of your thighs.\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Rest the bar on the front of the thighs with the elbows fully extended and pointing out to the sides.\"): os dedos, por trás da barra, ficam a poucos mm da frente das coxas (o boneco não é simétrico: ~4 mm na esquerda e ~10 mm na direita)"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "braços esticados embaixo, com o cotovelo solto",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          5,
+          18
+        ],
+        "fonte": "free-exercise-db — Upright Cable Row (\"Your arms should be extended with a slight bend at the elbows and your back should be straight.\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Rest the bar on the front of the thighs with the elbows fully extended and pointing out to the sides.\"). Com as mãos mais fechadas que na barra livre o cotovelo fica um pouco mais solto (~16° × 12° na Remada Alta com Barra): com 12° o braço pendurado entrava 5–7 mm na lateral do tronco"
+      },
+      {
+        "nome": "em cima o cotovelo chega na altura do ombro",
+        "medida": "braco_elevacao",
+        "t": 1.0,
+        "graus": [
+          86,
+          94
+        ],
+        "fonte": "NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"At the highest bar position, the elbows should be level with or slightly higher than the shoulders and wrists.\"); Schoenfeld, Kolber & Haimes 2011 (\"the authors recommend that asymptomatic individuals elevate their arms during the upright row to just below 90° (shoulder height)\"; \"Similar recommendations have been put forth by other authors (21), who suggest limiting shoulder abduction to approximately parallel with the floor.\"); Body-Solid — Upright Row (polia baixa) (\"Pull the bar up until your upper arms are parrallel to the floor. Pause, then slowly lower the bar to the starting position.\")"
+      },
+      {
+        "nome": "o cotovelo não passa da altura do ombro",
+        "medida": "braco_elevacao",
+        "t": "todos",
+        "graus": [
+          0,
+          94
+        ],
+        "fonte": "Schoenfeld, Kolber & Haimes 2011 (\"This risk may be mitigated through instruction of the individual to avoid elevation of the elbows above the shoulder height.\")"
+      },
+      {
+        "nome": "em cima o braço fica paralelo ao chão",
+        "medida": "inclinacao",
+        "segmento": [
+          "Arm",
+          "ForeArm"
+        ],
+        "t": 1.0,
+        "graus": [
+          -4,
+          4
+        ],
+        "fonte": "Schoenfeld, Kolber & Haimes 2011 (\"limiting shoulder abduction to approximately parallel with the floor\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"At the highest bar position, the elbows should be level with or slightly higher than the shoulders and wrists.\")"
+      },
+      {
+        "nome": "cotovelos sempre mais altos que os punhos",
+        "medida": "inclinacao",
+        "segmento": [
+          "ForeArm",
+          "Hand"
+        ],
+        "t": "todos",
+        "graus": [
+          10,
+          90
+        ],
+        "fonte": "free-exercise-db — Upright Cable Row (\"Tip: Your elbows should drive the motion. As you lift the bar, your elbows should always be higher than your forearms. Also, keep your torso stationary and pause for a second at the top of the movement.\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"At the highest bar position, the elbows should be level with or slightly higher than the shoulders and wrists.\"); ExRx — Cable Upright Row (\"with elbows leading\"); Schoenfeld, Kolber & Haimes 2011 (\"it is important to pull through the elbows, not the wrist\")"
+      },
+      {
+        "nome": "cotovelos pros lados (o braço sobe pelo lado, só um pouco à frente do plano do corpo)",
+        "medida": "braco_plano",
+        "t": [
+          0.5,
+          1.0
+        ],
+        "graus": [
+          0,
+          30
+        ],
+        "fonte": "Schoenfeld, Kolber & Haimes 2011 (\"Performance of the upright row requires elevation of the arm at an angle that is slightly anterior to the coronal plane (bringing the arm straight out to the side).\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Keep the elbows pointed out to the sides as the bar brushes against the body.\"); ExRx — Upright Row Safety (\"keep the elbow pointing directly to the side, instead of angling it slightly to the front\")"
+      },
+      {
+        "nome": "pegada pronada (as palmas viradas pras coxas embaixo)",
+        "medida": "palma_frente",
+        "t": 0.0,
+        "graus": [
+          140,
+          180
+        ],
+        "fonte": "free-exercise-db — Upright Cable Row (\"a pronated (palms facing your thighs) grip\"); ExRx — Cable Upright Row (\"overhand grip\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"closed, pronated grip\")"
+      },
+      {
+        "nome": "pegada na largura dos ombros ou um pouco mais fechada (o máximo que a barra de 20\" deixa)",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          0.8,
+          1.0
+        ],
+        "fonte": "ExRx — Cable Upright Row (\"Grasp cable bar with shoulder width or slightly narrower overhand grip. Stand close to pulley.\"); free-exercise-db — Upright Cable Row (\"Grasp a straight bar cable attachment that is attached to a low pulley with a pronated (palms facing your thighs) grip that is slightly less than shoulder width.\"); ExRx — Upright Row Safety (\"A shoulder width grip is suggested when performing the upright row.\"; \"The greater internal rotation required for a close grip upright row decreases the subacromial space\"); McAllister et al. 2013 (\"Sixteen weight-trained men completed 2 repetitions each in the URR with 3 grip conditions: 50, 100, and 200% of the biacromial breadth (BAB).\"). A barra reta da polia tem 20\" com a borracha de 4,5 a 23,5 cm do meio: as mãos ficam a 37 cm (a mais aberta em que a mão inteira fica na borracha), um pouco mais fechada que os ombros (a Remada Alta com Barra usa 43 cm)"
+      },
+      {
+        "nome": "punho reto embaixo",
+        "medida": "punho_flexao",
+        "t": 0.0,
+        "graus": [
+          -10,
+          10
+        ],
+        "fonte": "ExRx — Cable Upright Row (\"Allow wrists to flex as bar rises\": o punho só dobra conforme a barra sobe; embaixo a mão fica na linha do antebraço)"
+      },
+      {
+        "nome": "o punho dobra (flexão) conforme a barra sobe",
+        "medida": "punho_flexao",
+        "t": 1.0,
+        "graus": [
+          15,
+          45
+        ],
+        "fonte": "ExRx — Cable Upright Row (\"Pull bar to neck with elbows leading. Allow wrists to flex as bar rises. Lower and repeat.\")"
+      },
+      {
+        "nome": "o punho desvia pro lado do mínimo no máximo o normal",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -30,
+          10
+        ],
+        "fonte": "Norkin & White / AAOS (limites.py): desvio ulnar 0–30°. O antebraço chega na mão vindo do cotovelo aberto (NSCA (Achievable, curso da prova CSCS) — Barbell upright row: \"Keep the elbows pointed out to the sides as the bar brushes against the body.\") e as mãos ficam um pouco por dentro dos ombros: o punho desvia pro lado do mínimo e o resto vira a barra oblíqua na palma"
+      },
+      {
+        "nome": "tronco ereto e parado (sem inclinar pra trás contra o cabo)",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "free-exercise-db — Upright Cable Row (\"keep your torso stationary\"; \"your back should be straight\"); NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Stand erect with feet shoulder-width apart and knees slightly flexed.\"; \"Keep the torso and knees in the same position.\"; \"Don’t rise up on the toes or swing the bar upward.\"); ExRx — Upright Row Safety (\"An upright posture with chest high and shoulders back\"). Nenhuma fonte manda inclinar pra trás por causa do cabo: o ExRx resolve o puxão pra frente ficando perto (\"Stand close to pulley.\")"
+      },
+      {
+        "nome": "joelhos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          3,
+          12
+        ],
+        "fonte": "NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Stand erect with feet shoulder-width apart and knees slightly flexed.\"; \"Keep the torso and knees in the same position.\")"
+      },
+      {
+        "nome": "pés na largura dos ombros",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.3
+        ],
+        "fonte": "NSCA (Achievable, curso da prova CSCS) — Barbell upright row (\"Stand erect with feet shoulder-width apart and knees slightly flexed.\"); o free-exercise-db e o ExRx do cabo não falam dos pés"
+      },
+      {
+        "nome": "os ombros não vão pra frente (escápulas pra trás)",
+        "medida": "ombro_frente",
+        "t": "todos",
+        "mm": [
+          -15,
+          5
+        ],
+        "fonte": "ExRx — Upright Row Safety (\"Shoulders should be kept back since scapula protraction can decrease width of subacromical space\"; \"chest high and shoulders back\")"
+      },
+      {
+        "nome": "ombros relaxados embaixo (linha do ombro caída)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Shoulder",
+          "Arm"
+        ],
+        "t": 0.0,
+        "graus": [
+          20,
+          32
+        ],
+        "fonte": "a mesma da Remada Alta com Barra e do Encolhimento (o ombro parte do repouso)"
+      },
+      {
+        "nome": "em cima os ombros sobem só um pouco, junto com o braço (sem encolher até a orelha)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Shoulder",
+          "Arm"
+        ],
+        "t": 1.0,
+        "graus": [
+          8,
+          22
+        ],
+        "fonte": "Catalyst Athletics — Cable Upright Row (\"allowing yourself to shrug up and back naturally with the motion\"); ExRx — Cable Upright Row (o trapézio superior entre os estabilizadores: \"Stabilizers: Trapezius, Upper; Levator Scapulae\"); a mesma da Remada Alta com Barra: a linha do ombro sobe ~10° (o boneco não é simétrico: no repouso ela fica a 26° no lado esquerdo e 22° no direito)"
+      },
+      {
+        "nome": "cabeça alinhada com a coluna, olhando à frente",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -15,
+          0
+        ],
+        "fonte": "nenhuma fonte da remada alta fala da cabeça; segue a postura ereta da NSCA (\"Stand erect with feet shoulder-width apart and knees slightly flexed.\") e do ExRx Safety (\"An upright posture\")"
+      }
+    ]
+  }
+}

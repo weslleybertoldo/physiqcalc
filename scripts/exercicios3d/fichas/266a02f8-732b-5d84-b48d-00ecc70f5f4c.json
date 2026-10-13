@@ -1,0 +1,820 @@
+{
+  "uuid": "266a02f8-732b-5d84-b48d-00ecc70f5f4c",
+  "nome": "Coice em Quatro Apoios",
+  "cena": "coice_em_quatro_apoios",
+  "grupo": "Glúteo",
+  "subgrupo": "Glúteo máximo (extensão de quadril)",
+  "padrao_movimento": "coice_gluteo",
+  "equipamento": "peso_corporal",
+  "variacao": "quatro apoios",
+  "alvos": [
+    "gluteo"
+  ],
+  "auxiliares": [
+    "posterior"
+  ],
+  "camera": {
+    "az": 80,
+    "el": 8,
+    "dist": 3.0,
+    "alvo": [
+      0.0,
+      0.08,
+      0.42
+    ]
+  },
+  "camera_vistas": {
+    "dist": 3.3,
+    "alvo": [
+      0.0,
+      0.08,
+      0.42
+    ]
+  },
+  "ida_s": 2.0,
+  "checagens": {
+    "pes_no_chao": true,
+    "pe_fora_do_chao": [
+      "E"
+    ],
+    "pe_fora_do_chao_fonte": "o pé esquerdo, o da perna que sobe, sai do chão logo depois do começo e vai pro alto (Boren et al. 2011: \"to lift the foot toward the ceiling\"): sem a regra do chão nele; o direito segue no chão (planta = o peito do pé deitado). No começo (t = 0) o pé esquerdo está no chão: as alturas abaixo medem isso",
+    "pe_no_ar": [
+      "E"
+    ],
+    "pe_no_ar_fonte": "o pé esquerdo MEXE fora do chão (sobe com a perna): sem a regra do pé escorregando nele (checagem3d, lote 8, como no Coice de Glúteo na Polia); o direito continua com todas — no chão e sem escorregar",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "As regras padrão de base (tecnica3d.PADRAO_PES_NO_CHAO: largura dos pés, ponta do pé, os 2 pés virados igual, um pé à frente do outro, joelho na direção do pé e coluna até 20°) foram feitas pra quem está em pé com os pés chapados. Aqui o apoio é em quatro apoios — mãos, joelhos, canelas e o peito dos pés no chão (ACE, Quadruped Bent-knee Hip Extensions: \"Kneel on an exercise mat or floor\"; \"with your feet plantar-flexed (toes pointing away from your body)\") —, com os pés deitados apontando pra trás (a ponta_pe mede ~180°) e o pé esquerdo saindo do chão. As que valem estão abaixo, mais estreitas: joelhos e pés na largura do quadril, coluna neutra (até 6°, sem arquear), pelve nivelada e sem girar, ombros nivelados.",
+    "limites_juntas": {
+      "punhoE": [
+        0,
+        92
+      ],
+      "punhoD": [
+        0,
+        92
+      ]
+    },
+    "limites_juntas_fonte": "Punhos das mãos espalmadas no chão, sem segurar peso: com a palma chapada no chão e o ombro bem em cima da mão (ACE, Quadruped Bent-knee Hip Extensions: \"positioning them directly under your shoulders\"; free-exercise-db: \"a kneeling push-up position\") o antebraço fica em pé e o punho, ~88° estendido — é o apoio \"with the wrist in hyperextension\" da flexão de braço (Polovinets et al. 2018), o mesmo da Flexão de Braço (lote 7, a mesma faixa). O teto de 55° do limites.py é pra mão segurando peso sem dobrar o punho e o de 70° (AAOS, Norkin & White) é a extensão ativa sem carga.",
+    "zonas": [],
+    "alturas": [
+      {
+        "nome": "palma da mão esquerda espalmada no chão",
+        "partes": [
+          "LeftHand"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"Slowly lean forward to place your hands on the mat, positioning them directly under your shoulders at shoulder-width with your fingers facing forward\"); pedido: palma encostando, sem afundar mais que ~1 mm e sem escorregar (a mão fica parada: o tronco não mexe)"
+      },
+      {
+        "nome": "dedo indicador da mão esquerda no chão",
+        "partes": [
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "dedo médio da mão esquerda no chão",
+        "partes": [
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "dedo anelar da mão esquerda no chão",
+        "partes": [
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "dedo mínimo da mão esquerda no chão",
+        "partes": [
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "polegar da mão esquerda no chão",
+        "partes": [
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "palma da mão direita espalmada no chão",
+        "partes": [
+          "RightHand"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"Slowly lean forward to place your hands on the mat, positioning them directly under your shoulders at shoulder-width with your fingers facing forward\"); pedido: palma encostando, sem afundar mais que ~1 mm e sem escorregar (a mão fica parada: o tronco não mexe)"
+      },
+      {
+        "nome": "dedo indicador da mão direita no chão",
+        "partes": [
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "dedo médio da mão direita no chão",
+        "partes": [
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "dedo anelar da mão direita no chão",
+        "partes": [
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "dedo mínimo da mão direita no chão",
+        "partes": [
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "polegar da mão direita no chão",
+        "partes": [
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ]
+      },
+      {
+        "nome": "antebraços nunca entram no chão (a pele do punho, no pé da mão, encosta junto com a palma)",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          5000
+        ],
+        "fonte": "regra da fábrica (o corpo não atravessa o chão), como na Flexão de Braço"
+      },
+      {
+        "nome": "joelho e canela direitos apoiados no chão, parados",
+        "partes": [
+          "RightLeg"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"Kneel on an exercise mat or floor\"; \"so that your knees are directly under your hips\"); pedido: joelho e canela de apoio encostam sem entrar no chão"
+      },
+      {
+        "nome": "peito do pé direito deitado no chão, parado",
+        "partes": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          1.5
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"with your feet plantar-flexed (toes pointing away from your body)\"); Boren et al. 2011, figura 17 (o peito do pé deitado no chão)"
+      },
+      {
+        "nome": "começo: joelho e canela esquerdos apoiados no chão",
+        "partes": [
+          "LeftLeg"
+        ],
+        "acima_de": "chao",
+        "t": 0.0,
+        "mm": [
+          -1.5,
+          1.5
+        ],
+        "fonte": "pedido (t = 0 em quatro apoios, com os 2 joelhos no chão); ACE, Quadruped Bent-knee Hip Extensions (\"so that your knees are directly under your hips\")"
+      },
+      {
+        "nome": "começo: peito do pé esquerdo deitado no chão",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "t": 0.0,
+        "mm": [
+          -1.5,
+          1.5
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"with your feet plantar-flexed\")"
+      },
+      {
+        "nome": "a perna que sobe sai do chão (joelho, canela e pé)",
+        "partes": [
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "t": [
+          0.05,
+          1.0
+        ],
+        "mm": [
+          3,
+          5000
+        ],
+        "fonte": "Boren et al. 2011 (\"to lift the foot toward the ceiling\"); a perna sobe girando no quadril: a canela, atrás do quadril, sai do chão logo no começo"
+      },
+      {
+        "nome": "a perna que sobe nunca entra no chão",
+        "partes": [
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          -1.5,
+          5000
+        ],
+        "fonte": "regra da fábrica (o corpo não atravessa o chão)"
+      },
+      {
+        "nome": "corpo nunca encosta no chão (tronco, ombros, braços)",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "LeftShoulder",
+          "RightShoulder",
+          "LeftArm",
+          "RightArm"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          150,
+          5000
+        ],
+        "fonte": "quatro apoios: só as mãos, os joelhos, as canelas e os pés encostam no chão (ACE, Quadruped Bent-knee Hip Extensions)"
+      },
+      {
+        "nome": "coxa de apoio fora do chão (só o joelho e a canela apoiam)",
+        "partes": [
+          "RightUpLeg"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          2,
+          5000
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"so that your knees are directly under your hips\"): a coxa fica em pé, o apoio é no joelho e na canela"
+      },
+      {
+        "nome": "cabeça longe do chão",
+        "partes": [
+          "Head"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          150,
+          5000
+        ]
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "mãos longe da cabeça (sem encostar no rosto nem no cabelo)",
+        "partes": [
+          "LeftHand",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "RightHand",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3"
+        ],
+        "com": [
+          "Head",
+          "Neck"
+        ],
+        "cabelo": true,
+        "mm": [
+          20,
+          2000
+        ]
+      },
+      {
+        "nome": "antebraços e mãos sem entrar no tronco",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "RightHand",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "mm": [
+          -2,
+          2000
+        ],
+        "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+      },
+      {
+        "nome": "a perna que sobe não encosta na de apoio",
+        "partes": [
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "com": [
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "mm": [
+          20,
+          5000
+        ],
+        "fonte": "pedido (\"o pé que sobe × a outra perna (não encosta)\"); a perna sobe no plano dela, ao lado da outra"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "braços estendidos, sem travar",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          0,
+          10
+        ],
+        "fonte": "free-exercise-db, Glute Kickback (\"with your arms extended in front of you (perpendicular to the torso) in order to get into a kneeling push-up position\"); a cena fica a ~4°"
+      },
+      {
+        "nome": "ombros bem em cima das mãos (braço em pé)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Arm",
+          "Hand"
+        ],
+        "t": "todos",
+        "graus": [
+          82,
+          90
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"hands are directly under your shoulders\")"
+      },
+      {
+        "nome": "mãos na largura dos ombros",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          0.85,
+          1.25
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"positioning them directly under your shoulders at shoulder-width\"); free-exercise-db, Glute Kickback (\"with the arms spaced at shoulder width\"). A medida divide pela distância entre as cabeças do úmero: com o punho embaixo do ombro dá ~1,0"
+      },
+      {
+        "nome": "dedos das mãos pra frente",
+        "medida": "dedos_mao_dentro",
+        "t": "todos",
+        "graus": [
+          -10,
+          15
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"with your fingers facing forward\")"
+      },
+      {
+        "nome": "palmas viradas pro chão",
+        "medida": "palma_cima",
+        "t": "todos",
+        "graus": [
+          165,
+          180
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"place your hands on the mat\")"
+      },
+      {
+        "nome": "tronco perto da horizontal, parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          74,
+          86
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"Reposition your hands and knees as necessary so that your knees are directly under your hips and hands are directly under your shoulders\"): com os braços e as coxas em pé, a inclinação do tronco sai do comprimento do braço × o da coxa; parado (\"allowing movement only from the left hip joint\")"
+      },
+      {
+        "nome": "coluna neutra (sem afundar nem arredondar)",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          6
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"Stiffen your core and abdominal muscles to position your spine in a neutral position, avoid any excessive sagging or arching\")"
+      },
+      {
+        "nome": "a lombar não arqueia quando a perna sobe",
+        "medida": "coluna_sinal",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"As the leg is raised, individuals may witness an increase in lumbar lordosis (low back sagging). Only raise the leg to a height where the low back position can be maintained\"); − = a coluna arqueando"
+      },
+      {
+        "nome": "cabeça alinhada com a coluna",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -18,
+          -4
+        ],
+        "fonte": "ACE, Bird-dog (\"Your head should remain aligned with the spine throughout the movement\"); as fotos da ACE, de Boren 2011 e do free-exercise-db mostram a cabeça na linha da coluna, olhando pro chão. O boneco em pé, no repouso, mede ~−11°"
+      },
+      {
+        "nome": "pelve nivelada (não cai pro lado da perna que sobe)",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -2,
+          2
+        ],
+        "fonte": "ACE, Bird-dog (\"without any rotation in the hip. Your goal is to keep both hips parallel to the floor\")"
+      },
+      {
+        "nome": "pelve sem girar",
+        "medida": "pelve_giro",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "ACE, Bird-dog (\"without any rotation in the hip\"); ACE, Quadruped Bent-knee Hip Extensions (\"allowing movement only from the left hip joint\")"
+      },
+      {
+        "nome": "tronco sem girar (ombros nivelados)",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"Maintain a strong, stable core\")"
+      },
+      {
+        "nome": "começo: as 2 coxas em pé, joelhos embaixo do quadril",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "t": 0.0,
+        "graus": [
+          85,
+          90
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"so that your knees are directly under your hips\")"
+      },
+      {
+        "nome": "quadril de apoio parado (coxa em pé)",
+        "medida": "quadril_sinal",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          75,
+          85
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"allowing movement only from the left hip joint\"); 0 = coxa na linha do tronco"
+      },
+      {
+        "nome": "começo: quadril que sobe dobrado como o de apoio (coxa em pé)",
+        "medida": "quadril_sinal",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          75,
+          85
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (quatro apoios, \"knees are directly under your hips\")"
+      },
+      {
+        "nome": "fim: coxa na linha das costas, quase paralela ao chão",
+        "medida": "quadril_sinal",
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          -11,
+          0
+        ],
+        "fonte": "free-exercise-db, Glute Kickback (\"lift up your right leg until the hamstrings are in line with the back\"; \"Tip: At the end of the movement the upper leg should be parallel to the floor while the calf should be perpendicular to it.\"); Boren et al. 2011 (\"to achieve neutral hip extension\"). 0 = coxa na linha das costas; com as costas ~10° subindo pros ombros, a coxa paralela ao chão mede ~−10,5. A cena fica entre os 2 (~−8)"
+      },
+      {
+        "nome": "fim: coxa perto da horizontal",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Leg"
+        ],
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          -2,
+          8
+        ],
+        "fonte": "free-exercise-db, Glute Kickback (\"the upper leg should be parallel to the floor\"); + = o joelho abaixo do quadril"
+      },
+      {
+        "nome": "fim: canela em pé (perpendicular ao chão)",
+        "medida": "inclinacao",
+        "segmento": [
+          "Leg",
+          "Foot"
+        ],
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          -90,
+          -82
+        ],
+        "fonte": "free-exercise-db, Glute Kickback (\"the calf should be perpendicular to it\"); −90 = a canela em pé, o tornozelo bem em cima do joelho"
+      },
+      {
+        "nome": "o quadril não passa da extensão normal",
+        "medida": "quadril_sinal",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          -13,
+          85
+        ],
+        "fonte": "AAOS (tabela 1 de Wichman et al. 2021): extensão do quadril 17,0 ± 3,9° — a coxa não passa de 13° atrás da linha do tronco; ACE, Quadruped Bent-knee Hip Extensions (\"Only raise the leg to a height where the low back position can be maintained\")"
+      },
+      {
+        "nome": "joelho que sobe dobrado ~90° e parado",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          88,
+          100
+        ],
+        "fonte": "free-exercise-db, Glute Kickback (\"the bend of the knees should create a 90-degree angle between the hamstrings and the calves\"; \"while maintaining the 90-degree angle bend\"); Boren et al. 2011 (\"while keeping the knee flexed 90 degrees\"); ACE, Quadruped Bent-knee Hip Extensions (\"while maintaining your bent-knee position\"). A canela sobe ~5° do joelho pro tornozelo no chão, o que soma ~5° ao ângulo"
+      },
+      {
+        "nome": "joelho de apoio dobrado ~90°, parado",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          88,
+          100
+        ],
+        "fonte": "free-exercise-db, Glute Kickback (\"the bend of the knees should create a 90-degree angle between the hamstrings and the calves\")"
+      },
+      {
+        "nome": "a coxa que sobe não abre pro lado",
+        "medida": "coxa_abducao",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          -3,
+          6
+        ],
+        "fonte": "ACE, Bird-dog (\"without any rotation in the hip\"); ACE, Quadruped Bent-knee Hip Extensions (\"allowing movement only from the left hip joint\"): a perna sobe no plano dela"
+      },
+      {
+        "nome": "pé de apoio esticado (peito do pé no chão)",
+        "medida": "tornozelo",
+        "lado": "D",
+        "t": "todos",
+        "graus": [
+          26,
+          36
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"with your feet plantar-flexed (toes pointing away from your body)\"); flexão plantar até 50° (Alazzawi et al. 2017, tabela 5) = ~26° no boneco (em pé ~76°)"
+      },
+      {
+        "nome": "começo: pé esquerdo esticado no chão",
+        "medida": "tornozelo",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          26,
+          36
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"with your feet plantar-flexed\")"
+      },
+      {
+        "nome": "fim: sola do pé esquerdo virada pro teto (tornozelo ~neutro)",
+        "medida": "tornozelo",
+        "lado": "E",
+        "t": 1.0,
+        "graus": [
+          70,
+          86
+        ],
+        "fonte": "Boren et al. 2011 (\"to lift the foot toward the ceiling\"); ExRx, Sled Kneeling Hip Extension (\"Position one foot up so middle of sole is positioned under foot bar\"); nas fotos da ACE, de Boren e do free-exercise-db a sola fica virada pro teto, com o tornozelo ~neutro (o boneco em pé mede ~76°)"
+      },
+      {
+        "nome": "o tornozelo que sobe fica na amplitude normal",
+        "medida": "tornozelo",
+        "lado": "E",
+        "t": "todos",
+        "graus": [
+          26,
+          96
+        ],
+        "fonte": "Alazzawi et al. 2017, tabela 5 (flexão plantar 0–50°, dorsiflexão 0–20°; no boneco ~26° a ~96°)"
+      },
+      {
+        "nome": "começo: joelhos e pés na largura do quadril",
+        "medida": "pes_base_lateral",
+        "t": 0.0,
+        "faixa": [
+          0.95,
+          1.5
+        ],
+        "fonte": "ACE, Quadruped Bent-knee Hip Extensions (\"positioning your knees and feet hip-width apart\"); a medida divide pela distância entre as articulações do quadril"
+      }
+    ]
+  },
+  "movimento": "Em quatro apoios no chão: as mãos espalmadas bem embaixo dos ombros, na largura dos ombros, com os dedos apontando para a frente e os braços esticados; os joelhos bem embaixo do quadril, afastados mais ou menos na largura do quadril, com as canelas e o peito dos pés deitados no chão (os pés esticados); a coluna neutra — sem afundar nem arredondar as costas — e a cabeça alinhada com ela, olhando para o chão. Sem mexer o tronco, contrai o glúteo e sobe a perna esquerda para trás e para cima, com o joelho dobrado a cerca de 90° e parado, até a coxa ficar na linha das costas, quase paralela ao chão, com a canela em pé e a sola do pé virada para o teto; sem arquear a lombar e sem girar nem inclinar a pelve. Volta devagar pelo mesmo caminho até o joelho chegar de novo perto do chão. Só o quadril da perna que sobe mexe: as mãos, o joelho e o pé da outra perna não saem do lugar. Faz a série com uma perna e depois com a outra.",
+  "cinesiologia": {
+    "plano": "sagital (extensão do quadril na subida, flexão na volta), de uma perna só, em cadeia cinética aberta; só o quadril da perna que sobe mexe (ACE, Quadruped Bent-knee Hip Extensions: \"allowing movement only from the left hip joint\"). A resistência é o peso da própria perna, que sobe contra a gravidade (Boren et al. 2011: \"to lift the foot toward the ceiling\")",
+    "articulacoes": "quadril da perna que sobe: de ~79° de flexão (a coxa em pé, embaixo do quadril — ACE: \"so that your knees are directly under your hips\") a ~8° de extensão, com a coxa entre a linha das costas e a horizontal (free-exercise-db: \"until the hamstrings are in line with the back\"; \"At the end of the movement the upper leg should be parallel to the floor while the calf should be perpendicular to it\") — a extensão normal do quadril é 17,0 ± 3,9° (AAOS, tabela 1 de Wichman 2021); joelho dela parado a ~95° (free-exercise-db: \"while maintaining the 90-degree angle bend\"; Boren: \"while keeping the knee flexed 90 degrees\"); tornozelo dela sai da flexão plantar (o peito do pé no chão) e fica ~neutro em cima, com a sola pro teto; coluna neutra e pelve parada e nivelada (ACE: \"avoid any excessive sagging or arching\"; ACE, Bird-dog: \"Your goal is to keep both hips parallel to the floor\"); ombros a ~77° de flexão com os cotovelos esticados (~4°) e os punhos estendidos (~88°, mãos espalmadas), parados; o outro quadril (~79°), o outro joelho (~94°) e o outro tornozelo (flexão plantar ~46°), parados no chão",
+    "agonistas": "glúteo máximo (free-exercise-db: \"primaryMuscles\": [\"glutes\"] e \"Contract the glutes throughout this movement\"; ACE: \"squeeze (contract) the left gluteus maximus (butt) to lift the left leg\"; ExRx, Sled Kneeling Hip Extension: Target \"Gluteus Maximus\"). Na NSCA o coice (\"kickbacks\") é extensão de quadril \"horizontal\", que trabalha o glúteo máximo encurtado, no alto (Hodge, NSCA PTQ 10.4: \"These movements will train the upper and lower subdivisions of the glute maximus in the shortened position, which is at the top when locked out\"). EMG: glúteo máximo 59,7% da CVIM na perna que sobe (Boren 2011, nas mãos); glúteo máximo superior 30,1 ± 12,5% e glúteo médio 30,9 ± 15,2% com o joelho dobrado (Selkowitz 2013, apoiado nos cotovelos, fio dentro do músculo)",
+    "sinergistas": "isquiotibiais (free-exercise-db: \"secondaryMuscles\": [\"hamstrings\"]) e adutor magno (ExRx, Sled Kneeling Hip Extension: Synergists \"Adductor Magnus\"); o ExRx põe os isquiotibiais como estabilizadores antagonistas (\"Antagonist Stabilizers: Hamstrings\") e lembra que com o quadril mais dobrado — o começo da subida — eles e os adutores ajudam mais (Gluteus Maximus: \"As hip is more bent, Hamstring and/or Hip Adductors become more involved\")",
+    "estabilizadores": "oblíquos, eretores da espinha, quadrado lombar, glúteo médio e glúteo mínimo (ExRx, Sled Kneeling Hip Extension: Stabilizers \"Obliques\", \"Erector Spinae\", \"Quadratus Lumborum\", \"Gluteus Medius\", \"Gluteus Minimus\"); o abdômen segura a coluna neutra (ACE: \"Stiffen your core and abdominal muscles\"); o glúteo da perna de apoio também trabalha, segurando a pelve (Boren 2011: 21,0% da CVIM no glúteo máximo e 22,0% no médio como \"stabilizing leg\"); nos braços, o serrátil anterior e o tríceps seguram o tronco (ExRx, Bird Dog — o mesmo quatro apoios: Stabilizers \"Serratus Anterior\", \"Triceps Brachii\")",
+    "fases": "concêntrica: a perna sobe contraindo o glúteo, soltando o ar, e segura 1 s em cima (free-exercise-db: \"As you exhale, lift up your right leg\"; \"hold the contraction at the top for a second\"); excêntrica: volta devagar puxando o ar (free-exercise-db: \"Go back to the initial position as you inhale\"). No estudo deste exercício, 2 s subindo e 2 s descendo (Boren 2011: metrônomo a 60 bpm, \"for two beats\")"
+  },
+  "referencias": [
+    "free-exercise-db (Yuhonas, domínio público) — Glute Kickback, o fonte_en do catálogo. https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Glute_Kickback.json (lido em 11/10/2026): \"Kneel on the floor or an exercise mat and bend at the waist with your arms extended in front of you (perpendicular to the torso) in order to get into a kneeling push-up position but with the arms spaced at shoulder width. Your head should be looking forward and the bend of the knees should create a 90-degree angle between the hamstrings and the calves.\"; \"As you exhale, lift up your right leg until the hamstrings are in line with the back while maintaining the 90-degree angle bend. Contract the glutes throughout this movement and hold the contraction at the top for a second. Tip: At the end of the movement the upper leg should be parallel to the floor while the calf should be perpendicular to it.\"; \"Go back to the initial position as you inhale and now repeat with the left leg.\"; \"Continue to alternate legs until all of the recommended repetitions have been performed.\"; \"primaryMuscles\": [\"glutes\"], \"secondaryMuscles\": [\"hamstrings\"].",
+    "American Council on Exercise (ACE) — Quadruped Bent-knee Hip Extensions (Exercise Library #270). https://www.acefitness.org/resources/everyone/exercise-library/270/quadruped-bent-knee-hip-extensions/ (lido em 11/10/2026): \"Starting Position: Kneel on an exercise mat or floor, positioning your knees and feet hip-width apart, with your feet plantar-flexed (toes pointing away from your body). Slowly lean forward to place your hands on the mat, positioning them directly under your shoulders at shoulder-width with your fingers facing forward. Reposition your hands and knees as necessary so that your knees are directly under your hips and hands are directly under your shoulders. Stiffen your core and abdominal muscles to position your spine in a neutral position, avoid any excessive sagging or arching.\"; \"Maintain a strong, stable core and squeeze (contract) the left gluteus maximus (butt) to lift the left leg while maintaining your bent-knee position, allowing movement only from the left hip joint. Perform a number of repetitions with the left leg before switching legs and performing the same number of repetitions with the right leg.\"; \"The degree of hip extension is determined by the ability to control against movement in the low back. As the leg is raised, individuals may witness an increase in lumbar lordosis (low back sagging). Only raise the leg to a height where the low back position can be maintained through the combined actions of the core and abdominal muscles.\"",
+    "American Council on Exercise (ACE) — Bird-dog (Exercise Library #14), o mesmo quatro apoios. https://www.acefitness.org/resources/everyone/exercise-library/14/bird-dog/ (lido em 11/10/2026): \"Reposition your hands and knees as necessary so that your knees are directly under your hips and hands are directly under your shoulders.\"; \"attempting to extend it until it is at, or near parallel, to the floor without any rotation in the hip. Your goal is to keep both hips parallel to the floor.\"; \"Your head should remain aligned with the spine throughout the movement.\"",
+    "ExRx.net — Sled Kneeling Hip Extension (Sled › Glute Kickback › Kneeling; o ExRx não tem o coice em quatro apoios com o peso do corpo). https://exrx.net/WeightExercises/GluteusMaximus/SLKneelingHipExtension (cópia do Internet Archive de 19/04/2025; o site direto bloqueia a leitura automática): \"Position one foot up so middle of sole is positioned under foot bar.\"; \"Push foot bar up by extending leg back as far as possible. Return leg to original position and repeat. Continue with opposite leg.\"; músculos: Target \"Gluteus Maximus\", Synergists \"Adductor Magnus\", Stabilizers \"Obliques\", \"Erector Spinae\", \"Quadratus Lumborum\", \"Gluteus Medius\", \"Gluteus Minimus\", Antagonist Stabilizers \"Hamstrings\". ExRx — Gluteus Maximus (https://exrx.net/Muscles/GluteusMaximus, cópia de 19/02/2026): \"The moment arm of gluteus maximus decreases with increasing hip flexion angle (Takahashi 2025). As hip is more bent, Hamstring and/or Hip Adductors become more involved, depending upon magnitude of the hip and knee angle.\" ExRx — Bird Dog (https://exrx.net/WeightExercises/ErectorSpinae/BWBirdDog, cópia de 12/02/2026): \"Kneel on mat on all fours with legs and hands slightly apart.\"; Stabilizers \"Serratus Anterior\", \"Triceps Brachii\".",
+    "Boren K, Conrey C, Le Coguic J, Paprocki L, Voight M, Robinson TK. Electromyographic analysis of gluteus medius and gluteus maximus during rehabilitation exercises. Int J Sports Phys Ther. 2011;6(3):206-223 (PMC3201064; lido na cópia do Internet Archive de 03/07/2026): \"Quadruped Hip Extension: In quadruped (left) the subject extends the dominant leg at the hip, while keeping the knee flexed 90 degrees, to lift the foot toward the ceiling (right) to achieve neutral hip extension for two beats and then returns the dominant leg to the start position for two beats. This exercise was repeated with the non-dominant leg and EMG values were recorded in order to measure activity as both the stabilizing and moving leg.\"; \"Exercises were performed to a metronome set at 60 beats per minute\"; tabela 5 (glúteo máximo, %CVIM): \"Quadruped hip ext, DOM\" 59,70 e \"non-DOM\" 21,04; tabela 4 (glúteo médio): 46,67 e 22,03. Figura 17: nas mãos, os braços esticados, o joelho embaixo do quadril, o peito dos pés no chão (sem colchonete).",
+    "Selkowitz DM, Beneck GJ, Powers CM. Which exercises target the gluteal muscles while minimizing activation of the tensor fascia lata? Electromyographic assessment using fine-wire electrodes. J Orthop Sports Phys Ther. 2013;43(2):54-64. doi:10.2519/jospt.2013.4116 (lido na cópia do Internet Archive de 22/07/2025): \"Starting position was quadruped, with the upper body supported by the elbows and forearms, and the knees and elbows at approximately 90° of flexion.\"; \"the subject maintained the knee in 90° of flexion throughout the exercise.\"; tabela 1 (%CVIM; TFL | glúteo médio | glúteo máximo superior): \"Quadruped hip extension, knee flexed | 18.7 ± 10.6 | 30.9 ± 15.2 | 30.1 ± 12.5\". A posição deles é nos cotovelos (aqui, nas mãos): só o número de EMG.",
+    "Macadam P, Feser EH. Examination of gluteus maximus electromyographic excitation associated with dynamic hip extension during body weight exercise: a systematic review. Int J Sports Phys Ther. 2019;14(1):14-31 (PMC6350668; cópia do Internet Archive de 10/04/2026): \"When performing hip extension from a quadruped position (i.e. starting with ground contact from the hands and knees), moderate to large excitation levels result.\"",
+    "Hodge A. Program Design Considerations for Optimal Strength and Hypertrophy of the Glute Muscles. NSCA Personal Training Quarterly 10.4 (2023). https://www.nsca.com/contentassets/f921c5b3fe4142db964a943d3554b324/ptq-10.4.4-program-design-considerations-for-optimal-strength-hypertophy-glute-mucsles.pdf: \"HORIZONTAL HIP EXTENSION EXERCISES These movements will train the upper and lower subdivisions of the glute maximus in the shortened position, which is at the top when locked out (e.g., hip thrusts, frog pumps, back extensions, kickbacks, glute bridges).\" (O manual de técnica da NSCA não descreve o coice em quatro apoios.)",
+    "Wichman D, Rasio JP, Looney A, Nho SJ. Physical Examination of the Hip. Sports Health. 2021;13(2):149-153. doi:10.1177/1941738120953418, tabela 1 (valores da American Academy of Orthopaedic Surgeons; cópia do Internet Archive de 15/03/2025): \"Extension | 17.0 ± 3.9\" graus; \"Prone position is used for extension.\"; \"As variation from the neutral, midline position.\"",
+    "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29, tabela 5 (amplitude normal do tornozelo: flexão plantar 0–50°, dorsiflexão 0–20°) — a referência do tecnica3d.tornozelo (o boneco em pé mede ~76°: 50° de flexão plantar = ~26°).",
+    "Polovinets O, Wolf A, Wollstein R. Force transmission through the wrist during performance of push-ups on a hyperextended and a neutral wrist. J Hand Ther. 2018;31(3):322-330. doi:10.1016/j.jht.2017.04.005 — o resumo (a mesma referência da Flexão de Braço): \"Push-ups are used ubiquitously to evaluate and strengthen the upper body. They are usually performed in 1 of 2 main ways: with the wrist in hyperextension and with the wrist in a neutral position.\" A mão espalmada no chão é o apoio com o punho em hiperextensão.",
+    "Winter DA. Biomechanics and Motor Control of Human Movement, 4ª ed. (2009) — massas e centros de massa dos segmentos (tabela de Dempster, no arquivo BSP_DempsterWinter do laboratório BMC, Duarte M., https://github.com/BMClab/BMC; a mesma do Coice de Glúteo na Polia): usados pra conferir que o centro de massa fica dentro da base (mãos + joelho, canela e pé direitos) com a perna esquerda no ar."
+  ]
+}

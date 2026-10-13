@@ -1,0 +1,64 @@
+{
+  "uuid": "df9a0732-03b5-5d64-b2fd-047ec172c4f2",
+  "nome": "Crucifixo Inclinado com Halteres",
+  "cena": "crucifixo_inclinado_com_halteres",
+  "grupo": "Peitoral",
+  "subgrupo": "Peitoral superior (porção clavicular) — adução horizontal",
+  "padrao_movimento": "crucifixo",
+  "equipamento": "halteres",
+  "variacao": "banco inclinado",
+  "alvos": ["peitoral"],
+  "auxiliares": ["deltoide", "biceps"],
+  "camera": {"az": 35, "el": 18, "dist": 4.5, "alvo": [0, 0.15, 0.58]},
+  "ida_s": 1.5,
+  "movimento": "Sentado no banco inclinado a 30°, com o glúteo no assento, as costas e a cabeça no encosto e os pés chapados no chão, segura um halter em cada mão com as palmas viradas uma para a outra e os halteres paralelos entre si, com os braços quase estendidos e os halteres em cima da parte de cima do peito, quase encostando um no outro; com os cotovelos levemente dobrados e parados e os punhos retos, abre os braços para os lados num arco largo, com os cotovelos apontando para o chão, até os braços ficarem na linha dos ombros, paralelos ao chão, com os halteres do lado dos ombros e as palmas viradas para cima; volta pelo mesmo arco, como num abraço, até os halteres quase se encostarem de novo em cima da parte de cima do peito, sem mudar o ângulo dos cotovelos.",
+  "cinesiologia": {
+    "plano": "quase vertical, de lado a lado (o arco fica ~7° fora da vertical): adução horizontal do ombro na subida e abdução horizontal na descida, com o braço indo de ~90° do tronco, aberto pro lado, embaixo a ~113° do tronco, pra cima da cabeça, em cima — o caminho da porção clavicular do peitoral; cadeia cinética aberta",
+    "articulacoes": "ombro (adução horizontal com flexão na subida, abdução horizontal com extensão na descida, ombro girado pra dentro: cotovelo pra fora em cima e pro chão embaixo); cotovelo parado, levemente dobrado (~25°); punho neutro; escápulas paradas no encosto",
+    "agonistas": "peitoral maior (porção clavicular) (ExRx)",
+    "sinergistas": "peitoral maior (porção esternal), deltoide anterior, bíceps braquial (cabeça curta) e coracobraquial (ExRx); no crucifixo com o banco a 30° o deltoide anterior trabalha mais que no banco reto e as 2 porções do peitoral, parecido (Reiser 2014)",
+    "estabilizadores": "bíceps braquial, braquial e tríceps braquial seguram o cotovelo no mesmo ângulo e os flexores do punho seguram o halter (ExRx)",
+    "fases": "descida excêntrica (abre os braços, inspirando), subida concêntrica (fecha os braços, soltando o ar) (Bodybuilding.com: \"As you breathe in, start to slowly lower the arms\" / \"As you exhale start to bring the dumbbells back up\")"
+  },
+  "referencias": [
+    "ExRx.net — Dumbbell Incline Fly. https://exrx.net/WeightExercises/PectoralClavicular/DBInclineFly (lido na cópia do Internet Archive de 28/08/2025)",
+    "Bodybuilding.com — Incline Dumbbell Flyes (o fonte_en do catálogo). https://www.bodybuilding.com/exercises/incline-dumbbell-flyes (lido na cópia do Internet Archive de 07/11/2024; o mesmo texto está na lista aberta free-exercise-db, exercises/Incline_Dumbbell_Flyes.json)",
+    "American Council on Exercise (ACE) — Lying Chest Fly. https://www.acefitness.org/resources/everyone/exercise-library/21/lying-chest-fly/",
+    "Reiser FC, Moura JAR, Cardoso JMD, Grzelczak MT, Souza WC, Mascarenhas LPG. Eletromiografia do exercício de crucifixo em diferentes planos e angulações de movimento. Rev Bras Prescr Fisiol Exerc. 2014;8(50):864-870.",
+    "Solstad TEJ, Andersen V, Shaw M, Hoel EM, Vonheim A, Saeterbakken AH. A Comparison of Muscle Activation between Barbell Bench Press and Dumbbell Flyes in Resistance-Trained Males. J Sports Sci Med. 2020;19(4):645-651.",
+    "Welsch EA, Bird M, Mayhew JL. Electromyographic activity of the pectoralis major and anterior deltoid muscles during three upper-body lifts. J Strength Cond Res. 2005;19(2):449-452.",
+    "Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM. Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise. Int J Environ Res Public Health. 2020;17(19):7339.",
+    "Lauver JD, Cayot TE, Scheuermann BW. Influence of bench angle on upper extremity muscular activation during bench press exercise. Eur J Sport Sci. 2016;16(3):309-316.",
+    "Trebs AA, Brandenburg JP, Pitney WA. An electromyography analysis of 3 muscles surrounding the shoulder joint during the performance of a chest press exercise at several angles. J Strength Cond Res. 2010;24(7):1925-1930."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {"nome": "costas apoiadas no encosto", "equipamento": "banco", "partes": ["Spine1", "Spine2"], "mm": [-20, 3], "fonte": "ACE — Lying Chest Fly (\"Your head, shoulders, butt and feet should make contact with the bench and floor/riser throughout the exercise\")"},
+      {"nome": "glúteo apoiado no assento", "equipamento": "banco", "partes": ["Hips"], "mm": [-20, 3], "fonte": "ACE (idem); Solstad 2020 (\"the head, shoulder, and hips were supported by a bench\")"},
+      {"nome": "cabeça apoiada no encosto", "equipamento": "banco", "partes": ["Head"], "mm": [-20, 3], "fonte": "ACE (idem)"}
+    ],
+    "folgas": [
+      {"nome": "halteres sem bater um no outro", "equipamento": "halter_Left", "de": "halter_Right", "mm": [20, 5000], "fonte": "ExRx — Dumbbell Incline Fly (\"until dumbbells are nearly together\"); a cena deixa 4 cm entre as anilhas em cima"},
+      {"nome": "halter esquerdo longe do banco", "equipamento": "halter_Left", "de": "banco", "mm": [30, 5000]},
+      {"nome": "halter direito longe do banco", "equipamento": "halter_Right", "de": "banco", "mm": [30, 5000]},
+      {"nome": "halter esquerdo longe do cabelo", "equipamento": "halter_Left", "de": "cabelo", "mm": [30, 5000]},
+      {"nome": "halter direito longe do cabelo", "equipamento": "halter_Right", "de": "cabelo", "mm": [30, 5000]}
+    ],
+    "angulos": [
+      {"nome": "tronco no encosto a ~30° do chão", "medida": "tronco", "t": "todos", "graus": [55, 66], "fonte": "Bodybuilding.com — Incline Dumbbell Flyes (\"lie on an incline bench that is set to an incline angle of no more than 30 degrees\"); Reiser 2014 (o crucifixo com halteres \"inclinado à 30º\"); a medida é quadril → pescoço × vertical (60° = tronco a 30° do chão)"},
+      {"nome": "braços quase estendidos em cima, halteres em cima da parte de cima do peito", "medida": "braco_elevacao", "t": 0.0, "graus": [105, 122], "fonte": "ExRx — Dumbbell Incline Fly (\"Support dumbbells above upper chest with arms fixed in slightly bent position\"); com o tronco a 30° e os braços quase na vertical, o braço fica a ~113° do tronco"},
+      {"nome": "halteres quase juntos em cima", "medida": "pegada_largura", "t": 0.0, "faixa": [0.3, 0.8], "fonte": "ExRx — Dumbbell Incline Fly (\"bring dumbbells back together in hugging motion above upper chest until dumbbells are nearly together\"); a cena deixa 4 cm entre as anilhas, sem encostar"},
+      {"nome": "embaixo o braço na linha dos ombros, paralelo ao chão (halteres do lado dos ombros), sem descer além", "medida": "inclinacao", "segmento": ["Arm", "ForeArm"], "t": 1.0, "graus": [-5, 5], "fonte": "ExRx — Dumbbell Incline Fly (\"Lower dumbbells outward to sides of shoulders\"; \"Shoulder will likely have less range of motion in lower position as compared to Fly on flat bench\": no Crucifixo com Halteres, no banco reto, o braço termina ~5° abaixo da linha); ACE — Lying Chest Fly (\"until they lie level with your shoulders or chest\"); Reiser 2014 (o braço a 90° da vertical, o mais aberto medido, deu a maior ativação)"},
+      {"nome": "embaixo o braço aberto pro lado, no plano do tronco", "medida": "braco_plano", "t": 1.0, "graus": [-10, 10], "fonte": "ExRx — Dumbbell Incline Fly (\"Lower dumbbells outward to sides of shoulders\")"},
+      {"nome": "embaixo o braço a ~90° do tronco", "medida": "braco_elevacao", "t": 1.0, "graus": [80, 100], "fonte": "ExRx (idem); Reiser 2014 (\"ângulos de 30º, 60º e 90º da articulação glenoumeral em isometria com a vertical\")"},
+      {"nome": "cotovelo levemente dobrado (150–160° por dentro) e parado o movimento todo", "medida": "flexao", "junta": "ForeArm", "t": "todos", "graus": [20, 30], "fonte": "ExRx — Dumbbell Incline Fly (\"Keep elbows fixed in slightly bent position\"); Solstad 2020 (\"In the DF, the elbow angle (150-160º) in the lowest position\"; \"The angle of the elbow joint was kept close to constant throughout the execution of the DF\")"},
+      {"nome": "cotovelo apontando pro chão embaixo (a mão fica acima do cotovelo)", "medida": "inclinacao", "segmento": ["ForeArm", "Hand"], "t": 1.0, "graus": [-35, -10], "fonte": "ExRx — Dumbbell Incline Fly (\"Keep shoulders internally rotated so elbows point downward at bottom position and outward at top position\")"},
+      {"nome": "pegada neutra: palmas uma pra outra em cima", "medida": "palma_dentro", "t": 0.0, "graus": [55, 90], "fonte": "ACE — Lying Chest Fly (\"Externally rotate the arms (rotate your elbows to face outward and palms to face inward)\"; \"Keep the dumbbells parallel with each other during the movement\")"},
+      {"nome": "palmas viradas pra cima embaixo", "medida": "palma_cima", "t": 1.0, "graus": [0, 35], "fonte": "ACE — Lying Chest Fly (\"Keep the dumbbells parallel with each other during the movement\"): com a pegada neutra de cima e os halteres paralelos, o braço abrindo leva a palma pra cima; ExRx — Dumbbell Incline Fly (\"Keep shoulders internally rotated so elbows point downward at bottom position\"); o Bodybuilding.com, Incline Dumbbell Flyes, diz o mesmo no fim do crucifixo com giro (\"At the end of the movement the arms will be by your side with the palms facing the ceiling\")"},
+      {"nome": "punho reto (neutro)", "medida": "flexao", "junta": "Hand", "t": "todos", "graus": [0, 15], "fonte": "ACE — Lying Chest Fly (\"maintaining a neutral wrist position (avoid flexion/extension at the wrist joint)\")"},
+      {"nome": "punho sem dobrar pra frente nem pra trás", "medida": "punho_flexao", "t": "todos", "graus": [-12, 12], "fonte": "ACE (idem)"},
+      {"nome": "joelhos a ~90° com os pés no chão", "medida": "flexao", "junta": "Leg", "t": "todos", "graus": [75, 105], "fonte": "Solstad 2020 (\"the head, shoulder, and hips were supported by a bench with ~90º knee flexion\")"}
+    ]
+  }
+}

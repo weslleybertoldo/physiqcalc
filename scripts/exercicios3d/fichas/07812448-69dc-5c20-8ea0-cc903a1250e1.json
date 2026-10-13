@@ -1,0 +1,351 @@
+{
+ "uuid": "07812448-69dc-5c20-8ea0-cc903a1250e1",
+ "nome": "Panturrilha no Leg Press",
+ "cena": "panturrilha_no_leg_press",
+ "grupo": "Panturrilha",
+ "subgrupo": "Gastrocnêmio · sóleo",
+ "padrao_movimento": "panturrilha",
+ "equipamento": "maquina",
+ "variacao": "no leg press",
+ "alvos": [
+  "panturrilha"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 115,
+  "el": 14,
+  "dist": 3.3,
+  "alvo": [
+   0.0,
+   -0.35,
+   0.88
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.0,
+  "alvo": [
+   0.0,
+   -0.3,
+   0.85
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado no leg press 45°, com o encosto reclinado (20° do chão) e o glúteo, a lombar, as costas e a cabeça encostados nele, e as mãos segurando os pegadores dos lados do assento, com os braços quase esticados. As pernas ficam quase esticadas (os joelhos sem travar e sem dobrar), na direção do trilho; os pés na largura do quadril, com as pontas para a frente, e só a parte da frente deles (os dedos e a sola embaixo da base dos dedos) apoiada na borda de baixo da plataforma, com o arco e os calcanhares para fora dela. Começa com os calcanhares embaixo, além do plano da plataforma, a panturrilha alongada, e empurra a plataforma estendendo só o tornozelo, até ficar na ponta dos pés (o carrinho sobe uns 11 cm no trilho); volta devagar, dobrando o tornozelo, até a panturrilha alongar de novo. Só o tornozelo trabalha: os joelhos não dobram, o tronco e os braços ficam parados e os dedos ficam apoiados na plataforma, sem escorregar (pra isso a perna inteira, com o joelho fixo, sobe uns 3° no quadril enquanto o calcanhar sobe).",
+ "cinesiologia": {
+  "plano": "sagital (flexão plantar e flexão dorsal do tornozelo). O tornozelo é o eixo e a força do carrinho chega na bola do pé (ExRx, Calf Exercise Analyses: \"Calf Press can be seen as a 1st class lever system\", \"Motive Force: Weight on Leg Press Sled transferred to the ball of the foot\", \"Axis: Ankle joint\"): a base dos dedos anda num arco em volta do tornozelo; a parte do arco ao longo do trilho o carrinho acompanha e a parte ao longo da plataforma a perna absorve, inclinando ~3° no quadril (com o joelho fixo)",
+  "articulacoes": "tornozelo (flexão plantar na ida, de 20° de flexão dorsal — calcanhar além do plano da plataforma — até 30° de flexão plantar; flexão dorsal na volta); base dos dedos (metatarsofalângica) estendendo na ida, com os dedos apoiados na plataforma; joelho quase esticado e parado (~10° de flexão); quadril de ~69° a ~72° (a perna inteira inclina ~3° pra base dos dedos não escorregar), com a pelve parada no encosto; tronco, coluna e cabeça parados e encostados; ombros, cotovelos (~21°) e punhos parados, mãos nos pegadores",
+  "agonistas": "gastrocnêmio (ExRx: Target \"Gastrocnemius\"; NASM: Primary Muscles \"Gastrocnemius -- primary mover for plantarflexion and calf raising\"), em contração concêntrica na ida e excêntrica na volta; com o joelho esticado ele trabalha alongado (Kinoshita et al. 2023: \"The LG and MG are biarticular muscles crossing the knee joint, and are lengthened more in a knee-extended than knee-flexed position\"; Signorile et al. 2002: \"the SOL can be targeted most effectively with the knee flexed at 90 degrees and the MG with the leg fully extended\"; NSCA, PTQ 8.4: \"doing calf raises (i.e., ankle plantar flexion) with a straight knee creates superior gastrocnemius muscle activity\")",
+  "sinergistas": "sóleo (ExRx: Synergists \"Soleus\"; NASM: \"Soleus -- assists in plantarflexion and supports calf strength\"; ExRx, Calf Exercise Analyses: \"Calf exercises like the Standing Calf Raise or Calf Press, both with the knees straight, activate both the Gastrocnemius and Soleus.\") e plantar (NASM: Secondary Muscles \"Plantaris\"). No mapa do app gastrocnêmio e sóleo são o mesmo grupo (panturrilha), marcado como alvo; não há auxiliar marcado (o grupo \"tibial\" do mapa é o tibial anterior, o antagonista)",
+  "estabilizadores": "ExRx: Stabilizers \"No significant stabilizers\"; as mãos nos pegadores seguram o corpo no encosto (ExRx: \"Grasp handles to sides\") e o abdômen fica firme (NASM: \"Engage your core and prepare for plantarflexion movement.\")",
+  "fases": "concêntrica (empurra o carrinho estendendo o tornozelo o máximo — ExRx: \"Push sled by extending ankles as far as possible.\"; NASM: \"Raise your heels by plantarflexing your ankles, pushing the platform down with your toes.\") e excêntrica (volta dobrando o tornozelo até alongar — ExRx: \"Return by bending ankles until calves are stretched.\"; NASM: \"Lower your heels to return to the starting position with control, maintaining tension in the calf muscles.\"; Kinoshita et al. 2023: \"taking 2 s for each of the concentric/lifting and eccentric/lowering phases\")"
+ },
+ "referencias": [
+  "ExRx.net — Sled 45° Calf Press (https://exrx.net/WeightExercises/Gastrocnemius/SL45CalfPress, lido na cópia do Internet Archive de 20/01/2026, em 10/10/2026): classificação \"Utility: Basic\", \"Mechanics: Isolated\", \"Force: Push\"; Preparation: \"Sit on seat with back on padded support. Place feet on platform. Grasp handles to sides and extend hips and knees. Place toes and balls of feet on lower portion of platform with heels and arches extending off.\"; Execution: \"Push sled by extending ankles as far as possible. Return by bending ankles until calves are stretched. Repeat.\"; Comments: \"Reposition stance if feet slip. Keep knees straight throughout exercise or bend knees slightly only during stretch. Quadriceps serve as synergist muscle if knees are bent slightly during stretch. Movement can also be performed on Bilateral 45° Leg Press apparatus. See Calf Exercise Analyses.\"; músculos: Target \"Gastrocnemius\", Synergists \"Soleus\", Stabilizers \"No significant stabilizers\"",
+  "ExRx.net — Calf Exercise Analyses (https://exrx.net/Kinesiology/CalfExercises, a análise que a página do exercício indica; lida na cópia do Internet Archive de 25/06/2026, em 10/10/2026): \"Calf Press can be seen as a 1st class lever system\", \"Motive Force: Weight on Leg Press Sled transferred to the ball of the foot\", \"Axis: Ankle joint\", \"Resistive Force: Plantar Flexors attached at Calcaneus\"; \"calf press movements (performed off the lower edge of a leg press) experience a relative continuous tension curve throughout the entire range of motion\"; \"Calf exercises like the Standing Calf Raise or Calf Press, both with the knees straight, activate both the Gastrocnemius and Soleus.\"; Hip Position: \"Significant flexion of the hip with knee straight stretch the biarticulate hamstrings cross both hip and knee.\", \"This places the point at which the stretch occurs in the calf slightly higher in the movement, decreasing the range of motion at the bottom.\", \"For those with less hamstring flexibility, the apparatus seat can be positioned too upright resulting in either a subtle flexion through the lumbar spine or a slight knee bend (possibly asymmetrically on the tighter hamstring side), particularly during dorsal flexion of the ankle\"",
+  "ExRx.net — Lever Standing Calf Raise (https://exrx.net/WeightExercises/Gastrocnemius/LVStandingCalfRaise, cópia do Internet Archive de 07/04/2023, lida em 10/10/2026), a trava da máquina de panturrilha: Comments: \"If possible, position lever just below lowest range of motion.\"",
+  "ExRx.net — Sled 45° Leg Press (https://exrx.net/WeightExercises/Quadriceps/SL45LegPress, cópia do Internet Archive de 02/02/2026, lida em 10/10/2026), a trava do carrinho na mesma máquina: \"Release dock lever and grasp handles to sides.\"; \"Adjust safety brace and back support to accommodate near full range of motion without forcing hips to bend at waist.\"",
+  "NASM — Leg Press Calf Raise (https://www.nasm.org/resource-center/exercise-library/leg-press-calf-raise, lido em 10/10/2026): \"Sit on the leg press machine with your back and head firmly against the backrest. Position your feet on the platform with only your forefeet on the platform and your heels extending beyond the edge.\"; \"Position your feet hip-width apart and release the safety bars. Engage your core and prepare for plantarflexion movement.\"; \"Raise your heels by plantarflexing your ankles, pushing the platform down with your toes.\"; \"Lower your heels to return to the starting position with control, maintaining tension in the calf muscles.\"; Primary Muscles \"Gastrocnemius -- primary mover for plantarflexion and calf raising\", \"Soleus -- assists in plantarflexion and supports calf strength\"; Secondary Muscles \"Plantaris\"; Common Mistakes: \"Not achieving full range of motion, limiting calf muscle activation\", \"Allowing knees to bend excessively or plateau to shift during the movement\"; FAQ: \"Achieve full plantarflexion range of motion while maintaining platform contact with your forefeet. Full dorsiflexion lowering is important for maximum calf stimulation and stretch sensation.\"",
+  "Kinoshita M, Maeo S, Kobayashi Y, Eihara Y, Ono M, Sato M, Sugiyama T, Kanehisa H, Isaka T. Triceps surae muscle hypertrophy is greater after standing versus seated calf-raise training. Front Physiol. 2023;14:1272106. doi:10.3389/fphys.2023.1272106 — texto completo aberto (frontiersin.org), lido em 10/10/2026: legenda da figura 1, \"Postures of the standing and seated calf-raise exercises [...] These were obtained using the OpenSim Gait 2392 model (Delp et al., 2007), with the knee joint 0° and 90° for the standing and seated conditions, respectively, and the ankle joint angle ranging from 20° dorsiflexed to 30° plantarflexed positions for both conditions.\"; \"The LG and MG are biarticular muscles crossing the knee joint, and are lengthened more in a knee-extended than knee-flexed position\"; \"Participants were instructed to place/keep their foot in a neutral position\"; \"taking 2 s for each of the concentric/lifting and eccentric/lowering phases\"; resultados: \"The changes in muscle volume were significantly greater for the standing than seated condition leg in the lateral gastrocnemius (12.4% vs. 1.7%), medial gastrocnemius (9.2% vs. 0.6%), and whole triceps surae (5.6% vs. 2.1%)\"",
+  "Signorile JF, Applegate B, Duque M, Cole N, Zink A. Selective recruitment of the triceps surae muscles with changes in knee angle. J Strength Cond Res. 2002;16(3):433-439 (resumo, PMID 12173959, lido na Europe PMC em 10/10/2026): \"Data also revealed that the SOL produced less electrical activity at 180 degrees than at the other knee angles, whereas the MG produced greater electrical activity.\"; \"Results suggest that the SOL can be targeted most effectively with the knee flexed at 90 degrees and the MG with the leg fully extended.\"",
+  "NSCA — Personal Training Quarterly 8.4 (2021), Tumminello N., \"How to Improve Ankle Dorsiflexion and Calf Strength for Better Performance\" (PDF em nsca.com, lido em 10/10/2026): \"Research shows that doing calf raises (i.e., ankle plantar flexion) with a straight knee creates superior gastrocnemius muscle activity, while doing these raises with a bent knee creates superior soleus muscle activity\"; \"Traditional calf exercises, such as standing barbell and dumbbell calf raises, standing machine calf raises, and seated machine calf raises, are focused on improving calf strength.\"; no Dumbbell Foot-Elevated Calf Raise: \"Do not allow your foot to rotate outwards at any point, keep it straight throughout.\", \"Do not bounce; control the lowering (eccentric) portion of each repetition\". (A NSCA não tem a panturrilha no leg press nesse texto; o Exercise Technique Manual dela não foi lido.)",
+  "ACE — Calf Raises (exercise library 51, acefitness.org, lido em 10/10/2026; é a panturrilha em pé com barra — a ACE não tem a panturrilha no leg press): \"placing both feet approximately hip-width apart and squarely set on the floor with the toes pointed forward.\"; \"press the toes into the ground while lifting the heels up. Pause at the top, and slowly roll the heels back down to the floor\"",
+  "Kay AD, Warren LA, Hammond LE. The influence of hip angle on dorsiflexion range of motion, passive angle moment and neuromuscular reflex activity of the triceps surae. Resumo, 17th Annual Congress of the European College of Sport Science (ECSS), Bruges, 2012 (pure.northampton.ac.uk, lido em 10/10/2026): \"Passive dorsiflexion ROM trials were performed on an isokinetic dynamometer across three hip positions (supine = 10°; semi-reclined = 55°; upright = 85°).\"; \"Post-hoc analyses revealed no difference between supine and semi-reclined hip positions in any measure, while the upright position had significantly lower dorsiflexion ROM\"",
+  "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29 (PMC5241541), tabela 5 lida em 10/10/2026: \"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"",
+  "Golparian M, Anbarian M, Golparian A. Effects of Trunk and Foot Positions on Electromyographic Activity and Co-contraction of Selected Lower Extremity Muscles During Leg-Press Resistance Training. J Adv Sport Technol. 2021;5(1):17-26. doi:10.22098/jast.2021.1149 — resumo lido em 10/10/2026 (jast.uma.ac.ir): \"the backrest of leg-press machine was adjusted at 15°, 20°, 25°, and 30° angles relative to the horizon\"; \"the backrest of the machine be adjusted at a 20° angle\" (o encosto da mesma máquina do Leg Press 45°)",
+  "Precor DPL0601 Angled Leg Press (ficha de venda em PDF, ©2018 Precor, lida em 10/10/2026): \"a 45 degree angled carriage sled\"; \"Weight carriage stops are visible from the seated position so the exerciser has visual confirmation that the carriage is securely positioned on the stops. A four-position adjustable fail-safe stop increases confidence for the exerciser and the facility operator.\" — as medidas da máquina são as do Leg Press 45° (ficha 3274a384-ff2e-4ebf-8350-aea78367ee71: trilho a 45°, plataforma de 72 × 51 cm, encosto a 20°, estofado de 60 mm, pegadores de 29 mm)"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "deitado no leg press, só a ponta dos pés fica na plataforma do carrinho, a ~1,1 m do chão, e os calcanhares ficam pra fora dela, descendo além do plano dela e subindo (ExRx, Sled 45° Calf Press: \"Place toes and balls of feet on lower portion of platform with heels and arches extending off\"; NASM: \"only your forefeet on the platform and your heels extending beyond the edge\"): as regras de pé chapado no chão (planta e calcanhar a 0 ± 5 mm, sem escorregar) e as de técnica medidas no plano do chão não servem; quem confere os pés são as zonas da ponta do pé na plataforma em todo quadro, os ângulos do tornozelo e a largura dos pés abaixo, e a cena mede a base dos dedos parada na plataforma (0,00 mm em todo quadro: o carrinho anda o mesmo que ela)",
+  "zonas": [
+   {
+    "nome": "glúteo e sacro encostados no encosto",
+    "equipamento": "leg_press_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NASM — Leg Press Calf Raise (\"Sit on the leg press machine with your back and head firmly against the backrest.\"); ExRx — Sled 45° Calf Press (\"Sit on seat with back on padded support.\")"
+   },
+   {
+    "nome": "lombar apoiada (no apoio lombar do encosto)",
+    "equipamento": "leg_press_encosto",
+    "partes": [
+     "Spine"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Calf Exercise Analyses (com o assento em pé demais, \"a subtle flexion through the lumbar spine\"): a lombar fica no rolo do encosto, sem enrolar"
+   },
+   {
+    "nome": "costas encostadas no encosto",
+    "equipamento": "leg_press_encosto",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Sled 45° Calf Press (\"Sit on seat with back on padded support.\")"
+   },
+   {
+    "nome": "cabeça encostada no encosto",
+    "equipamento": "leg_press_encosto",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NASM — Leg Press Calf Raise (\"with your back and head firmly against the backrest\")"
+   },
+   {
+    "nome": "glúteo e coxas no assento",
+    "equipamento": "leg_press_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Sled 45° Calf Press (\"Sit on seat with back on padded support.\"): o glúteo e o começo das coxas ficam no assento o movimento todo"
+   },
+   {
+    "nome": "ponta do pé esquerdo (base dos dedos e dedos) apoiada na plataforma, sem escorregar",
+    "equipamento": "leg_press_plataforma",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     -7,
+     2
+    ],
+    "fonte": "ExRx — Sled 45° Calf Press (\"Place toes and balls of feet on lower portion of platform with heels and arches extending off\"; \"Reposition stance if feet slip.\"); NASM (\"maintaining platform contact with your forefeet\"): a sola embaixo da base dos dedos e os dedos encostados na plataforma em todo quadro; na ponta dos pés a planta embaixo da base dos dedos afunda até 6 mm (o coxim do antepé, como nas 2 panturrilhas prontas no degrau)"
+   },
+   {
+    "nome": "ponta do pé direito (base dos dedos e dedos) apoiada na plataforma, sem escorregar",
+    "equipamento": "leg_press_plataforma",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     -7,
+     2
+    ],
+    "fonte": "ExRx — Sled 45° Calf Press (idem); NASM (idem)"
+   },
+   {
+    "nome": "canelas sem encostar na plataforma",
+    "equipamento": "leg_press_plataforma",
+    "partes": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "só a ponta dos pés encosta na plataforma (NASM: \"only your forefeet on the platform\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tornozelo em flexão dorsal embaixo, calcanhar além do plano da plataforma (20°)",
+    "medida": "tornozelo",
+    "t": 0.0,
+    "graus": [
+     94,
+     98
+    ],
+    "fonte": "Kinoshita et al. 2023, legenda da figura 1 (\"the ankle joint angle ranging from 20° dorsiflexed to 30° plantarflexed positions\"); ExRx — Sled 45° Calf Press (\"Return by bending ankles until calves are stretched.\"); NASM (\"Full dorsiflexion lowering is important for maximum calf stimulation and stretch sensation.\"); neutro do boneco 76,06° (tecnica3d.tornozelo, o pé chapado em pé): 20° de flexão dorsal = 96,06°. Kay et al. 2012 mediram a flexão dorsal máxima com o quadril a 10°, 55° e 85°: a 55° foi igual à de deitado (\"no difference between supine and semi-reclined\") e a 85° menor (\"significantly lower dorsiflexion ROM\"); aqui o quadril fica em ~69–72°, entre os dois (a amplitude usada é a de Kinoshita)"
+   },
+   {
+    "nome": "tornozelo em flexão plantar em cima, na ponta dos pés (30°)",
+    "medida": "tornozelo",
+    "t": 1.0,
+    "graus": [
+     43,
+     49
+    ],
+    "fonte": "Kinoshita et al. 2023 (idem: 30° de flexão plantar = 46,06° no boneco); ExRx — Sled 45° Calf Press (\"Push sled by extending ankles as far as possible.\"); NASM (\"Achieve full plantarflexion range of motion while maintaining platform contact with your forefeet.\")"
+   },
+   {
+    "nome": "tornozelo dentro da amplitude normal o movimento todo",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     26.0,
+     96.6
+    ],
+    "fonte": "Alazzawi et al. 2017, tabela 5 (\"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"): 76,06° + 20° = 96,06° (+0,5° de tolerância, como no limites.py) e 76,06° − 50° = 26,06°"
+   },
+   {
+    "nome": "joelhos quase esticados e parados o movimento todo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     8,
+     12
+    ],
+    "fonte": "ExRx — Sled 45° Calf Press (\"Keep knees straight throughout exercise\"); NASM (\"Allowing knees to bend excessively\" é erro): o joelho fica fixo em 10° (sem travar, como o Leg Press 45° em cima)"
+   },
+   {
+    "nome": "quadril parado (só os ~3° que a perna inclina pra ponta do pé não escorregar)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     66,
+     76
+    ],
+    "fonte": "ExRx — Calf Exercise Analyses (o tornozelo é o eixo: \"Axis: Ankle joint\"; com o quadril dobrado demais e o joelho esticado, os isquiotibiais cortam a descida: \"decreasing the range of motion at the bottom\"): a perna inteira (o joelho fixo) inclina ~3° no quadril, de ~69° a ~72°, pra base dos dedos ficar parada na plataforma (sem isso ela escorregaria ~5 cm ao longo dela); Kay et al. 2012 mediram só 10°, 55° e 85° de quadril: a 55° a flexão dorsal máxima foi a mesma de deitado e a 85° menor"
+   },
+   {
+    "nome": "tronco parado, deitado no encosto a 20° do chão",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     66,
+     74
+    ],
+    "fonte": "Golparian et al. 2021 (\"the backrest of the machine be adjusted at a 20° angle\"): o tronco fica ~70° da vertical"
+   },
+   {
+    "nome": "coluna neutra, apoiada",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ExRx — Calf Exercise Analyses (\"a subtle flexion through the lumbar spine\" é o erro do assento em pé demais)"
+   },
+   {
+    "nome": "joelhos na linha dos pés (sem entrar pra dentro)",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     -20,
+     20
+    ],
+    "fonte": "Kinoshita et al. 2023 (\"Participants were instructed to place/keep their foot in a neutral position\"); NSCA, PTQ 8.4 (\"Do not allow your foot to rotate outwards at any point, keep it straight throughout.\"): perna quase reta, o joelho na reta quadril–tornozelo"
+   },
+   {
+    "nome": "pés na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.2,
+     1.6
+    ],
+    "fonte": "NASM — Leg Press Calf Raise (\"Position your feet hip-width apart\"); ACE — Calf Raises (\"placing both feet approximately hip-width apart\"): distância entre os tornozelos ÷ entre as articulações do quadril (a largura de fora do quadril do boneco é ~1,5×), como no Leg Press 45°"
+   },
+   {
+    "nome": "braços quase esticados, mãos nos pegadores",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     35
+    ],
+    "fonte": "ExRx — Sled 45° Calf Press (\"Grasp handles to sides\")"
+   },
+   {
+    "nome": "pegada neutra (palmas viradas pro corpo)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     50,
+     90
+    ]
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ]
+ }
+}

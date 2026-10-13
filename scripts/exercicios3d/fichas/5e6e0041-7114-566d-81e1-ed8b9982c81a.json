@@ -1,0 +1,395 @@
+{
+ "uuid": "5e6e0041-7114-566d-81e1-ed8b9982c81a",
+ "nome": "Remada Cavalinho com Barra",
+ "cena": "remada_cavalinho_com_barra",
+ "grupo": "Dorsal / Trapézio",
+ "subgrupo": "Latíssimo · trapézio médio/inferior · romboides",
+ "padrao_movimento": "remada",
+ "equipamento": "barra",
+ "variacao": "barra no canto (landmine)",
+ "alvos": [
+  "dorsal",
+  "trapezio"
+ ],
+ "auxiliares": [
+  "costas",
+  "deltoide",
+  "biceps",
+  "antebraco",
+  "lombar"
+ ],
+ "camera": {
+  "az": 65,
+  "el": 10,
+  "dist": 3.8,
+  "alvo": [
+   0.0,
+   0.23,
+   0.675
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.8,
+  "alvo": [
+   0.0,
+   0.3,
+   0.65
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Em pé por cima da barra, de costas pro suporte de canto (landmine) onde a outra ponta dela fica presa, no chão: a barra passa entre os pés, com os pés um pouco mais abertos que os ombros e as pontas um pouco pra fora, os joelhos levemente dobrados e o tronco inclinado à frente (uns 38° do chão) com a coluna reta e a cabeça na linha do tronco. Segura o triângulo encaixado embaixo da barra, logo atrás da anilha, com a pegada neutra (palmas uma pra outra) e os braços pendurados quase esticados, as escápulas soltas. Puxa levando os cotovelos pra trás, rentes ao corpo, até a anilha chegar perto do peito, com o triângulo embaixo do alto do abdômen, e junta as escápulas no fim; volta devagar até os braços quase esticarem de novo. A barra sobe e desce num arco em volta do suporte; o tronco, o quadril, as pernas e a cabeça ficam parados o movimento todo e a anilha não encosta no chão.",
+ "cinesiologia": {
+  "plano": "sagital (extensão do ombro com o braço perto do corpo e flexão do cotovelo); cadeia cinética aberta",
+  "articulacoes": "ombro (extensão na subida, de ~50° de flexão com o braço pendurado até perto da linha do tronco, ~6° à frente dela, quando a anilha encosta no peito; flexão na descida), cotovelo (flexão na subida, de ~15° até ~95°; extensão na descida, sem travar), escápulas (retração na subida, protração na descida); punho quase neutro; quadril dobrado (~66°), joelhos levemente dobrados (~25°) e tornozelos parados, com o tronco se segurando sozinho, sem apoio",
+  "agonistas": "músculos do meio das costas: grande dorsal, trapézio médio e inferior e romboides (o catálogo; free-exercise-db: \"primaryMuscles\": [\"middle back\"], \"secondaryMuscles\": [\"biceps\", \"lats\"]; ExRx, Lever T-bar Row: Target \"General, Back\")",
+  "sinergistas": "trapézio médio e inferior, romboides, grande dorsal, redondo maior, deltoide posterior, infraespinhal, redondo menor, braquial, braquiorradial e peitoral maior (porção esternal) — ExRx, Lever T-bar Row: Synergists \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\"; NSCA, bent-over row: \"Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"; GGR: \"your biceps and rear deltoids play supporting roles\"",
+  "estabilizadores": "bíceps braquial e cabeça longa do tríceps (ExRx: Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\") e, sem apoio do peito, os eretores da espinha, os posteriores da coxa, o glúteo máximo, o adutor magno e o quadríceps seguram o tronco inclinado e os joelhos dobrados (ExRx: Stabilizers \"Erector Spinae\", \"Hamstrings\", \"Gluteus Maximus\", \"Adductor Magnus\", \"Quadriceps\"; Antagonist Stabilizers \"Rectus Abdominis\", \"Obliques\"; GGR: \"latissimus dorsi, rhomboids, and erector spinae\")",
+  "fases": "concêntrica (puxa até a anilha chegar perto do peito e junta as escápulas — free-exercise-db: \"Pull the bar straight up with your elbows in (to maximize back stimulation) until the plates touch your lower chest. Squeeze the back muscles as you lift the weight up and hold for a second at the top of the movement. Breathe out as you lift the weight.\"; T-Bar Row with Handle: \"Pull the weight to your upper abdomen by retracting the shoulder blades and flexing the elbows.\") e excêntrica (desce devagar até os braços esticarem, com as escápulas se afastando — free-exercise-db: \"Slowly lower the bar to the starting position getting a nice stretch on the lats.\"; Cissik: \"concentrate on them coming apart as you lower the weight\")"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público) — Bent Over Two-Arm Long Bar Row (o fonte_en do catálogo; https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Two-Arm_Long_Bar_Row.json, lido em 11/10/2026): \"Put weight on one of the ends of an Olympic barbell. Make sure that you either place the other end of the barbell in the corner of two walls; or put a heavy object on the ground so the barbell cannot slide backward.\"; \"Bend forward until your torso is as close to parallel with the floor as you can and keep your knees slightly bent.\"; \"Now grab the bar with both arms just behind the plates on the side where the weight was placed and put your other hand on your knee.\" (o \"other hand on your knee\" sobrou da versão de 1 braço, a Bent Over One-Arm Long Bar Row: \"grab the bar with one arm\"); \"Pull the bar straight up with your elbows in (to maximize back stimulation) until the plates touch your lower chest. Squeeze the back muscles as you lift the weight up and hold for a second at the top of the movement. Breathe out as you lift the weight. Tip: Use a stirrup or double handle cable attachment by hooking it under the end of the bar.\"; \"Slowly lower the bar to the starting position getting a nice stretch on the lats. Tip: Do not let the plates touch the floor. To ensure the best range of motion, I recommend using small plates (25-lb ones) as opposed to larger plates (like 35-45lb ones).\"; \"primaryMuscles\": [\"middle back\"], \"secondaryMuscles\": [\"biceps\", \"lats\"]",
+  "free-exercise-db — T-Bar Row with Handle (https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/T-Bar_Row_with_Handle.json, lido em 11/10/2026): \"Position a bar into a landmine or in a corner to keep it from moving. Load an appropriate weight onto your end.\"; \"Stand over the bar, and position a Double D row handle around the bar next to the collar. Using your hips and legs, rise to a standing position.\"; \"Assume a wide stance with your hips back and your chest up. Your arms should be extended. This will be your starting position.\"; \"Pull the weight to your upper abdomen by retracting the shoulder blades and flexing the elbows. Do not jerk the weight or cheat during the movement.\"; \"After a brief pause, return to the starting position.\"; \"primaryMuscles\": [\"middle back\"], \"secondaryMuscles\": [\"biceps\", \"lats\"]",
+  "ExRx.net — Lever T-bar Row (plate loaded) (https://exrx.net/WeightExercises/BackGeneral/LVTBarRow, lido em 11/10/2026 pela cópia do Internet Archive de 14/08/2025; o site responde 403 direto; o ExRx não tem a remada T com a barra livre no landmine, só as de alavanca): Preparation \"Bend knees slightly and bend over lever handles with back straight.\"; Execution \"Pull lever up to torso. Return until arms are extended and shoulders are stretched downward.\"; Comments \"Keep low back straight. Lighten load if torso raises beyond 45 degrees in order to complete repetition.\" (na cópia de 2021: \"Position torso as low as possible, allowing for full arm extension.\"); Target \"General, Back\"; Synergists \"Trapezius, Middle\", \"Trapezius, Lower\", \"Rhomboids\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Infraspinatus\", \"Teres Minor\", \"Brachialis\", \"Brachioradialis\", \"Pectoralis Major, Sternal\"; Dynamic Stabilizers \"Biceps Brachii\", \"Triceps, Long Head\"; Stabilizers \"Erector Spinae\", \"Hamstrings\", \"Gluteus Maximus\", \"Adductor Magnus\", \"Quadriceps\"; Antagonist Stabilizers \"Rectus Abdominis\", \"Obliques\". ExRx.net — Lever Close Grip T-bar Row (plate loaded) (https://exrx.net/WeightExercises/BackGeneral/LVCloseGripTBarRow, cópia do Internet Archive): \"Grasp narrow grip parallel lever handles.\"; \"Closer grip increases lat involvement by emphasizing shoulder extension over transverse extension.\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15, Bent-over row (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-1, lido em 11/10/2026; não tem a remada T/landmine): \"Major muscles involved: Latissimus dorsi, teres major, middle trapezius, rhomboids, posterior deltoids\"; \"Stand with a shoulder-width stance and knees slightly flexed\"; \"Flex at the hips so your torso is just above parallel to the floor\"; \"Keep a neutral spine and look ahead\"; \"Fully extend your arms\"; \"Pull the bar to your torso (lower chest/upper abdomen)\"; \"Keep your torso rigid and your knees flexed\"",
+  "ACE — Barbell Jammers (https://www.acefitness.org/resources/everyone/exercise-library/236/barbell-jammers/, lido em 11/10/2026; outro exercício, só a montagem da barra no canto e a base com a barra entre os pés): \"Place the end of a standard barbell in a corner so that it will not move unnecessarily, place a weight on one end of the barbell with a collar so that the weight can not fall off during the exercise.\"; \"Stand w ith your feet slightly wider than shoulder-width, your toes pointed forward or slightly outward facing the end of the barbell so that it is between both feet and directly under your center of gravity.\". ACE — Bent-over Row (https://www.acefitness.org/resources/everyone/exercise-library/12/bent-over-row/): \"bend forward at the hips, and keep the back straight with a slight bend in the knees\" (a ACE não tem a remada T)",
+  "John M. Cissik (MS, CSCS) — Landmine Bent Over Rows, blog Improving Athletic Performance, 05/09/2022 (https://www.cissik.com/blog/2022/09/landmine-bent-over-rows/, lido em 11/10/2026): \"Straddle the end of the barbell with the weight. Your feet should be between hip-width and shoulder-width apart.\"; \"push the hips back and unlock your knees until you have at least a 45 degree angle between your upper body and the ground\"; \"Maintaining that position with your upper body, pull the bar towards your body.\"; \"Avoid swinging\"; \"Keep your elbows in against your body\"; \"Concentrate on bringing your shoulder blades together as you bring the weight up, concentrate on them coming apart as you lower the weight.\"; com o pegador da remada sentada: \"Squat down and place the handle just under the inside collar, around the bar. Grip the handle.\"",
+  "Garage Gym Reviews — Stephen Sheehan (CPT, ISSA), T-Bar Row (https://www.garagegymreviews.com/t-bar-row, lido em 11/10/2026; site de review): \"Hook a chinning triangle or close-grip dual handle about eight to 10 inches from the weight plate so it is facing upward.\"; \"Stand over the barbell with your feet about shoulder-width apart, bend your knees slightly, and hinge at the hips to lean forward.\"; \"Grasp the handle with both hands turned inward\"; \"Pull the barbell toward your lower chest by retracting your shoulder blades and driving your elbows back.\"; \"The T-bar row primarily engages the back muscles—the latissimus dorsi, rhomboids, and erector spinae. Meanwhile, your biceps and rear deltoids play supporting roles.\"",
+  "Suporte de canto (landmine) — Body-Solid TBR50 T-Bar Row / Landmine Base (https://bodysolid.com/t-bar-row-landmine, lido em 11/10/2026, com as fotos do fabricante): \"Assembled Dimensions: Length Width Height 23.00in / 584.20mm 15.00in / 381.00mm 5.00in/127.00mm\", \"Free-flowing 360-degree pivot sleeve\", \"Accommodates any Olympic barbell\"; Origin Elite Series Fixed Landmine (https://originfitness.com/origin-elite-series-fixed-landmine, lido em 12/10/2026): \"Inner Diameter of Landmine: 51mm\", \"Length of Landmine Sleeve: 250mm\", \"Pin Diameter: 18mm\"; Titan Rack Mounted Landmine (cópia do Internet Archive de 10/09/2026): \"Outside Sleeve Diameter\" \"2.25-in.\", \"Inside Sleeve Diameter\" \"50mm\"; REP Free Standing Landmine (cópia do Internet Archive de 18/07/2025): \"Insert Sleeve Length\" \"10.3\\\"\", \"Easily slide any standard barbell with 2” diameter sleeves into the landmine’s tube\"; Rogue Post Landmine (cópia de 06/10/2025): \"Pivot-Sleeve Length: 10”\"; Titan Base Landmine na Garage Gym Reviews (ficha de site de review): \"Plate Thickness: 3/8”\", \"1” thick rope anchor\"; SMAI Landmine with handles (loja Living.Fit, lido em 12/10/2026): \"Base unit thickness: 0.3 inches\". Nenhum fabricante dá a altura do pivô do chão: 9,5 cm é estimativa (a Body-Solid com a luva deitada tem 127 mm de altura)",
+  "Barra e anilha — IPF Technical Rules 2026 (barra): \"Total overall length not to exceed 2.2 m.\", \"Distance between the collar faces is not to exceed 1.32 m or be less than 1.31 m.\", \"Diameter of the bar is not to exceed 29 mm or be less than 28 mm.\", \"Diameter of the sleeve not to exceed 52 mm or be less than 50 mm.\"; Rogue Olympic Plates (cópia do Internet Archive de 05/08/2026): \"Weight\" \"25LB\" · \"Diameter\" \"10.9\\\"\" · \"Thickness\" \"1.4\\\"\" (277 × 35,6 mm); Rogue Deep Dish Plates (cópia de 04/09/2026): \"25LB:  10.87\\\" (276mm) diameter, 1.35” (34.5mm) width\", \"Collar Opening 50MM\"",
+  "Triângulo — Corength (Decathlon) Weight Training Pull Triangle (o equip3d.triangulo_polia, lote 6): \"Handle diameter: 30 mm; Width: 17 cm, Length: 19 cm, Height: 12 cm, Handle length:12 cm\"",
+  "Amplitude normal do punho (o limites.py da fábrica: Norkin CC, White DJ. Measurement of Joint Motion, valores da AAOS): desvio radial 20°, ulnar 30°"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: o pivô do suporte fica no chão, ~1,3 m atrás dos pés, longe de qualquer junta (a barra comprida faz o triângulo andar quase reto pra cima e um pouco pra trás). A regulagem é a pessoa por cima da barra com os braços pendurados embaixo dos ombros (\"Your arms should be extended\", free-exercise-db): a cena acha o lugar do suporte a partir disso",
+  "folgas": [
+   {
+    "nome": "barra encaixada no V das hastes do triângulo (encosta sem entrar)",
+    "equipamento": "triangulo",
+    "de": "landmine_barra",
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "free-exercise-db, T-Bar Row with Handle (\"position a Double D row handle around the bar next to the collar\"); fonte_en (\"hooking it under the end of the bar\"); regra da fábrica (peça não atravessa peça)"
+   },
+   {
+    "nome": "eixo do garfo × olhal da luva do suporte",
+    "equipamento": "landmine_garfo",
+    "de": "landmine_luva",
+    "mm": [
+     0.2,
+     5000
+    ],
+    "fonte": "regra da fábrica (peça não atravessa peça): o eixo passa pelo olhal com 0,5 mm de folga"
+   },
+   {
+    "nome": "luva da barra × luva do suporte",
+    "equipamento": "landmine_luva",
+    "de": "landmine_barra",
+    "mm": [
+     0.2,
+     5000
+    ],
+    "fonte": "regra da fábrica (peça não atravessa peça): a luva de 50 mm da barra no furo de 51 mm (Origin: \"Inner Diameter of Landmine: 51mm\")"
+   },
+   {
+    "nome": "giro do garfo × base",
+    "equipamento": "landmine_garfo",
+    "de": "landmine_base",
+    "mm": [
+     0.2,
+     5000
+    ],
+    "fonte": "regra da fábrica (peça não atravessa peça)"
+   },
+   {
+    "nome": "luva do suporte × base",
+    "equipamento": "landmine_luva",
+    "de": "landmine_base",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica (peça não atravessa peça)"
+   },
+   {
+    "nome": "barra × base do suporte",
+    "equipamento": "landmine_barra",
+    "de": "landmine_base",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica (peça não atravessa peça)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tronco inclinado ~52° da vertical (38° do chão), parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     48,
+     56
+    ],
+    "fonte": "free-exercise-db (\"Bend forward until your torso is as close to parallel with the floor as you can\"); ExRx — Lever T-bar Row (\"Lighten load if torso raises beyond 45 degrees\"); Cissik (\"at least a 45 degree angle between your upper body and the ground\"; \"Maintaining that position with your upper body\"); nas fotos do free-exercise-db e do Cissik o tronco fica a ~35–40° do chão"
+   },
+   {
+    "nome": "costas retas (coluna neutra)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx — Lever T-bar Row (\"Keep low back straight\"); NSCA (\"Keep a neutral spine\"); ACE — Bent-over Row (\"keep the back straight\")"
+   },
+   {
+    "nome": "joelhos levemente dobrados, parados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     18,
+     32
+    ],
+    "fonte": "free-exercise-db (\"keep your knees slightly bent\"); ExRx (\"Bend knees slightly\"); NSCA (\"Keep your torso rigid and your knees flexed\")"
+   },
+   {
+    "nome": "quadril dobrado (quadril pra trás) e parado",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     58,
+     74
+    ],
+    "fonte": "free-exercise-db, T-Bar Row with Handle (\"Assume a wide stance with your hips back\"); Cissik (\"push the hips back\"); a medida da fábrica é coxa × prolongamento do tronco pra baixo"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA (\"Keep a neutral spine and look ahead\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   },
+   {
+    "nome": "base um pouco mais aberta que os ombros, a barra entre os pés",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     1.9,
+     2.4
+    ],
+    "fonte": "free-exercise-db, T-Bar Row with Handle (\"Assume a wide stance\"); ACE — Barbell Jammers (\"feet slightly wider than shoulder-width ... so that it is between both feet\"); GGR (\"feet about shoulder-width apart\"): tornozelos a 0,44 m um do outro, com os ombros (articulação) a 0,40 m"
+   },
+   {
+    "nome": "pontas dos pés pra frente ou um pouco pra fora",
+    "medida": "ponta_pe",
+    "t": "todos",
+    "graus": [
+     5,
+     25
+    ],
+    "fonte": "ACE — Barbell Jammers (\"your toes pointed forward or slightly outward facing the end of the barbell\")"
+   },
+   {
+    "nome": "braços pendurados no começo",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "t": 0.0,
+    "graus": [
+     72,
+     90
+    ],
+    "fonte": "free-exercise-db, T-Bar Row with Handle (\"Your arms should be extended\"); ExRx (\"Return until arms are extended\")"
+   },
+   {
+    "nome": "braços quase esticados no começo, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "free-exercise-db (\"Your arms should be extended\"); NSCA (\"Fully extend your arms\"); ExRx (\"Return until arms are extended\"). Quase esticados, sem travar (pedido do exercício)"
+   },
+   {
+    "nome": "escápulas soltas no começo",
+    "medida": "escapula_frente",
+    "t": 0.0,
+    "mm": [
+     10,
+     40
+    ],
+    "fonte": "ExRx (\"shoulders are stretched downward\"); Cissik (\"concentrate on them coming apart as you lower the weight\"); free-exercise-db (\"getting a nice stretch on the lats\")"
+   },
+   {
+    "nome": "escápulas juntas no fim",
+    "medida": "escapula_frente",
+    "t": 1.0,
+    "mm": [
+     -30,
+     -5
+    ],
+    "fonte": "free-exercise-db, T-Bar Row with Handle (\"by retracting the shoulder blades\"); Cissik (\"Concentrate on bringing your shoulder blades together as you bring the weight up\")"
+   },
+   {
+    "nome": "cotovelos dobrados no fim",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     80,
+     110
+    ],
+    "fonte": "free-exercise-db, T-Bar Row with Handle (\"Pull the weight to your upper abdomen by ... flexing the elbows\"); fonte_en (\"until the plates touch your lower chest\")"
+   },
+   {
+    "nome": "cotovelos na linha do tronco no fim (a anilha chega no peito)",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -15,
+     10
+    ],
+    "fonte": "fonte_en (\"until the plates touch your lower chest\"): a anilha encosta no peito com o braço na linha do tronco, como na foto de cima do free-exercise-db; GGR (\"driving your elbows back\")"
+   },
+   {
+    "nome": "cotovelos rentes ao corpo (não abrem pro lado)",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     20
+    ],
+    "fonte": "fonte_en (\"with your elbows in\"); Cissik (\"Keep your elbows in against your body\"); ExRx — Lever Close Grip T-bar Row (\"Closer grip increases lat involvement by emphasizing shoulder extension over transverse extension\")"
+   },
+   {
+    "nome": "pegada neutra (palmas uma pra outra)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     50,
+     90
+    ],
+    "fonte": "GGR (\"Grasp the handle with both hands turned inward\"); ExRx — Lever Close Grip T-bar Row (\"parallel lever handles\"). Os pegadores ficam paralelos à barra e as mãos, a 14 cm uma da outra, recebem os antebraços vindo de fora (cotovelos ~13° abertos, pra o braço não entrar no tronco): com o punho reto (flexão −3/−5°), as palmas continuam uma de frente pra outra, viradas até ~30° pra cima, pro lado da barra (mede 58–62° no fim)"
+   },
+   {
+    "nome": "pegada fechada do triângulo (14 cm entre os pegadores)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.3,
+     0.6
+    ],
+    "fonte": "Corength Pull Triangle (17 cm de fora a fora dos pegadores de 30 mm); ExRx (\"Grasp narrow grip parallel lever handles\")"
+   },
+   {
+    "nome": "punho quase reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "ACE — Bent-over Row (\"so that the wrists, elbows, and shoulders are in a straight line\"): o pegador fica paralelo à barra e inclina com ela"
+   },
+   {
+    "nome": "punho de lado dentro da amplitude normal",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -25,
+     20
+    ],
+    "fonte": "Norkin & White (AAOS), o limites.py da fábrica: desvio radial 20°, ulnar 30°. Embaixo o pegador sobe junto com a barra (~17° do chão) e o punho desvia pro lado do polegar; em cima, um pouco pro lado do mínimo"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ]
+ }
+}

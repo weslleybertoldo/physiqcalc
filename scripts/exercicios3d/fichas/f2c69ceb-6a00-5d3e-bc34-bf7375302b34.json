@@ -1,0 +1,609 @@
+{
+ "uuid": "f2c69ceb-6a00-5d3e-bc34-bf7375302b34",
+ "nome": "Abdominal na Polia",
+ "cena": "abdominal_na_polia",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal · oblíquos",
+ "padrao_movimento": "abdominal_supra",
+ "equipamento": "polia",
+ "variacao": "ajoelhado",
+ "alvos": [
+  "abdomen"
+ ],
+ "auxiliares": [
+  "obliquos"
+ ],
+ "camera": {
+  "az": 80,
+  "el": 10,
+  "dist": 3.6,
+  "alvo": [
+   0.0,
+   -0.2,
+   0.55
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.15,
+   0.55
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Ajoelhado num colchonete de frente para a polia alta, logo atrás da linha do cabo, com os joelhos na largura do quadril, as canelas apoiadas e os dedos dos pés dobrados no colchonete (calcanhares para cima). Segura as duas pontas da corda e traz as mãos para os lados da cabeça, um pouco acima das orelhas, com os punhos encostando de leve na cabeça e os cotovelos dobrados, na frente do corpo; a corda desce de trás da cabeça até as mãos. O quadril fica para trás e dobrado (o glúteo acima dos calcanhares, sem sentar neles) e o peso do cabo puxa o tronco para cima, deixando a lombar arqueada: é a posição de começo. Soltando o ar, com o quadril parado, contrai o abdômen e enrola a coluna: as costelas descem em direção à pelve, a cabeça acompanha e os cotovelos descem em direção ao meio das coxas, sem os braços puxarem (os cotovelos continuam dobrados e as mãos paradas junto da cabeça). Volta devagar, puxando o ar e desenrolando a coluna até o tronco subir de novo, sem soltar o peso.",
+ "cinesiologia": {
+  "plano": "sagital (flexão da coluna), com o quadril, as pernas e os braços parados",
+  "articulacoes": "coluna lombar e torácica (sai de ~10° de extensão — a lombar arqueada pelo peso do cabo — e enrola até ~59° de flexão; o tórax vai de ~51° acima da horizontal a ~32° abaixo dela), com o pescoço acompanhando e só um pouco dobrado; quadril parado e dobrado (pelve em anteversão, coxas ~27° inclinadas pra trás da vertical), joelhos parados (~134°) com as canelas no colchonete, tornozelos em flexão dorsal com os dedos dobrados; ombros e cotovelos parados (~125°): as mãos ficam junto da cabeça e só a coluna dobra",
+  "agonistas": "reto abdominal (ExRx: Target \"Rectus Abdominis\"; free-exercise-db: primaryMuscles \"abdominals\"), em contração concêntrica na ida e excêntrica na volta",
+  "sinergistas": "oblíquos interno e externo (ExRx: Synergists \"Obliques\")",
+  "estabilizadores": "iliopsoas, tensor da fáscia lata, reto femoral e sartório, que seguram o quadril dobrado e parado; latíssimo do dorso, redondo maior, deltoide posterior, cabeça longa do tríceps, romboides, trapézio inferior, peitoral maior (esternal e clavicular), coracobraquial, peitoral menor e serrátil anterior, que seguram os braços e as mãos junto da cabeça (ExRx: Stabilizers \"Iliopsoas\", \"Tensor Fasciae Latae\", \"Rectus Femoris\", \"Sartorius\", \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Triceps, Long Head\", \"Rhomboids\", \"Trapezius, Lower\", \"Pectoralis Major, Sternal\", \"Pectoralis Major, Clavicular\", \"Coracobrachialis\", \"Pectoralis Minor\", \"Serratus Anterior\")",
+  "fases": "concêntrica (enrola a coluna soltando o ar, os cotovelos indo pro meio das coxas — ExRx: \"With hips stationary, flex waist so elbows travel toward middle of thighs.\"; free-exercise-db: \"Exhale as you perform this portion of the movement and hold the contraction for a second.\") e excêntrica (volta devagar puxando o ar até a lombar arquear de novo — free-exercise-db: \"Slowly return to the starting position as you inhale.\"; \"Make sure that you keep constant tension on the abs throughout the movement.\")"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público) — Cable Crunch, o fonte_en do catálogo (https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crunch.json, lido em 11/10/2026, com as 2 fotos): \"Kneel below a high pulley that contains a rope attachment.\"; \"Grasp cable rope attachment and lower the rope until your hands are placed next to your face.\"; \"Flex your hips slightly and allow the weight to hyperextend the lower back. This will be your starting position.\"; \"With the hips stationary, flex the waist as you contract the abs so that the elbows travel towards the middle of the thighs. Exhale as you perform this portion of the movement and hold the contraction for a second.\"; \"Slowly return to the starting position as you inhale. Tip: Make sure that you keep constant tension on the abs throughout the movement. Also, do not choose a weight so heavy that the lower back handles the brunt of the work.\"; \"primaryMuscles\": [\"abdominals\"]",
+  "ExRx.net — Cable Kneeling Crunch (https://exrx.net/WeightExercises/RectusAbdominis/CBKneelingCrunch, lido na cópia do Internet Archive de 06/02/2026 — o site responde 403 direto —, o mesmo texto da de 12/12/2019; animação © 2012 ExRx.net): \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Kneel below high pulley. Grasp cable rope attachment with both hands. Place wrists against head. Position hips back and flex hips, allowing resistance on cable pulley to lift torso upward so spine is hyperextended.\"; Execution: \"With hips stationary, flex waist so elbows travel toward middle of thighs. Return and repeat.\"; Comments: \"Note movement occurs in waist, not hips.\", \"Hyperextension of spine at top of motion is achieved by anterior rotation of pelvis with hips flexed.\", \"Certain individuals may need to keep their neck in neutral position with space between their chin and sternum.\"; Target \"Rectus Abdominis\", Synergists \"Obliques\"",
+  "ACE — Standing Crunch, Exercise Library nº 331 (https://www.acefitness.org/resources/everyone/exercise-library/331/standing-crunch/, lido em 11/10/2026; é EM PÉ e de costas pra polia, a ACE não tem o ajoelhado — serve só pra mão, corda, cotovelos e costelas): \"Using a rope attachment, hold the rope with the right hand by the right ear and the left hand by the left ear. Elbows should be tucked in along the front of the body. Draw the belly button in to the spine and tuck the rib cage down towards the floor. Focus on rolling the rib cage down against the pull of the cable and slowly returning to the top.\"",
+  "Referências da ficha do Abdominal na Máquina (o mesmo padrão abdominal_supra), relidas em 11/10/2026: ExRx — Lever Seated Crunch (cópia do Internet Archive de 12/12/2023): \"With hips stationary, flex waist so elbows travel downward.\" (a mesma frase-base do ajoelhado, com \"downward\" no lugar de \"toward middle of thighs\"); NSCA (Achievable CSCS 15.2) — Abdominal crunch (machine): \"Curl your torso forward toward your thighs, keeping your buttocks and legs still\" (a NSCA não tem o cable crunch); ExRx — Curl-up / Half Sit-up Test Protocols (cópia de 16/09/2025): ACSM \"Since elevation of the truck to 30° is the important criteria\", YMCA \"ensures 30 degree spinal flexion\" — a amplitude do crunch no chão (o Abdominal Supra), menor que a do cable crunch",
+  "Estudo de EMG do cable crunch ajoelhado: nenhum (PubMed: \"cable crunch\", \"kneeling cable crunch\", \"cable crunch electromyography\", 11/10/2026; busca na web no mesmo dia: só estudos de outros abdominais)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pe_na_ponta": [
+   "E",
+   "D"
+  ],
+  "pe_na_ponta_motivo": "Ajoelhado com os dedos dos pés dobrados no colchonete (nas fotos do free-exercise-db e na animação do ExRx a sola fica em pé e o calcanhar pra cima — observação): os dois pés ficam quase em pé, só os dedos encostam e o calcanhar fica no alto, como na Flexão Nórdica. A planta (a pele mais baixa do pé, nos dedos) continua medida no colchonete e a base dos dedos não pode escorregar entre os quadros; o calcanhar sobe de propósito.",
+  "chao_mm": 12,
+  "chao_mm_motivo": "os dedos dos pés, os joelhos e as canelas ficam em cima do colchonete de 12 mm (o dos abdominais no chão; nas fotos e na animação a pessoa ajoelha num colchonete — observação), então a planta é medida no topo dele",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os dois pés chapados no chão (largura, ponta do pé, alinhamento, joelho na direção do pé, coluna até 20°) não servem pra quem está ajoelhado com o pé quase em pé (a ponta_pe perde o sentido com o pé vertical, como na Flexão Nórdica), e a coluna dobra de propósito: o exercício É a flexão da coluna (ExRx: \"flex waist so elbows travel toward middle of thighs\"), que sai arqueada no começo (free-exercise-db: \"allow the weight to hyperextend the lower back\"). As que valem estão abaixo: joelhos e pés na largura do quadril, dedos pra frente, a coluna arqueada no começo e enrolada embaixo (com sinal).",
+  "pelve_motivo": "o quadril não mexe (free-exercise-db: \"With the hips stationary\"; ExRx: \"With hips stationary\", \"Note movement occurs in waist, not hips.\"): a pelve fica parada por construção (a cena só gira os ossos da coluna e do pescoço; as pernas e a pelve ficam na mesma pose nos 25 quadros); os joelhos parados no colchonete e os dedos dos pés sem escorregar conferem",
+  "zonas": [
+   {
+    "nome": "joelho e canela esquerdos apoiados no colchonete",
+    "equipamento": "colchonete",
+    "partes": [
+     "LeftLeg"
+    ],
+    "mm": [
+     -12,
+     0.5
+    ],
+    "fonte": "free-exercise-db — Cable Crunch (o fonte_en do catálogo) (\"Kneel below a high pulley that contains a rope attachment.\"); ExRx — Cable Kneeling Crunch (\"Kneel below high pulley.\"); o colchonete fino embaixo dos joelhos e das canelas é observação nas 2 fotos do free-exercise-db e na animação do ExRx (nenhum texto dá número)"
+   },
+   {
+    "nome": "joelho e canela direitos apoiados no colchonete",
+    "equipamento": "colchonete",
+    "partes": [
+     "RightLeg"
+    ],
+    "mm": [
+     -12,
+     0.5
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "o cabo passa longe da cabeça, do tronco e dos braços",
+    "equipamento": "polia_cabo",
+    "partes": [
+     "Head",
+     "Neck",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftArm",
+     "RightArm",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "mm": [
+     40,
+     5000
+    ],
+    "fonte": "Weslley (o cabo nunca passa por dentro da cabeça, do rosto, do pescoço, dos ombros nem dos braços); medido da pele (o cabelo tem regra própria em folgas)"
+   },
+   {
+    "nome": "o gancho da corda não encosta na cabeça nem nas costas",
+    "equipamento": "corda_gancho",
+    "partes": [
+     "Head",
+     "Neck",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     15,
+     5000
+    ],
+    "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele. O gancho fica acima e atrás da cabeça"
+   },
+   {
+    "nome": "a perna da corda da mão esquerda não encosta na cabeça, no pescoço nem nos ombros",
+    "equipamento": "corda_perna+1",
+    "partes": [
+     "Head",
+     "Neck",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     5,
+     5000
+    ],
+    "fonte": "Weslley (a corda nunca passa por dentro da cabeça); medido da pele. A corda desce atrás da cabeça até as mãos, como na foto de cima do free-exercise-db"
+   },
+   {
+    "nome": "a perna da corda da mão direita não encosta na cabeça, no pescoço nem nos ombros",
+    "equipamento": "corda_perna-1",
+    "partes": [
+     "Head",
+     "Neck",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     5,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "a corda e o batente da mão esquerda não encostam na cabeça, no pescoço nem nos ombros",
+    "equipamento": "corda_ponta+1",
+    "partes": [
+     "Head",
+     "Neck",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "Weslley (o equipamento nunca entra no corpo; batente × rosto, pescoço e ombros); medido da pele"
+   },
+   {
+    "nome": "a corda e o batente da mão direita não encostam na cabeça, no pescoço nem nos ombros",
+    "equipamento": "corda_ponta-1",
+    "partes": [
+     "Head",
+     "Neck",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "o cabo não entra no cabelo",
+    "equipamento": "polia_cabo",
+    "de": "cabelo",
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "Weslley (o cabo nunca passa por dentro da cabeça)"
+   },
+   {
+    "nome": "o gancho da corda não entra no cabelo",
+    "equipamento": "corda_gancho",
+    "de": "cabelo",
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "Weslley (o equipamento nunca entra na cabeça)"
+   },
+   {
+    "nome": "a perna da corda da mão esquerda não entra no cabelo",
+    "equipamento": "corda_perna+1",
+    "de": "cabelo",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "Weslley (a corda nunca passa por dentro da cabeça); a corda passa atrás da cabeça, rente ao cabelo"
+   },
+   {
+    "nome": "a perna da corda da mão direita não entra no cabelo",
+    "equipamento": "corda_perna-1",
+    "de": "cabelo",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "a corda e o batente da mão esquerda não entram no cabelo",
+    "equipamento": "corda_ponta+1",
+    "de": "cabelo",
+    "mm": [
+     2,
+     5000
+    ],
+    "fonte": "Weslley (o equipamento nunca entra na cabeça)"
+   },
+   {
+    "nome": "a corda e o batente da mão direita não entram no cabelo",
+    "equipamento": "corda_ponta-1",
+    "de": "cabelo",
+    "mm": [
+     2,
+     5000
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos encostando de leve na cabeça (punhos contra a cabeça), sem entrar",
+    "partes": [
+     "LeftHand",
+     "RightHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     -2,
+     20
+    ],
+    "fonte": "ExRx — Cable Kneeling Crunch (\"Place wrists against head.\"); free-exercise-db — Cable Crunch (o fonte_en do catálogo) (\"lower the rope until your hands are placed next to your face\"); ACE — Standing Crunch (\"hold the rope with the right hand by the right ear and the left hand by the left ear\"). −2 mm = PENETRA_MM; medido até o cabelo (ou a pele sem cabelo)"
+   },
+   {
+    "nome": "mãos sem entrar no tronco, nos braços e nas coxas",
+    "partes": [
+     "LeftHand",
+     "RightHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftArm",
+     "RightArm",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "antebraços sem entrar na cabeça, no tronco e nas coxas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Head",
+     "Neck",
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "braços sem entrar na cabeça nem nas coxas",
+    "partes": [
+     "LeftArm",
+     "RightArm"
+    ],
+    "com": [
+     "Head",
+     "Neck",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   },
+   {
+    "nome": "embaixo, os cotovelos chegam perto das coxas (entre o meio e o joelho)",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftArm",
+     "RightArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "t": 1.0,
+    "mm": [
+     -2,
+     70
+    ],
+    "fonte": "free-exercise-db — Cable Crunch (o fonte_en do catálogo) (\"so that the elbows travel towards the middle of the thighs\"); ExRx — Cable Kneeling Crunch (\"flex waist so elbows travel toward middle of thighs\"); nas fotos do free-exercise-db os cotovelos chegam perto da coxa, entre o meio dela e o joelho (observação)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "começo: lombar arqueada pelo peso do cabo (coluna em extensão)",
+    "medida": "coluna_sinal",
+    "t": 0.0,
+    "graus": [
+     -16,
+     -4
+    ],
+    "fonte": "free-exercise-db — Cable Crunch (o fonte_en do catálogo) (\"Flex your hips slightly and allow the weight to hyperextend the lower back. This will be your starting position.\"); ExRx — Cable Kneeling Crunch (\"Position hips back and flex hips, allowing resistance on cable pulley to lift torso upward so spine is hyperextended.\"; \"Hyperextension of spine at top of motion is achieved by anterior rotation of pelvis with hips flexed.\"). Medida com sinal (tecnica3d.coluna_sinal): − = arqueada"
+   },
+   {
+    "nome": "embaixo: coluna enrolada",
+    "medida": "coluna_sinal",
+    "t": 1.0,
+    "graus": [
+     50,
+     64
+    ],
+    "fonte": "ExRx — Cable Kneeling Crunch (\"With hips stationary, flex waist so elbows travel toward middle of thighs.\"); free-exercise-db — Cable Crunch (o fonte_en do catálogo) (\"With the hips stationary, flex the waist as you contract the abs so that the elbows travel towards the middle of the thighs.\"); ACE — Standing Crunch (\"tuck the rib cage down towards the floor\"; \"rolling the rib cage down against the pull of the cable\"). Sai da extensão (~−10°) e enrola ~59°: amplitude de ~69°, maior que os ~36° do Abdominal na Máquina e os ~30° do crunch no chão (ACSM, citado pelo ExRx: \"elevation of the truck to 30° is the important criteria\")"
+   },
+   {
+    "nome": "começo: tronco inclinado à frente (~40–45° da vertical)",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     38,
+     48
+    ],
+    "fonte": "na foto de cima do free-exercise-db e no começo da animação do ExRx o tronco fica ~45° à frente da vertical (observação nas 2 fotos do free-exercise-db e na animação do ExRx (nenhum texto dá número))"
+   },
+   {
+    "nome": "embaixo: a linha quadril → pescoço perto da horizontal",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     90,
+     106
+    ],
+    "fonte": "na foto de baixo do free-exercise-db as costas ficam bem curvadas e a linha quadril → cabeça fica quase na horizontal, com a cabeça na frente dos joelhos (observação nas 2 fotos do free-exercise-db e na animação do ExRx (nenhum texto dá número))"
+   },
+   {
+    "nome": "embaixo: o tórax passa da horizontal, a cabeça perto do colchonete",
+    "medida": "torax_chao",
+    "t": 1.0,
+    "graus": [
+     -38,
+     -24
+    ],
+    "fonte": "na animação do ExRx a coluna enrola e a cabeça desce até perto do colchonete, na frente dos joelhos (observação nas 2 fotos do free-exercise-db e na animação do ExRx (nenhum texto dá número)); o tórax (transição toracolombar → base do pescoço) sai de ~51° acima da horizontal e chega a ~32° abaixo dela"
+   },
+   {
+    "nome": "cabeça acompanhando a coluna (no começo, na linha do tronco)",
+    "medida": "cabeca_tronco",
+    "t": 0.0,
+    "graus": [
+     -16,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11°; ExRx — Cable Kneeling Crunch (\"Certain individuals may need to keep their neck in neutral position with space between their chin and sternum.\")"
+   },
+   {
+    "nome": "embaixo: a cabeça desce junto com a coluna enrolada (o pescoço só um pouco dobrado)",
+    "medida": "cabeca_tronco",
+    "t": 1.0,
+    "graus": [
+     -52,
+     -38
+    ],
+    "fonte": "na animação do ExRx a cabeça desce junto com as mãos (observação nas 2 fotos do free-exercise-db e na animação do ExRx (nenhum texto dá número)); ExRx — Cable Kneeling Crunch (\"Certain individuals may need to keep their neck in neutral position with space between their chin and sternum.\"): o queixo pode ir pro peito, mas a cena dobra o pescoço só 5° além da coluna (perto dos 8° do Abdominal na Máquina). Medida contra a linha quadril → pescoço: com a coluna enrolada ~59°, a cabeça na linha do tórax já mede ~−42°"
+   },
+   {
+    "nome": "joelhos dobrados e parados (ajoelhado)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     128,
+     140
+    ],
+    "fonte": "free-exercise-db — Cable Crunch (o fonte_en do catálogo) (\"Kneel below a high pulley\"; \"With the hips stationary\"); ExRx — Cable Kneeling Crunch (\"Kneel below high pulley.\"; \"With hips stationary\"). A canela deitada no colchonete sobe ~18° do joelho pro tornozelo (os dedos dobrados levantam o tornozelo) e a coxa inclina ~27° pra trás"
+   },
+   {
+    "nome": "coxas inclinadas pra trás: quadril atrás dos joelhos, sem sentar nos calcanhares",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": "todos",
+    "graus": [
+     56,
+     70
+    ],
+    "fonte": "ExRx — Cable Kneeling Crunch (\"Position hips back and flex hips\"); free-exercise-db — Cable Crunch (o fonte_en do catálogo) (\"Flex your hips slightly\"); nas fotos e na animação o quadril fica atrás dos joelhos e acima dos calcanhares, sem sentar neles (observação nas 2 fotos do free-exercise-db e na animação do ExRx (nenhum texto dá número): a coxa ~30–40° da vertical; a cena fica em ~27° pra não passar dos ~134° de joelho). Medida: a coxa (quadril → joelho) × a horizontal"
+   },
+   {
+    "nome": "tornozelos em flexão dorsal, dedos dos pés dobrados no colchonete",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     86,
+     96
+    ],
+    "fonte": "nas fotos do free-exercise-db e na animação do ExRx os dedos ficam dobrados no chão, com a sola em pé e o calcanhar pra cima (observação nas 2 fotos do free-exercise-db e na animação do ExRx (nenhum texto dá número)), como na Flexão Nórdica (NSCA: \"ankles flexed and toes into the floor\"); limite da flexão dorsal de 20° (Alazzawi 2017) = ~96° no boneco (em pé ~76°)"
+   },
+   {
+    "nome": "joelhos e pés na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     2.2
+    ],
+    "fonte": "nenhuma fonte do cable crunch dá a largura (de lado, nas fotos e na animação, não dá pra ver); fica a do ajoelhado da Flexão Nórdica (FIFA 11+: \"Kneel with knees hip-width apart\")"
+   },
+   {
+    "nome": "dedos dos pés pra frente",
+    "medida": "ponta_dedos",
+    "t": "todos",
+    "graus": [
+     -10,
+     20
+    ]
+   },
+   {
+    "nome": "cotovelos dobrados e parados (os braços não puxam)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     118,
+     132
+    ],
+    "fonte": "ExRx — Cable Kneeling Crunch (\"With hips stationary, flex waist so elbows travel toward middle of thighs.\"; \"Note movement occurs in waist, not hips.\"): quem leva os cotovelos às coxas é a cintura dobrando; o braço fica parado em relação à cabeça e ao tórax (pedido do Weslley: \"sem os braços puxarem\")"
+   },
+   {
+    "nome": "cotovelos na frente do corpo",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     25
+    ],
+    "fonte": "ACE — Standing Crunch (\"Elbows should be tucked in along the front of the body.\"); nas fotos do free-exercise-db os cotovelos ficam na frente e pra baixo (observação)"
+   },
+   {
+    "nome": "punho sem dobrar pra frente nem pra trás na corda",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "regra da fábrica: a mão segura a corda com o punho firme, sem dobrar"
+   },
+   {
+    "nome": "punho desviado pro lado do mínimo dentro da faixa normal",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     0
+    ],
+    "fonte": "com a corda descendo de trás da cabeça, o punho fica desviado ~20° pro lado do mínimo pra corda sair da mão sem passar por cima dos dedos; desvio ulnar normal até 30° (Norkin & White / AAOS, a referência do limites.py)"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "a cena só gira a coluna em volta do eixo de lado a lado (os 2 lados iguais); a linha das bases das clavículas do boneco não é perpendicular ao plano do meio (o boneco não é simétrico ao milímetro) e, com o tronco indo da inclinação de 42° até passar da horizontal, a medida vai de −1° a +2° sem o tronco girar"
+   }
+  ]
+ }
+}

@@ -1,0 +1,566 @@
+{
+ "uuid": "adf24ec2-6761-583f-a13c-d974ba1b90a2",
+ "nome": "Abdominal Completo",
+ "cena": "abdominal_completo",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal · flexores do quadril",
+ "padrao_movimento": "abdominal_supra",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado no chão",
+ "alvos": [
+  "abdomen"
+ ],
+ "auxiliares": [
+  "quadriceps",
+  "tensor",
+  "obliquos"
+ ],
+ "camera": {
+  "az": 75,
+  "el": 12,
+  "dist": 3.4,
+  "alvo": [
+   0,
+   -0.02,
+   0.32
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0,
+   0.0,
+   0.35
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Deitado de costas no colchonete, com os joelhos dobrados, os pés chapados no colchonete na largura do quadril — soltos, sem nada prendendo — e os braços esticados ao lado do corpo, com as mãos no colchonete; soltando o ar, enrola o corpo pra cima nesta ordem: primeiro leva o queixo em direção ao peito e tira a cabeça e os ombros do chão, depois sobe a parte de cima das costas, depois a lombar sai do chão e, por último, a pelve gira e o quadril dobra, até ficar sentado com o tronco quase na vertical, perto das coxas, e as mãos esticadas na direção dos lados dos calcanhares; os pés e o glúteo ficam no colchonete o tempo todo; desce devagar, desenrolando a coluna, até a lombar, as costas, os ombros e a cabeça voltarem a apoiar.",
+ "cinesiologia": {
+  "plano": "sagital (flexão da coluna e do quadril), com os pés e o glúteo parados no chão",
+  "articulacoes": "coluna (flexão: o pescoço e a parte de cima das costas primeiro, depois a lombar) e quadril (flexão: a pelve gira pra frente em volta das articulações do quadril, que ficam paradas no lugar); joelhos e tornozelos parados, com os pés chapados; ombros: os braços esticados acompanham o tronco, apontando sempre pros lados dos calcanhares",
+  "agonistas": "reto do abdome (ExRx: \"Target: Rectus Abdominis\"; NSCA: \"Major muscle involved: Rectus abdominis\")",
+  "sinergistas": "iliopsoas, reto femoral, tensor da fáscia lata, sartório e oblíquos (ExRx: \"Synergists: Iliopsoas, Tensor Fasciae Latae, Rectus Femoris, Sartorius, Obliques\"). Os flexores do quadril trabalham bem mais que no abdominal supra: o psoas chegou a 15–35% da contração máxima em todas as formas de sit-up e a menos de 10% no curl-up (Juker 1998: \"All forms of sit-ups activated psoas (15-35% MVC) more than the curl-up (<10%)\") e o reto femoral ficou entre os mais ativos no sit-up de joelhos dobrados (Escamilla 2006: \"Rectus femoris muscle EMG activity was highest for the Power Wheel (pike and knee-up), reverse crunch inclined 30 degrees, and bent-knee sit-up\"). O app pinta o reto femoral (quadríceps), o tensor da fáscia lata e os oblíquos; o iliopsoas não tem malha própria",
+  "estabilizadores": "tibial anterior (ExRx: \"Stabilizers: Tibialis Anterior\")",
+  "fases": "subida concêntrica soltando o ar (free-exercise-db: \"Breathe out when performing this part of the exercise\"); descida excêntrica e controlada, desenrolando a coluna e puxando o ar (NSCA: \"Uncurl your back to return to the starting position\"; free-exercise-db: \"lower your upper body back down to the starting position while inhaling\")"
+ },
+ "referencias": [
+  "NSCA — Essentials of Strength Training and Conditioning, cap. 15, Bent-knee sit-up (lido pelo resumo do CSCS da Achievable, 15.2 Exercise list part 1). https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-1",
+  "ExRx.net — Sit-up (arms down). https://exrx.net/WeightExercises/RectusAbdominis/BWSitUpAD (lido na cópia do Internet Archive de 14/08/2025)",
+  "ExRx.net — Sit-up e Sit-up (arms crossed). https://exrx.net/WeightExercises/RectusAbdominis/BWSitUp e https://exrx.net/WeightExercises/RectusAbdominis/BWSitUpX (cópias do Internet Archive de 12/02/2026 e 13/08/2025)",
+  "ExRx.net — Are Sit-ups Safe? (cita Kreighbaum E, Barthels KM. Biomechanics: A Qualitative Approach for Studying Human Movement. Allyn & Bacon, 1996, p. 235-238). https://exrx.net/Questions/Situp (cópia do Internet Archive de 07/05/2024)",
+  "ExRx.net — Sit-up Test (Pollock, Wilmore & Fox, 1978). https://exrx.net/Calculators/SitUps (cópia do Internet Archive de 07/06/2025)",
+  "ExRx.net — Curl-up / Half Sit-up Test Protocols (ACSM Curl-up e YMCA Half Sit-up). https://exrx.net/Testing/CurlUpTests (cópia do Internet Archive de 16/09/2025)",
+  "free-exercise-db (yuhonas, domínio público) — Sit-Up. https://github.com/yuhonas/free-exercise-db (exercises/Sit-Up.json)",
+  "Juker D, McGill S, Kropf P, Steffen T. Quantitative intramuscular myoelectric activity of lumbar portions of psoas and the abdominal wall during a wide variety of tasks. Med Sci Sports Exerc. 1998;30(2):301-310 (resumo no PubMed, 9502361)",
+  "Andersson EA, Nilsson J, Ma Z, Thorstensson A. Abdominal and hip flexor muscle activation during various training exercises. Eur J Appl Physiol Occup Physiol. 1997;75(2):115-123 (resumo no PubMed, 9118976)",
+  "Escamilla RF, Babb E, DeWitt R, et al. Electromyographic analysis of traditional and nontraditional abdominal exercises: implications for rehabilitation and training. Phys Ther. 2006;86(5):656-671 (resumo no PubMed, 16649890)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pes_no_chao_motivo": "pés soltos, sem prender: as fontes divergem — o free-exercise-db (o fonte_en do catálogo) e o ExRx com as mãos na nuca ou com os braços cruzados prendem os pés (\"Hook feet under foot brace or secure low overhang\"), mas a NSCA mantém o pé no chão sem prender (\"keeping your lower body in contact with the floor\") e o ExRx com os braços pra baixo só prende \"if required to keep feet down\"; ficou a que não pede peça (o pedido do plano). Os braços pra baixo diminuem a carga do tronco (Kreighbaum: \"Placing the arms down to the sides thereby reducing the resistance torque of the upper body\"); com o pé preso os flexores do quadril trabalham mais e o abdômen não muda (Andersson 1997: \"flexed and supported legs increased hip flexor activation, whereas such modifications did not generally alter the activation level of the abdominals\")",
+  "chao_mm": 12,
+  "tecnica_padrao": {
+   "coluna": [
+    0,
+    45
+   ]
+  },
+  "zonas": [
+   {
+    "nome": "glúteo e sacro apoiados no colchonete",
+    "equipamento": "colchonete",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA, Bent-knee sit-up (\"Curl your torso toward your thighs while keeping your lower body in contact with the floor\"; \"Keep contact with the floor as you lower\"). Em cima quem apoia é o glúteo embaixo da pelve (a pele do fim da coxa, junto do glúteo, conta junto)"
+   },
+   {
+    "nome": "costas apoiadas embaixo",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "t": 0.0,
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA, Bent-knee sit-up (\"Lie supine on a floor mat\"); ExRx (\"Return until back of shoulders contact mat or bench\")"
+   },
+   {
+    "nome": "cabeça apoiada embaixo (o cabelo da nuca no colchonete)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Head"
+    ],
+    "t": 0.0,
+    "mm": [
+     -20,
+     8
+    ],
+    "fonte": "deitado de costas sem as mãos atrás da cabeça, a cabeça apoia no colchonete (NSCA: \"Lie supine on a floor mat\"). Medido na pele: o cabelo da nuca encosta no colchonete e a pele fica uns 2–6 mm acima dele, embaixo do cabelo"
+   },
+   {
+    "nome": "mãos no colchonete embaixo, do lado do corpo",
+    "equipamento": "colchonete",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "t": 0.0,
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx, Sit-up (arms down) (\"Extend arms down to sides\"; na animação do ExRx as mãos ficam no colchonete do lado do corpo)"
+   },
+   {
+    "nome": "lombar ainda perto do colchonete quando o tórax já subiu (fase 1)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine"
+    ],
+    "t": [
+     0.24,
+     0.31
+    ],
+    "mm": [
+     -20,
+     8
+    ],
+    "fonte": "Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"Curl into the upright position by first lifting the head and neck, then lifting the thorax, then lumbar, and finally the pelvis regions\"); ExRx, Curl-up Tests (o sit-up do PCSFN: \"a sit-up with specific instruction for spinal flexion before the torso is raised off the mat\"). Embaixo, relaxado, o boneco tem a curva natural da lombar (~2 cm de vão); a pelve vira um pouco pra trás no começo e a lombar encosta enquanto o tórax sobe"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "braços e mãos sem bater nas pernas (passam por fora das coxas e dos joelhos)",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase"
+    ],
+    "mm": [
+     5,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica); ExRx, Sit-up (arms down) (\"Extend hands toward sides of heels\": as mãos vão pros LADOS dos calcanhares, por fora das pernas)"
+   },
+   {
+    "nome": "antebraços e mãos sem entrar no tronco nem no quadril",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     5,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "costas, glúteo e coxas sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado), como no abdominal supra"
+   },
+   {
+    "nome": "cabeça sem atravessar o colchonete",
+    "partes": [
+     "Head"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "braços e mãos sem atravessar o colchonete",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "costas inteiras fora do chão em cima (só o glúteo apoiado)",
+    "partes": [
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "t": 1.0,
+    "mm": [
+     60,
+     2000
+    ],
+    "fonte": "Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"Curl into the upright position\": em cima a lombar e a pelve já subiram); free-exercise-db (\"Elevate your upper body so that it creates an imaginary V-shape with your thighs\")"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelhos dobrados, pés chapados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     90,
+     110
+    ],
+    "fonte": "NSCA, Bent-knee sit-up (\"Bend your knees, with heels near your buttocks\"); ExRx, Sit-up Test (\"knees bent 90°\"); ExRx (\"Lie supine on mat or bench with hips bent and feet on floor\"). A cena usa ~100°, como o abdominal supra: entre os 90° do teste e o calcanhar perto do glúteo da NSCA"
+   },
+   {
+    "nome": "braços estendidos (cotovelo só um pouco dobrado)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "ExRx, Sit-up (arms down) (\"Extend arms down to sides\"; \"Extend hands toward sides of heels\"). Deitado o cotovelo fica dobrado ~28°, aberto pra fora: com o braço esticado colado no corpo, o braço deste boneco (ombro e dorsal largos) entrava no dorsal (15 mm com 14°); a partir do meio da subida ele estica (~16°)"
+   },
+   {
+    "nome": "deitado embaixo (tronco no chão)",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     86,
+     94
+    ],
+    "fonte": "NSCA, Bent-knee sit-up (\"Lie supine on a floor mat\")"
+   },
+   {
+    "nome": "tórax no chão embaixo",
+    "medida": "torax_chao",
+    "t": 0.0,
+    "graus": [
+     -5,
+     5
+    ]
+   },
+   {
+    "nome": "coluna reta embaixo",
+    "medida": "coluna",
+    "t": 0.0,
+    "graus": [
+     0,
+     10
+    ]
+   },
+   {
+    "nome": "quadril dobrado embaixo (pés chapados)",
+    "medida": "quadril_sinal",
+    "t": 0.0,
+    "graus": [
+     40,
+     60
+    ],
+    "fonte": "ExRx (\"Lie supine on mat or bench with hips bent\"); Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"Positioning the lower body so the legs and hips are in a flexed position\")"
+   },
+   {
+    "nome": "braços ao lado do corpo embaixo",
+    "medida": "braco_frente",
+    "t": 0.0,
+    "graus": [
+     -15,
+     10
+    ],
+    "fonte": "ExRx, Sit-up (arms down) (\"Extend arms down to sides\"); Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"Placing the arms down to the sides thereby reducing the resistance torque of the upper body\")"
+   },
+   {
+    "nome": "fase 1: a cabeça e o tórax sobem primeiro (tórax a ~20° com a lombar no chão)",
+    "medida": "torax_chao",
+    "t": [
+     0.24,
+     0.31
+    ],
+    "graus": [
+     15,
+     30
+    ],
+    "fonte": "Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"first lifting the head and neck, then lifting the thorax, then lumbar, and finally the pelvis regions\"); é a parte do abdominal supra (o curl-up do ACSM vai até 30°: \"elevation of the truck to 30° is the important criteria\", ExRx, Curl-up Tests)"
+   },
+   {
+    "nome": "fase 1: o quadril ainda quase não dobrou (a pelve gira por último)",
+    "medida": "quadril_sinal",
+    "t": [
+     0.24,
+     0.31
+    ],
+    "graus": [
+     45,
+     68
+    ],
+    "fonte": "Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"... then lumbar, and finally the pelvis regions\"). A medida (coxa × linha pelve → pescoço) sobe um pouco com o tórax enrolando; a pelve em si ainda não girou pra frente"
+   },
+   {
+    "nome": "fase 1: queixo em direção ao peito",
+    "medida": "cabeca_tronco",
+    "t": [
+     0.24,
+     0.31
+    ],
+    "graus": [
+     -40,
+     -20
+    ],
+    "fonte": "NSCA, Bent-knee sit-up (\"Flex your neck to bring your chin toward your chest\"); Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"first lifting the head and neck\")"
+   },
+   {
+    "nome": "tronco quase vertical em cima",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"Curl into the upright position\"); NSCA, Bent-knee sit-up (\"Curl your torso toward your thighs\"); free-exercise-db (\"Elevate your upper body so that it creates an imaginary V-shape with your thighs\"). Medido da pelve à base do pescoço (a vertical é 0): a lombar fica arredondada e a linha fica ~14° atrás da vertical"
+   },
+   {
+    "nome": "tórax na vertical em cima",
+    "medida": "torax_chao",
+    "t": 1.0,
+    "graus": [
+     80,
+     90
+    ],
+    "fonte": "Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"Curl into the upright position\"); nas fotos do free-exercise-db e nas animações do ExRx o tronco chega perto da vertical em cima. Medido da transição toracolombar à base do pescoço (90 = vertical)"
+   },
+   {
+    "nome": "quadril bem dobrado em cima: o V do tronco com as coxas",
+    "medida": "quadril_sinal",
+    "t": 1.0,
+    "graus": [
+     118,
+     130
+    ],
+    "fonte": "free-exercise-db (\"creates an imaginary V-shape with your thighs\"); ExRx (\"Raise torso from mat or bench by bending waist and hips\"). O teto é o do quadril da fábrica (limites.py, 130°): a coxa × pelve fica em ~102°, dentro dos 120° da AAOS — o resto é a coluna enrolada"
+   },
+   {
+    "nome": "coluna enrolada em cima",
+    "medida": "coluna",
+    "t": 1.0,
+    "graus": [
+     30,
+     45
+    ],
+    "fonte": "NSCA, Bent-knee sit-up (\"Curl your torso toward your thighs\"); Kreighbaum 1996, citado pelo ExRx (Are Sit-ups Safe?) (\"Curl into the upright position\")"
+   },
+   {
+    "nome": "cabeça na linha do tórax em cima, com espaço entre o queixo e o peito",
+    "medida": "cabeca_tronco",
+    "t": 1.0,
+    "graus": [
+     -32,
+     -15
+    ],
+    "fonte": "ExRx, Sit-up (\"Certain individuals may need to keep their neck in neutral position with space between their chin and sternum\"). Medida contra a linha pelve → pescoço: com o tórax enrolado, a cabeça na linha do tórax mede ~−24°"
+   },
+   {
+    "nome": "braços pra frente em cima, na direção dos calcanhares",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     30,
+     55
+    ],
+    "fonte": "ExRx, Sit-up (arms down) (\"Extend hands toward sides of heels\")"
+   },
+   {
+    "nome": "a pelve não gira de lado",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "o sit-up é no plano sagital: o ExRx lista o sit-up com giro como outro exercício (Twisting Sit-up)"
+   },
+   {
+    "nome": "o tronco não torce",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -6,
+     6
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "chao_mm_motivo": "os pés ficam chapados em cima do colchonete de 12 mm (NSCA: \"Lie supine on a floor mat\"; \"keeping your lower body in contact with the floor\"), então a planta é medida no topo dele",
+  "tecnica_padrao_motivo": "a coluna dobra de propósito: o exercício É a flexão da coluna até sentar (NSCA: \"Curl your torso toward your thighs\"; Kreighbaum, citado pelo ExRx: \"Curl into the upright position\"); a coluna reta embaixo e enrolada em cima estão nos ângulos da ficha (em cima ~39°)"
+ }
+}

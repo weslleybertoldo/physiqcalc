@@ -1,0 +1,571 @@
+{
+ "uuid": "578f2cf4-630b-410c-ab50-8cc8975d3248",
+ "nome": "Flexora em Pé",
+ "cena": "flexora_em_pe",
+ "grupo": "Posterior de Coxa",
+ "subgrupo": "Isquiotibiais (unilateral)",
+ "padrao_movimento": "flexao_joelho",
+ "equipamento": "maquina",
+ "variacao": "em pé, unilateral",
+ "alvos": [
+  "posterior"
+ ],
+ "auxiliares": [
+  "panturrilha"
+ ],
+ "camera": {
+  "az": 100,
+  "el": 10,
+  "dist": 4.5,
+  "alvo": [
+   0.05,
+   -0.08,
+   0.81
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.0,
+  "alvo": [
+   -0.04,
+   -0.2,
+   0.82
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Em pé de frente para a flexora em pé, com o pé de apoio (o direito) chapado na plataforma e o peso do corpo em cima dele, a frente da coxa da perna que trabalha (a esquerda) encostada na almofada da coxa, logo acima do joelho, o joelho alinhado com o eixo da máquina (o ponto em que a alavanca gira) e o rolo da alavanca encostado atrás da perna, no terço de baixo, acima do calcanhar; o tronco um pouco inclinado para a frente, apoiado na almofada do peito, as mãos fechadas nos 2 pegadores dos lados dela, com os cotovelos dobrados, e o tornozelo com os dedos puxados um pouco para a canela e a ponta do pé para a frente. Começa com a perna quase esticada (sem travar o joelho) e o pé um pouco acima da plataforma, e dobra o joelho puxando o rolo para trás e para cima, levando o calcanhar na direção do glúteo, até o joelho ficar dobrado a cerca de 120°; volta devagar, esticando o joelho, até quase esticar. Só o joelho mexe: a coxa fica parada, encostada na almofada, o quadril fica parado e nivelado (sem inclinar), o tronco e a cabeça ficam parados, apoiados, e o pé acompanha a perna, sem mexer o tornozelo. Depois, troca de perna.",
+ "cinesiologia": {
+  "plano": "sagital (flexão e extensão do joelho de uma perna só); a perna gira em volta do eixo do joelho, que fica alinhado com o eixo da alavanca da máquina",
+  "articulacoes": "joelho da perna que trabalha (flexão na ida, de ~6° — quase esticado, sem travar — até ~120°; extensão na volta); quadril da perna que trabalha parado a ~30° de flexão (a coxa ~15° à frente da vertical, encostada na almofada, e aberta ~8°; o tronco ~15° à frente); perna de apoio parada (joelho a ~5°, pé chapado na plataforma); coluna neutra e parada, apoiada; tornozelo da perna que trabalha parado em flexão dorsal leve; ombros, cotovelos e punhos parados, as mãos nos pegadores",
+  "agonistas": "isquiotibiais — bíceps femoral, semitendíneo e semimembranáceo (ExRx: alvo \"Hamstrings\"; NSCA, na flexora de máquina: \"Semimembranosus, semitendinosus, biceps femoris\"; free-exercise-db: \"primaryMuscles\": [\"hamstrings\"]), em contração concêntrica na ida e excêntrica na volta, uma perna de cada vez; em pé, com o quadril pouco dobrado, os isquiotibiais biarticulares trabalham mais curtos que na flexora sentada (Maeo et al. 2021: \"The biarticular hamstrings are lengthened more in a seated (hip-flexed) than prone (hip-extended) position.\")",
+  "sinergistas": "gastrocnêmio, sartório e grácil (ExRx: Synergists \"Gastrocnemius\", \"Sartorius\", \"Gracilis\"); com o tornozelo em flexão dorsal o gastrocnêmio ajuda mais (ExRx: \"Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion.\"). No app só a panturrilha (gastrocnêmio) fica marcada como auxiliar: o grácil e o sartório estão no grupo dos adutores do mapa, que pintaria a parte de dentro da coxa inteira",
+  "estabilizadores": "glúteo médio e glúteo mínimo (ExRx: Stabilizers \"Gluteus Medius\", \"Gluteus Minimus\": seguram a pelve nivelada em cima da perna de apoio), tibial anterior (ExRx: Antagonist Stabilizers \"Tibialis Anterior\": segura o pé em flexão dorsal) e, com o corpo quase em pé, o reto femoral (ExRx: \"If hips are not significantly bent (ie: body upright), Rectus Femoris becomes antagonist stabilizers.\"); a perna de apoio segura o peso (ExRx: \"Stand with body weight shifted on foot of resting leg\") e o tronco apoiado e as mãos nos pegadores dão a estabilidade (ExRx: \"Bend over and grasp handles for support if available.\")",
+  "fases": "concêntrica (dobra o joelho puxando o rolo para trás e para cima, o calcanhar indo na direção do glúteo — ExRx: \"Pull lever up to back of thigh by flexing knee.\"; free-exercise-db: \"As you exhale, curl your right leg up as far as possible without lifting the upper leg from the pad.\") e excêntrica (volta devagar esticando o joelho até quase esticar — ExRx: \"Return lever until knee is straight.\"; NSCA: \"Allow the knees to slowly extend back to the starting position.\" / \"Do not forcefully lock out the knees.\"); depois troca de perna (ExRx: \"Continue with opposite leg.\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Standing Leg Curl (https://exrx.net/WeightExercises/Hamstrings/LVStandingLegCurl, lido na cópia do Internet Archive de 31/05/2023; o site responde 403 direto): classificação \"Utility: Basic or Auxiliary\", \"Mechanics: Isolated\", \"Force: Pull\"; Preparation: \"Stand in machine with one or both legs between pads depending upon machine's design. Position exercising leg with lever pad behind lower leg and upper pad in front of lower thigh. Bend over and grasp handles for support if available. Stand with body weight shifted on foot of resting leg and raise foot of exercising leg slightly off of floor or platform.\"; Execution: \"Pull lever up to back of thigh by flexing knee. Return lever until knee is straight. Repeat. Continue with opposite leg.\"; Comments: \"Some apparatuses allow for a bent over posture potentially further decreasing active insufficiency of three of four heads of hamstring at completion of knee flexion. If hips are not significantly bent (ie: body upright), Rectus Femoris becomes antagonist stabilizers. Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion.\"; músculos: Target \"Hamstrings\", Synergists \"Gastrocnemius\", \"Sartorius\", \"Gracilis\", Stabilizers \"Gluteus Medius\", \"Gluteus Minimus\", Antagonist Stabilizers \"Tibialis Anterior\"",
+  "ExRx.net — Lever Bent-over Leg Curl (https://exrx.net/WeightExercises/Hamstrings/LVBentOverLegCurl, cópia do Internet Archive de 31/05/2023): \"Stand in machine with lower pads behind lower legs, upper pads in front of thighs, and lever fulcrum between knees. Bend over, placing forearms on pads, and grasp handles.\"; \"Raise lever up by bending knee as high as possible. Return lever until knee is straight.\"",
+  "free-exercise-db (yuhonas, domínio público) — Standing Leg Curl (https://github.com/yuhonas/free-exercise-db, exercises/Standing_Leg_Curl.json, lido em 11/10/2026): \"Adjust the machine lever to fit your height and lie with your torso bent at the waist facing forward around 30-45 degrees (since an angled position is more favorable for hamstrings recruitment) with the pad of the lever on the back of your right leg (just a few inches under the calves) and the front of the right leg on top of the machine pad.\"; \"Keeping the torso bent forward, ensure your leg is fully stretched and grab the side handles of the machine. Position your toes straight.\"; \"As you exhale, curl your right leg up as far as possible without lifting the upper leg from the pad. Once you hit the fully contracted position, hold it for a second.\"; \"primaryMuscles\": [\"hamstrings\"]. As 2 fotos dele são de uma flexora AJOELHADA (o joelho de apoio numa almofada baixa): os 30–45° de tronco são dessa máquina, não da em pé",
+  "NSCA — Exercise Technique for Free Weight and Machine Training, Machine leg curl (pelo resumo do capítulo 15 do Achievable CSCS, https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-4, lido em 11/10/2026; a NSCA não tem a flexora em pé, só a sentada): \"Major muscles involved: Semimembranosus, semitendinosus, biceps femoris\"; \"Align the knees with the axis of the machine.\"; \"Curl the roller pad below the seat by fully flexing the knees.\"; \"Allow the knees to slowly extend back to the starting position.\"; \"Do not forcefully lock out the knees.\"",
+  "ACE — Lying Hamstrings Curl (https://www.acefitness.org/resources/everyone/exercise-library/153/lying-hamstrings-curl/, lido em 11/10/2026; o ACE não tem a flexora em pé — daqui o joelho no eixo e o lugar do rolo): \"Lie on your stomach on the machine, aligning the mid-point of your knee joint with the axis of rotation of the moving lever (arm) of the machine. Position the backs of the lower 1/3 of your lower legs under the resistance pads, avoiding contact with the pads at, or just above the heel.\"; \"Continue contracting the hamstrings and moving the resistance pad until your knees are bent more than 90 degrees, or your lower legs are aligned vertical to the floor, or the pads come close to touching your butt.\"; \"Exercise Variation: Repeat the same exercise, but train each leg independently.\"",
+  "Maeo S et al. Greater Hamstrings Muscle Hypertrophy but Similar Damage Protection after Training at Long versus Short Muscle Lengths. Med Sci Sports Exerc. 2021;53(4):825-837. doi:10.1249/MSS.0000000000002523 — texto completo aberto (PMC7969179), lido em 11/10/2026: \"The biarticular hamstrings are lengthened more in a seated (hip-flexed) than prone (hip-extended) position.\"; \"Both legs were trained unilaterally\"; \"with the hip joint fixed at ~90° and a prone leg curl machine (Toredo, Senoh, Japan) with the hip joint fixed at ~30° (0° = anatomical position). The knee joint range of motion was 0°–90° for both conditions\" (não testou a flexora em pé)",
+  "Bourne MN et al. Impact of exercise selection on hamstring muscle activation. Br J Sports Med. 2017;51(13):1021-1028. doi:10.1136/bjsports-2015-095739 — só o resumo (Europe PMC, PMID 27467123), lido em 11/10/2026, o estudo da \"Base\" da dica do app: \"To determine which strength training exercises selectively activate the biceps femoris long head (BFLongHead) muscle.\"; \"Concentrically, the highest BF/MH nEMG ratio occurred during the lunge and 45° hip extension; the lowest was during the leg curl and bent-knee bridge.\" — o resumo não fala de assimetria entre as pernas nem de exercício unilateral (a \"Base\" da dica não bate com o estudo; o catálogo não foi mexido)",
+  "TRUE Fitness (fabricante) — PLS-1300 Standing Leg Curl, Palladium (folha de venda, https://truefitness.com/wp-content/uploads/2024/07/PALLADIUM_Plate-Loaded_2025-1300.pdf, e a página do produto na cópia do Internet Archive de 07/06/2026, lidas em 11/10/2026): \"the six-position torso pad and dual handles provide added stability and support\"; \"A self-adjusting ankle pad enhances ease of use\"; \"Unique off-axis pivot design allows users to place knee freely on pad without need to align with fixed pivot\" (outro desenho: aqui o joelho fica no eixo); \"Instruction Placard illustrates proper START and END positions\" (a placa: em pé, o peito na almofada do tronco, as mãos nos pegadores, a coxa na almofada do joelho, o rolo atrás do tornozelo, o pé de apoio numa plataforma; no fim o joelho a ~90°); \"DIMENSIONS (L x W x H) 45\" x 49\" x 47\" / 114cm x 124cm x 119cm\"",
+  "Sorinex (fabricante) — Standing Leg Curl Machine (https://www.sorinex.com/products/standing-leg-curl-machine e a ficha técnica https://cdn.shopify.com/s/files/1/2559/4942/files/StandingLegCurlSpecSheet.pdf, lidas em 11/10/2026): \"Adjustable Pad Depth\", \"Adjustable Roller Pad Height\", \"Diamond Plated Base\", \"Knurled Handles\", \"Right or Left Configuration\"; \"DEPTH 34.25”\", \"HEIGHT 47”\", \"WIDTH 29”\"",
+  "Rogue (fabricante) — Westside Standing Leg Curl (cópia do Internet Archive de 24/01/2026, lida em 11/10/2026): \"features a simple but scientific design that promotes proper form by stabilizing the knee and hips during the standing leg curl movement\"; \"rubber grip handles, and robust vinyl-covered pads\"; \"The texture powder coated diamond tread footplate ensures a reliable surface to stand on.\"; \"Length 36\"\", \"Width 43\"\", \"Height 45\"\"",
+  "Panatta (fabricante) — Standing Leg Curling 1FE084, linha Fit Evo, selecionável de pilha (catálogo oficial, p. 98, numa cópia de revendedor: https://cdn.webshopapp.com/shops/129922/files/430501836/panatta-fit-evo-catalogue.pdf, lido em 11/10/2026): \"DIMENSIONS W 110 cm H 160 cm\" / \"L 140 cm\"",
+  "Perform Better — Signature Series Plate-Loaded Standing Leg Curl (https://www.performbetter.com/signature-series-plate-loaded-standing-leg-curl/, lido em 11/10/2026): \"Train one leg at a time to correct imbalances, improve hamstring strength, and protect your knees from strain.\"; \"Knee pads : side to side adjustments\"; \"Roller pad: side to side adjustments\"; \"1430mm x 1045mm x 1200mm\"",
+  "Kikos (fabricante brasileiro) — Flexora Em Pé Kikos Pro Plate Load PR72 (página de venda da Fast Shop, https://site.fastshop.com.br/flexora-em-pe-kikos-pro-plate-load-pr72-181001/p, lida em 12/10/2026): \"Dimensões Aproximadas (CxLxA): 119 x 138 x 113 cm\"; \"A Flexora Kikos Pro Plate Load PR72 coloca o foco nos músculos posteriores da coxa, como o flexor deitado, mas inclui ainda os bíceps da coxa (cabeças longa e curta) e um pouco do gastrocnêmios.\"",
+  "Titan Fitness — Leg Extension & Hamstring Curl Machine (citado no bloco da cadeira_joelho do lib/equip3d.py): \"Roller Pad Dimensions: 17-in. x 5-in.\", \"Seat Pad Dimensions: 22-in. x 17-in. x 2-in.\" — o rolo e o estofado daqui",
+  "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29 (PMC5241541), tabela 5 (a mesma das outras flexoras): \"Dorsiflexion\" \"0-20 degrees\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "chao_mm": 50.0,
+  "chao_mm_motivo": "o pé de apoio fica chapado na chapa xadrez da plataforma da máquina, com o topo a 50 mm do chão (Rogue Westside: \"diamond tread footplate ensures a reliable surface to stand on\"; Sorinex: \"Diamond Plated Base\")",
+  "pe_fora_do_chao": [
+   "E"
+  ],
+  "pe_fora_do_chao_fonte": "ExRx — Lever Standing Leg Curl (\"Stand with body weight shifted on foot of resting leg and raise foot of exercising leg slightly off of floor or platform.\"): o pé esquerdo, o da perna que trabalha, fica fora da plataforma o movimento todo (regra alturas abaixo); o direito segue chapado nela",
+  "pe_no_ar": [
+   "E"
+  ],
+  "pe_no_ar_fonte": "o pé esquerdo MEXE fora da plataforma (vai pra trás e pra cima com a canela): sem a regra do pé escorregando nele (checagem3d, lote 8); o direito continua com todas — planta e calcanhar na plataforma e sem escorregar",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "Base de um pé só: as regras padrão (tecnica3d.PADRAO_PES_NO_CHAO) são pros 2 pés no chão, e aqui o pé esquerdo fica no ar e vai pra trás e pra cima, então largura dos pés, um pé à frente do outro, os 2 pés virados igual e o joelho na direção do pé não servem. As que valem estão abaixo: a coluna neutra, a pelve nivelada e parada (a dica pede \"Quadril estável, sem inclinar\") e as do pé de apoio (lado D).",
+  "zonas": [
+   {
+    "nome": "peito apoiado na almofada do peito",
+    "equipamento": "flexora_peito",
+    "partes": [
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "dica do app (\"Tronco apoiado\"); TRUE — PLS-1300 Standing Leg Curl (\"the six-position torso pad and dual handles provide added stability and support\")"
+   },
+   {
+    "nome": "frente da coxa esquerda encostada na almofada da coxa, logo acima do joelho",
+    "equipamento": "flexora_coxa",
+    "partes": [
+     "LeftUpLeg"
+    ],
+    "mm": [
+     -10,
+     3
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"upper pad in front of lower thigh\"); free-exercise-db — Standing Leg Curl (\"the front of the right leg on top of the machine pad\"; \"without lifting the upper leg from the pad\")"
+   },
+   {
+    "nome": "joelho e perna sem encostar na almofada da coxa (ela fica acima do joelho)",
+    "equipamento": "flexora_coxa",
+    "partes": [
+     "LeftLeg",
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"upper pad in front of lower thigh\")"
+   },
+   {
+    "nome": "perna esquerda encostada no rolo (atrás, no terço de baixo)",
+    "equipamento": "flexora_rolo",
+    "partes": [
+     "LeftLeg"
+    ],
+    "mm": [
+     -10,
+     1
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"lever pad behind lower leg\"); free-exercise-db — Standing Leg Curl (\"the pad of the lever on the back of your right leg (just a few inches under the calves)\"); ACE — Lying Hamstrings Curl (\"Position the backs of the lower 1/3 of your lower legs under the resistance pads\")"
+   },
+   {
+    "nome": "pé esquerdo sem encostar no rolo (o rolo fica acima do calcanhar)",
+    "equipamento": "flexora_rolo",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "ACE — Lying Hamstrings Curl (\"avoiding contact with the pads at, or just above the heel\")"
+   },
+   {
+    "nome": "perna de apoio longe do rolo",
+    "equipamento": "flexora_rolo",
+    "partes": [
+     "RightUpLeg",
+     "RightLeg",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     30,
+     1000000000000000.0
+    ],
+    "fonte": "o rolo fica atrás da perna que trabalha (ExRx — Lever Standing Leg Curl: \"Position exercising leg with lever pad behind lower leg\"); a perna de apoio fica fora dele"
+   },
+   {
+    "nome": "pé de apoio chapado na plataforma",
+    "equipamento": "flexora_plataforma",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     -5,
+     2
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"Stand with body weight shifted on foot of resting leg\"); Rogue — Westside Standing Leg Curl (\"diamond tread footplate ensures a reliable surface to stand on\")"
+   },
+   {
+    "nome": "braços e mãos sem encostar na almofada do peito",
+    "equipamento": "flexora_peito",
+    "partes": [
+     "LeftArm",
+     "RightArm",
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "as mãos ficam nos pegadores dos lados da almofada (TRUE — PLS-1300 Standing Leg Curl: \"dual handles\")"
+   },
+   {
+    "nome": "cabeça sem encostar na almofada do peito",
+    "equipamento": "flexora_peito",
+    "partes": [
+     "Neck",
+     "Head"
+    ],
+    "mm": [
+     3,
+     1000000000000000.0
+    ],
+    "fonte": "a cabeça fica na linha do tronco, por cima da almofada"
+   },
+   {
+    "nome": "mãos sem encostar na estrutura (só nos pegadores)",
+    "equipamento": "flexora_estrutura",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     5,
+     1000000000000000.0
+    ],
+    "fonte": "Weslley (a checagem ignora o que fica dentro da mão: aqui a mão × o resto da máquina, medido à parte)"
+   }
+  ],
+  "eixos": [
+   {
+    "nome": "joelho esquerdo no eixo da alavanca",
+    "equipamento": "flexora_alavanca",
+    "ossos": [
+     "LeftLeg"
+    ],
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "NSCA — Machine leg curl (\"Align the knees with the axis of the machine.\"); ACE — Lying Hamstrings Curl (\"aligning the mid-point of your knee joint with the axis of rotation of the moving lever (arm) of the machine\"); ExRx — Lever Bent-over Leg Curl (\"lever fulcrum between knees\")"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pé esquerdo um pouco fora da plataforma",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     55,
+     5000
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"raise foot of exercising leg slightly off of floor or platform\"); a pele mais baixa do pé esquerdo acima do chão: a chapa da plataforma fica a 50 mm, então 55 = 5 mm acima dela (a chapa é APOIO, e a regra alturas só mede contra o chão ou malha de equipamento)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelho que trabalha quase esticado no começo, sem travar",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "E",
+    "t": 0.0,
+    "graus": [
+     2,
+     12
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"Return lever until knee is straight.\"); free-exercise-db — Standing Leg Curl (\"ensure your leg is fully stretched\"); NSCA — Machine leg curl (\"Do not forcefully lock out the knees.\")"
+   },
+   {
+    "nome": "joelho que trabalha dobrado a ~120° no fim (o calcanhar indo pro glúteo)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "E",
+    "t": 1.0,
+    "graus": [
+     114,
+     126
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"Pull lever up to back of thigh by flexing knee.\"); free-exercise-db — Standing Leg Curl (\"curl your right leg up as far as possible without lifting the upper leg from the pad\"); dica do app (\"flexione o joelho levando o calcanhar ao glúteo\"). As placas de fabricante param em ~90° (TRUE — PLS-1300 Standing Leg Curl, desenho END) — aqui vale a fonte do exercício"
+   },
+   {
+    "nome": "joelho que trabalha nunca trava nem passa de 126°",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     2,
+     126
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl e NSCA — Machine leg curl (idem)"
+   },
+   {
+    "nome": "joelho de apoio quase esticado e parado",
+    "medida": "flexao",
+    "junta": "Leg",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     2,
+     10
+    ],
+    "fonte": "a perna de apoio segura o corpo (ExRx — Lever Standing Leg Curl: \"Stand with body weight shifted on foot of resting leg\"); a cena fica a 5°"
+   },
+   {
+    "nome": "coxa que trabalha parada, encostada na almofada",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     70,
+     76
+    ],
+    "fonte": "free-exercise-db — Standing Leg Curl (\"without lifting the upper leg from the pad\"); só o joelho mexe"
+   },
+   {
+    "nome": "quadril que trabalha parado (~30° de flexão)",
+    "medida": "quadril_sinal",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     26,
+     34
+    ],
+    "fonte": "dica do app (\"Quadril estável\"); ExRx — Lever Standing Leg Curl (\"Bend over and grasp handles for support if available\")"
+   },
+   {
+    "nome": "quadril de apoio parado",
+    "medida": "quadril_sinal",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     15,
+     25
+    ],
+    "fonte": "dica do app (\"Quadril estável, sem inclinar\")"
+   },
+   {
+    "nome": "tronco inclinado ~15° e parado, apoiado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     13,
+     17
+    ],
+    "fonte": "dica do app (\"Tronco apoiado\"); ExRx — Lever Standing Leg Curl (\"Bend over and grasp handles for support if available\")"
+   },
+   {
+    "nome": "coluna neutra",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "dica do app (\"Quadril estável, sem inclinar\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   },
+   {
+    "nome": "pelve nivelada e parada (sem inclinar)",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "dica do app (\"Quadril estável, sem inclinar\")"
+   },
+   {
+    "nome": "ombros nivelados",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "dica do app (\"Tronco apoiado\"): o tronco não tomba pro lado"
+   },
+   {
+    "nome": "coxa que trabalha aberta ~8° e parada",
+    "medida": "coxa_abducao",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     5,
+     11
+    ],
+    "fonte": "a coxa fica parada na almofada (free-exercise-db — Standing Leg Curl: \"without lifting the upper leg from the pad\"); 8° pra fora: as coxas musculosas do boneco não entram uma na outra perto da virilha"
+   },
+   {
+    "nome": "tornozelo que trabalha em flexão dorsal leve e parado",
+    "medida": "tornozelo",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     80,
+     92
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"Dorsal flexion of ankle reduces active insufficiency of Gastrocnemius allowing it to assist in knee flexion.\"); free-exercise-db — Standing Leg Curl (\"Position your toes straight.\"); neutro do boneco em pé ~76° (tecnica3d.tornozelo), aqui +10° de flexão dorsal (amplitude normal 0–20°, Alazzawi 2017)"
+   },
+   {
+    "nome": "pé de apoio pra frente (a pelve não gira em cima dele)",
+    "medida": "ponta_pe",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     -8,
+     12
+    ],
+    "fonte": "dica do app (\"Quadril estável\"): com o pé chapado, girar a pelve muda o ângulo do pé em relação a ela"
+   },
+   {
+    "nome": "joelho de apoio na linha quadril–tornozelo",
+    "medida": "joelho_valgo",
+    "lado": "D",
+    "t": "todos",
+    "mm": [
+     -15,
+     15
+    ],
+    "fonte": "regra da fábrica (joelho sem entrar nem abrir)"
+   },
+   {
+    "nome": "cotovelos dobrados ~90°, mãos nos pegadores",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     80,
+     105
+    ],
+    "fonte": "ExRx — Lever Standing Leg Curl (\"Bend over and grasp handles for support if available\"); free-exercise-db — Standing Leg Curl (\"grab the side handles of the machine\")"
+   },
+   {
+    "nome": "pegada neutra (palmas pro meio)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     50,
+     90
+    ],
+    "fonte": "pegadores verticais dos lados da almofada do peito"
+   },
+   {
+    "nome": "punhos retos",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "mão fechada no pegador com o punho na linha do antebraço"
+   }
+  ]
+ }
+}

@@ -1,0 +1,429 @@
+{
+ "uuid": "04b721d3-3167-5508-97d8-975b8265217a",
+ "nome": "Elevação de Pernas Suspenso na Barra",
+ "cena": "elevacao_de_pernas_suspenso_na_barra",
+ "grupo": "Abdômen",
+ "subgrupo": "Reto abdominal (porção inferior) · flexores do quadril · oblíquos",
+ "padrao_movimento": "abdominal_infra",
+ "equipamento": "peso_corporal",
+ "variacao": "suspenso na barra",
+ "alvos": [
+  "abdomen"
+ ],
+ "auxiliares": [
+  "quadriceps",
+  "tensor",
+  "obliquos"
+ ],
+ "camera": {
+  "az": 110,
+  "el": 10,
+  "dist": 5.8,
+  "alvo": [
+   0,
+   -0.1,
+   1.2
+  ]
+ },
+ "camera_vistas": {
+  "dist": 5.0,
+  "alvo": [
+   0,
+   -0.1,
+   1.25
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Pendurado na barra fixa com as mãos um pouco mais abertas que os ombros e as palmas viradas pra frente (pegada pronada), o polegar em volta da barra, os braços estendidos acima da cabeça, as pernas retas pra baixo e paralelas, os pés fora do chão e a pelve um pouco encaixada pra trás (retroversão leve). Sobe as pernas dobrando o quadril e os joelhos ao mesmo tempo — os joelhos dobram logo no começo e as canelas ficam penduradas, quase na vertical —, até as coxas passarem um pouco da horizontal, com os joelhos acima do quadril e dobrados a ~90°. Quem dobra é o quadril: a coluna não enrola. Os braços continuam estendidos e as mãos paradas na barra; com as pernas indo à frente, o corpo inteiro vai um pouco pra trás e os braços inclinam, sem balançar nem dar impulso. Desce devagar, sem deixar as pernas caírem, até elas ficarem de novo retas pra baixo.",
+ "cinesiologia": {
+  "plano": "sagital (flexão do quadril e do joelho); as pernas sobem em cadeia aberta e o corpo fica pendurado pelas mãos, paradas na barra",
+  "articulacoes": "quadril (flexão na subida até ~99° do tronco, com as coxas um pouco acima da horizontal; extensão na descida) e joelho (flexão junto com o quadril até ~90° em cima; extensão na descida); a pelve fica um pouco retrovertida do começo ao fim e a coluna lombar não enrola — no ExRx, enrolar a cintura é o Leg-Hip Raise, outro exercício (\"Rectus Abdominis and Obliques only contract dynamically if actual waist flexion occurs\"); ombros e cotovelos parados, com os braços estendidos acima da cabeça",
+  "agonistas": "iliopsoas, quem dobra o quadril (ExRx — Hanging Leg Raise: Target \"Iliopsoas\"); o catálogo e o free-exercise-db põem o abdômen como alvo (\"abdominals\") e o EMG mostra a parede abdominal trabalhando forte na versão de pernas retas (McGill 2015: \">130% MVC in rectus abdominis, 88% MVC in external oblique\") — por isso o alvo do 3D é o abdômen inteiro, como na Elevação de Pernas",
+  "sinergistas": "tensor da fáscia lata, pectíneo, sartório, adutor longo e adutor curto (ExRx — Hanging Leg Raise: Synergists \"Tensor Fasciae Latae\", \"Pectineus\", \"Sartorius\", \"Adductor Longus\", \"Adductor Brevis\") e o reto femoral (ExRx: Dynamic Stabilizers \"Rectus Femoris\")",
+  "estabilizadores": "reto abdominal e oblíquos seguram a pelve e a lombar enquanto o quadril dobra (ExRx: Stabilizers \"Rectus Abdominis\", \"Obliques\"; \"With no waist flexion, Rectus Abdominis and External Oblique will only act to stabilize pelvis and waist during hip flexion.\"; Andersson 1997: \"Bilateral, but not unilateral, leg lifts required activation of abdominal muscles.\"), o abdômen inteiro, sem separar uma \"porção inferior\" (Lehman & McGill 2001: \"No differences in muscle activity were found between the upper and lower portions of the rectus abdominis muscle within and between exercises.\"; ACE 2001: \"the upper and lower rectus abdominus act as a sheath, or one large muscle group\"); os flexores do antebraço seguram o corpo pendurado",
+  "fases": "subida concêntrica, soltando o ar e segurando ~1 s em cima (free-exercise-db: \"Exhale as you perform this movement and hold the contraction for a second or so.\"); descida excêntrica e devagar (free-exercise-db: \"Go back slowly to the starting position as you breathe in.\"; ExRx: \"Return until hips and knees are extended downward.\"), sem balançar as pernas (Healthline: \"The second common mistake people make on the hanging knee raise is swinging their legs and using momentum.\"); no estudo da ACE de 2001, 2 s na subida e 2 s na descida (\"two seconds at the concentric phase, two at the eccentric phase\") — o 3D sobe em 2 s"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas/free-exercise-db, domínio público — a lista de onde veio o fonte_en do catálogo), Hanging Leg Raise. https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hanging_Leg_Raise.json (lido em 11/10/2026): \"Hang from a chin-up bar with both arms extended at arms length in top of you using either a wide grip or a medium grip. The legs should be straight down with the pelvis rolled slightly backwards. This will be your starting position.\"; \"Raise your legs until the torso makes a 90-degree angle with the legs. Exhale as you perform this movement and hold the contraction for a second or so.\"; \"Go back slowly to the starting position as you breathe in.\"; primaryMuscles \"abdominals\". Na foto de cima (exercises/Hanging_Leg_Raise/1.jpg), medida com grade: as coxas ~20° acima da horizontal, os joelhos dobrados a ~90° (canela ~18° à frente da vertical) e o tronco de pé (ombro e quadril na mesma vertical); as mãos ficam fora da foto",
+  "ExRx.net — Hanging Leg Raise (https://exrx.net/WeightExercises/HipFlexors/BWHangingLegRaise, lido na cópia do Internet Archive de 25/06/2026 — o site bloqueia o acesso direto): Preparation \"Grasp and hang from high bar with slightly wider than shoulder width overhand grip.\"; Execution \"Raise legs by flexing hips and knees until hips are completely flexed or knees are well above hips. Return until hips and knees are extended downward. Repeat.\"; Comments \"Rectus Abdominis and Obliques only contract dynamically if actual waist flexion occurs. With no waist flexion, Rectus Abdominis and External Oblique will only act to stabilize pelvis and waist during hip flexion. It may be necessary to completely flex hips before waist flexion is possible, as in leg-hip raise. Also known as Hanging Knee Raise. Also see Spot Reduction Myth and Lower Ab Myth.\"; músculos: Target \"Iliopsoas\"; Synergists \"Tensor Fasciae Latae\", \"Pectineus\", \"Sartorius\", \"Adductor Longus\", \"Adductor Brevis\"; Stabilizers \"Rectus Abdominis\", \"Obliques\"; Dynamic Stabilizers \"Rectus Femoris\". Na animação de 2010 os pés ficam atrás dos joelhos no meio da subida e os joelhos sobem até a altura do peito, com o tronco quase de pé",
+  "ExRx.net — Hanging Straight Leg Raise (https://exrx.net/WeightExercises/HipFlexors/BWHangingStraightLegRaise, cópia do Internet Archive de 25/06/2026): \"With knees straight, raise legs by flexing hips until hips are completely flexed or knees are well above hips.\"; Easier \"Knees can flex along with hips to decrease intensity.\" — a versão de pernas retas (não é a do 3D: o free-exercise-db e o ExRx de mesmo nome dobram os joelhos)",
+  "ExRx.net — Hanging Leg-Hip Raise (https://exrx.net/WeightExercises/RectusAbdominis/BWHangingLegHipRaise, cópia do Internet Archive de 03/09/2022) e Hanging Straight Leg-Hip Raise (\"Toes-to-Bar\"; cópia de 07/06/2023): \"Continue to raise knees toward shoulders by flexing waist.\" / \"Continue to raise feet toward bar by flexing waist.\" (Target \"Rectus Abdominis\") — o enrolar da cintura que o 3D NÃO faz",
+  "McGill S, Andersen J, Cannon J. Muscle activity and spine load during anterior chain whole body linkage exercises: the body saw, hanging leg raise and walkout from a push-up. J Sports Sci. 2015;33(4):419-26. doi:10.1080/02640414.2014.946437 (só o RESUMO, PubMed 25111163; o texto completo é pago): \"The hanging straight leg raise created the highest challenge to the abdominal wall (>130% MVC in rectus abdominis, 88% MVC in external oblique).\"; \"On average, the hanging straight leg raise created approximately 3000 N of spine compression\"",
+  "Escamilla RF et al. Electromyographic analysis of traditional and nontraditional abdominal exercises: implications for rehabilitation and training. Phys Ther. 2006;86(5):656-71 (só o RESUMO, PubMed 16649890): \"Upper and lower rectus abdominis, internal oblique, and latissimus dorsi muscle EMG activity were highest for the Power Wheel (pike, knee-up, and roll-out), hanging knee-up with straps, and reverse crunch inclined 30 degrees.\" (com alças nos braços, não pendurado pelas mãos)",
+  "American Council on Exercise (ACE) — Anders M. New Study Puts the Crunch on Ineffective Ab Exercises. ACE FitnessMatters, mai/jun 2001, p. 9-11 (estudo de Peter Francis, San Diego State University; https://www.acefitness.org/getfit/studies/BestWorstAbExercises.pdf, lido em 11/10/2026): Captain's Chair, o mesmo movimento com apoio das costas e dos antebraços (a ACE não tem o exercício pendurado na barra) — \"The starting position begins with you holding your body up with legs dangling below. Now slowly lift your knees in toward your chest. The motion should be controlled and deliberate as you bring the knees up and return them back to the starting position.\"; método: \"two seconds at the concentric phase, two at the eccentric phase\"; \"the average exerciser appears unable to differentially recruit the upper and lower abdominal muscles\"; \"the upper and lower rectus abdominus act as a sheath, or one large muscle group\"",
+  "Lehman GJ, McGill SM. Quantification of the differences in electromyographic activity magnitude between the upper and lower portions of the rectus abdominis muscle during selected trunk exercises. Phys Ther. 2001;81(5):1096-1101 (resumo, PubMed 11319934): \"No differences in muscle activity were found between the upper and lower portions of the rectus abdominis muscle within and between exercises.\" (entre os exercícios medidos estão \"leg raises\") — a \"porção inferior\" do subgrupo do catálogo não se sustenta",
+  "Andersson EA, Nilsson J, Ma Z, Thorstensson A. Abdominal and hip flexor muscle activation during various training exercises. Eur J Appl Physiol Occup Physiol. 1997;75(2):115-123 (resumo, PubMed 9118976): \"The hip flexors were highly activated only in exercises involving hip flexion, either lifting the whole upper body or the legs.\"; \"Bilateral, but not unilateral, leg lifts required activation of abdominal muscles.\"",
+  "Healthline — Read T (BSc, CPT), revisão de Bubnis D (MS, NASM-CPT). For a Great Core Workout, Give Hanging Knee Raises a Try (04/06/2021). https://www.healthline.com/health/fitness/hanging-knee-raises (lido em 11/10/2026; fonte complementar, de site de saúde com revisão de personal certificado NASM): \"You should use a pronated, overhand grip, meaning your palms will face away from you when gripping your equipment.\"; \"The key to ensuring proper muscle activation is maintaining a neutral pelvis or a slight posterior tilt by activating your lower abs\"; \"Slowly raise your knees upward toward your chest while maintaining braced lower abs and a hollowed position.\"; \"Slowly lower your legs to return to the bottom position.\"; \"The second common mistake people make on the hanging knee raise is swinging their legs and using momentum.\"; \"The most common mistakes in the hanging knee raise are arching your lower back and excessively swinging your legs.\"; e o que separa o knee raise do leg raise de pernas retas: \"instead of bending at the knee and keeping your lower legs perpendicular to the floor, you keep your legs straight\"",
+  "Barra fixa: a mesma peça da Barra Fixa (equip3d.barra_fixa), barra de 32 mm — TITAN Fitness, TITAN Series 1.25\" Single Pull-Up Bar (\"Overall Diameter 1.25-in.\"), https://titan.fitness/products/titan-series-1-25-in-single-pull-up-bar",
+  "Lee Y, Lim B-O. Effects of grip width and hand orientation on muscle activities of upper body during the lat pull-down. Korean J Sport Sci. 2017;28(3):556-565. doi:10.24985/kjss.2017.28.3.556: Tabela 1 (8 homens), altura 172,5 ± 4,0 cm e largura biacromial 40,3 ± 3,0 cm — a largura biacromial do boneco sai da altura dele nessa proporção (como na Barra Fixa Supinada) e a pegada fica 1,25 × ela",
+  "Duarte M. Body segment parameters (BMClab, UFABC) — tabela de Dempster adaptada por Winter (2009): massa e centro de cada segmento, usada pro centro de massa ficar embaixo da barra em todo quadro (a mesma tabela SEG da Barra Fixa). https://github.com/BMClab/BMC/blob/master/notebooks/BodySegmentParameters.ipynb",
+  "Dica: este exercício não tem dica no catálogo do app (é dos 61 novos do scripts/conteudo/novos_61.json). A da Elevação de Pernas (o mesmo padrão, deitado) é \"Deitado, mãos ao lado do corpo, eleve as pernas até a vertical e desça devagar sem encostar no chão. Lombar sempre em contato com o solo.\" e a da Barra Fixa (a mesma barra) é \"Pendure com os braços estendidos e puxe até o queixo passar a barra, iniciando pelas escápulas. Desça completo sem balançar.\" — o 3D segue as fontes deste exercício"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "zonas": [
+   {
+    "nome": "a barra nunca encosta na cabeça nem no pescoço (a cabeça fica entre os braços, embaixo dela)",
+    "equipamento": "barra_fixa",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "mm": [
+     10,
+     5000
+    ],
+    "fonte": "Weslley (peso e equipamento nunca entram no corpo); free-exercise-db (\"Hang from a chin-up bar with both arms extended at arms length in top of you\")"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pés fora do chão o movimento todo",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     30,
+     3000
+    ],
+    "fonte": "free-exercise-db (\"Hang from a chin-up bar\"; nas 2 fotos os pés ficam fora do chão); ExRx (\"Grasp and hang from high bar\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "braço e mão esquerdos não entram na cabeça (braço acima da cabeça)",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "braço e mão direitos não entram na cabeça (braço acima da cabeça)",
+    "partes": [
+     "RightArm",
+     "RightForeArm",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     3,
+     3000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "as 2 mãos não se encostam",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     200,
+     3000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); com a pegada um pouco mais aberta que os ombros sobram ~40 cm entre as mãos"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "corpo pendurado reto embaixo",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "free-exercise-db (\"The legs should be straight down\"; na foto de baixo o corpo fica reto e na vertical)"
+   },
+   {
+    "nome": "tronco de pé o movimento todo, sem balançar (o corpo vai pra trás inteiro e os braços inclinam)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "Healthline (\"The second common mistake people make on the hanging knee raise is swinging their legs and using momentum.\"); ACE 2001 (\"The motion should be controlled and deliberate\"); foto de cima do free-exercise-db e animação do ExRx (tronco de pé em cima). Pendurado parado, o centro de massa fica embaixo da barra (Dempster/Winter)"
+   },
+   {
+    "nome": "braços estendidos o movimento todo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "free-exercise-db (\"Hang from a chin-up bar with both arms extended at arms length\")"
+   },
+   {
+    "nome": "braços acima da cabeça o movimento todo",
+    "medida": "braco_elevacao",
+    "t": "todos",
+    "graus": [
+     150,
+     180
+    ],
+    "fonte": "free-exercise-db (\"both arms extended at arms length in top of you\"); ExRx (\"Grasp and hang from high bar\")"
+   },
+   {
+    "nome": "ombros pendurados (escápula subida) o movimento todo: não há puxada",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": "todos",
+    "graus": [
+     -10,
+     14
+    ],
+    "fonte": "free-exercise-db (\"both arms extended at arms length\"); nenhuma fonte manda baixar as escápulas — o ombro fica como na pose de baixo da Barra Fixa (a mesma faixa dela em t = 0)"
+   },
+   {
+    "nome": "pegada um pouco mais aberta que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.1,
+     1.4
+    ],
+    "fonte": "ExRx (\"slightly wider than shoulder width overhand grip\"); free-exercise-db (\"either a wide grip or a medium grip\"). No boneco a largura biacromial (40,3/172,5 da altura, Lee & Lim 2017) dá a distância das articulações dos ombros"
+   },
+   {
+    "nome": "pegada pronada (palma virada pra frente)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     0,
+     45
+    ],
+    "fonte": "ExRx (\"overhand grip\"); Healthline (\"You should use a pronated, overhand grip, meaning your palms will face away from you\"). Medida: palma × frente do tronco; 0 = palma pra frente, 180 = virada pro corpo"
+   },
+   {
+    "nome": "punho quase reto (sem dobrar pra frente nem pra trás)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "pendurado com os braços estendidos acima da cabeça, a mão fecha na barra na linha do antebraço (free-exercise-db: \"both arms extended at arms length\"). Medida: flexão (+) / extensão (−) do punho"
+   },
+   {
+    "nome": "punho no máximo um pouco desviado",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "amplitude normal do punho (AAOS, por Norkin & White — a mesma fonte do limites.py)"
+   },
+   {
+    "nome": "punho sem desviar de lado além do normal (desvio radial até 20°, ulnar até 30°)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "amplitude normal do punho (AAOS, por Norkin & White — a mesma fonte do limites.py). Medida: + = radial"
+   },
+   {
+    "nome": "pernas retas embaixo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "free-exercise-db (\"The legs should be straight down\"); ExRx (\"Return until hips and knees are extended downward.\")"
+   },
+   {
+    "nome": "pernas pra baixo embaixo (quadril estendido)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": 0.0,
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "free-exercise-db (\"The legs should be straight down\"); ExRx (\"Return until hips and knees are extended downward.\")"
+   },
+   {
+    "nome": "em cima o quadril bem dobrado: coxas um pouco acima da horizontal",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": 1.0,
+    "graus": [
+     90,
+     110
+    ],
+    "fonte": "free-exercise-db (\"Raise your legs until the torso makes a 90-degree angle with the legs\"; na foto de cima as coxas ficam ~20° acima da horizontal); ExRx (\"until hips are completely flexed or knees are well above hips\"). O teto é a coxa do boneco começando a entrar na barriga (~100°)"
+   },
+   {
+    "nome": "em cima os joelhos ficam acima do quadril",
+    "medida": "inclinacao",
+    "segmento": [
+     "UpLeg",
+     "Leg"
+    ],
+    "t": 1.0,
+    "graus": [
+     -25,
+     -3
+    ],
+    "fonte": "ExRx (\"knees are well above hips\"); Healthline (\"Slowly raise your knees upward toward your chest\"). Medida: coxa × horizontal, − = o joelho acima do quadril"
+   },
+   {
+    "nome": "em cima os joelhos dobrados a ~90°",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     80,
+     105
+    ],
+    "fonte": "ExRx (\"Raise legs by flexing hips and knees\"; \"Also known as Hanging Knee Raise\"); foto de cima do free-exercise-db (joelhos a ~90°)"
+   },
+   {
+    "nome": "canelas penduradas, quase na vertical, o movimento todo",
+    "medida": "inclinacao",
+    "segmento": [
+     "Leg",
+     "Foot"
+    ],
+    "t": "todos",
+    "graus": [
+     70,
+     90
+    ],
+    "fonte": "Healthline (o knee raise: \"bending at the knee and keeping your lower legs perpendicular to the floor\"); animação do ExRx (canelas penduradas em cima). Medida: canela × horizontal; 90 = na vertical"
+   },
+   {
+    "nome": "a coluna não enrola (quem dobra é o quadril) e a lombar fica um pouco mais reta que em pé (pelve retrovertida)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     2,
+     10
+    ],
+    "fonte": "ExRx (\"With no waist flexion, Rectus Abdominis and External Oblique will only act to stabilize pelvis and waist during hip flexion.\"; enrolar a cintura é o Leg-Hip Raise); free-exercise-db (\"with the pelvis rolled slightly backwards\"); Healthline (\"a slight posterior tilt\"). Medida: lombar (quadril → Spine1) × torácica (Spine1 → pescoço); o boneco pendurado sem retroversão mede ~1° (Barra Fixa)"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -25,
+     10
+    ],
+    "fonte": "pendurado com os braços estendidos, a cabeça fica entre os braços, olhando pra frente (fotos do free-exercise-db)"
+   },
+   {
+    "nome": "pernas paralelas, sem cruzar os tornozelos",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     2.2
+    ],
+    "fonte": "fotos do free-exercise-db e animação do ExRx (pernas juntas e paralelas), como na Barra Fixa"
+   },
+   {
+    "nome": "coxas sem abrir pros lados",
+    "medida": "coxa_abducao",
+    "t": "todos",
+    "graus": [
+     -5,
+     10
+    ],
+    "fonte": "fotos do free-exercise-db e animação do ExRx (as coxas sobem juntas, pra frente)"
+   }
+  ]
+ }
+}

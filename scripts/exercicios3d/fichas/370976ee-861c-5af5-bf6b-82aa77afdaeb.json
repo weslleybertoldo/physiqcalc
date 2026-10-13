@@ -1,0 +1,447 @@
+{
+  "uuid": "370976ee-861c-5af5-bf6b-82aa77afdaeb",
+  "nome": "Remo Ergômetro",
+  "cena": "remo_ergometro",
+  "grupo": "Cardio",
+  "subgrupo": "Cardiorrespiratório · costas · membros inferiores",
+  "padrao_movimento": "cardio",
+  "equipamento": "cardio",
+  "variacao": "sentado",
+  "alvos": [
+    "quadriceps",
+    "dorsal"
+  ],
+  "auxiliares": [
+    "gluteo",
+    "posterior",
+    "panturrilha",
+    "costas",
+    "lombar",
+    "biceps"
+  ],
+  "camera": {
+    "az": 72,
+    "el": 10,
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.25,
+      0.55
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.25,
+      0.55
+    ]
+  },
+  "ida_s": 2.5,
+  "fps": 30,
+  "ciclo": true,
+  "ciclo_motivo": "Remo ergômetro: o movimento é cíclico (a remada se repete) — t = 0 → 1 é UMA remada (t = 0 a pegada; a passada até t = 1/3, o final; a volta de 1/3 a 1) e a pose em t = 1 é igual à de t = 0; o app repete o ciclo (LoopRepeat) em vez de ir e voltar, o que faria a remada andar de trás pra frente. ida_s = 2,5 s = 1 remada a 24 remadas/min (Concept2: \"keep your spm between 24 and 30\"; ACE: \"24-28 strokes per minute\"; ACE/Crosby: \"about 24 to 26 strokes per minute (spm)\" em intensidade média), com a volta levando o dobro da passada (Concept2: \"Overall, your drive-recovery ratio should be 1:2\"). fps = 30 (75 quadros na remada): o maior salto de osso entre 2 quadros foi medido em 64,8 mm (a cabeça, no meio da passada, com o carrinho correndo e o tronco abrindo); com 16 quadros/s seriam 40 quadros e ~120 mm, acima da regra de 80 mm (a regra continua a mesma, só tem mais quadros no mesmo 2,5 s).",
+  "movimento": "Remo ergômetro em ritmo moderado (24 remadas por minuto), sentado no carrinho que corre no trilho, com os pés presos nos apoios inclinados (a tira por cima da bola do pé) e as 2 mãos fechadas no manete (pegada pronada). Na PEGADA as canelas ficam em pé, os joelhos bem dobrados (~120°) perto das axilas, o tronco um pouco à frente (~15°, inclinando no quadril) e os braços esticados; o calcanhar sobe um pouco do apoio. Na PASSADA as pernas empurram primeiro (o carrinho corre pra trás), o tronco abre passando pela vertical no meio dela e só no fim os braços puxam o manete até embaixo das costelas. No FINAL as pernas ficam esticadas (sem travar), o tronco um pouco pra trás (~20°), os cotovelos dobrados atrás do corpo, os antebraços quase na horizontal e os punhos retos. Na VOLTA a ordem inverte: os braços esticam, o tronco vai à frente no quadril e, só depois que as mãos passam dos joelhos, os joelhos dobram e o carrinho volta devagar até a pegada. A volta leva o dobro do tempo da passada; o manete anda em linha reta, na direção da saída da corrente; a coluna fica neutra e a cabeça olha pra frente a remada toda.",
+  "cinesiologia": {
+    "plano": "sagital, cíclico, bilateral e simultâneo; sentado no carrinho que corre no trilho, com os pés presos nos apoios (cadeia fechada nas pernas) e as mãos no manete",
+    "articulacoes": "joelho (extensão na passada, de ~120° de flexão a ~8°; flexão na volta), quadril (extensão na passada, com o tronco indo de ~15° à frente a ~20° pra trás; flexão na volta), tornozelo (flexão plantar na passada, dorsiflexão na volta — o calcanhar sobe um pouco na pegada), ombro (extensão e adução no fim da passada; flexão na volta), cotovelo (flexão no fim da passada, extensão no começo da volta) e escápulas (retração no final, abertura na pegada); a coluna fica neutra",
+    "agonistas": "quadríceps (estende o joelho: as pernas fazem a maior parte da força) e grande dorsal (puxa o manete: extensão e adução do ombro)",
+    "sinergistas": "glúteo máximo e isquiotibiais (estendem o quadril quando o tronco abre), sóleo e gastrocnêmio (empurram o apoio), eretores da espinha (o tronco abrindo), bíceps, braquial e braquiorradial (dobram o cotovelo), trapézio, romboides e deltoide posterior (fecham as escápulas e levam o braço pra trás no final); na volta, tríceps (esticam os braços), abdominais (levam o tronco à frente) e tibial anterior (dorsiflexão)",
+    "estabilizadores": "abdominais e eretores da espinha (coluna neutra), músculos do antebraço e da mão (fechada no manete), ombros baixos e relaxados",
+    "fases": "pegada (catch) → passada (drive: pernas, depois o tronco, depois os braços) → final (finish) → volta (recovery: braços, depois o tronco, depois as pernas); a volta leva o dobro da passada"
+  },
+  "referencias": [
+    "free-exercise-db (yuhonas, domínio público), \"Rowing, Stationary\" (o fonte_en do catálogo), lido em 11/10/2026: \"To begin, seat yourself on the rower. Make sure that your heels are resting comfortably against the base of the foot pedals and that the straps are secured.\"; \"Your knees are bent and against your chest. Your upper body is leaning slightly forward while still maintaining good posture. Next, push against the foot pedals and extend your legs while bringing your hands to your upper abdominal area, squeezing your shoulders back as you do so. To avoid straining your back, use primarily your leg and hip muscles.\"; \"The recovery phase simply involves straightening your arms, bending the knees, and bringing your body forward again\"; \"primaryMuscles\": [\"quadriceps\"], \"secondaryMuscles\": [\"biceps\", \"calves\", \"glutes\", \"hamstrings\", \"lower back\", \"middle back\"]; as 2 fotos: sentado num Concept2 Model D (variação \"sentado\" confirmada).",
+    "Concept2, Indoor Rowing Technique on the Concept2 RowErg (concept2.com/training/rowing-technique): pegada \"Arms are straight; head is neutral; shoulders are level and not hunched.\" / \"Upper body is leaning forward from the hips with the shoulders in front of the hips.\" / \"Shins are vertical, or as close to vertical as is comfortable for you. Shins should not move beyond perpendicular.\" / \"Heels may lift as needed.\"; passada \"Start the drive by pressing with your legs, and then swing the back through the vertical position before finally adding the arm pull.\" / \"Hands move in a straight line to and from the flywheel.\"; final \"Upper body is leaning back slightly, using good support from the core muscles.\" / \"Legs are extended and handle is held lightly below your ribs.\" / \"Shoulders should be low with wrists and grip relaxed. Wrists should be flat.\"; volta \"Extend your arms until they straighten before leaning from the hips towards the flywheel.\" / \"Once your hands have cleared your knees, allow your knees to bend and gradually slide the seat forward on the monorail.\"",
+    "Concept2, How To Row/Ski/Bike Harder: \"try to keep your spm between 24 and 30 for most rowing workouts\"; \"Overall, your drive-recovery ratio should be 1:2. In other words, your recovery should take twice as long as your drive.\" Concept2, manual dos Models D e E (02/2013): \"Aim for a stroke rate (spm) of between 24 and 30 spm\"; \"Halfway through the drive, the arms are still straight and the shoulders are relaxed.\"; \"At the finish of the drive, the handle is pulled by the arms and shoulders into the abdomen. The legs are straight and the body is leaning back slightly. Note that the height of the handle is neither at the chest nor in the lap.\"; \"This puts the handle in front of the knees to avoid interference between the knees and hands as the seat moves forward.\"",
+    "Concept2, The Biomechanics of Rowing (a partir de Mazzone T., Kinesiology of the rowing stroke, NSCA Journal 1988;10(2)): \"the knees are tucked into the chest\"; \"press firmly against the foot stretchers until the legs are almost fully extended, but not locked\"; \"with the torso at a 90 degree angle with the monorail\"; \"your torso leaning back slightly beyond 90 degrees\"; \"The arms must pass over the knees before the knees bend.\"; músculos: \"The quadriceps extend the knee, and the feet are plantar flexed by the soleus and gastrocnemius muscles.\" / \"the hip is also extending by the contraction of the gluteus and hamstring muscles. Back extension is occurring by contraction of the erector spinae.\" / \"The upper arm is internally rotated by the latissimus dorsi and pectoralis major.\" / \"The scapula is rotated downward by the pectoralis minor and then drawn backward by the trapezius and rhomboid muscles.\" / \"The shoulder is extended and adducted.\"",
+    "Concept2, Getting Comfortable on the RowErg: \"you want your knees to be in the general vicinity of your arm pits at the catch position\"; A Foot Position Primer: \"your heel should be positioned in the footstretcher so that the strap crosses over the ball of your foot\"; Improving Your Rows with the Force Curve: \"the legs generating the most force (around 60% of the power), followed by the back (30% of the power) and finally the arms (10% of the power)\" / \"This is one reason not to lay back too much in the finish position.\"; Muscles Used While Rowing: \"your biceps engage to pull the handle toward your abdomen, your back muscles work more as you swing your torso open, and your glutes and hamstrings contract to extend the hip\".",
+    "ACSM, Selecting and Effectively Using a Rowing Machine (Hosea, 2011): \"The “oar” handle should be centered in front and enable a full range of motion in a straight-horizontal plane.\"; \"the knees are flexed or bent with the shins vertical and the shoulders and arms reaching forward\"; \"The arms remain straight until the knees are mostly extended, and then the elbows flex bringing the oar handle into the upper stomach. The drive ends at the finish when the legs are fully extended, shoulders are back, elbows are flexed and the oar handle is against the upper stomach, as the back extends.\"; \"A common error when rowing on a machine is allowing the knees to flex prior to the hands passing over the knees during the recovery.\"",
+    "ACE, Reap the Benefits of Rowing (Thielen, 2016): \"the upper body leaning forward from the hips (at about 1 o’clock) and the shins vertical\"; \"Continue moving the upper body back slightly (11 o’clock)\"; \"The legs should be fully extended and the handlebar slightly below the ribs.\"; \"Strive for 24-28 strokes per minute (SPM) during the work phase.\" ACE Certified, Branch Out With Cardio Equipment (Vogel/Crosby, 2018): \"Push first with your legs, then lean back with your core/back and, finally, pull in with your arms at the very end.\"; \"It should take twice as long to come forward as it does to push, lean and pull back.\"; \"about 24 to 26 strokes per minute (spm)\".",
+    "ExRx.net, Row Ergometer: \"Grasp handlebar with both hands, overhand grip. With legs extended, pull handlebar to midsection, forearms horizontal.\"; \"Slide forward by flexing legs until shins are vertical and body is pressed up to legs.\"; \"As knees straighten, pull handlebar back to midsection and lean back slightly.\"; \"Static: Spine Extension\".",
+    "Cardoso R et al. Assessment of Angular and Straight Linear Rowing Ergometers at Different Intensities of Exercise. Sensors 2024;24(17):5686 (PMC11397995; Concept2 Model D, 16 remadores), Tabela 1, ritmo moderado: \"Rowing ratio\" 0.61 ± 0.07, \"Maximal handle velocity (m/s)\" 1.90 ± 0.15, \"Maximal seat velocity (m/s)\" 1.22 ± 0.13, \"Thorax angle at catch (°)\" −26.76 ± 4.57, \"Thorax angle at finish (°)\" 27.19 ± 7.18, \"Knee angle at catch (°)\" 135.20 ± 7.12.",
+    "Penichet-Tomas A et al. Kinematic Analysis of Olympic and Traditional Rowing Mechanics at different Stroke Rates. Int J Exerc Sci 2025;18(7):610 (PMC12289236; Concept2 Model D; método \"not yet validated\"): pegada \"Legs 56.3 ± 9.5 | 57.3 ± 11.0\" (18 e 24 spm), final \"Legs 169.0 ± 3.6 | 167.7 ± 4.8\".",
+    "Engstrom I et al. The effect of foot-stretcher position and stroke rate on ergometer rowing kinematics. PLoS One 2023;18(5):e0285676 (PMC10174490; Concept2 Model D): \"At 22 spm, rowers reached the catch position 60.6% (SD 1.7) of their way through the stroke cycle. At 26 spm, it was 57.0% (SD 1.9)\"; dados brutos do artigo (github.com/Telfer/Rowing_Biomechanics, licença MIT; Visual3D, 11 remadores, posição neutra, 22 e 26 spm; medianas por remador calculadas pela fábrica): joelho −129 a −130° na pegada e −3 a −5° no final; quadril 130° na pegada e 37–38° no final; tornozelo ~63–64° de amplitude; cotovelo ~15–17° na pegada e ~130° no final; ombro 75–78° na pegada e −22 a −24° no final.",
+    "Soper C, Hume PA. Ergometer rowing performance improves over 2000 m when using a steeper foot-stretcher angle. ISBS 2005: \"the foot-stretcher angle set to 36°, 41° (currently used angle) or 46°\" (Concept II) — o apoio dos pés a 41°.",
+    "Vieira TM et al. Sensors 2020;20(6):1666 (PMC7147320; Concept II, 20 remadores de elite): \"we observed the plantar flexors and both ventral and dorsal thigh muscles were active predominantly during the drive phase (i.e., when knees are extended), from just before catch to just before finish, whereas tibialis anterior was recruited within recovery\".",
+    "Concept2 RowErg (página do produto e ficha RowErg_Specs 05/2024): \"Overall Length 96 in (244cm)\", \"Width 24 in (61cm)\", \"Seat Height From Floor With standard legs 14in (36 cm)\", \"Monorail Length 54 in (137 cm)\", \"Nickel-plated steel chain\", \"Monitor Arm Pivots for storage and to adjust monitor height.\"; o manete (loja da Concept2): \"The handle measures 19\\\" long and features an ergonomic 10-degree bend\" e a foto dele (2 manoplas longas e a ponte no meio); manual RowErg 10/2024, p. 2: o desenho de lado das 4 fases (a carenagem de ~48 cm e a saída da corrente a ~0,66 m, medidas no desenho pela fábrica) — as medidas do remo (equip3d.remo)."
+  ],
+  "checagens": {
+    "pes_no_chao": false,
+    "pes_no_chao_fonte": "Os pés ficam nos apoios inclinados do remo, presos pela tira, não no chão: free-exercise-db (\"Make sure that your heels are resting comfortably against the base of the foot pedals and that the straps are secured.\"); Concept2, A Foot Position Primer (\"your heel should be positioned in the footstretcher so that the strap crosses over the ball of your foot\"); Concept2, Indoor Rowing Technique on the Concept2 RowErg (pegada: \"Heels may lift as needed.\"). As zonas abaixo medem a sola encostando no apoio em todo quadro e o glúteo no assento (que anda com o carrinho); na pegada o calcanhar sobe um pouco (o pé gira na bola do pé, embaixo da tira) — o info da cena mostra quanto em cada quadro.",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "As regras padrão são de base parada com os 2 pés no chão (pés paralelos, na largura do quadril, coluna neutra até 20°); no remo os pés estão nos apoios inclinados, a ~±10 cm do meio, e a técnica é a dos ângulos abaixo (canela, joelho, tronco com sinal, braços, punhos, coluna neutra até 12°).",
+    "limites_juntas": {
+      "quadrilE": [
+        0,
+        138
+      ],
+      "quadrilD": [
+        0,
+        138
+      ]
+    },
+    "limites_juntas_fonte": "Na pegada o quadril dobra além dos 130° do limites.py: com a canela vertical e o joelho a ~120° a coxa sobe ~30° e o tronco vai ~15° à frente, e o \"quadril\" da checagem (coxa × linha quadril → pescoço) dá ~134° com a coluna neutra (0,6°: todo o dobrar fica no quadril). É a pegada das fontes: free-exercise-db (\"Your knees are bent and against your chest.\"), ExRx (\"until shins are vertical and body is pressed up to legs\"), Concept2/Mazzone (\"the knees are tucked into the chest\"); medido no Concept2: Engstrom 2023, dados brutos, quadril (coxa × pelve) de 130° na pegada (mediana de 11 remadores, de 84 a 153°). Os 130° do limites.py já dão 10° pra pelve que inclina com o tronco no agachamento; aqui o teto vai a 138°.",
+    "zonas": [
+      {
+        "nome": "pé esquerdo no apoio",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "equipamento": "remo_apoio_pes",
+        "mm": [
+          -3,
+          3
+        ],
+        "t": "todos"
+      },
+      {
+        "nome": "pé direito no apoio",
+        "partes": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "equipamento": "remo_apoio_pes",
+        "mm": [
+          -3,
+          3
+        ],
+        "t": "todos"
+      },
+      {
+        "nome": "glúteo no assento (anda com o carrinho)",
+        "partes": [
+          "Hips",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "equipamento": "remo_carrinho",
+        "mm": [
+          -15,
+          1
+        ],
+        "t": "todos"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "pegada: canela em pé (sem passar da vertical)",
+        "medida": "canela_sinal",
+        "t": 0.0,
+        "graus": [
+          -8,
+          2
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Shins are vertical, or as close to vertical as is comfortable for you. Shins should not move beyond perpendicular.\"); ACSM (\"the knees are flexed or bent with the shins vertical\"); ExRx (\"until shins are vertical\")"
+      },
+      {
+        "nome": "a canela nunca passa da vertical",
+        "medida": "canela_sinal",
+        "t": "todos",
+        "graus": [
+          -90,
+          2
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Shins should not move beyond perpendicular.\")"
+      },
+      {
+        "nome": "pegada: joelho bem dobrado",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": 0.0,
+        "graus": [
+          112,
+          132
+        ],
+        "fonte": "Penichet-Tomas et al. 2025 (Concept2 Model D; pegada \"Legs 56.3 ± 9.5 | 57.3 ± 11.0\" entre coxa e canela a 18 e 24 remadas/min = joelho ~123° dobrado); Engstrom et al. 2023, dados brutos (github Telfer/Rowing_Biomechanics, 11 remadores, posição neutra, 22 e 26 spm): joelho na pegada −129 a −130° (mediana; Visual3D); Cardoso et al. 2024 (Concept2, ritmo moderado: \"Knee angle at catch (°) 135.20 ± 7.12\")"
+      },
+      {
+        "nome": "pegada: tronco um pouco à frente (no quadril)",
+        "medida": "tronco_sinal",
+        "t": 0.0,
+        "graus": [
+          -26,
+          -10
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Upper body is leaning forward from the hips with the shoulders in front of the hips.\"); free-exercise-db (\"Your upper body is leaning slightly forward while still maintaining good posture.\"); ExRx (\"lean forward slightly from hips\"); medido no Concept2: Cardoso 2024, \"Thorax angle at catch (°)\" −26.76 ± 4.57 (moderado); ACE (\"at about 1 o’clock\")"
+      },
+      {
+        "nome": "pegada: braços esticados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Arms are straight; head is neutral; shoulders are level and not hunched.\"); Engstrom 2023, dados brutos: cotovelo na pegada ~15–17° (mediana)"
+      },
+      {
+        "nome": "pegada: braços à frente, mais ou menos na horizontal",
+        "medida": "braco_frente",
+        "t": 0.0,
+        "graus": [
+          75,
+          100
+        ],
+        "fonte": "ACSM (\"the shoulders and arms reaching forward\"); Engstrom 2023, dados brutos: ombro na pegada 75–78° (mediana)"
+      },
+      {
+        "nome": "passada: as pernas primeiro (o tronco ainda à frente)",
+        "medida": "tronco_sinal",
+        "t": [
+          0.079,
+          0.081
+        ],
+        "graus": [
+          -24,
+          -8
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Start the drive by pressing with your legs, and then swing the back through the vertical position before finally adding the arm pull.\"); ACE/Crosby (\"A common technique mistake is to simultaneously push with the legs and lean back\")"
+      },
+      {
+        "nome": "passada: braços ainda esticados até o meio",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": [
+          0.0,
+          0.174
+        ],
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "Concept2, manual dos Models D e E (\"Halfway through the drive, the arms are still straight and the shoulders are relaxed.\"); ACSM (\"The arms remain straight until the knees are mostly extended, and then the elbows flex\")"
+      },
+      {
+        "nome": "meio da passada: o tronco passa pela vertical",
+        "medida": "tronco_sinal",
+        "t": [
+          0.159,
+          0.174
+        ],
+        "graus": [
+          -6,
+          6
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"swing the back through the vertical position\"); Concept2/Mazzone (\"with the torso at a 90 degree angle with the monorail\"); ACE (\"Move the upper body into a vertical (12 o’clock) position\")"
+      },
+      {
+        "nome": "final: pernas esticadas sem travar",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": [
+          0.333,
+          0.334
+        ],
+        "graus": [
+          3,
+          15
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Legs are extended\"); Concept2/Mazzone (\"almost fully extended, but not locked\"); Penichet 2025 (final \"Legs 169.0 ± 3.6 | 167.7 ± 4.8\" = ~11–12° dobrado); Engstrom 2023, dados brutos: −3 a −5° (mediana)"
+      },
+      {
+        "nome": "final: tronco um pouco pra trás",
+        "medida": "tronco_sinal",
+        "t": [
+          0.333,
+          0.334
+        ],
+        "graus": [
+          14,
+          28
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Upper body is leaning back slightly, using good support from the core muscles.\"); Concept2, Improving Your Rows with the Force Curve (\"This is one reason not to lay back too much in the finish position.\"); medido no Concept2: Cardoso 2024, \"Thorax angle at finish (°)\" 27.19 ± 7.18 (moderado)"
+      },
+      {
+        "nome": "final: cotovelos dobrados, puxando até a barriga",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": [
+          0.333,
+          0.334
+        ],
+        "graus": [
+          95,
+          140
+        ],
+        "fonte": "ACSM (\"elbows are flexed and the oar handle is against the upper stomach\"); Engstrom 2023, dados brutos: cotovelo no final ~130° (mediana)"
+      },
+      {
+        "nome": "final: antebraços quase na horizontal",
+        "medida": "inclinacao",
+        "segmento": [
+          "ForeArm",
+          "Hand"
+        ],
+        "t": [
+          0.333,
+          0.334
+        ],
+        "graus": [
+          -12,
+          12
+        ],
+        "fonte": "ExRx, Row Ergometer (\"With legs extended, pull handlebar to midsection, forearms horizontal.\")"
+      },
+      {
+        "nome": "final: o braço vai atrás do tronco",
+        "medida": "braco_frente",
+        "t": [
+          0.333,
+          0.334
+        ],
+        "graus": [
+          -45,
+          -15
+        ],
+        "fonte": "Concept2/Mazzone (\"The shoulder is extended and adducted.\"); Engstrom 2023, dados brutos: ombro no final −22 a −24° (mediana)"
+      },
+      {
+        "nome": "final: cotovelos perto do corpo",
+        "medida": "cotovelo_tronco",
+        "t": [
+          0.333,
+          0.334
+        ],
+        "graus": [
+          -5,
+          25
+        ],
+        "fonte": "Concept2/Mazzone (\"The shoulder is extended and adducted.\"); free-exercise-db, foto do final (cotovelos atrás, perto do tronco — observação, não frase)"
+      },
+      {
+        "nome": "volta: os braços esticam antes do tronco ir à frente (braços)",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": [
+          0.493,
+          0.494
+        ],
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Extend your arms until they straighten before leaning from the hips towards the flywheel.\")"
+      },
+      {
+        "nome": "volta: os braços esticam antes do tronco ir à frente (tronco ainda atrás)",
+        "medida": "tronco_sinal",
+        "t": [
+          0.493,
+          0.494
+        ],
+        "graus": [
+          10,
+          28
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Extend your arms until they straighten before leaning from the hips towards the flywheel.\")"
+      },
+      {
+        "nome": "volta: os joelhos só dobram depois que as mãos passam deles",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": [
+          0.333,
+          0.6
+        ],
+        "graus": [
+          3,
+          15
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Once your hands have cleared your knees, allow your knees to bend and gradually slide the seat forward on the monorail.\"); ACSM (\"A common error when rowing on a machine is allowing the knees to flex prior to the hands passing over the knees during the recovery.\"); Concept2/Mazzone (\"The arms must pass over the knees before the knees bend.\")"
+      },
+      {
+        "nome": "coluna neutra (o tronco inclina no quadril)",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          12
+        ],
+        "fonte": "free-exercise-db (\"To avoid straining your back, use primarily your leg and hip muscles.\"); Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"leaning forward from the hips\"); ExRx (\"Static: Spine Extension\")"
+      },
+      {
+        "nome": "cabeça neutra, olhando pra frente",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -26,
+          6
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"head is neutral\"); free-exercise-db, fotos (a cabeça olhando pra frente — observação). O boneco em pé, no repouso, mede ~−11°"
+      },
+      {
+        "nome": "tornozelo: dorsiflexão até ~30° na pegada (o calcanhar sobe) e flexão plantar no final",
+        "medida": "tornozelo",
+        "t": "todos",
+        "graus": [
+          40,
+          108
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Heels may lift as needed.\"); Engstrom 2023, dados brutos: o tornozelo anda 63–64° da pegada ao final (mediana; Visual3D); Concept2/Mazzone (\"The ankles are dorsiflexed by the tibialis anterior.\"). O boneco em pé mede 76°: 30° de dorsiflexão = 106°"
+      },
+      {
+        "nome": "punho reto (sem dobrar pra cima nem pra baixo)",
+        "medida": "punho_flexao",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"Shoulders should be low with wrists and grip relaxed. Wrists should be flat.\")"
+      },
+      {
+        "nome": "punho sem desviar de lado além do normal",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -30,
+          20
+        ],
+        "fonte": "limites.py/tecnica3d.punho_desvio (Norkin & White, valores da AAOS): desvio radial normal até 20° e ulnar até 30°"
+      },
+      {
+        "nome": "pelve parada no assento: nivelada",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -1,
+          1
+        ],
+        "fonte": "ACSM (\"The “oar” handle should be centered in front\"); Concept2 manual (\"Pull straight back with both hands. Do not row with one hand only.\"): os 2 lados iguais"
+      },
+      {
+        "nome": "pelve parada no assento: sem girar",
+        "medida": "pelve_giro",
+        "t": "todos",
+        "graus": [
+          -1,
+          1
+        ],
+        "fonte": "Concept2 manual (\"Pull straight back with both hands.\")"
+      },
+      {
+        "nome": "tronco sem torcer",
+        "medida": "tronco_giro",
+        "t": "todos",
+        "graus": [
+          -2,
+          2
+        ],
+        "fonte": "Concept2 manual (\"Never twist chain or pull from side to side.\")"
+      },
+      {
+        "nome": "ombros nivelados",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -2,
+          2
+        ],
+        "fonte": "Concept2, Indoor Rowing Technique on the Concept2 RowErg (\"shoulders are level and not hunched\")"
+      }
+    ]
+  }
+}

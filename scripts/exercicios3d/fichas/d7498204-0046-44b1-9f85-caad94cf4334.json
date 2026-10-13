@@ -1,0 +1,383 @@
+{
+ "uuid": "d7498204-0046-44b1-9f85-caad94cf4334",
+ "nome": "Panturrilha no Step",
+ "cena": "panturrilha_no_step",
+ "grupo": "Panturrilha",
+ "subgrupo": "Gastrocnêmio · sóleo",
+ "padrao_movimento": "panturrilha",
+ "equipamento": "peso_corporal",
+ "variacao": "no step",
+ "alvos": [
+  "panturrilha"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 105,
+  "el": 5,
+  "dist": 5.0,
+  "alvo": [
+   0.0,
+   -0.3,
+   0.92
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.3,
+  "alvo": [
+   0.0,
+   -0.3,
+   1.0
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Em pé num step de academia (a plataforma de aeróbica, solta no chão), de frente pra uma parede, com as palmas das 2 mãos apoiadas de leve nela, na largura e na altura dos ombros, e os braços quase estendidos; os pés na largura do quadril e com as pontas para a frente, só a ponta dos pés (os dedos e a parte da frente da sola, embaixo da base dos dedos) apoiada na borda de trás do step e os calcanhares para fora dele. Começa com os calcanhares embaixo, abaixo da altura do step, a panturrilha alongada, e sobe os calcanhares o máximo que conseguir, ficando na ponta dos pés; desce devagar, controlando, até a panturrilha alongar de novo. Só o tornozelo trabalha: os dedos ficam apoiados no step, os joelhos e o quadril esticados e o corpo inteiro sobe e desce reto, equilibrado em cima da ponta dos pés — embaixo, com o calcanhar longe, atrás, ele fica um pouco inclinado pra frente, e em cima quase em pé; as mãos só encostam na parede para o equilíbrio, sem empurrar.",
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "em pé no step, só a ponta dos pés fica em cima dele (a 15 cm do chão) e os calcanhares ficam pra fora, descendo e subindo (ExRx — Standing Calf Raise (peso do corpo): \"Position toes and balls of feet on calf block with arches and heels extending off\"): as regras de pé chapado no chão (planta e calcanhar a 0 ± 5 mm, sem escorregar) e as de técnica medidas no plano do chão não servem; quem confere os pés são as zonas da ponta do pé no step em todo quadro, a altura do calcanhar embaixo e os ângulos do tornozelo, da largura e da ponta dos pés abaixo (os dedos ficam parados no step: a cena prende a base deles)",
+  "limites_juntas": {
+   "punhoE": [
+    0,
+    92
+   ],
+   "punhoD": [
+    0,
+    92
+   ]
+  },
+  "limites_juntas_fonte": "Punhos das mãos espalmadas na parede, sem segurar peso: com o braço quase estendido pra frente, perto da altura do ombro, e a palma chapada na parede com os dedos pra cima (ACE — Standing Calf Raises - Wall: \"Extend your arms to place your palms on the wall, level with your chest or shoulders.\"), o antebraço fica quase ⟂ à parede e o punho, estendido perto de 90° — a mesma conta da mão espalmada no chão da Flexão de Braço (lote 7, punho até 92°). Aqui vai de 66° embaixo (a palma um pouco acima do ombro) a 90–91° em cima (o ombro subiu 11 cm). O teto de 55° do limites.py é pra mão segurando peso sem dobrar o punho; aqui a mão só encosta (ExRx — Standing Calf Raise (peso do corpo): \"Place hand on support for balance.\")",
+  "zonas": [
+   {
+    "nome": "ponta do pé esquerdo (metatarsos e dedos) apoiada no step, sem entrar nele",
+    "equipamento": "step",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     -6,
+     2
+    ],
+    "fonte": "ExRx — Standing Calf Raise (peso do corpo) (\"Position toes and balls of feet on calf block with arches and heels extending off.\"; \"Exercise step that will not overturn can be used as calf block.\"): os dedos e a planta embaixo das cabeças dos metatarsos apoiados no step em todo quadro, sem entrar nele; a planta afunda uns milímetros na borracha (o coxim do antepé). Esta medida é por malha (a borracha de 6 mm e o tampo embaixo dela são malhas separadas): quanto a pele fica abaixo do TOPO do step (até 5 mm) quem confere é a regra de altura dos pés abaixo e o info da cena"
+   },
+   {
+    "nome": "ponta do pé direito (metatarsos e dedos) apoiada no step, sem entrar nele",
+    "equipamento": "step",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     -6,
+     2
+    ],
+    "fonte": "ExRx — Standing Calf Raise (peso do corpo) (\"Position toes and balls of feet on calf block with arches and heels extending off.\"; \"Exercise step that will not overturn can be used as calf block.\"): os dedos e a planta embaixo das cabeças dos metatarsos apoiados no step em todo quadro, sem entrar nele; a planta afunda uns milímetros na borracha (o coxim do antepé). Esta medida é por malha (a borracha de 6 mm e o tampo embaixo dela são malhas separadas): quanto a pele fica abaixo do TOPO do step (até 5 mm) quem confere é a regra de altura dos pés abaixo e o info da cena"
+   },
+   {
+    "nome": "palma esquerda espalmada na parede, sem entrar nela",
+    "equipamento": "parede",
+    "partes": [
+     "LeftHand"
+    ],
+    "mm": [
+     -2.5,
+     1.5
+    ],
+    "fonte": "ACE — Standing Calf Raises - Wall (\"Extend your arms to place your palms on the wall, level with your chest or shoulders.\"; \"Use your hands on the wall to support your body.\") e ExRx — Standing Calf Raise (peso do corpo) (\"Place hand on support for balance.\"): a palma chapada na parede, parada nela em todo quadro, afundando ~1 mm (só encosta, não empurra)"
+   },
+   {
+    "nome": "palma direita espalmada na parede, sem entrar nela",
+    "equipamento": "parede",
+    "partes": [
+     "RightHand"
+    ],
+    "mm": [
+     -2.5,
+     1.5
+    ],
+    "fonte": "ACE — Standing Calf Raises - Wall (\"Extend your arms to place your palms on the wall, level with your chest or shoulders.\"; \"Use your hands on the wall to support your body.\") e ExRx — Standing Calf Raise (peso do corpo) (\"Place hand on support for balance.\"): a palma chapada na parede, parada nela em todo quadro, afundando ~1 mm (só encosta, não empurra)"
+   },
+   {
+    "nome": "dedos da mão esquerda encostados na parede, sem entrar nela",
+    "equipamento": "parede",
+    "partes": [
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "mm": [
+     -2,
+     2
+    ],
+    "fonte": "idem: os dedos juntos e esticados encostando na parede (cada dedo dobra só até a pele encostar) e o polegar junto do indicador, sem entrar nela"
+   },
+   {
+    "nome": "dedos da mão direita encostados na parede, sem entrar nela",
+    "equipamento": "parede",
+    "partes": [
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     -2,
+     2
+    ],
+    "fonte": "idem: os dedos juntos e esticados encostando na parede (cada dedo dobra só até a pele encostar) e o polegar junto do indicador, sem entrar nela"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pés em cima do step da metade pra cima: a pele mais baixa deles no máximo 5 mm abaixo do topo (150 mm) e encostando",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     145,
+     152
+    ],
+    "t": [
+     0.5,
+     1.0
+    ],
+    "fonte": "a ponta do pé apoia no step sem entrar nele (ExRx — Standing Calf Raise (peso do corpo): \"Position toes and balls of feet on calf block\"); da metade do movimento pra cima o calcanhar já está acima do topo e a pele mais baixa do pé é a de baixo dos dedos, em cima do step. Com a base dos dedos dobrada ~35° em cima, a malha do pé esquerdo dobra pra baixo embaixo dos dedos (a mesma dobra da Panturrilha em Pé na Máquina, pé esquerdo a 143 mm com o degrau a 150): a cena sobe o corpo o que passar de 4,8 mm (até ~2,7 mm, só perto do topo; o pé direito fica a ≤ 2 mm do step)"
+   },
+   {
+    "nome": "calcanhares abaixo do topo do step no começo (alongado): 2 a 5 cm abaixo dele, que fica a 15 cm do chão",
+    "partes": [
+     "LeftFoot",
+     "RightFoot"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     100,
+     130
+    ],
+    "t": 0.0,
+    "fonte": "ExRx — Standing Calf Raise (peso do corpo) (\"Lower heels by bending ankles until calves are stretched\"; \"heels extending off\"): o calcanhar desce abaixo do topo do step (a pele mais baixa do pé a ~11 cm do chão, ~3,6 cm abaixo do topo). Desce menos que na Panturrilha em Pé na Máquina (~6 cm) com o mesmo tornozelo: sem ombreira, o corpo inclina ~8° pra frente pra ficar em equilíbrio e parte da flexão dorsal vem da canela inclinada"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "tornozelo em flexão dorsal embaixo, calcanhar abaixo do step (20°)",
+    "medida": "tornozelo",
+    "t": 0.0,
+    "graus": [
+     94,
+     98
+    ],
+    "fonte": "Kinoshita et al. 2023, legenda da figura 1 (as posturas da panturrilha em pé e sentada, \"with the knee joint 0° and 90° for the standing and seated conditions, respectively, and the ankle joint angle ranging from 20° dorsiflexed to 30° plantarflexed positions for both conditions\"); ExRx — Standing Calf Raise (peso do corpo) (\"Lower heels by bending ankles until calves are stretched\"); neutro do boneco 75,95° (tecnica3d.tornozelo, o pé chapado em pé): 20° de flexão dorsal = 95,95°"
+   },
+   {
+    "nome": "tornozelo em flexão plantar em cima, na ponta dos pés (30°)",
+    "medida": "tornozelo",
+    "t": 1.0,
+    "graus": [
+     43,
+     49
+    ],
+    "fonte": "Kinoshita et al. 2023 (idem: 30° de flexão plantar = 45,95° no boneco); ExRx — Standing Calf Raise (peso do corpo) (\"Raise heels by extending ankles as high as possible\"); NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"Push up onto your toes as high as possible.\")"
+   },
+   {
+    "nome": "tornozelo dentro da amplitude normal o movimento todo",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     25.9,
+     96.5
+    ],
+    "fonte": "Alazzawi et al. 2017, tabela 5 (\"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"): 75,95° + 20° = 95,95° (+0,5° de tolerância, como no limites.py) e 75,95° − 50° = 25,95°"
+   },
+   {
+    "nome": "joelhos estendidos o movimento todo",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "ExRx — Standing Calf Raise (peso do corpo) (\"Keep knees straight throughout exercise or bend knees slightly only during stretch.\"); NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"Keep your knees fully extended (not locked)\"); ACE — Standing Calf Raises - Wall (\"keeping your knees extended\"); a dica do app (\"Joelhos estendidos para focar o gastrocnêmio\"): a perna reta do boneco em pé mede ~7,5° e fica parada (não dobra embaixo)"
+   },
+   {
+    "nome": "quadril estendido (em pé)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"Keep your knees extended and your body upright.\"): o quadril fica como em pé (o boneco mede ~5°)"
+   },
+   {
+    "nome": "corpo reto, inclinado só no tornozelo pra ficar em equilíbrio",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"Keep your knees extended and your body upright.\") e ExRx, Calf Exercise Analyses (\"Axis: Ball of Foot\"): o corpo fica reto (tronco, quadril e joelhos parados) e inclina em volta do tornozelo só o que precisa pro centro de massa ficar em cima da ponta dos pés (sem ombreira, ninguém segura o corpo): ~8° embaixo, com o tornozelo ~15 cm atrás da base dos dedos, e ~5° em cima"
+   },
+   {
+    "nome": "coluna neutra, parada",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"body upright\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   },
+   {
+    "nome": "pés na largura do quadril",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.7
+    ],
+    "fonte": "ACE — Standing Calf Raises - Wall (\"feet hip-width apart\"); NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise) (\"legs hip-width apart\"): distância de lado a lado entre os tornozelos ÷ entre as articulações do quadril (~1,56: as coxas musculosas do boneco já se tocam)"
+   },
+   {
+    "nome": "pontas dos pés pra frente",
+    "medida": "ponta_pe",
+    "t": "todos",
+    "graus": [
+     -5,
+     10
+    ],
+    "fonte": "ACE — Standing Calf Raises - Wall (\"facing forward\"; \"without rotating your feet\"); NSCA, PTQ 8.4 (\"Do not allow your foot to rotate outwards at any point, keep it straight throughout.\"); Kinoshita et al. 2023 (\"Participants were instructed to place/keep their foot in a neutral position\")"
+   },
+   {
+    "nome": "os dois pés virados igual",
+    "medida": "ponta_pe_diferenca",
+    "t": "todos",
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "joelho na linha do pé (sem entrar pra dentro)",
+    "medida": "joelho_valgo",
+    "t": "todos",
+    "mm": [
+     -20,
+     20
+    ],
+    "fonte": "perna reta: o joelho fica na reta quadril–tornozelo (o boneco em pé, no repouso, mede ~−11 mm)"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "o corpo sobe reto, sem pender pro lado"
+   },
+   {
+    "nome": "ombros nivelados",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "braços quase estendidos até a parede",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     50
+    ],
+    "fonte": "ACE — Standing Calf Raises - Wall (\"Extend your arms to place your palms on the wall\"): o braço quase estendido; a mão fica parada na parede e o cotovelo acompanha o ombro, que sobe 11 cm e vai 2 cm pra trás (15–17° em cima, 42–43° embaixo)"
+   },
+   {
+    "nome": "braços pra frente, perto da horizontal",
+    "medida": "braco_frente",
+    "t": "todos",
+    "graus": [
+     60,
+     100
+    ],
+    "fonte": "ACE — Standing Calf Raises - Wall (\"level with your chest or shoulders\"): o braço vai pra frente até a parede, perto da horizontal"
+   },
+   {
+    "nome": "mãos na largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.9,
+     1.4
+    ],
+    "fonte": "escolha da fábrica (a ACE não dá a largura das mãos): a palma ~3 cm por fora da articulação do ombro"
+   }
+  ]
+ },
+ "cinesiologia": {
+  "plano": "sagital (flexão plantar e flexão dorsal do tornozelo). Com a ponta do pé no step, a base dos dedos é o eixo (ExRx, Calf Exercise Analyses: \"Axis: Ball of Foot\"): quando o calcanhar sobe, o tornozelo gira em volta dela e o corpo inteiro (reto, rígido do tornozelo pra cima) sobe junto, equilibrado em cima da ponta dos pés",
+  "articulacoes": "tornozelo (flexão plantar na ida, de 20° de flexão dorsal — calcanhar abaixo do step — até 30° de flexão plantar; flexão dorsal na volta); base dos dedos (metatarsofalângica) estendendo na subida, com os dedos apoiados no step; joelho e quadril estendidos e parados; tronco, coluna e cabeça parados (o corpo inteiro só sobe e desce, inclinando uns graus em volta do tornozelo pra ficar em equilíbrio); ombros e cotovelos acompanhando as mãos paradas na parede; punhos estendidos com as palmas chapadas na parede",
+  "agonistas": "gastrocnêmio (ExRx — Standing Calf Raise (peso do corpo): Target \"Gastrocnemius\"; NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise): \"Major muscles involved : Gastrocnemius, soleus\"), em contração concêntrica na subida e excêntrica na descida; com o joelho estendido ele trabalha alongado (ExRx, Calf Exercise Analyses: \"For the biarticulate gastrocnemius to plantarflex through the ankle, it must be at least partially stretched across a straight or nearly straight knee.\"; NSCA, PTQ 8.4: \"Research shows that doing calf raises (i.e., ankle plantar flexion) with a straight knee creates superior gastrocnemius muscle activity\")",
+  "sinergistas": "sóleo (ExRx — Standing Calf Raise (peso do corpo): Synergists \"Soleus\"; ExRx, Calf Exercise Analyses: \"Calf exercises like the Standing Calf Raise or Calf Press, both with the knees straight, activate both the Gastrocnemius and Soleus.\"). No mapa do app gastrocnêmio e sóleo são o mesmo grupo (panturrilha), marcado como alvo; não há auxiliar marcado (o grupo \"tibial\" do mapa é o tibial anterior, o antagonista)",
+  "estabilizadores": "o corpo se equilibra sozinho em cima da ponta dos pés; as mãos na parede só ajudam no equilíbrio (ExRx — Standing Calf Raise (peso do corpo): \"Place hand on support for balance.\"; ACE — Standing Calf Raises - Wall: \"Use your hands on the wall to support your body.\") — empurrar ou puxar o apoio tira carga da panturrilha (ExRx — Standing Calf Raise (peso do corpo): \"Resistance can be reduced by assisting raise by pulling/pushing on support.\"). O ExRx não lista estabilizadores nesta versão com as 2 pernas",
+  "fases": "concêntrica (sobe os calcanhares o máximo — ExRx — Standing Calf Raise (peso do corpo): \"Raise heels by extending ankles as high as possible\"; ACE — Standing Calf Raises - Wall: \"Hold your raised position briefly.\") e excêntrica (desce devagar até alongar — ExRx — Standing Calf Raise (peso do corpo): \"Lower heels by bending ankles until calves are stretched\"; NSCA (Achievable CSCS, cap. 15, Standing calf (heel) raise): \"Lower your heels slowly to the stretched position.\"; NSCA, PTQ 8.4: \"Do not bounce; control the lowering (eccentric) portion\"); a dica do app pede uma pausa de 1–2 s embaixo (no 3D é só o tempo: o app faz a ida e a volta)"
+ },
+ "referencias": [
+  "ExRx.net — Standing Calf Raise, peso do corpo (https://exrx.net/WeightExercises/Gastrocnemius/BWStandingCalfRaise, lido na cópia do Internet Archive de 02/07/2025; o site responde 403 direto), lido em 12/10/2026: \"Utility: Basic\", \"Mechanics: Isolated\", \"Force: Push\"; Preparation: \"Position toes and balls of feet on calf block with arches and heels extending off. Place hand on support for balance.\"; Execution: \"Raise heels by extending ankles as high as possible. Lower heels by bending ankles until calves are stretched. Repeat.\"; Comments: \"Exercise step that will not overturn can be used as calf block. Keep knees straight throughout exercise or bend knees slightly only during stretch.\"; Easier: \"Resistance can be reduced by assisting raise by pulling/pushing on support.\"; músculos: Target \"Gastrocnemius\", Synergists \"Soleus\"",
+  "ExRx.net — Calf Exercise Analyses (https://exrx.net/Kinesiology/CalfExercises, cópia do Internet Archive de 06/02/2026, lida em 12/10/2026): \"Axis: Ball of Foot\"; \"Calf exercises like the Standing Calf Raise or Calf Press, both with the knees straight, activate both the Gastrocnemius and Soleus.\"; \"For the biarticulate gastrocnemius to plantarflex through the ankle, it must be at least partially stretched across a straight or nearly straight knee.\"",
+  "ACE — Standing Calf Raises - Wall (exercise library 73, acefitness.org, lido em 12/10/2026; a versão da ACE com o peso do corpo, no chão — a ACE não tem a do step): \"Stand 6 -12\" away from a wall with your feet hip-width apart and facing forward. Extend your arms to place your palms on the wall, level with your chest or shoulders.\"; \"Exhale and slowly lift your heels off the floor keeping your knees extended and without rotating your feet. Use your hands on the wall to support your body. Hold your raised position briefly.\"; \"Inhale and slowly lower your heels back towards the floor.\"",
+  "NSCA — Achievable CSCS, cap. 15 (Exercise technique for free weight and machine training, exercise list part 2), Standing calf (heel) raise (machine) (app.achievable.me, lido em 12/10/2026; a NSCA não tem a versão com o peso do corpo no step): \"Major muscles involved : Gastrocnemius, soleus\"; \"Stand with your shoulders under the pads and your feet on the step, legs hip-width apart.\"; \"Keep your knees fully extended (not locked) and your heels lowered.\"; \"Push up onto your toes as high as possible.\"; \"Keep your knees extended and your body upright.\"; \"Lower your heels slowly to the stretched position.\"",
+  "NSCA — Personal Training Quarterly 8.4 (2021), Tumminello N., \"How to Improve Ankle Dorsiflexion and Calf Strength for Better Performance\" (PDF em nsca.com, lido em 12/10/2026): \"Research shows that doing calf raises (i.e., ankle plantar flexion) with a straight knee creates superior gastrocnemius muscle activity\"; \"Do not allow your foot to rotate outwards at any point, keep it straight throughout.\"; \"Do not bounce; control the lowering (eccentric) portion\"",
+  "Kinoshita M, Maeo S, Kobayashi Y, Eihara Y, Ono M, Sato M, Sugiyama T, Kanehisa H, Isaka T. Triceps surae muscle hypertrophy is greater after standing versus seated calf-raise training. Front Physiol. 2023;14:1272106. doi:10.3389/fphys.2023.1272106 (texto completo, PMC10753835, lido em 12/10/2026): legenda da figura 1, \"with the knee joint 0° and 90° for the standing and seated conditions, respectively, and the ankle joint angle ranging from 20° dorsiflexed to 30° plantarflexed positions for both conditions\"; \"Participants were instructed to place/keep their foot in a neutral position\"; \"muscle hypertrophy was greater after standing than seated calf-raise training, indicating greater hypertrophic effects of training at long muscle lengths\" (treino em máquina de panturrilha em pé)",
+  "Alazzawi S, Sukeik M, King D, Vemulapalli K. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop. 2017;8(1):21-29 (PMC5241541), tabela 5 lida em 12/10/2026: \"Dorsiflexion\" \"0-20 degrees\"; \"Plantar flexion\" \"0-50 degrees\"",
+  "free-exercise-db (yuhonas, domínio público) — Standing Dumbbell Calf Raise (lido em 12/10/2026; a mais perto, com halteres numa tábua baixa): \"Stand with your torso upright holding two dumbbells in your hands by your sides. Place the ball of the foot on a sturdy and stable wooden board (that is around 2-3 inches tall) while your heels extend off and touch the floor.\"; \"With the toes pointing either straight (to hit all parts equally), inwards (for emphasis on the outer head) or outwards (for emphasis on the inner head)\"; \"Hold the top contraction for a second.\"",
+  "Base da dica do app (conferida, sem mexer no catálogo): Kassiano W et al. Greater Gastrocnemius Muscle Hypertrophy After Partial Range of Motion Training Performed at Long Muscle Lengths. J Strength Cond Res. 2023;37(9):1746-1753 (resumo, PMID 37015016, lido em 12/10/2026): \"The calf raise exercise was performed in a pin-loaded, horizontal, leg-press machine\"; \"INITIAL ROM elicited greater medial gastrocnemius increases than FULL ROM and FINAL ROM\"; \"calf training performed at longer muscle lengths may optimize gastrocnemius muscle hypertrophy in young women\" — bate com \"a posição alongada (calcanhar abaixo) é a que mais gera hipertrofia\". Nunes JP et al. Different Foot Positioning During Calf Training to Induce Portion-Specific Gastrocnemius Muscle Hypertrophy. J Strength Cond Res. 2020;34(8):2347-2351 (resumo, PMID 32735428, lido em 12/10/2026): \"Positioning FPO potentiated the increases in MT of the medial gastrocnemius head, whereas FPI provided greater gains for the lateral gastrocnemius head.\" — NÃO bate com \"a direção dos pés não altera a ativação\" (mediu hipertrofia por cabeça, que mudou com a direção do pé); o 3D usa os pés pra frente (neutro), como a ACE, a NSCA e o Kinoshita",
+  "Medidas do step — Reebok Step \"The Original\": Lifespan Fitness (distribuidora da Reebok Fitness na Austrália, lifespanfitness.com.au/products/reebok-step-red, cópia do Internet Archive de 18/04/2026, lida em 12/10/2026): \"Occupancy Size 102cm x 38.5cm x 25cm (L x W x H)\", \"3 adjustable heights - 15, 20 and 25 cm\", \"Non-slip workout surface\", \"Rubber feet prevent slipping\"; Made4Fighters (loja, cópia de 09/12/2023): \"Setup dimensions: (L)102 x (W)38.5 x (H)15, 20, 25 cm\", \"The textured surface provides even more grip\"; Perform Better, The Step (performbetter.com, lido em 12/10/2026): \"Platform Dimensions 43\" L × 16\" W × 4\" H\", \"Riser Dimensions 16\" square × 2\" H (each)\", \"Four nonskid feet on platform and on each riser\". Aqui o Reebok na altura mais baixa (15 cm), atravessado na frente da pessoa, com a ponta dos pés na borda comprida (os 2 pés na largura do quadril ocupam 44 cm de lado a lado: não cabem na borda curta, de 38,5 cm)"
+ ]
+}

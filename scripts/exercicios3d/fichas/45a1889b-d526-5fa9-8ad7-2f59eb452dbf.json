@@ -1,0 +1,349 @@
+{
+ "uuid": "45a1889b-d526-5fa9-8ad7-2f59eb452dbf",
+ "nome": "Elevação Frontal com Anilha",
+ "cena": "elevacao_frontal_com_anilha",
+ "grupo": "Deltóide",
+ "subgrupo": "Deltoide anterior",
+ "padrao_movimento": "elevacao_frontal",
+ "equipamento": "anilha",
+ "variacao": "em pé",
+ "alvos": [
+  "deltoide"
+ ],
+ "auxiliares": [
+  "peitoral",
+  "trapezio"
+ ],
+ "camera": {
+  "az": 40,
+  "el": 12,
+  "dist": 4.4,
+  "alvo": [
+   0,
+   -0.3,
+   1.05
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.6,
+  "alvo": [
+   0,
+   -0.2,
+   1.0
+  ]
+ },
+ "ida_s": 2.0,
+ "movimento": "Em pé, ereto, com os pés na largura do quadril e as pontas para a frente e os joelhos levemente dobrados, segura UMA anilha com as duas mãos, uma de cada lado, nas posições de 3 e 9 horas (nos pegadores vazados da anilha), com as palmas viradas uma para a outra (pegada neutra) e os cotovelos levemente dobrados. Começa com a anilha na frente da cintura, logo na frente das coxas, inclinada (a borda de cima para a frente). Sem mexer os cotovelos e sem balançar, sobe a anilha pela frente, num arco, com os dois braços juntos, até os braços passarem um pouco da horizontal e a anilha ficar em pé, de frente, com o meio um pouco acima da altura dos ombros. Desce devagar (cerca de 2 s) pelo mesmo caminho até a anilha voltar para a frente da cintura. O tronco fica ereto e parado, a cabeça na linha da coluna, as escápulas paradas e as pernas paradas; o punho não dobra para a frente nem para trás — só a inclinação da mão acompanha a anilha, que gira um pouco menos que os braços (em pé em cima, inclinada embaixo).",
+ "cinesiologia": {
+  "plano": "sagital (flexão do ombro na subida, extensão na descida), cadeia cinética aberta; os dois braços sobem juntos com a anilha rígida entre as mãos (free-exercise-db, Front Plate Raise: \"Slowly raise the plate as you exhale until it is a little above shoulder level\"; PureGym, Plate Front Raise: \"Brace your core and begin the reps by sweeping the plate upwards in an arc direction until your hands and the plate are at shoulder height\"; Coratella 2020: \"Frontal raise was performed on the sagittal plane, lifting up the upper limb in neutral rotation by a frontal flexion, with a straight elbow\")",
+  "articulacoes": "ombro (flexão de ~18° a ~92° e volta, com o úmero sem girar: pegada neutra, polegar pra cima); cotovelo parado, levemente dobrado (~10°); punho sem flexão nem extensão (~3°, parado) e com um desvio pro lado do polegar que vai de ~2° em cima a ~17° embaixo — é ele que deixa a anilha inclinada embaixo (a anilha gira ~59° enquanto os braços giram ~74°), dentro da amplitude normal do punho que a fábrica usa (desvio radial até 20°: limites.py, Norkin & White, valores da AAOS); escápulas paradas; tronco ereto, joelhos levemente dobrados (~10°) e pés chapados, parados (free-exercise-db, Front Plate Raise: \"your arms should be extended and locked with a slight bend at the elbows\", \"The arms will remain in this position throughout the exercise\", \"make sure that you do not swing the weight or bend at the elbows. Your torso should remain stationary throughout the movement as well\"; ExRx, Barbell Front Raise: \"Elbows may be kept straight or slightly bent throughout movement\"; ACE, Front Raise: \"Maintain an erect torso (no arching of your low back) and neutral wrist position (avoid flexion and extension of your wrists)\"; NSCA (Basics of Strength and Conditioning Manual), Front Raises: \"Slightly flex knees and engage the core to stabilize the body\"; Coratella 2020: \"the humerus neutrally rotated (i.e., thumb-to-thumb)\", \"All exercises were performed avoiding any movement in elbow and wrist flexion/extension or wrist pronation/supination\")",
+  "agonistas": "deltoide anterior (ExRx, Barbell Front Raise: Target \"Deltoid, Anterior\"; NSCA (Basics of Strength and Conditioning Manual), Front Raises: \"Exercise Objective: Isolate and develop strength in the anterior deltoids\"; free-exercise-db, Front Plate Raise: \"primaryMuscles\": [\"shoulders\"]); na elevação frontal ele trabalha junto com a porção clavicular do peitoral, e o deltoide médio e o posterior quase não trabalham (Coratella 2020, fisiculturistas sentados: \"Frontal raise mainly activates anterior deltoid and pectoralis major\"; \"both medial and posterior deltoids appeared to play a negligible role in frontal raise\"). A PureGym, Plate Front Raise diz que o deltoide médio também trabalha (\"Front plate raises mainly work the medial and anterior deltoids\"); o estudo de EMG não mostra isso",
+  "sinergistas": "porção clavicular do peitoral maior, deltoide lateral, coracobraquial, trapézio (fibras médias e inferiores) e serrátil anterior (ExRx, Barbell Front Raise: Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Lateral\", \"Coracobrachialis\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\"; Coratella 2020: \"As a whole, frontal raise appears to mainly require the activation of the anterior deltoid and the clavicular head of the pectoralis major\"; PureGym, Plate Front Raise: \"with the traps and chest helping to stabilise the movement\")",
+  "estabilizadores": "trapézio superior, levantador da escápula e extensores do punho (ExRx, Barbell Front Raise: Stabilizers \"Trapezius, Upper\", \"Levator Scapulae\", \"Wrist Extensors\"); o tríceps segura o cotovelo no mesmo ângulo (Coratella 2020: \"triceps brachii is a strong stabilizer of the elbow during all LR variations and frontal raise\"); os abdominais firmam o tronco e as escápulas ficam baixas e pra trás (PureGym, Plate Front Raise: \"The core is also engaged to keep the body stable\"; ACE, Front Raise: \"Stiffen your torso by contracting your abdominal/core muscles (\"bracing\"), and depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise\"; NSCA (Basics of Strength and Conditioning Manual), Front Raises: \"pull shoulder blades back and down\")",
+  "fases": "subida concêntrica (soltando o ar) e descida excêntrica devagar, pelo mesmo caminho, até a anilha voltar para a frente da cintura; cada fase leva 2 s no app, como no estudo (free-exercise-db, Front Plate Raise: \"Slowly raise the plate as you exhale until it is a little above shoulder level. Hold the contraction for a second\"; \"As you inhale, slowly lower the plate back down to the starting position\"; Coratella 2020: \"Each exercise was performed with the pacing of 2 s for the concentric and 2 s for the eccentric phase\"; PureGym, Plate Front Raise: \"It’s important to avoid using momentum to lift the plate as this removes tension from the shoulders\")"
+ },
+ "referencias": [
+  "free-exercise-db (lista aberta, domínio público; é a fonte do \"fonte_en\" do catálogo) — Front Plate Raise. https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Plate_Raise.json (lido em 11/10/2026): \"While standing straight, hold a barbell plate in both hands at the 3 and 9 o'clock positions. Your palms should be facing each other and your arms should be extended and locked with a slight bend at the elbows and the plate should be down near your waist in front of you as far as you can go. Tip: The arms will remain in this position throughout the exercise. This will be your starting position.\" \"Slowly raise the plate as you exhale until it is a little above shoulder level. Hold the contraction for a second. Tip: make sure that you do not swing the weight or bend at the elbows. Your torso should remain stationary throughout the movement as well.\" \"As you inhale, slowly lower the plate back down to the starting position.\" Campos: \"mechanic\": \"isolation\", \"force\": \"push\", \"primaryMuscles\": [\"shoulders\"], \"secondaryMuscles\": []. As 2 fotos (em pé, pés paralelos): embaixo a anilha (uma bumper sem pegadores) inclinada na frente do quadril; em cima, em pé, de frente, na altura do rosto.",
+  "PureGym — Plate Front Raise. https://www.puregym.com/exercises/arms-and-shoulders/front-raises/plate-front-raise/ (lido em 11/10/2026): \"The front plate raise is a front raise variation that challenges the lifter to raise a weight plate from hip height in an arc direction until the arms are straight ahead and the plate is at shoulder height. Due to the shape of the plate, a neutral grip is used, where other variations use a pronated grip.\" \"To adopt the correct grip and positioning, think about placing your hands on the plate at 3 o’clock and 9 o’clock.\" \"Select a weight plate and hold with both hands using a neutral grip so that the palms are facing each other.\" \"Brace your core and begin the reps by sweeping the plate upwards in an arc direction until your hands and the plate are at shoulder height.\" \"Revert the movement by slowly lowering the plate until it returns to the beginning position.\" \"It’s important to avoid using momentum to lift the plate as this removes tension from the shoulders.\" \"Front plate raises mainly work the medial and anterior deltoids, with the traps and chest helping to stabilise the movement. The core is also engaged to keep the body stable.\" Na foto (em cima): anilha de pegadores, em pé, de frente, as mãos nas laterais.",
+  "ExRx.net — Barbell Front Raise (o ExRx não tem a elevação frontal com anilha; esta é a com as 2 mãos num implemento só). https://exrx.net/WeightExercises/DeltoidAnterior/BBFrontRaise (lido na cópia do Internet Archive de 06/02/2026; o site direto bloqueia a leitura automática): \"Grasp barbell with overhand grip with elbows straight or slightly bent.\" \"Raise barbell forward and upward until upper arms are above horizontal. Lower and repeat.\" \"Height of movement may depend on range of motion. Raise should be limited to height achieved just before tightness is felt in shoulder capsule. Alternatively, height just above horizontal may be considered adequate. Elbows may be kept straight or slightly bent throughout movement.\" Músculos: alvo Deltoid, Anterior; sinergistas Pectoralis Major, Clavicular; Deltoid, Lateral; Coracobrachialis; Trapezius, Middle; Trapezius, Lower; Serratus Anterior, Inferior Digitations; estabilizadores Trapezius, Upper; Levator Scapulae; Wrist Extensors.",
+  "American Council on Exercise (ACE) — Exercise Library: Front Raise (com halteres; o ACE não tem a com anilha). https://www.acefitness.org/resources/everyone/exercise-library/54/front-raise/ (lido em 11/10/2026): \"Position the dumbbells lightly touching the fronts of your thighs with your elbows extended or holding a slight bend. Assume either a split-stance position to stabilize your body or position your feet slightly wider than hip-width apart.\" \"Stiffen your torso by contracting your abdominal/core muscles (\"bracing\"), and depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise. Your head position should be aligned with your spine.\" \"Continue raising the dumbbells until your arms are level with your shoulders and approximately parallel with the floor. Maintain an erect torso (no arching of your low back) and neutral wrist position (avoid flexion and extension of your wrists).\"",
+  "Sands WA, Wurth JJ, Hewit JK. The National Strength and Conditioning Association's (NSCA) Basics of Strength and Conditioning Manual. NSCA; 2012. Cap. 4, \"3a. Dumbbell Shoulder Raises — Front Raises\", p. 41 (com halteres; a NSCA não tem a com anilha). https://www.nsca.com/contentassets/48a12160221541acbdc048498d77192d/basics_of_strength_and_conditioning_manual.pdf (lido na cópia do Internet Archive de 12/02/2022): \"Exercise Objective: Isolate and develop strength in the anterior deltoids\"; Start Position: \"1. Stand erect with a dumbbell in each hand\" \"2. Let arms hang in front of the thighs, and pull shoulder blades back and down\" \"3. Position feet hip-width apart with toes pointed straight ahead\" \"4. Slightly flex knees and engage the core to stabilize the body and prevent arching of the back (avoid rocking back and forth to complete the lift)\"; Procedure: \"1. Maintain a constant body position and raise dumbbells directly to the front until they are at shoulder level\"; Coaching Points: \"Maintain a constant head, body, and arm position throughout the entire lift\" \"Avoid using momentum to complete the lift\".",
+  "Coratella G, Tornatore G, Longo S, Esposito F, Cè E. An Electromyographic Analysis of Lateral Raise Variations and Frontal Raise in Competitive Bodybuilders. Int J Environ Res Public Health. 2020;17(17):6015. doi:10.3390/ijerph17176015 (texto completo no PMC7503819, lido em 11/10/2026): \"each exercise was performed seated with a load that allowed eight repetitions (i.e., 8-RM)\"; \"Each exercise was performed with the pacing of 2 s for the concentric and 2 s for the eccentric phase and 0.5 s for the isometric phase at the beginning and at the end of each movement\"; \"All exercises were performed avoiding any movement in elbow and wrist flexion/extension or wrist pronation/supination\"; \"For frontal raise, the participants were required to frontally flex the humerus up to 90°, with humerus neutrally rotated (i.e., thumb-to-thumb). For all these exercises, the elbow was almost fully extended, and the wrist in line with the forearm\"; \"Frontal raise mainly activates anterior deltoid and pectoralis major\"; \"both medial and posterior deltoids appeared to play a negligible role in frontal raise\".",
+  "Eleiko — Eleiko Grip Plate Rubber 10kg, ficha oficial do produto (art. 3085671-10). https://media.eleiko.com/admin/download-product-sheet.aspx?language=en-us&articlecode=3085671-10&view=true (lida em 11/10/2026): \"Eleiko Grip Plates feature a solid iron core covered in rubber with symmetric, ergonomic grip holes for easier plate handling and loading.\" \"Integrated symmetric grip holes are comfortable for a wider range of users and allow for hand-held weighted strength movements.\" \"Width 30 mm / 1.18 in.\" \"Weight 10 kg / 22.05 lbs\" \"Diameter 350 mm / 13.78 in.\" A anilha do 3D (equip3d.anilha) é essa: os 2 vazados (47 × 100 mm, a borda de fora a 145,5 mm do centro) e o furo de 50 mm foram medidos na foto da ficha (a ficha não dá essas medidas); o furo bate com o da Rogue 6-Shooter Urethane Olympic Grip Plates (\"50.60MM collar opening\", cópia do Internet Archive de 03/09/2025)."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "começo: a anilha fica logo na frente das coxas, sem encostar",
+    "equipamento": "anilha",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "t": 0.0,
+    "mm": [
+     8,
+     40
+    ],
+    "fonte": "free-exercise-db, Front Plate Raise (\"the plate should be down near your waist in front of you as far as you can go\"); PureGym, Plate Front Raise (\"raise a weight plate from hip height\"); pedido do Weslley (a anilha nunca entra nas coxas). Medido da anilha até a pele; a faixa é da cena"
+   },
+   {
+    "nome": "a anilha não encosta na barriga nem no peito",
+    "equipamento": "anilha",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     50,
+     5000
+    ],
+    "fonte": "pedido do Weslley (a anilha nunca entra no tronco); medido da pele (a faixa é da cena)"
+   },
+   {
+    "nome": "a anilha passa longe do rosto e do pescoço",
+    "equipamento": "anilha",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "mm": [
+     150,
+     5000
+    ],
+    "fonte": "pedido do Weslley (em cima, com a anilha na altura dos ombros, nada entra no rosto); medido da pele (a faixa é da cena)"
+   },
+   {
+    "nome": "a anilha não encosta nos antebraços nem nos braços",
+    "equipamento": "anilha",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     15,
+     5000
+    ],
+    "fonte": "pedido do Weslley (a anilha nunca entra nos antebraços); a anilha fica entre as mãos, na frente dos punhos; medido da pele (a faixa é da cena)"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "a anilha passa longe do cabelo",
+    "equipamento": "anilha",
+    "de": "cabelo",
+    "mm": [
+     150,
+     5000
+    ],
+    "fonte": "pedido do Weslley (em cima a anilha fica na frente do rosto, sem encostar no cabelo); medido de superfície a superfície (a faixa é da cena)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "antebraços e mãos não entram no tronco nem nas coxas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o mesmo limite do corpo × corpo da checagem (PENETRA_MM)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "começo: braços quase pendurados, um pouco à frente do corpo (a anilha na frente da cintura)",
+    "medida": "braco_frente",
+    "t": 0.0,
+    "graus": [
+     12,
+     25
+    ],
+    "fonte": "free-exercise-db, Front Plate Raise (\"the plate should be down near your waist in front of you as far as you can go\"); PureGym, Plate Front Raise (\"from hip height\"). A anilha (35 cm) fica entre as mãos, na frente do corpo: o braço para a 18°, com a anilha a ~2 cm das coxas; a faixa é da cena"
+   },
+   {
+    "nome": "fim: braços um pouco acima da horizontal",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     88,
+     100
+    ],
+    "fonte": "free-exercise-db, Front Plate Raise (\"until it is a little above shoulder level\"); ExRx, Barbell Front Raise (\"until upper arms are above horizontal\"; \"height just above horizontal may be considered adequate\"); PureGym, Plate Front Raise (\"until the arms are straight ahead and the plate is at shoulder height\"). A cena para a 92°"
+   },
+   {
+    "nome": "o braço não passa muito da horizontal",
+    "medida": "braco_elevacao",
+    "t": "todos",
+    "graus": [
+     0,
+     100
+    ],
+    "fonte": "ExRx, Barbell Front Raise (\"Raise should be limited to height achieved just before tightness is felt in shoulder capsule. Alternatively, height just above horizontal may be considered adequate\")"
+   },
+   {
+    "nome": "sobe pela frente, no plano sagital (braços quase paralelos)",
+    "medida": "braco_plano",
+    "t": [
+     0.5,
+     1.0
+    ],
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "Coratella 2020 (\"Frontal raise was performed on the sagittal plane\"); NSCA (Basics of Strength and Conditioning Manual), Front Raises (\"raise dumbbells directly to the front\"). 90 = braço apontando pra frente"
+   },
+   {
+    "nome": "cotovelos sem abrir pro lado",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -5,
+     8
+    ],
+    "fonte": "Coratella 2020 (\"Frontal raise was performed on the sagittal plane\"). As mãos ficam nos lados da anilha (32 cm), um pouco por dentro dos ombros: os braços fecham ~1° pra dentro; a faixa é da cena"
+   },
+   {
+    "nome": "cotovelos levemente dobrados e parados",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     5,
+     15
+    ],
+    "fonte": "free-exercise-db, Front Plate Raise (\"your arms should be extended and locked with a slight bend at the elbows\"; \"The arms will remain in this position throughout the exercise\"; \"do not ... bend at the elbows\"); ExRx, Barbell Front Raise (\"Elbows may be kept straight or slightly bent throughout movement\"); Coratella 2020 (\"the elbow was almost fully extended\"). A cena usa 10°"
+   },
+   {
+    "nome": "punho sem dobrar pra frente nem pra trás",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -10,
+     10
+    ],
+    "fonte": "ACE, Front Raise (\"neutral wrist position (avoid flexion and extension of your wrists)\"); Coratella 2020 (\"the wrist in line with the forearm\"; \"avoiding any movement in elbow and wrist flexion/extension\"). A cena fica em ~−3°, parada"
+   },
+   {
+    "nome": "desvio do punho dentro da amplitude normal (pro lado do polegar, embaixo)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -5,
+     20
+    ],
+    "fonte": "amplitude normal do punho usada na fábrica (limites.py: Norkin & White, valores da AAOS — desvio radial 20°, ulnar 30°). Com a pegada neutra é o desvio que inclina a anilha: em pé em cima (~2°), inclinada embaixo (~17°), como nas fotos do free-exercise-db, Front Plate Raise (a anilha inclinada embaixo e em pé em cima)"
+   },
+   {
+    "nome": "pegada neutra: palmas viradas uma pra outra",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     70,
+     90
+    ],
+    "fonte": "free-exercise-db, Front Plate Raise (\"Your palms should be facing each other\"); PureGym, Plate Front Raise (\"a neutral grip is used\"; \"so that the palms are facing each other\"). 90 = palma virada bem pro meio do corpo"
+   },
+   {
+    "nome": "mãos nos lados da anilha (3 e 9 horas)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.85,
+     1.0
+    ],
+    "fonte": "free-exercise-db, Front Plate Raise (\"hold a barbell plate in both hands at the 3 and 9 o'clock positions\"); PureGym, Plate Front Raise (\"placing your hands on the plate at 3 o’clock and 9 o’clock\"). Distância entre as bases dos dedos médios ÷ entre as articulações dos ombros: as mãos ficam nos lados da anilha de 35 cm; a faixa é da cena"
+   },
+   {
+    "nome": "tronco ereto e parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "free-exercise-db, Front Plate Raise (\"Your torso should remain stationary throughout the movement as well\"); ACE, Front Raise (\"Maintain an erect torso\"); NSCA (Basics of Strength and Conditioning Manual), Front Raises (\"Maintain a constant head, body, and arm position throughout the entire lift\")"
+   },
+   {
+    "nome": "cabeça na linha da coluna",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE, Front Raise (\"Your head position should be aligned with your spine\"). O boneco em pé, no repouso, mede ~−11°; a faixa é da cena"
+   },
+   {
+    "nome": "escápulas paradas (os ombros não vão pra frente)",
+    "medida": "ombro_frente",
+    "t": "todos",
+    "mm": [
+     -15,
+     20
+    ],
+    "fonte": "ACE, Front Raise (\"depress and retract your scapulae (pull your shoulders down and back), maintaining this position throughout the exercise\"); NSCA (Basics of Strength and Conditioning Manual), Front Raises (\"pull shoulder blades back and down\"). O boneco em pé, no repouso, mede ~6 mm; a faixa é da cena"
+   },
+   {
+    "nome": "joelhos levemente dobrados e parados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     5,
+     15
+    ],
+    "fonte": "NSCA (Basics of Strength and Conditioning Manual), Front Raises (\"Slightly flex knees and engage the core to stabilize the body and prevent arching of the back\"). A cena usa 10°"
+   },
+   {
+    "nome": "pés na largura do quadril",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     1.3,
+     1.8
+    ],
+    "fonte": "NSCA (Basics of Strength and Conditioning Manual), Front Raises (\"Position feet hip-width apart with toes pointed straight ahead\"); ACE, Front Raise (\"position your feet slightly wider than hip-width apart\"). Distância entre os tornozelos ÷ entre as articulações do quadril; a faixa é da cena"
+   },
+   {
+    "nome": "pontas dos pés pra frente",
+    "medida": "ponta_pe",
+    "t": "todos",
+    "graus": [
+     -6,
+     8
+    ],
+    "fonte": "NSCA (Basics of Strength and Conditioning Manual), Front Raises (\"Position feet hip-width apart with toes pointed straight ahead\")"
+   }
+  ]
+ }
+}

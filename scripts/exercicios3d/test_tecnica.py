@@ -683,3 +683,217 @@ def test_tronco_giro_sentado_em_volta_do_proprio_eixo():
     assert tc.tronco_giro(girar(virar(j, -8), 25, (1, 0, 0), (0, 0, 1.0))) == pytest.approx([-8], abs=1e-6)
     assert tc.tronco_giro(em_pe()) == []
     assert "tronco_giro" in tc.MEDIDAS
+
+
+def test_coluna_sinal_arqueada_negativa_e_enrolada_positiva():
+    """Abdominal na polia (lote 12): a coluna reta = 0; a torácica 30° à frente da lombar (enrolada) = +30 e 12° pra trás (arqueada
+    pelo peso do cabo, no começo) = −12 — o `coluna` dá 30 e 12, sem sinal. O mesmo número com o boneco inclinado 45° pra frente
+    (ajoelhado na polia), deitado ou virado."""
+    j = em_pe()
+    assert tc.coluna_sinal(j) == pytest.approx([0], abs=1e-6)
+    enrolada = dict(j, Neck=girar({"n": j["Neck"]}, 30, (1, 0, 0), j["Spine1"])["n"])
+    arqueada = dict(j, Neck=girar({"n": j["Neck"]}, -12, (1, 0, 0), j["Spine1"])["n"])
+    assert tc.coluna_sinal(enrolada) == pytest.approx([30], abs=1e-6)
+    assert tc.coluna_sinal(arqueada) == pytest.approx([-12], abs=1e-6)
+    assert tc.coluna(arqueada)[0] == pytest.approx(12, abs=1e-6)
+    assert tc.coluna_sinal(girar(arqueada, 45, (1, 0, 0), (0, 0, 0.95))) == pytest.approx([-12], abs=1e-6)
+    assert tc.coluna_sinal(girar(enrolada, -90, (1, 0, 0))) == pytest.approx([30], abs=1e-6)
+    assert tc.coluna_sinal(girar(enrolada, 60, (0, 0, 1))) == pytest.approx([30], abs=1e-6)
+    assert "coluna_sinal" in tc.MEDIDAS
+
+
+def test_pelve_giro_no_chao_em_pe_deitado_e_virando():
+    """Abdominal russo (lote 12): a pelve parada no chão mede 0 em pé, curvada ou deitada; virando pra esquerda (em volta da vertical)
+    dá +, pra direita −; o tórax girando sozinho (tronco_giro) não mexe nela."""
+    j = em_pe()
+    assert tc.pelve_giro(j)[0] == pytest.approx(0, abs=1e-6)
+    deitado = girar(j, -90, (1, 0, 0), pivo=(0, 0, 0.95))          # deitado de costas (cabeça pra +Y): a linha dos quadris fica no X
+    assert tc.pelve_giro(deitado)[0] == pytest.approx(0, abs=1e-6)
+    sentado = girar(j, -40, (1, 0, 0), pivo=(0, 0, 0.95))          # tronco reclinado 40° pra trás
+    assert tc.pelve_giro(sentado)[0] == pytest.approx(0, abs=1e-6)
+    esq = girar(sentado, 25, (0, 0, 1))                            # o corpo inteiro vira pra esquerda (o quadril direito vai pra frente)
+    assert tc.pelve_giro(esq)[0] == pytest.approx(25, abs=1e-6)
+    assert esq["RightUpLeg"][1] < esq["LeftUpLeg"][1]
+    assert tc.pelve_giro(girar(sentado, -25, (0, 0, 1)))[0] == pytest.approx(-25, abs=1e-6)
+    so_torax = dict(sentado)                                        # só o tórax gira: a pelve continua em 0
+    so_torax.update({k: v for k, v in girar(sentado, 30, (0, 0, 1)).items() if k in ("LeftShoulder", "RightShoulder", "Neck")})
+    assert tc.pelve_giro(so_torax)[0] == pytest.approx(0, abs=1e-6)
+
+
+def test_coxa_vertical_deitado_com_a_pelve_no_chao_e_levantada():
+    """Abdominal infra (lote 12): deitado de costas (cabeça pra +Y), a coxa em pé mede 0, inclinada 30° pro lado da cabeça +30 e 20°
+    pro lado dos pés −20, nos 2 lados; abrir a coxa pro lado não muda; com a pelve levantada (quadril mais alto que o pescoço) e o
+    corpo virado no chão, o número é o mesmo."""
+    deitado = girar(em_pe(), -90, (1, 0, 0), pivo=(0, 0, 0.95))
+
+    def coxa(j, graus, abre=0.0):
+        j = dict(j)
+        for L, s in (("Left", 1), ("Right", -1)):
+            a = math.radians(graus)
+            j[L + "Leg"] = j[L + "UpLeg"] + 0.45 * np.array((s * math.sin(math.radians(abre)), math.sin(a), math.cos(a)))
+        return j
+
+    assert tc.coxa_vertical(coxa(deitado, 0)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.coxa_vertical(coxa(deitado, 30)) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.coxa_vertical(coxa(deitado, -20)) == pytest.approx([-20, -20], abs=1e-6)
+    assert tc.coxa_vertical(coxa(deitado, 30, abre=10)) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.coxa_vertical(deitado)[0] == pytest.approx(-87.5, abs=0.1)     # pernas esticadas no chão, pros pés
+    alto = dict(coxa(deitado, 65), Hips=deitado["Hips"] + np.array((0, 0.05, 0.20)))  # pelve 20 cm acima do chão
+    assert tc.coxa_vertical(alto) == pytest.approx([65, 65], abs=1e-6)
+    virado = girar(coxa(deitado, 40), 90, (0, 0, 1))                # o corpo inteiro virado no chão
+    assert tc.coxa_vertical(virado) == pytest.approx([40, 40], abs=1e-6)
+    assert "coxa_vertical" in tc.MEDIDAS
+
+
+def test_joelho_frente_do_pe_na_linha_de_prumo_da_bola_do_pe():
+    """Bicicleta ergométrica (lote 14): o joelho bem em cima da base dos dedos mede 0; 2 cm à frente +20 e 4 cm atrás −40, nos 2 lados;
+    subir o joelho não muda (é só a distância na horizontal) e o boneco inteiro virado no chão dá o mesmo número."""
+    def joelho_em(j, dy):
+        j = dict(j)
+        for L in ("Left", "Right"):
+            j[L + "Leg"] = j[L + "ToeBase"] + np.array((0.0, -dy, 0.40))       # −Y = frente
+        return j
+
+    j = em_pe()
+    assert tc.joelho_frente_do_pe(joelho_em(j, 0.0)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.joelho_frente_do_pe(joelho_em(j, 0.02)) == pytest.approx([20, 20], abs=1e-6)
+    assert tc.joelho_frente_do_pe(joelho_em(j, -0.04)) == pytest.approx([-40, -40], abs=1e-6)
+    alto = joelho_em(j, 0.02)
+    alto = dict(alto, LeftLeg=alto["LeftLeg"] + np.array((0, 0, 0.1)), RightLeg=alto["RightLeg"] + np.array((0, 0, 0.1)))
+    assert tc.joelho_frente_do_pe(alto) == pytest.approx([20, 20], abs=1e-6)
+    assert tc.joelho_frente_do_pe(girar(joelho_em(j, 0.02), 35, (0, 0, 1))) == pytest.approx([20, 20], abs=1e-6)
+    assert "joelho_frente_do_pe" in tc.MEDIDAS
+
+
+def test_coxa_em_pe_contra_a_vertical_com_sinal():
+    """Elíptico (lote 14): a coxa em pé mede ~0, 30° à frente +30 e 10° atrás −10, nos 2 lados; abrir a coxa pro lado não muda; o boneco
+    inteiro virado no chão (em volta da vertical) dá o mesmo número."""
+    def coxa(j, graus, abre=0.0):
+        j = dict(j)
+        for L, s in (("Left", 1), ("Right", -1)):
+            a = math.radians(graus)
+            j[L + "Leg"] = j[L + "UpLeg"] + 0.45 * np.array((s * math.sin(math.radians(abre)), -math.sin(a), -math.cos(a)))
+        return j
+
+    j = em_pe()
+    assert tc.coxa_em_pe(coxa(j, 0)) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.coxa_em_pe(coxa(j, 30)) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.coxa_em_pe(coxa(j, -10)) == pytest.approx([-10, -10], abs=1e-6)
+    assert tc.coxa_em_pe(coxa(j, 45, abre=12)) == pytest.approx([45, 45], abs=1e-6)
+    assert tc.coxa_em_pe(girar(coxa(j, 30), 40, (0, 0, 1))) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.coxa_em_pe(j)[0] == pytest.approx(math.degrees(math.atan2(0.02, 0.45)), abs=1e-6)   # em_pe: joelho 2 cm à frente
+    assert "coxa_em_pe" in tc.MEDIDAS
+
+
+def test_quadril_na_reta_ate_o_tornozelo_de_um_lado_e_bola_do_pe_no_escalador():
+    """Escalador (lote 13): com os 2 tornozelos juntos, os 2 lados dão o quadril_linha_ombro_tornozelo; com o pé esquerdo puxado pra
+    frente (embaixo do quadril) só o número do lado esquerdo muda — o direito continua medindo a reta até o tornozelo de trás. A bola do
+    pé (ToeBase) à frente (+) ou atrás (−) do quadril, vista de cima, na direção da cabeça: de bruços, inclinado ou virado, o mesmo
+    número; subir o pé não muda."""
+    j = em_pe()                                                   # ombros, quadril e tornozelos no eixo x = 0, y = 0 (vista de lado)
+    for L in ("Left", "Right"):
+        j[L + "Foot"] = np.array([j[L + "Foot"][0], 0.0, 0.08])
+    k = dict(j, **{L + "UpLeg": j[L + "UpLeg"] + np.array([0, 0.03, 0]) for L in ("Left", "Right")})   # quadril 3 cm pras costas
+    assert tc.quadril_linha_ombro_tornozelo_lado(k) == pytest.approx([30, 30], abs=1e-6)
+    assert tc.quadril_linha_ombro_tornozelo_lado(k)[0] == pytest.approx(tc.quadril_linha_ombro_tornozelo(k)[0], abs=1e-6)
+    dobrou = dict(k, LeftFoot=np.array([0.10, -0.25, 0.55]))     # o pé esquerdo vai pra frente e pra cima (perna dobrada)
+    assert tc.quadril_linha_ombro_tornozelo_lado(dobrou)[1] == pytest.approx(30, abs=1e-6)
+    assert abs(tc.quadril_linha_ombro_tornozelo_lado(dobrou)[0] - 30) > 5
+    de_brucos = girar(dobrou, 85, (1, 0, 0))
+    assert tc.quadril_linha_ombro_tornozelo_lado(de_brucos)[1] == pytest.approx(30, abs=1e-6)
+    assert tc.quadril_linha_ombro_tornozelo_lado(girar(de_brucos, 35, (0, 0, 1)))[1] == pytest.approx(30, abs=1e-6)
+
+    p = girar(em_pe(), 90, (1, 0, 0), (0, 0, 0.95))                # de bruços: a cabeça pra −Y, o quadril em y = 0
+    quadril = (p["LeftUpLeg"] + p["RightUpLeg"]) / 2
+    p["LeftToeBase"] = quadril + np.array([0.10, 0.20, -0.45])   # 20 cm atrás do quadril, embaixo do corpo
+    p["RightToeBase"] = quadril + np.array([-0.10, 0.75, -0.45])  # 75 cm atrás
+    assert tc.bola_do_pe_quadril(p) == pytest.approx([-200, -750], abs=1e-6)
+    assert tc.bola_do_pe_quadril(girar(p, 30, (0, 0, 1))) == pytest.approx([-200, -750], abs=1e-6)
+    alto = dict(p, LeftToeBase=p["LeftToeBase"] + np.array([0, 0, 0.06]))
+    assert tc.bola_do_pe_quadril(alto) == pytest.approx([-200, -750], abs=1e-6)
+    assert {"quadril_linha_ombro_tornozelo_lado", "bola_do_pe_quadril"} <= set(tc.MEDIDAS)
+
+
+def test_tronco_e_canela_com_sinal_no_remo():
+    """Remo ergômetro (lote 14): o tronco (quadril → pescoço) × vertical com sinal, + pra trás (o final) e − pra frente (a pegada), visto
+    de lado da pelve: o mesmo número com o boneco virado e com o tronco inclinado de lado; a canela (tornozelo → joelho) × vertical, + com
+    o joelho à frente do tornozelo."""
+    j = em_pe()
+    assert tc.tronco_sinal(j) == pytest.approx([0], abs=1e-6)
+    tras = dict(j, Neck=j["Hips"] + np.array([0, 0.5 * math.sin(math.radians(20)), 0.5 * math.cos(math.radians(20))]))
+    frente = dict(j, Neck=j["Hips"] + np.array([0, -0.5 * math.sin(math.radians(25)), 0.5 * math.cos(math.radians(25))]))
+    assert tc.tronco_sinal(tras) == pytest.approx([20], abs=1e-6)
+    assert tc.tronco_sinal(frente) == pytest.approx([-25], abs=1e-6)
+    assert tc.tronco_sinal(girar(frente, 70, (0, 0, 1))) == pytest.approx([-25], abs=1e-6)
+    de_lado = dict(frente, Neck=frente["Neck"] + np.array([0.10, 0, 0]))   # inclinar pro lado não conta
+    assert tc.tronco_sinal(de_lado) == pytest.approx([-25], abs=1e-6)
+    assert tc.canela_sinal(j)[0] == pytest.approx(math.degrees(math.atan2(0.02, 0.42)), abs=1e-6)   # em_pe: joelho 2 cm à frente
+    reta = dict(j, LeftLeg=j["LeftFoot"] + np.array([0, 0, 0.43]), RightLeg=j["RightFoot"] + np.array([0.05, 0.43 * math.sin(math.radians(10)),
+                                                                                                        0.43 * math.cos(math.radians(10))]))
+    assert tc.canela_sinal(reta) == pytest.approx([0, -10], abs=1e-6)        # o direito atrás (e aberto 5 cm pro lado: não conta)
+    assert tc.canela_sinal(girar(reta, -40, (0, 0, 1))) == pytest.approx([0, -10], abs=1e-6)
+    assert {"tronco_sinal", "canela_sinal"} <= set(tc.MEDIDAS)
+
+
+def test_braco_lado_perpendicular_ao_chao_no_banco_declinado():
+    """Supino declinado com barra (lote 14): deitado de costas no banco a −15° (a cabeça pra +Y, mais baixa), o braço em pé no mundo dá 0
+    visto de lado mesmo com o punho aberto pro lado (pegada média); perpendicular ao TRONCO ele fica 15° pro lado da cabeça; pros pés, +."""
+    deitado = girar(em_pe(), -105, (1, 0, 0), (0, 0, 0.95))       # cabeça pra +Y e 15° abaixo da horizontal, peito pra cima
+    assert tc.eixos_tronco(deitado)[0][2] == pytest.approx(-math.sin(math.radians(15)), abs=1e-6)
+    j = dict(deitado)
+    for L, s in (("Left", 1), ("Right", -1)):
+        j[L + "Hand"] = j[L + "Arm"] + np.array([s * 0.12, 0, 0.55])           # em pé no mundo, o punho 12 cm pro lado
+    assert tc.braco_lado(j) == pytest.approx([0, 0], abs=1e-6)
+    normal = np.array([0, math.sin(math.radians(15)), math.cos(math.radians(15))])
+    k = dict(j, LeftHand=j["LeftArm"] + 0.55 * normal)                          # perpendicular ao tronco
+    assert tc.braco_lado(k)[0] == pytest.approx(-15, abs=1e-6)
+    pes = dict(j, RightHand=j["RightArm"] + np.array([-0.12, -0.55 * math.tan(math.radians(10)), 0.55]))   # 10° pros pés
+    assert tc.braco_lado(pes)[1] == pytest.approx(10, abs=1e-6)
+    assert tc.braco_lado(girar(pes, 40, (0, 0, 1)))[1] == pytest.approx(10, abs=1e-6)   # girar o banco no chão não muda
+    assert "braco_lado" in tc.MEDIDAS
+
+
+def test_prancha_lateral_corpo_reto_de_lado_sem_rolar_e_cabeca_na_linha():
+    """Prancha lateral (lote 13): deitado sobre o lado direito com a cabeça 18° acima dos pés, o corpo reto mede 0 no eixo de LADO do
+    tronco, sem rolar e com a cabeça na linha; o quadril caindo 5 cm pro chão dá −; o corpo rolando com o peito pro chão dá − no tórax e
+    na pelve; a cabeça inclinada pro lado de cima dá +."""
+    j = em_pe()
+    for L, s in (("Left", 1), ("Right", -1)):
+        j[L + "Shoulder"] = np.array([s * 0.06, 0, 1.44])
+    j["Head"] = np.array([0, 0, 1.70])
+    lado = girar(j, -72, (0, 1, 0))                  # o lado esquerdo pra cima, a cabeça pra −X e 18° acima dos pés
+    assert lado["LeftArm"][2] > lado["RightArm"][2]
+    assert tc.quadril_linha_lateral(lado) == pytest.approx([0], abs=1e-6)
+    assert tc.corpo_rolagem(lado) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.cabeca_lado(lado) == pytest.approx([0], abs=1e-6)
+    caiu = dict(lado, LeftUpLeg=lado["LeftUpLeg"] + np.array([0, 0, -0.05]), RightUpLeg=lado["RightUpLeg"] + np.array([0, 0, -0.05]))
+    assert tc.quadril_linha_lateral(caiu)[0] == pytest.approx(-50 * math.cos(math.radians(18)), abs=1e-6)
+    subiu = dict(lado, LeftUpLeg=lado["LeftUpLeg"] + np.array([0, 0, 0.03]), RightUpLeg=lado["RightUpLeg"] + np.array([0, 0, 0.03]))
+    assert tc.quadril_linha_lateral(subiu)[0] == pytest.approx(30 * math.cos(math.radians(18)), abs=1e-6)
+    eixo = lado["Neck"] - lado["Hips"]
+    rolou = girar(lado, -10, eixo, (lado["LeftUpLeg"] + lado["RightUpLeg"]) / 2)     # o peito vira pro chão
+    esperado = math.degrees(math.asin(math.cos(math.radians(18)) * math.sin(math.radians(-10))))
+    assert tc.corpo_rolagem(rolou) == pytest.approx([esperado, esperado], abs=1e-6)
+    assert tc.quadril_linha_lateral(rolou) == pytest.approx([0], abs=1e-6)
+    cima = (lado["Neck"] - lado["Hips"]) / np.linalg.norm(lado["Neck"] - lado["Hips"])
+    up = lado["LeftArm"] - lado["RightArm"]
+    up = up - cima * (up @ cima)
+    up = up / np.linalg.norm(up)
+    cabeca = dict(lado, Head=lado["Neck"] + 0.2 * (math.cos(math.radians(15)) * cima + math.sin(math.radians(15)) * up))
+    assert tc.cabeca_lado(cabeca) == pytest.approx([15], abs=1e-6)
+    assert tc.corpo_rolagem(em_pe()) == [] and tc.cabeca_lado(em_pe()) == []
+    assert {"quadril_linha_lateral", "corpo_rolagem", "cabeca_lado", "antebraco_frente", "pe_frente"} <= set(tc.MEDIDAS)
+
+
+def test_antebraco_e_pe_pra_frente_do_tronco():
+    """Prancha lateral (lote 13): o antebraço de baixo aponta reto pra frente do peito ("perpendicular to body", ExRx) = 0; de lado = 90;
+    os dedos dos pés pra frente medem o próprio caimento do pé (base dos dedos 6 cm abaixo do tornozelo, 14 cm à frente); deitado de lado,
+    o mesmo."""
+    j = em_pe()
+    j["RightHand"] = j["RightForeArm"] + np.array([0, -0.25, 0])
+    j["LeftHand"] = j["LeftForeArm"] + np.array([0.25, 0, 0])
+    assert tc.antebraco_frente(j) == pytest.approx([90, 0], abs=1e-6)
+    assert tc.pe_frente(j) == pytest.approx([math.degrees(math.atan2(0.06, 0.14))] * 2, abs=1e-6)
+    lado = girar(j, -72, (0, 1, 0))
+    assert tc.antebraco_frente(lado) == pytest.approx([90, 0], abs=1e-6)
+    assert tc.pe_frente(lado) == pytest.approx(tc.pe_frente(j), abs=1e-6)

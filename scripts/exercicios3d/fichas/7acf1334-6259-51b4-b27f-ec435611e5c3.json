@@ -1,0 +1,932 @@
+{
+  "uuid": "7acf1334-6259-51b4-b27f-ec435611e5c3",
+  "nome": "Cross-over na Polia Baixa",
+  "cena": "cross_over_na_polia_baixa",
+  "grupo": "Peitoral",
+  "subgrupo": "Peitoral superior (porção clavicular) · deltoide anterior",
+  "padrao_movimento": "crucifixo",
+  "equipamento": "polia",
+  "variacao": "polia baixa, de baixo para cima",
+  "alvos": [
+    "peitoral"
+  ],
+  "auxiliares": [
+    "deltoide",
+    "biceps"
+  ],
+  "camera": {
+    "az": 30,
+    "el": 8,
+    "dist": 5.4,
+    "alvo": [
+      0.0,
+      -0.2,
+      1.0
+    ]
+  },
+  "camera_vistas": {
+    "dist": 5.4,
+    "alvo": [
+      0.0,
+      -0.1,
+      1.05
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, no meio do cross-over, com uma polia baixa de cada lado, um passo à frente da linha delas. Pés afastados, um à frente do outro como numa passada (o direito na frente), os dois chapados e com as pontas para a frente, joelhos levemente dobrados e o tronco em pé, com as costas retas, o abdome firme e a cabeça na linha do tronco. Segura um puxador em cada mão. Começa com os braços embaixo e abertos para os lados, um pouco à frente do corpo, as mãos abaixo da cintura, do lado do quadril, com as palmas para a frente e os cotovelos levemente dobrados, apontando para trás. Com o cotovelo parado, sobe os puxadores para a frente e para dentro num arco, como um abraço de baixo para cima, até as mãos se encontrarem na frente do corpo, na altura do queixo, com as palmas para cima e uma para a outra, sem cruzar. Volta devagar pelo mesmo caminho até os braços abrirem de novo embaixo e o peito alongar. O tronco, as pernas e a cabeça ficam parados; os cabos sobem das polias até as mãos por fora do corpo, sem encostar nele.",
+  "cinesiologia": {
+    "plano": "oblíquo, entre o sagital e o transversal: o braço sobe e fecha à frente num arco (um plano só, em volta do eixo do \"abraço\", inclinado ~45° da horizontal), flexão do ombro com adução horizontal, os dois braços juntos, cadeia cinética aberta (ExRx: \"bring stirrups together in upwardly arching, hugging motion, at 30º to 45º angle\"; free-exercise-db: \"draw your hands upward and toward the midline of your body\"). A resistência vem de baixo, de fora e um pouco de trás (as polias baixas, atrás dos ombros): o cabo puxa a mão para baixo, para o lado e para trás",
+    "articulacoes": "ombro (de ~45° do tronco, embaixo e aberto para o lado, até ~97°, à frente, um pouco acima da horizontal e um pouco para dentro, ~92° de arco); cotovelo parado, levemente dobrado (~15°; ExRx, \"Keeping elbows fixed in slightly bent position\"; ACE, \"Maintain a slight bend in your elbows\"); punho reto (ACE, \"neutral wrist position\"); tronco em pé, joelhos levemente dobrados (~10°) e pés chapados, tudo parado (ACE, \"align your trunk vertically\")",
+    "agonistas": "peitoral maior, porção clavicular (ExRx: Target \"Pectoralis Major, Clavicular\"), em contração concêntrica na subida e excêntrica na volta. Não achei estudo de EMG deste caminho (polias baixas, de baixo para cima): no PubMed (10/10/2026) a busca \"cable crossover electromyography\" deu 2 artigos, nenhum sobre ele",
+    "sinergistas": "peitoral maior (porção esternal), deltoide anterior e bíceps braquial, cabeça curta (ExRx: Synergists \"Pectoralis Major, Sternal\", \"Deltoid, Anterior\", \"Biceps Brachii, Short Head\"); a free-exercise-db põe os ombros como secundários (\"shoulders\"). No app, de auxiliares, aparecem o deltoide (o mapa de músculos pinta o deltoide inteiro) e o bíceps; a porção esternal faz parte do peitoral",
+    "estabilizadores": "bíceps braquial, braquial e tríceps braquial (seguram o cotovelo parado), flexores do punho, reto do abdome e oblíquos; eretores da espinha como antagonistas estabilizadores (ExRx: Stabilizers \"Biceps Brachii\", \"Brachialis\", \"Triceps Brachii\", \"Wrist Flexors\", \"Rectus Abdominis\", \"Obliques\"; Antagonist Stabilizers \"Erector Spinae\"); a ACE pede o abdome firme (\"Stiffen (“brace”) your abdominal muscles to stabilize your spine\")",
+    "fases": "ida concêntrica, subindo os puxadores para a frente e para dentro até as mãos se encontrarem (a ACE para um instante em cima: \"Pause momentarily\"; a free-exercise-db: \"after a brief pause\"), e volta excêntrica, devagar, pelo mesmo caminho até alongar o peito (ExRx: \"Lower stirrups to original position in reverse pattern. As soon as stretch is felt in chest or shoulders, repeat motion.\"; ACE: \"slowly return to your starting position, allowing your arms to move back outwards in a slow, controlled manner\")"
+  },
+  "referencias": [
+    "ExRx.net — Cable Standing Incline Fly (Pectoralis Major, Clavicular; o diretório chama de \"Upper Chest\"). https://exrx.net/WeightExercises/PectoralClavicular/CBStandingInclineFly (lido na cópia do Internet Archive de 24/05/2022; o site direto bloqueia a leitura automática e o índice de peito de 30/07/2026 não lista mais a página): Classification \"Utility: Auxiliary\", \"Mechanics: Isolated\", \"Force: Push\"; Preparation \"Stand between two pulleys position hip height and arms width or slightly wider apart. Grasp stirrups, one in each hand. Extend arms out with elbows slightly bent, pointed back and downward slightly. Step forward until cables are taut or when weights are lifted up slightly. Stand with feet staggered.\"; Execution \"Keeping elbows fixed in slightly bent position, bring stirrups together in upwardly arching, hugging motion, at 30º to 45º angle until they meet at top of motion. Lower stirrups to original position in reverse pattern. As soon as stretch is felt in chest or shoulders, repeat motion.\"; Muscles: Target \"Pectoralis Major, Clavicular\"; Synergists \"Pectoralis Major, Sternal\", \"Deltoid, Anterior\", \"Biceps Brachii, Short Head\"; Stabilizers \"Biceps Brachii\", \"Brachialis\", \"Triceps Brachii\", \"Wrist Flexors\", \"Rectus Abdominis\", \"Obliques\"; Antagonist Stabilizers \"Erector Spinae\". O ExRx põe as roldanas na altura do quadril (\"position hip height\"); esta cena usa a posição mais baixa (free-exercise-db e o nome do catálogo, abaixo)",
+    "American Council on Exercise (ACE) — Exercise Library: Standing Incline Cable Flyes. https://www.acefitness.org/resources/everyone/exercise-library/163/standing-incline-cable-flyes/ (lido em 10/10/2026): \"Position the cable handles level with the region between your knees and hips, and grasp each handle firmly. Stiffen (“brace”) your abdominal muscles to stabilize your spine, and attempt to avoid any arching of your low back throughout the exercise.\"; \"Assume a staggered-stance position (i.e., walking position, with one leg forward) to stabilize yourself and align your trunk vertically. Allow your arms to slowly open, moving downward and outward to your sides. Maintain a slight bend in your elbows, neutral wrist position (i.e., wrists aligned in a straight line with your forearms) and do not allow your hands to move past the midline of your body (level of your armpit).\"; \"Exhale gently and slowly squeeze your chest muscles to pull your arms forward until your hands meet level with your face or above your head. Maintain the slight bend in your elbows, neutral wrist position and vertical alignment of your trunk throughout the movement.\"; \"Pause momentarily then slowly return to your starting position, allowing your arms to move back outwards in a slow, controlled manner.\"; \"Avoid the tendency to lean forward during this exercise as this increases the stresses within the shoulder joint, which happens frequently when the resistance used is too heavy.\" A ACE põe os puxadores entre o joelho e o quadril e junta as mãos na altura do rosto ou acima da cabeça",
+    "free-exercise-db (yuhonas), Low Cable Crossover — a lista aberta de onde veio o nome do catálogo (fonte_en), domínio público (The Unlicense). https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Low_Cable_Crossover.json : \"To move into the starting position, place the pulleys at the low position, select the resistance to be used and grasp a handle in each hand.\" \"Step forward, gaining tension in the pulleys. Your palms should be facing forward, hands below the waist, and your arms straight. This will be your starting position.\" \"With a slight bend in your arms, draw your hands upward and toward the midline of your body. Your hands should come together in front of your chest, palms facing up.\" \"Return your arms back to the starting position after a brief pause.\" Classificação: force \"push\", mechanic \"isolation\"; músculos: primary \"chest\", secondary \"shoulders\"",
+    "Schoenfeld BJ. The M.A.X. Muscle Plan 2.0, 2ª ed. (Human Kinetics) — trecho \"Try this move: cable fly\" (a versão com a polia alta, referência do Cross-over na Polia). https://us.humankinetics.com/blogs/excerpt/try-this-move-cable-fly (cópia do Internet Archive de 14/10/2025): o cotovelo fica levemente dobrado e parado no crucifixo no cabo (\"Your elbows should remain slightly bent and fixed throughout the move—don’t flex or extend them at any time.\"; \"think of hugging a beach ball to maintain the semicircular motion\")",
+    "Schanke W, Porcari JP, Felix E, Hendrix C, Foster C. ACE-Sponsored Research: Top 3 Most Effective Chest Exercises. ACE Certified News, out./2012 (referência do Cross-over na Polia). https://www.acefitness.org/certifiednewsarticle/2884/ace-sponsored-research-top-3-most-effective-chest-exercises/ — dica (Mark P. Kelly, ACE) contra cruzar os puxadores no fim: \"some exercisers start with the shoulders in horizontal hyperextension or the arms behind the torso, and then actually cross the two handles above and below each other to come past the midline. While this extreme range of motion may feel good, it does little in terms of muscular conditioning, and there is a risk of injury in the shoulder during hyperextension and of the hand when the handles pass so close to each other.\"",
+    "NASM — Exercise Library: Cable Crossover (a versão com as polias na altura dos ombros; referência do Cross-over na Polia). https://www.nasm.org/resource-center/exercise-library/cable-crossover : entre os erros, \"Bringing the hands too close together at peak contraction, which can strain the shoulder joint\"",
+    "Life Fitness — Signature Series Adjustable Cable Crossover (LCM-CC), ficha técnica (lida em 10/10/2026): \"Dimensions (L x l x H): 150 x 28,5 x 94 po (381 x 72 x 239 cm)\", \"Réglages du chariot 7 » à 76 » au-dessus du sol\" (carrinho de 18 a 193 cm do chão), \"Rotation du chariot 165°\". https://www.lifefitness.com/fr-fr/catalog/strength-training/cable-machines-functional-trainers/adjustable-cable-crossover — a mesma estação do Cross-over na Polia, com o carrinho na posição mais baixa (7\" = 0,178 m)"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "tecnica_padrao": {
+      "pes_alinhados": [
+        250,
+        450
+      ]
+    },
+    "tecnica_padrao_motivo": "base escalonada de propósito (um pé à frente do outro): ExRx, Cable Standing Incline Fly (\"Stand with feet staggered\"); ACE, Standing Incline Cable Flyes (\"Assume a staggered-stance position (i.e., walking position, with one leg forward)\"). A regra padrão pes_alinhados (0 a 40 mm) passa a 250–450 mm; a cena põe os tornozelos 34 cm um à frente do outro (pé direito na frente), como no Cross-over na Polia. As outras regras padrão continuam",
+    "zonas": [
+      {
+        "nome": "o cabo esquerdo não encosta no tronco, na cabeça nem nas pernas",
+        "equipamento": "polia_E_cabo",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele (a faixa é da cena)"
+      },
+      {
+        "nome": "o cabo esquerdo não encosta no braço esquerdo",
+        "equipamento": "polia_E_cabo",
+        "partes": [
+          "LeftArm",
+          "LeftForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele: no fim o cabo desce pra trás e pra fora, por baixo do antebraço"
+      },
+      {
+        "nome": "o cabo esquerdo passa longe do braço direito",
+        "equipamento": "polia_E_cabo",
+        "partes": [
+          "RightArm",
+          "RightForeArm",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele"
+      },
+      {
+        "nome": "o aro do puxador esquerdo passa em volta da mão sem entrar nela",
+        "equipamento": "puxador_E_alca",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "mm": [
+          1,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele (a checagem do peso ignora o que fica dentro da mão: aqui é medido à parte)"
+      },
+      {
+        "nome": "o aro do puxador esquerdo não encosta no antebraço nem no braço",
+        "equipamento": "puxador_E_alca",
+        "partes": [
+          "LeftForeArm",
+          "LeftArm"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele: no fim o cabo desce pra trás e o aro passa por cima do dorso da mão e do punho"
+      },
+      {
+        "nome": "o mosquetão e a bola do cabo esquerdo não encostam no corpo",
+        "equipamento": "puxador_E_engate",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "LeftForeArm",
+          "LeftArm",
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele"
+      },
+      {
+        "nome": "o puxador esquerdo não encosta na mão direita",
+        "equipamento": "puxador_E_pegador",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3",
+          "RightForeArm"
+        ],
+        "mm": [
+          3,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele: no fim as mãos se encontram"
+      },
+      {
+        "nome": "o aro do puxador esquerdo não encosta na mão direita",
+        "equipamento": "puxador_E_alca",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3",
+          "RightForeArm"
+        ],
+        "mm": [
+          3,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele"
+      },
+      {
+        "nome": "o cabo direito não encosta no tronco, na cabeça nem nas pernas",
+        "equipamento": "polia_D_cabo",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele (a faixa é da cena)"
+      },
+      {
+        "nome": "o cabo direito não encosta no braço direito",
+        "equipamento": "polia_D_cabo",
+        "partes": [
+          "RightArm",
+          "RightForeArm",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele: no fim o cabo desce pra trás e pra fora, por baixo do antebraço"
+      },
+      {
+        "nome": "o cabo direito passa longe do braço esquerdo",
+        "equipamento": "polia_D_cabo",
+        "partes": [
+          "LeftArm",
+          "LeftForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele"
+      },
+      {
+        "nome": "o aro do puxador direito passa em volta da mão sem entrar nela",
+        "equipamento": "puxador_D_alca",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          1,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele (a checagem do peso ignora o que fica dentro da mão: aqui é medido à parte)"
+      },
+      {
+        "nome": "o aro do puxador direito não encosta no antebraço nem no braço",
+        "equipamento": "puxador_D_alca",
+        "partes": [
+          "RightForeArm",
+          "RightArm"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele: no fim o cabo desce pra trás e o aro passa por cima do dorso da mão e do punho"
+      },
+      {
+        "nome": "o mosquetão e a bola do cabo direito não encostam no corpo",
+        "equipamento": "puxador_D_engate",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3",
+          "RightForeArm",
+          "RightArm",
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head",
+          "LeftShoulder",
+          "RightShoulder",
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg",
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase"
+        ],
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele"
+      },
+      {
+        "nome": "o puxador direito não encosta na mão esquerda",
+        "equipamento": "puxador_D_pegador",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "LeftForeArm"
+        ],
+        "mm": [
+          3,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele: no fim as mãos se encontram"
+      },
+      {
+        "nome": "o aro do puxador direito não encosta na mão esquerda",
+        "equipamento": "puxador_D_alca",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "LeftForeArm"
+        ],
+        "mm": [
+          3,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo); medido da pele"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "fim: as mãos se encontram, sem cruzar",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "t": 1.0,
+        "mm": [
+          3,
+          40
+        ],
+        "fonte": "ExRx, Cable Standing Incline Fly (\"bring stirrups together in upwardly arching, hugging motion ... until they meet at top of motion\"); free-exercise-db, Low Cable Crossover (\"Your hands should come together in front of your chest\"); ACE, Standing Incline Cable Flyes (\"until your hands meet\"); contra cruzar: ACE 2012, dica do Kelly (\"cross the two handles above and below each other to come past the midline ... there is a risk of injury ... of the hand when the handles pass so close to each other\"); NASM (erro: \"Bringing the hands too close together at peak contraction\"). Medido da pele de uma mão até a da outra (a faixa é da cena)"
+      },
+      {
+        "nome": "as mãos não se atravessam",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "mm": [
+          3,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); medido da pele"
+      },
+      {
+        "nome": "os antebraços não se encostam",
+        "partes": [
+          "LeftForeArm"
+        ],
+        "com": [
+          "RightForeArm"
+        ],
+        "mm": [
+          10,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); medido da pele"
+      },
+      {
+        "nome": "antebraços e mãos não entram no tronco nem nas coxas",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o limite do corpo × corpo da checagem (PENETRA_MM); o braço × tronco (fora o vinco da axila) é a regra corpo × corpo de sempre"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "o cabo esquerdo não entra no cabelo",
+        "equipamento": "polia_E_cabo",
+        "de": "cabelo",
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo)"
+      },
+      {
+        "nome": "o aro do puxador esquerdo não entra no cabelo",
+        "equipamento": "puxador_E_alca",
+        "de": "cabelo",
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo)"
+      },
+      {
+        "nome": "o mosquetão do puxador esquerdo não entra no cabelo",
+        "equipamento": "puxador_E_engate",
+        "de": "cabelo",
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo)"
+      },
+      {
+        "nome": "o cabo direito não entra no cabelo",
+        "equipamento": "polia_D_cabo",
+        "de": "cabelo",
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo)"
+      },
+      {
+        "nome": "o aro do puxador direito não entra no cabelo",
+        "equipamento": "puxador_D_alca",
+        "de": "cabelo",
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo)"
+      },
+      {
+        "nome": "o mosquetão do puxador direito não entra no cabelo",
+        "equipamento": "puxador_D_engate",
+        "de": "cabelo",
+        "mm": [
+          100,
+          5000
+        ],
+        "fonte": "Weslley (cabo, puxador e engate nunca passam por dentro do corpo nem do cabelo)"
+      },
+      {
+        "nome": "os 2 aros não se encostam",
+        "equipamento": "puxador_E_alca",
+        "de": "puxador_D_alca",
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (peça não atravessa peça); ACE 2012 (\"of the hand when the handles pass so close to each other\")"
+      },
+      {
+        "nome": "os 2 pegadores não se encostam",
+        "equipamento": "puxador_E_pegador",
+        "de": "puxador_D_pegador",
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (peça não atravessa peça)"
+      },
+      {
+        "nome": "o aro esquerdo não encosta no pegador direito",
+        "equipamento": "puxador_E_alca",
+        "de": "puxador_D_pegador",
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (peça não atravessa peça)"
+      },
+      {
+        "nome": "o aro direito não encosta no pegador esquerdo",
+        "equipamento": "puxador_D_alca",
+        "de": "puxador_E_pegador",
+        "mm": [
+          5,
+          5000
+        ],
+        "fonte": "Weslley (peça não atravessa peça)"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "começo: braços embaixo e abertos pros lados, as mãos abaixo da cintura",
+        "medida": "braco_elevacao",
+        "t": 0.0,
+        "graus": [
+          36,
+          54
+        ],
+        "fonte": "ExRx, Cable Standing Incline Fly (\"Extend arms out with elbows slightly bent, pointed back and downward slightly\"); free-exercise-db, Low Cable Crossover (\"hands below the waist\"). 0 = braço pendurado, 90 = na altura do ombro; a cena começa a 45° e o pegador fica ~0,95 m do chão, do lado do quadril"
+      },
+      {
+        "nome": "começo: braço um pouco à frente da linha dos ombros, sem ir pra trás",
+        "medida": "braco_plano",
+        "t": 0.0,
+        "graus": [
+          0,
+          25
+        ],
+        "fonte": "ACE, Standing Incline Cable Flyes (\"do not allow your hands to move past the midline of your body (level of your armpit)\"). 0 = pro lado (na linha das axilas); − = atrás do tronco; a cena começa a 12°"
+      },
+      {
+        "nome": "fim: braço à frente, um pouco acima da horizontal (as mãos na altura do queixo)",
+        "medida": "braco_elevacao",
+        "t": 1.0,
+        "graus": [
+          88,
+          106
+        ],
+        "fonte": "ExRx (\"upwardly arching, hugging motion ... until they meet at top of motion\"); free-exercise-db (\"Your hands should come together in front of your chest\"); ACE (\"until your hands meet level with your face or above your head\"). A cena para a 97°, com os pegadores na altura do queixo (~1,51 m do chão): entre o peito da free-exercise-db e o rosto da ACE"
+      },
+      {
+        "nome": "fim: braço fechado à frente, um pouco pra dentro (as mãos no meio)",
+        "medida": "braco_plano",
+        "t": 1.0,
+        "graus": [
+          88,
+          110
+        ],
+        "fonte": "ExRx (\"bring stirrups together ... until they meet\"); free-exercise-db (\"draw your hands upward and toward the midline of your body\"). 90 = pra frente; > 90 = um pouco pra dentro; o plano do fim sai da conta que deixa as mãos se encontrando"
+      },
+      {
+        "nome": "cotovelo levemente dobrado e parado",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          8,
+          25
+        ],
+        "fonte": "ExRx (\"Keeping elbows fixed in slightly bent position\"); ACE (\"Maintain a slight bend in your elbows\"); free-exercise-db (\"With a slight bend in your arms\"); Schoenfeld (\"Your elbows should remain slightly bent and fixed throughout the move\"). A cena usa 15°"
+      },
+      {
+        "nome": "punho reto e parado",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "ACE (\"neutral wrist position (i.e., wrists aligned in a straight line with your forearms)\"); ExRx lista os flexores do punho como estabilizadores (\"Wrist Flexors\")"
+      },
+      {
+        "nome": "começo: palmas pra frente",
+        "medida": "palma_frente",
+        "t": 0.0,
+        "graus": [
+          0,
+          40
+        ],
+        "fonte": "free-exercise-db (\"Your palms should be facing forward\"); ExRx (\"elbows ... pointed back and downward slightly\"). 0 = palma pra frente; a cena fica a ~20° (a palma olha pra frente e um pouco pra cima e pra dentro, pra onde o braço vai andar)"
+      },
+      {
+        "nome": "fim: palmas pra cima",
+        "medida": "palma_cima",
+        "t": 1.0,
+        "graus": [
+          25,
+          65
+        ],
+        "fonte": "free-exercise-db (\"Your hands should come together in front of your chest, palms facing up\"). 0 = palma pra cima, 90 = de lado; a cena fica a ~49° (pra cima e uma pra outra: a palma olha pra onde o braço anda, que no fim é pra cima e pra dentro)"
+      },
+      {
+        "nome": "fim: palmas viradas pro meio (uma pra outra), nunca pra fora",
+        "medida": "palma_dentro",
+        "t": 1.0,
+        "graus": [
+          15,
+          60
+        ],
+        "fonte": "ExRx (\"hugging motion\"); free-exercise-db (\"toward the midline of your body\"). +90 = palmas uma pra outra, 0 = pra cima; a cena fica a ~40°"
+      },
+      {
+        "nome": "tronco em pé e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          8
+        ],
+        "fonte": "ACE (\"align your trunk vertically\"; \"Maintain ... vertical alignment of your trunk throughout the movement\"; \"Avoid the tendency to lean forward during this exercise as this increases the stresses within the shoulder joint\"). A cena fica a ~0°"
+      },
+      {
+        "nome": "ombros nivelados (o tronco não gira nem inclina pro lado)",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -4,
+          4
+        ],
+        "fonte": "ACE (\"vertical alignment of your trunk throughout the movement\"; na variação de um braço só: \"avoiding any trunk rotation\")"
+      },
+      {
+        "nome": "cabeça na linha do tronco",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -20,
+          -2
+        ],
+        "fonte": "ACE (\"Stiffen (“brace”) your abdominal muscles to stabilize your spine\"; \"vertical alignment of your trunk\"). A cabeça não mexe em relação ao tronco: o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco); a faixa é da cena"
+      },
+      {
+        "nome": "joelhos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          3,
+          18
+        ],
+        "fonte": "ACE (\"staggered-stance position (i.e., walking position, with one leg forward)\"). As fontes não dão o ângulo: a cena usa 10° em média e a faixa é da cena"
+      },
+      {
+        "nome": "base de passada (um pé à frente do outro)",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.4
+        ],
+        "fonte": "ExRx (\"Stand with feet staggered\"); ACE (\"staggered-stance position (i.e., walking position, with one leg forward)\"). Medida: distância entre os tornozelos ÷ entre as articulações do quadril; a cena dá ~1,96 (34 cm de um pé à frente do outro, 24 cm de lado)"
+      },
+      {
+        "nome": "cada pé embaixo do seu quadril (de lado a lado)",
+        "medida": "pes_base_lateral",
+        "t": "todos",
+        "faixa": [
+          0.9,
+          1.5
+        ],
+        "fonte": "ACE (\"walking position\": cada pé embaixo do seu quadril, sem cruzar). A cena dá ~1,13"
+      }
+    ]
+  }
+}

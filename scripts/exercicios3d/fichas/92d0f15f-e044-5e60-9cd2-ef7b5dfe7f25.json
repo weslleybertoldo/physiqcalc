@@ -1,0 +1,349 @@
+{
+  "uuid": "92d0f15f-e044-5e60-9cd2-ef7b5dfe7f25",
+  "nome": "Tríceps Pulley Pegada Supinada",
+  "cena": "triceps_pulley_pegada_supinada",
+  "grupo": "Tríceps",
+  "subgrupo": "Tríceps (cabeças medial e lateral)",
+  "padrao_movimento": "triceps_extensao",
+  "equipamento": "polia",
+  "variacao": "pegada supinada",
+  "alvos": [
+    "triceps"
+  ],
+  "auxiliares": [],
+  "camera": {
+    "az": 120,
+    "el": 30,
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.25,
+      1.12
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.6,
+    "alvo": [
+      0,
+      -0.25,
+      1.12
+    ]
+  },
+  "ida_s": 1.5,
+  "movimento": "Em pé, de frente para a polia alta e perto dela, com o tronco ereto, os pés na largura dos ombros e os joelhos levemente dobrados, segura a barra reta da polia por baixo — palmas viradas para cima (pegada supinada), com o polegar em volta da barra — com as mãos mais ou menos na largura dos ombros. Começa com os braços junto das laterais do tronco, os cotovelos dobrados e a barra na altura do peito, com os antebraços inclinados para cima e o cabo descendo quase na vertical até a barra; estica só os cotovelos, empurrando a barra para baixo, até os braços ficarem esticados (sem travar) com a barra na frente das coxas — a palma, que começa virada para cima, termina virada para a frente. Os braços, o tronco, os joelhos e os punhos (retos) não mexem. Volta devagar, dobrando os cotovelos, até a barra chegar na altura do peito de novo.",
+  "cinesiologia": {
+    "plano": "sagital (extensão e flexão do cotovelo), cadeia cinética aberta, os 2 braços juntos; a resistência vem pelo cabo, que puxa a barra para cima, na direção da roldana alta, à frente da pessoa",
+    "articulacoes": "cotovelos (extensão quando a barra desce, de ~105° a ~11°; flexão na volta) com o antebraço supinado o tempo todo (a palma vai de virada para cima a virada para a frente junto com o antebraço) e o punho reto; ombros parados, com o braço junto da lateral do tronco e ~15° à frente dele; tronco ereto, joelhos levemente dobrados (~15°) e pés chapados no chão, parados (free-exercise-db, Reverse Grip Triceps Pushdown: \"Only the forearms should move and the elbows/upper arms should be stationary by your side at all times.\")",
+    "agonistas": "tríceps braquial, as 3 cabeças: a longa, que sai da escápula e cruza também o ombro, e a lateral e a medial, que saem do úmero (Landin 2018: \"Its proximal attachments are the infraglenoid tubercle, the lateral humerus, and the posterior/medial humerus for the long, lateral and medial heads, respectively.\"); a medial trabalha em toda extensão do cotovelo e a longa e a lateral quando ela é feita contra resistência (Landin 2018: \"Salmons [1] indicates that the medial head is involved in all forms of elbow extension, while the long and lateral heads become active only when the elbow is extended against resistance.\"), e a medial entra inteira com o cotovelo dobrado além de 90° (Landin 2018, sobre Madsen et al.: \"They concluded that the medial head becomes fully involved in extension only when the elbow is flexed beyond 90°.\" — o começo aqui é a ~105°). free-exercise-db, Reverse Grip Triceps Pushdown: \"primaryMuscles\": \"triceps\" (\"secondaryMuscles\" vazio); ExRx, Cable One Arm Pushdown (um braço, pegada supinada): Target \"Triceps Brachii\". As cabeças com a pegada supinada (o subgrupo do catálogo põe a medial e a lateral): nenhuma fonte lida mediu a cabeça medial; a Catalyst Athletics, na própria página da pegada supinada, liga a medial à pegada pronada (\"The pronated grip emphasizes the medial head of the triceps.\"); no EMG, com a barra reta e os 2 braços a supinada não mudou a lateral nem a longa (Morales 2023: \"nas pegadas pronada, neutra e supinada a análise da cabeça lateral e cabeça longa do tríceps braquial não mostrou significância (p>0,05)\") e, com um braço e o pegador, a longa subiu e a lateral não (Villalba 2024: \"There was greater TLO activity in the SUP-H condition compared to the PRON-H\"; \"Regarding the triceps brachii lateral head, although its activity was slightly higher in the supinated grip (80.7%) compared to the pronated grip (77.1%), the difference was not significant.\")",
+    "sinergistas": "nenhum (ExRx, Cable One Arm Pushdown (um braço, pegada supinada): Synergists \"None\")",
+    "estabilizadores": "latíssimo do dorso, redondo maior, deltoide posterior, peitoral maior (porção esternal), peitoral menor e trapézio inferior seguram o braço parado junto do tronco; oblíquos e reto do abdome seguram o tronco; os extensores do punho seguram a mão contra o puxão do cabo — na pegada pronada são os flexores —; os eretores da espinha equilibram o tronco (ExRx, Cable One Arm Pushdown (um braço, pegada supinada): Stabilizers \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Pectoralis Major, Sternal\", \"Pectoralis Minor\", \"Trapezius, Lower\", \"Obliques\", \"Rectus Abdominis\", \"Wrist Extensors\"; Antagonist Stabilizers \"Erector Spinae\"; Villalba 2024: \"the supinated handle condition resulted in higher EMG activity for the extensor carpi radialis muscle\", \"in the supinated with handle condition, the carpal extensors were recruited to prevent carpal flexion\")",
+    "fases": "descida da barra concêntrica, soltando o ar, até os cotovelos estenderem; volta excêntrica, devagar, puxando o ar, até a barra na altura do peito (free-exercise-db, Reverse Grip Triceps Pushdown: \"Slowly elevate the bar attachment up as you inhale so it is aligned with your chest.\"; \"Then begin to lower the cable bar back down to the original staring position while exhaling and contracting the triceps hard.\"; Catalyst Athletics, Reverse-Grip Tricep Pushdown: \"extend the elbows maximally, then return to the top under control\"; ACE, Triceps Pushdowns: \"Gently exhale and slowly extend your elbows, pressing the handle / rope down towards the floor\")"
+  },
+  "referencias": [
+    "free-exercise-db (lista aberta em domínio público, Unlicense — a lista de onde o catálogo do app tirou o nome: fonte_en \"Reverse Grip Triceps Pushdown\" no scripts/conteudo/novos_61.json, variação \"pegada supinada\") — Reverse Grip Triceps Pushdown (https://github.com/yuhonas/free-exercise-db/blob/main/exercises/Reverse_Grip_Triceps_Pushdown.json, lido em 11/10/2026): \"Start by setting a bar attachment (straight or e-z) on a high pulley machine.\"; \"Facing the bar attachment, grab it with the palms facing up (supinated grip) at shoulder width. Lower the bar by using your lats until your arms are fully extended by your sides. Tip: Elbows should be in by your sides and your feet should be shoulder width apart from each other. This is the starting position.\"; \"Slowly elevate the bar attachment up as you inhale so it is aligned with your chest. Only the forearms should move and the elbows/upper arms should be stationary by your side at all times.\"; \"Then begin to lower the cable bar back down to the original staring position while exhaling and contracting the triceps hard.\"; \"primaryMuscles\": \"triceps\" (\"secondaryMuscles\" vazio), \"mechanic\": \"isolation\", \"equipment\": \"cable\". As 2 fotos da entrada só foram olhadas pra conferir, nada delas vai pro app",
+    "Catalyst Athletics — Reverse-Grip Tricep Pushdown, \"AKA Supinated tricep pushdown\" (https://www.catalystathletics.com/exercise/878/Reverse-Grip-Tricep-Pushdown/, lido em 11/10/2026): \"Hold a straight handle in front of you on a high cable attachment with the elbows flexed and the palms up. Keeping the trunk braced tightly, and the elbows close to the sides, extend the elbows maximally, then return to the top under control.\"; Purpose: \"The cable tricep pressdown is an effective way to isolate the triceps for strengthening elbow extension and general elbow stability. The pronated grip emphasizes the medial head of the triceps.\"; Programming: \"Generally higher-rep sets of 15-20 reps are appropriate when focusing on the medial triceps head.\"",
+    "ExRx.net — a ExRx NÃO tem o pushdown com barra e pegada supinada (a lista Upper Arm Exercises, cópia do Internet Archive de 30/07/2026, e o diretório Triceps no Internet Archive: no cabo só Pushdown, One Arm, with back support e with V-bar; o site direto responde 403). A mais perto, de UM braço, com a pegada supinada — Cable One Arm Pushdown (https://exrx.net/WeightExercises/Triceps/CBOneArmPushdown, lido na cópia do Internet Archive de 21/11/2023 e conferido igual na de 23/06/2026): Preparation \"Grasp dumbbell cable attachment with underhand grip. Position elbow to side.\"; Execution \"Extend arm down. Return until forearm is close to upper arm. Repeat. Continue with opposite arm.\"; Comments \"The elbow can travel up few inches at top of motion. Step close to cable to provide resistance at top of motion.\"; Target \"Triceps Brachii\", Synergists \"None\", Stabilizers \"Latissimus Dorsi\", \"Teres Major\", \"Deltoid, Posterior\", \"Pectoralis Major, Sternal\", \"Pectoralis Minor\", \"Trapezius, Lower\", \"Obliques\", \"Rectus Abdominis\", \"Wrist Extensors\", Antagonist Stabilizers \"Erector Spinae\" (no Cable Pushdown de 2 braços, pegada pronada, o estabilizador do punho é \"Wrist Flexors\")",
+    "American Council on Exercise — Triceps Pushdowns, Exercise Library 185 (https://www.acefitness.org/resources/everyone/exercise-library/185/triceps-pushdowns/, lido em 11/10/2026; não fala da pegada supinada): \"Stand facing the cable machine and position the cable attachment at a height above your head. Attach the handle or rope and grasp it firmly with a full grip (thumbs clasped around the handle or rope).\"; \"Stiffen (“brace”) your abdominal muscles to stabilize your spine with a natural arch in your low back, keeping your torso aligned vertically with the floor and maintaining this position throughout the exercise.\"; \"Slowly press the handles / rope down to the starting positon where your elbows are aligned with the mid-point of your trunk, arms postioned firmly by sides and wrists in neutral positon (i.e., aligned with your forearms).\"; \"Continue pressing the weight with your elbows right next to your side while maintaining a neutral position with your wrists until your elbows become fully extended, (do not allow them to \"lock out\" in full extension).\"; \"Pause momentarily then slowly return to your starting position, allowing your elbows to flex (bend) in a slow, controlled manner moving the handle / rope upwards until your elbows begin to drift forward from the mid-line of your trunk (around upper chest level).\"; \"It is important to monitor the forward movement of your elbows as this recruits from your lats (back muscles) and reduces the emphasis on the triceps.\"",
+    "Achievable — CSCS Textbook (preparatório da certificação CSCS da NSCA), cap. 15.6 \"Exercise list part 5\": Triceps pushdown (machine) (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-5, lido em 11/10/2026; só a pegada pronada, a base do Tríceps Pulley): \"Major muscles involved: Triceps brachii\"; \"Stand erect with feet shoulder-width apart and knees slightly flexed.\"; \"Stand close enough to the machine that the cable hangs straight down in the starting position.\"; \"Pull the bar down to position the upper arms against the sides of the torso.\"; \"Push the bar down until the elbows are fully extended.\"; \"Keep the torso erect and the upper arms stationary.\"; \"Don’t forcefully lock out the elbows.\"; \"Keep the torso, arms, and knees in the same position.\"",
+    "Villalba MM, Fujita RA, Iossi Junior C, Gomes MM. Forearm Position Influences Triceps Brachii Activation During Triceps Push-Down Exercise. International Journal of Strength and Conditioning 2024;4(1). doi:10.47206/ijsc.v4i1.250 (CC BY 4.0; PDF lido em 11/10/2026; UM braço, com pegador, EMG das cabeças longa e lateral — a medial não foi medida): \"We instructed the participants to keep their arms alongside the trunk, elbows flexed at 90° pointed downwards, spine in anatomical position, knees slightly flexed, and shoulders stabilized, to perform elbow extension with range of motion 90 to 0°\"; \"There was greater TLO activity in the SUP-H condition compared to the PRON-H (Cohen’s d = 0.53, CI: 0.22, 0.89, p = 0.038)\"; \"Regarding the triceps brachii lateral head, although its activity was slightly higher in the supinated grip (80.7%) compared to the pronated grip (77.1%), the difference was not significant.\"; \"the supinated handle condition resulted in higher EMG activity for the extensor carpi radialis muscle\"; \"participants performed fewer repetitions of the triceps push-down exercise in the supinated forearm with handle condition, compared to the other three conditions.\"",
+    "Morales PJC, Souza IP, Jesus EED, Rosa A, Rodrigues LH, Lombardi MA, Brasilino FF. Diferentes pegadas no exercício de tríceps polia alta: um estudo eletromiográfico. FIEP Bulletin 2023;93 (edição especial), artigo 20. doi:10.16887/93.a1.20 (PDF lido em 11/10/2026; os 2 braços, a supinada e a pronada com a barra reta, EMG das cabeças lateral e longa — a medial não foi medida): \"O exercício pode ser encontrado em pegada neutra (com polegar das mãos para cima) utilizando o pegador neutro, pronada (com palma da mão para baixo) e supinada (com palma da mão para cima) utilizando a barra reta.\"; \"Contudo, mostrou que nas pegadas pronada, neutra e supinada a análise da cabeça lateral e cabeça longa do tríceps braquial não mostrou significância (p>0,05). Conclusão: No exercício tríceps na polia alta, não houve diferença significativa na ativação do músculo tríceps braquial entre os três tipos de pegadas.\"",
+    "Boehler B, Porcari JP, Kline D, Hendrix CR, Foster C, com Mark Anders. ACE Study Identifies Best Triceps Exercises. ACE Certified News 2011-2012 (https://www.acefitness.org/certifiednewsarticle/3008/ace-study-identifies-best-triceps-exercises/, lido em 11/10/2026): a pegada supinada NÃO é um dos 8 exercícios medidos (\"triceps kickbacks, overhead triceps extensions, bar push-downs, rope push-downs, closed-grip bench press and lying barbell triceps extensions\", mais dips e triangle push-ups); o pushdown com barra: \"Bar Pushdowns 67 ± 20.48 * 75 ± 29.3 * 59 ± 14.3 *†\" (média, cabeça longa e lateral, em % do triangle push-up)",
+    "Landin D, Thompson M, Jackson M. Functions of the Triceps Brachii in Humans: A Review. J Clin Med Res. 2018;10(4):290-293. doi:10.14740/jocmr3340w (texto completo da revista, lido em 11/10/2026; não fala da pegada)",
+    "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry — valores de referência da AAOS (a mesma fonte do lib/limites.py): desvio do punho radial 0–20°, ulnar 0–30°"
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "zonas": [
+      {
+        "nome": "fim: a barra fica na frente das coxas, sem encostar",
+        "equipamento": "barra_polia",
+        "partes": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "t": 1.0,
+        "mm": [
+          40,
+          120
+        ],
+        "fonte": "free-exercise-db, Reverse Grip Triceps Pushdown (\"Lower the bar by using your lats until your arms are fully extended by your sides\"; embaixo a barra fica na frente das coxas); pedido do Weslley (\"com a barra na frente das coxas\"). Com a pegada supinada a palma fica virada pra frente embaixo e o dorso da mão pras coxas: a borracha fica a ~78 mm da frente das coxas e o dorso das mãos a ~6 mm delas (no Tríceps Pulley, pronado, é a barra que fica perto: 15–80 mm). A faixa é da cena"
+      },
+      {
+        "nome": "a barra e o engate nunca encostam no tronco nem na cabeça",
+        "equipamento": "barra_polia",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head"
+        ],
+        "mm": [
+          30,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra no corpo); medido da pele"
+      },
+      {
+        "nome": "o cabo passa na frente do rosto e do peito, sem encostar",
+        "equipamento": "polia_cabo",
+        "partes": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "Neck",
+          "Head"
+        ],
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro da cabeça, do rosto nem do tronco); medido da pele"
+      },
+      {
+        "nome": "perto da polia: a base da torre fica na frente dos pés, sem encostar",
+        "equipamento": "polia_torre",
+        "partes": [
+          "LeftFoot",
+          "RightFoot",
+          "LeftToeBase",
+          "RightToeBase",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "mm": [
+          30,
+          150
+        ],
+        "fonte": "NSCA/CSCS (Achievable), Triceps pushdown (machine) (\"Stand close enough to the machine that the cable hangs straight down in the starting position.\"); ExRx, Cable One Arm Pushdown (um braço, pegada supinada) (\"Step close to cable to provide resistance at top of motion.\"). No começo o cabo desce ~4,6° fora da vertical e a base da torre fica a ~61 mm das pontas dos pés. A faixa é da cena"
+      }
+    ],
+    "folgas": [
+      {
+        "nome": "o cabo não entra no cabelo",
+        "equipamento": "polia_cabo",
+        "de": "cabelo",
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "Weslley (o cabo nunca passa por dentro da cabeça)"
+      },
+      {
+        "nome": "a barra e o engate não entram no cabelo",
+        "equipamento": "barra_polia",
+        "de": "cabelo",
+        "mm": [
+          50,
+          5000
+        ],
+        "fonte": "Weslley (o equipamento nunca entra na cabeça)"
+      }
+    ],
+    "contatos": [
+      {
+        "nome": "antebraços e mãos não entram no tronco nem nas coxas",
+        "partes": [
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Hips",
+          "Spine",
+          "Spine1",
+          "Spine2",
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "mm": [
+          -2,
+          5000
+        ],
+        "fonte": "Weslley (o corpo não atravessa o próprio corpo); −2 mm = o mesmo limite do corpo × corpo da checagem (PENETRA_MM)"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "começo: antebraço acima da horizontal, a barra na altura do peito",
+        "medida": "inclinacao",
+        "segmento": [
+          "ForeArm",
+          "Hand"
+        ],
+        "t": 0.0,
+        "graus": [
+          -40,
+          -20
+        ],
+        "fonte": "free-exercise-db, Reverse Grip Triceps Pushdown (\"Slowly elevate the bar attachment up as you inhale so it is aligned with your chest.\"); ACE, Triceps Pushdowns (a volta \"until your elbows begin to drift forward from the mid-line of your trunk (around upper chest level)\"); Catalyst Athletics, Reverse-Grip Tricep Pushdown (\"return to the top under control\"). Com os cotovelos parados ao lado do tronco, a barra chega no peito com o antebraço ~30° acima da horizontal (barra em z ~1,31 m; a pele da frente do peito vai mais à frente entre z 1,25 e 1,35). No Tríceps Pulley (CSCS: \"forearms parallel to the floor or slightly above\") são 18°. Medida: − = punho acima do cotovelo"
+      },
+      {
+        "nome": "começo: cotovelos dobrados um pouco além de 90°",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 0.0,
+        "graus": [
+          95,
+          115
+        ],
+        "fonte": "consequência da barra no peito com o braço parado (free-exercise-db, Reverse Grip Triceps Pushdown: \"aligned with your chest\"); a cabeça medial entra inteira com o cotovelo dobrado além de 90° (Landin 2018, sobre Madsen et al.: \"They concluded that the medial head becomes fully involved in extension only when the elbow is flexed beyond 90°.\"); Villalba 2024 começava a 90° (\"elbows flexed at 90° pointed downwards\"). A cena começa a ~105°"
+      },
+      {
+        "nome": "fim: cotovelos estendidos, sem travar",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": 1.0,
+        "graus": [
+          5,
+          15
+        ],
+        "fonte": "free-exercise-db, Reverse Grip Triceps Pushdown (\"until your arms are fully extended by your sides\"); Catalyst Athletics, Reverse-Grip Tricep Pushdown (\"extend the elbows maximally\"); ACE, Triceps Pushdowns (\"until your elbows become fully extended, (do not allow them to \\\"lock out\\\" in full extension)\"); NSCA/CSCS (Achievable), Triceps pushdown (machine) (\"Don’t forcefully lock out the elbows.\"). A cena para a ~11°, dos quais ~8° são o V de lado (o antebraço vem de fora pra dentro até a mão na barra de 20\"): o cotovelo quase reto, sem travar"
+      },
+      {
+        "nome": "braços parados junto do tronco, um pouco à frente da linha dele",
+        "medida": "braco_frente",
+        "t": "todos",
+        "graus": [
+          12,
+          17
+        ],
+        "fonte": "free-exercise-db, Reverse Grip Triceps Pushdown (\"Only the forearms should move and the elbows/upper arms should be stationary by your side at all times.\"); ACE, Triceps Pushdowns (\"arms postioned firmly by sides\"; \"It is important to monitor the forward movement of your elbows\"); NSCA/CSCS (Achievable), Triceps pushdown (machine) (\"Keep the torso erect and the upper arms stationary.\"). O braço fica parado ~15° à frente da linha do tronco: embaixo o dorso das mãos passa na frente das coxas (com 14° e o cotovelo a 13°, a ~2 mm). A faixa é da cena"
+      },
+      {
+        "nome": "cotovelos junto das laterais do tronco, sem abrir",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          -3,
+          10
+        ],
+        "fonte": "free-exercise-db, Reverse Grip Triceps Pushdown (\"Tip: Elbows should be in by your sides\"); Catalyst Athletics, Reverse-Grip Tricep Pushdown (\"the elbows close to the sides\"); ExRx, Cable One Arm Pushdown (um braço, pegada supinada) (\"Position elbow to side.\"); ACE, Triceps Pushdowns (\"Continue pressing the weight with your elbows right next to your side\")"
+      },
+      {
+        "nome": "mãos na largura dos ombros",
+        "medida": "pegada_largura",
+        "t": "todos",
+        "faixa": [
+          0.85,
+          1.05
+        ],
+        "fonte": "free-exercise-db, Reverse Grip Triceps Pushdown (\"grab it with the palms facing up (supinated grip) at shoulder width\"); pedido do Weslley (\"as mãos mais ou menos na largura dos ombros\"). Os vãos das mãos ficam a 35 cm um do outro (as articulações dos ombros a 40 cm): é o mais aberto que a barra de 20\" deixa com o polegar dando a volta por fora — a mão fica toda na borracha, a ~5–10 mm da ponta de aço. No Tríceps Pulley a pegada é a pronada FECHADA do CSCS (\"6 to 12 inches (15-30 cm) wide\"). Medida: entre as bases dos dedos médios ÷ entre as articulações dos ombros"
+      },
+      {
+        "nome": "pegada supinada (palma sem virar pro meio)",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          -20,
+          20
+        ],
+        "fonte": "free-exercise-db, Reverse Grip Triceps Pushdown (\"with the palms facing up (supinated grip)\"); Catalyst Athletics, Reverse-Grip Tricep Pushdown (\"the palms up\"); ExRx, Cable One Arm Pushdown (um braço, pegada supinada) (\"underhand grip\"); Morales 2023 (\"supinada (com palma da mão para cima) utilizando a barra reta\")"
+      },
+      {
+        "nome": "começo: palma virada pra cima",
+        "medida": "palma_cima",
+        "t": 0.0,
+        "graus": [
+          0,
+          45
+        ],
+        "fonte": "Catalyst Athletics, Reverse-Grip Tricep Pushdown (\"with the elbows flexed and the palms up\"); free-exercise-db, Reverse Grip Triceps Pushdown (\"palms facing up\"). Com o antebraço ~30° acima da horizontal e o punho reto, a palma fica virada pra cima e um pouco pro corpo"
+      },
+      {
+        "nome": "fim: palma virada pra frente",
+        "medida": "palma_frente",
+        "t": 1.0,
+        "graus": [
+          0,
+          45
+        ],
+        "fonte": "o antebraço continua supinado e o punho reto (ACE, Triceps Pushdowns: \"wrists in neutral positon (i.e., aligned with your forearms)\"; \"This arm and wrist position should be maintained throughout the exercise.\"): com o braço esticado a palma fica virada pra frente, longe das coxas"
+      },
+      {
+        "nome": "punho reto (sem dobrar pra frente nem pra trás)",
+        "medida": "punho_flexao",
+        "t": "todos",
+        "graus": [
+          -15,
+          15
+        ],
+        "fonte": "ACE, Triceps Pushdowns (\"wrists in neutral positon (i.e., aligned with your forearms)\"; \"while maintaining a neutral position with your wrists\"). Com a palma pra cima o cabo tende a dobrar o punho pro lado da palma e quem segura são os extensores do punho (ExRx, Cable One Arm Pushdown (um braço, pegada supinada): Stabilizers \"Wrist Extensors\"; Villalba 2024: \"in the supinated with handle condition, the carpal extensors were recruited to prevent carpal flexion\")"
+      },
+      {
+        "nome": "punho desviado de lado no máximo um pouco (barra reta curta)",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -15,
+          18
+        ],
+        "fonte": "amplitude normal do desvio do punho, radial 0–20° e ulnar 0–30° (AAOS, por Norkin & White — a mesma fonte do limites.py; tecnica3d.punho_desvio: + = pro lado do polegar). Na barra de 20\", com as mãos na largura dos ombros e os cotovelos junto do tronco (mais abertos que as mãos), o antebraço chega na mão vindo ~8° de fora pra dentro e, com o polegar por fora (supinada), o punho desvia ~13–14° pro lado do polegar (como na Rosca Direta na Polia); no Tríceps Pulley (pronado) o mesmo V vai pro lado do dedo mínimo, que tem mais folga. O ACE pede o punho na linha do antebraço (\"wrists in neutral positon (i.e., aligned with your forearms)\")"
+      },
+      {
+        "nome": "tronco ereto e parado",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "ACE, Triceps Pushdowns (\"keeping your torso aligned vertically with the floor and maintaining this position throughout the exercise\"); Catalyst Athletics, Reverse-Grip Tricep Pushdown (\"Keeping the trunk braced tightly\"); NSCA/CSCS (Achievable), Triceps pushdown (machine) (\"Stand erect\"; \"Keep the torso erect\")"
+      },
+      {
+        "nome": "joelhos levemente dobrados e parados",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          10,
+          20
+        ],
+        "fonte": "NSCA/CSCS (Achievable), Triceps pushdown (machine) (\"Stand erect with feet shoulder-width apart and knees slightly flexed.\"; \"Keep the torso, arms, and knees in the same position.\"); Villalba 2024 (\"knees slightly flexed\")"
+      },
+      {
+        "nome": "pés na largura dos ombros",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          1.5,
+          2.3
+        ],
+        "fonte": "free-exercise-db, Reverse Grip Triceps Pushdown (\"your feet should be shoulder width apart from each other\"); NSCA/CSCS (Achievable), Triceps pushdown (machine) (\"feet shoulder-width apart\"). Medida: distância entre os tornozelos ÷ entre as articulações do quadril (~2 = largura dos ombros, tecnica3d.pes_largura)"
+      }
+    ]
+  }
+}

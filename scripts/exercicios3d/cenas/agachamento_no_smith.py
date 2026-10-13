@@ -191,7 +191,9 @@ def montar(bon):
         palma_q = R @ Vector((0, -1, PALMA_INCL))
         for lado, s in LADOS:
             polo = p3.cabeca(rig, lado + "Arm") + R @ Vector((s * 0.30, 0.35, -0.40))
-            maos.segurar(lado, c + eixo_barra * (s * GRIP_X), dedos_q, palma_q, polo=polo, alinhar=ALINHA)
+            # zerar (12/10/2026): o braço parte do repouso em todo quadro; sem isso o antebraço esquerdo girava −5° por quadro no
+            # próprio eixo (119° na descida) com a mão parada na barra e o punho torcia junto
+            maos.segurar(lado, c + eixo_barra * (s * GRIP_X), dedos_q, palma_q, polo=polo, alinhar=ALINHA, zerar=True)
         for lado, _ in LADOS:          # os 4 dedos fecham até a pele encostar na barra (o polegar do fechar_em_volta é trocado
             pose.dedos[lado] = pg.fechar_em_volta(bon, lado, c, eixo_barra, RAIO, polegar_modo="busca")   # pelo novo, fixo)
             _polegar_nos_angulos(bon, lado, POLEGAR_VOLTA)

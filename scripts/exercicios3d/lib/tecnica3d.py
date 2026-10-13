@@ -696,3 +696,272 @@ def tronco_giro(j):
 
 
 MEDIDAS.update({"tronco_giro": tronco_giro})
+
+
+# ── abdominal na polia (lote 12, 11/10/2026): ajoelhado na polia alta, o peso do cabo arqueia a lombar no começo (free-exercise-db,
+# Cable Crunch: "allow the weight to hyperextend the lower back"; ExRx, Cable Kneeling Crunch: "allowing resistance on cable pulley to
+# lift torso upward so spine is hyperextended") e depois a coluna enrola. O `coluna` (lombar × torácica) não tem sinal: a coluna 10°
+# arqueada e 10° enrolada dão o mesmo número.
+def coluna_sinal(j):
+    """Curvatura da coluna COM SINAL, graus: a torácica (Spine1 → pescoço) em relação à lombar (quadril → Spine1), as 2 no plano
+    sagital do tronco (o lado vem da linha dos ombros): + = flexão (a torácica enrola pra frente), − = extensão (a coluna arqueada pra
+    trás). Sem o sinal, é o `coluna`. No referencial do tronco: vale em pé, ajoelhado com o tronco inclinado ou deitado."""
+    _, lado, _ = eixos_tronco(j)
+    a = j["Spine1"] - j["Hips"]
+    b = j["Neck"] - j["Spine1"]
+    a = _u(a - lado * (a @ lado))
+    b = _u(b - lado * (b @ lado))
+    return [math.degrees(math.atan2(float(np.cross(a, b) @ -lado), float(a @ b)))]
+
+
+MEDIDAS.update({"coluna_sinal": coluna_sinal})
+
+
+# ── abdominal russo (lote 12, 11/10/2026): sentado no colchonete, o TRONCO gira pros lados e a pelve fica parada — o glúteo não gira
+# no chão junto com o tronco (free-exercise-db, Russian Twist: "Twist your torso to the right side"; NASM, Russian Twist: "Rotate your
+# torso to one side"). O tronco_giro mede o tórax EM RELAÇÃO à pelve e o pelve_nivel a pelve inclinando de lado: a pelve inteira girando
+# em volta da vertical (o glúteo girando no chão, levando o tórax junto) não aparece em nenhum dos 2.
+def pelve_giro(j):
+    """Giro da pelve em volta da vertical, visto de cima, graus: a linha das articulações do quadril (da esquerda pra direita), no plano
+    do chão, × o eixo −X do mundo (a esquerda → a direita de quem olha pra −Y, pra onde todo boneco da fábrica olha): 0 = pelve de frente
+    pra −Y, + = a pelve virou pra ESQUERDA (o quadril direito foi pra frente), − = pra direita, como o tronco_giro. Referencial do MUNDO:
+    é o "glúteo não gira no chão" de quem fica sentado ou deitado no mesmo lugar (em pé, inclinado pra frente ou deitado de costas, a
+    linha dos quadris continua no plano do chão e o número não muda)."""
+    d = _chao(j["RightUpLeg"] - j["LeftUpLeg"])
+    return [math.degrees(math.atan2(-float(d[1]), -float(d[0])))]
+
+
+MEDIDAS.update({"pelve_giro": pelve_giro})
+
+
+# ── abdominal infra (lote 12, 11/10/2026): deitado de costas, as coxas começam NA VERTICAL e passam dela pro lado da cabeça
+# quando a pelve enrola pra trás e sai do chão (free-exercise-db, Reverse Crunch: "thighs are perpendicular to the floor" / "move
+# your legs towards the torso"; ACE, Reverse Crunch: "raising your knees directly above your hips" e, na volta, "ensuring that your
+# knees don't move past your hips"). O "quadril" do checagem3d e o quadril_sinal medem a coxa contra a linha quadril → pescoço, que
+# inclina quando a pelve sobe; a "inclinacao" da ficha não diz se o joelho foi pro lado da cabeça ou dos pés.
+def coxa_vertical(j):
+    """Coxa (quadril → joelho) × a vertical do mundo, no plano que vai dos pés à cabeça, graus [E, D]: 0 = coxa em pé, com o
+    joelho bem em cima do quadril; + = o joelho passou pro lado da cabeça (90 = coxa deitada apontando pra cabeça); − = pro lado
+    dos pés. O lado da cabeça é a linha quadril → pescoço vista de cima: vale com o boneco deitado no chão (de costas, com a pelve
+    no chão ou levantada), não em pé (aí essa linha some)."""
+    cab = _u(_chao(j["Neck"] - j["Hips"]))
+    return [math.degrees(math.atan2(float((j[L + "Leg"] - j[L + "UpLeg"]) @ cab), float((j[L + "Leg"] - j[L + "UpLeg"])[2])))
+            for L, _ in LADOS]
+
+
+MEDIDAS.update({"coxa_vertical": coxa_vertical})
+
+
+# ── bicicleta ergométrica (lote 14, 12/10/2026): o recuo do selim põe o joelho em cima do eixo do pedal com o pedivela na frente — a
+# linha de prumo do joelho passa pela bola do pé (HSS, How to Set Up an Exercise Bike: "imagine there's a straight line from your front
+# knee right down to the middle of the pedal, which should be right in line with the ball of your foot"; Tang et al. 2022, Int J Environ
+# Res Public Health 19(19):12046: o "knee forward of foot" (KFOF) é "the vertical projection distance of the knee joint to the fifth
+# metatarsal head at 90° of the pedaling cycle"). O joelho_alem_dos_dedos mede contra a PONTA dos dedos, ao longo do pé.
+def joelho_frente_do_pe(j):
+    """Centro do joelho à frente (+) ou atrás (−) da base dos dedos (cabeça do ToeBase: a bola do pé), na horizontal, ao longo da frente
+    da pelve, mm [E, D]: 0 = o joelho na linha de prumo da bola do pé (o KFOF do bike fit, medido com o pedivela na frente). Subir ou
+    descer o joelho não muda o número; no referencial da pelve, no plano do chão: vale sentado ou em pé, virado pra qualquer lado."""
+    _, frente = eixos_pelve(j)
+    return [float((j[L + "Leg"] - j[L + "ToeBase"]) @ frente) * 1000 for L, _ in LADOS]
+
+
+MEDIDAS.update({"joelho_frente_do_pe": joelho_frente_do_pe})
+UNIDADE.update({"joelho_frente_do_pe": "mm"})
+
+
+# ── elíptico (lote 14, 12/10/2026): em pé nos pedais, o "quadril" do estudo de cinemática do elíptico (Knutzen et al. 2010, Open Sports
+# Sci J 3:165-177, Fig. 1: θhip, a coxa — trocânter → côndilo lateral — contra a VERTICAL; o modelo não tem marcador na pelve) vai de
+# 6,78° de extensão a 45,63° de flexão (Tabela 1, rampa baixa). O quadril_sinal mede a coxa contra o tronco (muda com o tronco inclinado)
+# e a "inclinacao" da ficha não diz se o joelho está à frente ou atrás do quadril.
+def coxa_em_pe(j):
+    """Coxa (articulação do quadril → centro do joelho) × a vertical do mundo, no plano sagital da pelve (vista de lado), graus [E, D]:
+    0 = coxa em pé (o joelho bem embaixo do quadril), + = o joelho à frente do quadril (flexão), − = atrás (extensão). O lado vem da
+    linha dos quadris no chão (eixos_pelve): abrir a coxa pro lado não muda o número; vale em pé, virado pra qualquer lado."""
+    lado, frente = eixos_pelve(j)
+    out = []
+    for L, _ in LADOS:
+        c = j[L + "Leg"] - j[L + "UpLeg"]
+        c = c - lado * (c @ lado)
+        out.append(math.degrees(math.atan2(float(c @ frente), float(-c[2]))))
+    return out
+
+
+MEDIDAS.update({"coxa_em_pe": coxa_em_pe})
+
+
+# ── escalador (lote 13, 12/10/2026): na prancha alta com UMA perna dobrada embaixo do corpo e a outra esticada pra trás (NSCA, Kinetic
+# Select, Football-Specific Speed Drills: "the athlete flexes one leg at the knee and hip and positions that foot on the ground under the
+# hips. The hips do not rise away from the ground"), a reta do corpo vai do ombro ao tornozelo da perna ESTICADA — o
+# quadril_linha_ombro_tornozelo usa o meio dos 2 tornozelos (na flexão de braço os pés ficam juntos) e, com um pé embaixo do quadril, o
+# meio cai perto do joelho de trás. E a bola do pé da perna que vem pra frente pousa embaixo do quadril e fica parada no chão até a troca.
+def quadril_linha_ombro_tornozelo_lado(j):
+    """Como o quadril_linha_ombro_tornozelo, mas a reta vai do meio dos ombros (cabeças do úmero) até o tornozelo de UM lado, mm [E, D]:
+    o centro das articulações do quadril acima (+, pro lado das costas) ou abaixo (−, pro lado da barriga) da reta ombro → tornozelo
+    esquerdo e da reta ombro → tornozelo direito, no eixo frente do tronco. No escalador vale o lado da perna esticada atrás (a regra da
+    ficha usa "lado"); com os 2 tornozelos juntos (flexão de braço) os 2 números são o do quadril_linha_ombro_tornozelo."""
+    _, _, frente = eixos_tronco(j)
+    ombro = (j["LeftArm"] + j["RightArm"]) / 2
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    out = []
+    for L, _ in LADOS:
+        pe = j[L + "Foot"]
+        u = _u(ombro - pe)
+        d = (quadril - pe) - u * float((quadril - pe) @ u)
+        out.append(-float(d @ frente) * 1000)
+    return out
+
+
+def bola_do_pe_quadril(j):
+    """Bola do pé (cabeça do ToeBase: a articulação da base dos dedos) à frente (+, pro lado da cabeça) ou atrás (−) do centro das
+    articulações do quadril, na direção quadril → pescoço vista de cima (no plano do chão), mm [E, D]: 0 = a bola do pé bem embaixo do
+    quadril. De bruços na prancha alta (escalador), o pé que vem pra frente pousa embaixo do quadril e o de trás fica ~0,7 m atrás; com
+    o tronco parado, o pé parado no chão dá o mesmo número em todo quadro (sem escorregar). Subir ou descer o pé não muda o número; com
+    o tronco em pé (na vertical) a direção some."""
+    frente = _u(_chao(j["Neck"] - j["Hips"]))
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    return [float((j[L + "ToeBase"] - quadril) @ frente) * 1000 for L, _ in LADOS]
+
+
+MEDIDAS.update({"quadril_linha_ombro_tornozelo_lado": quadril_linha_ombro_tornozelo_lado, "bola_do_pe_quadril": bola_do_pe_quadril})
+UNIDADE.update({"quadril_linha_ombro_tornozelo_lado": "mm", "bola_do_pe_quadril": "mm"})
+
+
+# ── remo ergômetro (lote 14, 12/10/2026): sentado no carrinho, o tronco vai de inclinado à frente na pegada a inclinado pra trás no final,
+# passando pela vertical no meio da passada (Concept2, Indoor Rowing Technique: "Upper body is leaning forward from the hips with the
+# shoulders in front of the hips." / "swing the back through the vertical position" / "Upper body is leaning back slightly"), e na pegada a
+# canela fica em pé sem passar da vertical ("Shins are vertical, or as close to vertical as is comfortable for you. Shins should not move
+# beyond perpendicular."). O "tronco" do checagem3d (quadril → pescoço × vertical) não tem sinal: 20° à frente e 20° pra trás dão o mesmo
+# número; e a "inclinacao" da canela não diz se o joelho passou do tornozelo. Os estudos de remo medem o tronco com sinal, + pra trás
+# (Cardoso et al. 2024, Sensors 24:5686: "The thorax (positive) and knee angles indicate extension and flexion"; Penichet-Tomas et al.
+# 2025: "positive angles (AT+) indicating movement towards the finish position and negative angles (AT-) indicating movement towards the
+# catch position").
+def tronco_sinal(j):
+    """Tronco (quadril → pescoço) × a vertical do mundo COM SINAL, no plano sagital da pelve (vista de lado), graus: 0 = em pé, + =
+    inclinado pra TRÁS (o pescoço atrás do quadril: o final do remo), − = pra FRENTE (a pegada). O lado vem da linha dos quadris no chão
+    (eixos_pelve): inclinar de lado não muda o número; vale sentado ou em pé, virado pra qualquer lado."""
+    lado, frente = eixos_pelve(j)
+    d = j["Neck"] - j["Hips"]
+    d = d - lado * (d @ lado)
+    return [math.degrees(math.atan2(-float(d @ frente), float(d[2])))]
+
+
+def canela_sinal(j):
+    """Canela (tornozelo → centro do joelho) × a vertical do mundo COM SINAL, no plano sagital da pelve, graus [E, D]: 0 = canela em pé
+    (o joelho bem em cima do tornozelo), + = o joelho à frente do tornozelo (a canela passou da vertical), − = atrás. Abrir o joelho pro
+    lado não muda o número."""
+    lado, frente = eixos_pelve(j)
+    out = []
+    for L, _ in LADOS:
+        c = j[L + "Leg"] - j[L + "Foot"]
+        c = c - lado * (c @ lado)
+        out.append(math.degrees(math.atan2(float(c @ frente), float(c[2]))))
+    return out
+
+
+MEDIDAS.update({"tronco_sinal": tronco_sinal, "canela_sinal": canela_sinal})
+
+
+# ── supino declinado com barra (lote 14, 12/10/2026): em cima os braços ficam "perpendicular to the floor" (free-exercise-db, Decline
+# Barbell Bench Press: "The arms should be perpendicular to the floor.") — perpendiculares ao CHÃO, não ao tronco (no banco a −15° o
+# braço em pé fica ~15° inclinado pros pés em relação à normal do tronco) — e isso se vê de LADO: com a pegada média o punho fica mais
+# aberto que o ombro e a reta ombro → punho inclina pro lado vista de frente, o que não é erro (a "inclinacao" da checagem3d, segmento ×
+# horizontal, mede as 2 coisas juntas).
+def braco_lado(j):
+    """Reta ombro → punho (cabeça do úmero → cabeça da mão) × a vertical do mundo, vista de LADO — sem a parte de lado a lado do tronco
+    —, graus [E, D]: 0 = o punho bem em cima (ou bem embaixo) do ombro visto de lado, + = o punho pro lado dos pés, − = pro lado da
+    cabeça. No referencial do tronco (o lado a lado sai dos ombros e "os pés" do eixo quadril → pescoço): vale no banco reto, inclinado
+    ou declinado."""
+    cima, lado, _ = eixos_tronco(j)
+    v = _u(CIMA - lado * (CIMA @ lado))                  # a vertical do mundo no plano de lado do tronco
+    p = np.cross(lado, v)
+    if p @ -cima < 0:                                    # ⟂ à vertical, no mesmo plano, pro lado dos pés
+        p = -p
+    out = []
+    for L, _ in LADOS:
+        d = j[L + "Hand"] - j[L + "Arm"]
+        d = d - lado * (d @ lado)
+        out.append(math.degrees(math.atan2(float(d @ p), float(d @ v))))
+    return out
+
+
+MEDIDAS.update({"braco_lado": braco_lado})
+
+
+# ── prancha lateral (lote 13, 12/10/2026): deitado de lado num antebraço, o corpo fica reto da cabeça ao tornozelo visto de FRENTE (no
+# plano da frente do corpo) — o quadril não cai pro chão nem sobe pro teto (ACE, McGill's Torso Muscular Endurance Test Battery, Trunk
+# Lateral Endurance Test: "The hips should be elevated off the mat and the body should be in straight alignment (i.e., head, neck,
+# torso, hips, and legs)"; o teste acaba com "the hips dropping downward") — e o corpo não rola pra frente nem pra trás ("The hips
+# shifting forward or backward in an effort to maintain balance and stability"). O quadril_linha_ombro_tornozelo mede no eixo da FRENTE
+# do tronco (de bruços); aqui é o eixo de LADO a lado. O tronco_giro compara o tórax com a pelve (o corpo inteiro rolando junto não
+# aparece), o ombros_nivel/pelve_nivel perdem o sentido com o corpo de lado e a cabeca_tronco só vê a cabeça no plano de lado.
+def _lado_de_cima(lado):
+    """O eixo de lado a lado do tronco (do ombro esquerdo pro direito) virado pro ombro que está mais ALTO (com os 2 na mesma altura,
+    fica como está: pro direito)."""
+    return -lado if lado[2] < 0 else lado
+
+
+def quadril_linha_lateral(j):
+    """Centro das articulações do quadril fora da reta ombro → tornozelo (do meio das cabeças do úmero ao meio dos tornozelos) no eixo de
+    LADO a lado do tronco, mm: + = pro lado do ombro mais alto (na prancha lateral, o quadril subiu pro teto), − = pro lado do ombro mais
+    baixo (o quadril caiu pro chão); 0 = o corpo reto visto de frente. No referencial do tronco: vale deitado de lado, inclinado ou em pé
+    (em pé, com os 2 ombros na mesma altura, o + fica pro lado do ombro direito)."""
+    _, lado, _ = eixos_tronco(j)
+    lado = _lado_de_cima(lado)
+    ombro = (j["LeftArm"] + j["RightArm"]) / 2
+    pe = (j["LeftFoot"] + j["RightFoot"]) / 2
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    u = _u(ombro - pe)
+    d = (quadril - pe) - u * float((quadril - pe) @ u)
+    return [float(d @ lado) * 1000]
+
+
+def corpo_rolagem(j):
+    """Quanto o tórax e a pelve estão rolados em volta do eixo do corpo em relação ao CHÃO, graus [tórax, pelve]: a frente de cada um
+    (cima × lado, o lado do tórax pelas bases das clavículas e o da pelve pelas articulações do quadril, os 2 ⟂ ao eixo quadril → pescoço)
+    × o plano do chão: 0 = o peito (ou a frente da pelve) virado na horizontal — deitado de lado sem rolar, ou em pé —, + = virado pro teto
+    (rolou pra trás), − = virado pro chão (rolou pra frente); de bruços dá −90. Sem as clavículas nas juntas (dicionários antigos dos
+    testes), devolve []."""
+    if "LeftShoulder" not in j or "RightShoulder" not in j:
+        return []
+    cima = _u(j["Neck"] - j["Hips"])
+    out = []
+    for a, b in (("LeftShoulder", "RightShoulder"), ("LeftUpLeg", "RightUpLeg")):
+        lado = j[b] - j[a]
+        lado = _u(lado - cima * (lado @ cima))
+        out.append(math.degrees(math.asin(max(-1.0, min(1.0, float(np.cross(cima, lado)[2]))))))
+    return out
+
+
+def cabeca_lado(j):
+    """Cabeça (base do pescoço → base da cabeça) × eixo do tronco (quadril → pescoço) no plano da FRENTE do tronco (de lado a lado), graus:
+    0 = a cabeça na linha do tronco vista de frente, + = inclinada pro lado do ombro mais alto (na prancha lateral, levantou pro teto),
+    − = pro do ombro mais baixo (caiu pro chão). É a parte que a cabeca_tronco (plano de lado) não vê; o boneco em pé, no repouso, mede
+    ~−3 (o + pro ombro direito). Sem a cabeça nas juntas, devolve []."""
+    if "Head" not in j:
+        return []
+    cima, lado, frente = eixos_tronco(j)
+    lado = _lado_de_cima(lado)
+    c = j["Head"] - j["Neck"]
+    c = c - frente * (c @ frente)
+    return [math.degrees(math.atan2(float(c @ lado), float(c @ cima)))]
+
+
+def antebraco_frente(j):
+    """Antebraço (cotovelo → punho) × a FRENTE do tronco, graus [E, D]: 0 = apontando reto pra frente do peito — perpendicular ao corpo,
+    o "Place forearm on mat under shoulder perpendicular to body" (ExRx, Side Plank) —, 90 = pro lado, pra cabeça ou pros pés. No
+    referencial do tronco: vale em pé, deitado de lado ou de bruços."""
+    _, _, frente = eixos_tronco(j)
+    return [_ang(j[L + "Hand"] - j[L + "ForeArm"], frente) for L, _ in LADOS]
+
+
+def pe_frente(j):
+    """Pé (tornozelo → base dos dedos) × a FRENTE do tronco, graus [E, D]: os dedos virados pra frente do peito; o boneco em pé, no
+    repouso, mede ~16 (a base dos dedos fica mais baixa que o tornozelo). Com o corpo de lado o ponta_pe/ponta_dedos (no plano do chão,
+    pela pelve) perdem o sentido; este fica no referencial do tronco."""
+    _, _, frente = eixos_tronco(j)
+    return [_ang(j[L + "ToeBase"] - j[L + "Foot"], frente) for L, _ in LADOS]
+
+
+MEDIDAS.update({"quadril_linha_lateral": quadril_linha_lateral, "corpo_rolagem": corpo_rolagem, "cabeca_lado": cabeca_lado,
+                "antebraco_frente": antebraco_frente, "pe_frente": pe_frente})
+UNIDADE.update({"quadril_linha_lateral": "mm"})

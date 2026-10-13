@@ -1,0 +1,409 @@
+{
+  "uuid": "44838472-dc0c-5658-8169-55ac4bb2c5b1",
+  "nome": "Simulador de Escada",
+  "cena": "simulador_de_escada",
+  "grupo": "Cardio",
+  "subgrupo": "Cardiorrespiratório · glúteo · quadríceps",
+  "padrao_movimento": "cardio",
+  "equipamento": "cardio",
+  "variacao": "stepper (pedais)",
+  "alvos": [
+    "gluteo",
+    "quadriceps"
+  ],
+  "auxiliares": [
+    "panturrilha",
+    "posterior"
+  ],
+  "camera": {
+    "az": 66,
+    "el": 8,
+    "dist": 5.0,
+    "alvo": [
+      0,
+      -0.15,
+      1.0
+    ]
+  },
+  "camera_vistas": {
+    "dist": 5.0,
+    "alvo": [
+      0,
+      -0.15,
+      1.0
+    ]
+  },
+  "ida_s": 2.0,
+  "fps": 16,
+  "ciclo": true,
+  "ciclo_motivo": "Simulador de escada: o movimento é cíclico (o passo alternado se repete) — t = 0 → 1 é UM ciclo, 2 passos (t = 0: pedal direito embaixo e o esquerdo em cima; t = 0,5: o contrário), e a pose em t = 1 é igual à de t = 0; o app repete o ciclo (LoopRepeat) em vez de ir e voltar, o que faria o pedal subir com o peso do corpo em cima. ida_s = 2,0 s = 1 ciclo a 60 passos/min (Graham 1993: metrônomo de \"2 seconds per one complete movement\" no Stairmaster 4000; Butts 1993: 60 é uma das cadências do fabricante, \"60, 77, 95, and 112 steps.min-1\"; Zimmermann 1994: \"60 steps/minute\") e fps = 16 (o padrão: 32 quadros no ciclo): o maior salto entre 2 quadros foi medido em 27 mm (com 32 quadros no ciclo), abaixo da regra de 80 mm: pela mesma conta, 5,4 quadros/s já passariam.",
+  "movimento": "Subindo no simulador de escada (stepper de pedais) em ritmo moderado, 60 passos por minuto: em pé nos 2 pedais, com 3/4 do pé em cima (o calcanhar um pouco pra fora da borda de trás e os dedos pra frente) e as mãos de leve nos pegadores da frente, os cotovelos um pouco dobrados (~50°), sem jogar o peso nos braços. O passo é alternado: o peso vai pro pedal de cima, que desce ~20 cm (um pouco pra trás, sempre nivelado) enquanto a perna estica até quase reta (~8°, sem travar o joelho); ao mesmo tempo o outro pedal sobe e o joelho dessa perna dobra até ~79°; a troca acontece antes de o pedal de baixo chegar embaixo e de o de cima bater em cima. O corpo todo fica levemente inclinado à frente (~5°), com as costas retas, o quadril sem balançar de lado (só sobe ~2 cm no meio de cada passo), os joelhos na linha dos pés e a cabeça olhando pra frente.",
+  "cinesiologia": {
+    "plano": "sagital, cíclico, alternado (cadeia fechada: os 2 pés nos pedais o tempo todo), em pé, com as mãos de leve nos pegadores",
+    "articulacoes": "quadril (extensão quando o pedal desce, flexão quando sobe), joelho (idem: de ~8° a ~79°) e tornozelo (flexão plantar quando o pedal desce e dorsiflexão quando sobe — o pé fica chapado no pedal nivelado e a canela inclina com o joelho)",
+    "agonistas": "quadríceps (extensão do joelho) e glúteo máximo (extensão do quadril), que empurram o pedal pra baixo",
+    "sinergistas": "isquiotibiais (extensão do quadril, pouco ativos: Zimmermann 1994), gastrocnêmio e sóleo (flexão plantar no fim da descida; o gastrocnêmio trabalha mais que no step-up: Cook 1992)",
+    "estabilizadores": "glúteo médio (o quadril não balança de lado — ExRx: \"Static: Hip Abduction\"), abdominais, oblíquos e eretores da espinha (tronco reto), tibial anterior e os músculos do pé (o pé no pedal); os braços só equilibram (mãos de leve, sem puxar)",
+    "fases": "descida (o pedal de cima desce com o peso do corpo: o quadril e o joelho estendem) e subida (o pedal de baixo volta pra cima: o quadril e o joelho dobram), uma perna meio ciclo depois da outra; a troca (um pedal embaixo e o outro em cima, os 2 pés apoiados) acontece 2 vezes por ciclo"
+  },
+  "referencias": [
+    "free-exercise-db (yuhonas, domínio público), \"Stairmaster\" (o fonte_en do catálogo), lido em 11/10/2026: \"Pump your legs up and down in an established rhythm, driving the pedals down but not all the way to the floor. It is recommended that you maintain your grip on the handles so that you don't fall.\"; \"primaryMuscles\": [\"quadriceps\"], \"secondaryMuscles\": [\"calves\", \"glutes\", \"hamstrings\"]; as 2 fotos: um StairMaster FreeClimber (pedais independentes) — na foto 1, em pé, as 2 mãos nos pegadores da frente, na altura do peito. À parte, a escada que gira: \"Step Mill\" (\"Use caution so that you don't trip as you climb the stairs\") — outra máquina.",
+    "ExRx.net, \"Lever Stair Climber\" (o stepper de pedais; à parte do \"Gauntlet Stair Climber\", a escada que gira): \"Step onto pedal platforms and grasp handrails.\"; \"Place weight on one pedal and allow other pedal to raise. Before lower lever hits bottom or upper lever hits top, alternate with opposite movement. Repeat.\"; \"Avoid transferring body weight onto handlebars.\"; \"Dynamic: Hip Extension · Knee Extension · Ankle Plantar Flexion\" e \"Static: Hip Abduction · Spine Lateral Flexion\".",
+    "StairMaster FreeClimber 4200 PT, 4400 PT/CL e 4600 PT/CL Owner’s Manual (Core Health & Fitness, 42-44-4600_C40_OM): \"Hold onto the handlebars and step up onto the pedals. Stand up straight. The pedals will sink slowly toward the floor.\"; \"Take deep, comfortable steps. Do not let the pedals touch the floor or contact the upper stop.\"; \"Relax and stand up straight while exercising. Use the handlebars for balance (see Figure 5).\"; \"Select an intensity level that allows you to stay in the middle of the pedal range of motion.\"; figura 5, \"Correct Exercise Position\": \"Head - Keep your chin parallel to the floor.\", \"Chest/Shoulders - Keep your shoulders square and centered over your hips with your chest lifted.\", \"Hands - Rest your hands lightly on the side rails or front handlebars. Excessive leaning on the side rails can reduce calorie burn by up to 20%.\", \"Back - Although the whole body is in a slightly forward slant, keep your back straight and avoid bending at the waist.\", \"Hips/Torso - Keep your hips directly under you with the buttocks slightly contracted. Avoid letting your hips rock from side to side with each step.\", \"Elbows - Keep both elbows slightly bent.\", \"Legs - Use a full, pain-free range of motion with each step, straightening your legs as far as possible without causing discomfort or letting your knees lock out.\", \"Knees - Keep your knees aligned with your toes. Avoid training with your knees too far past your toes and keep your feet pointing forward. Do not hyperextend your knees.\", \"Feet - Place 3/4 of each foot on the pedals, heels slightly off the edge with your toes facing forward.\"; \"Floors - Displays the equivalent number of floors climbed with an 8-inch step\"; \"Length 44 inches (104 cm)\", \"Height 69 inches (176 cm)\". A foto da figura 5 (extraída do PDF): as 2 mãos nos pegadores da frente (os \"Handles\" em pé ao lado do painel, figura 1), cotovelo ~50°, a perna de cima com o joelho bem dobrado e o pé chapado no pedal, a de baixo quase reta e vertical (observação). Figura 11: braço do pedal com o eixo perto do chão e o braço nivelador paralelo acima dele.",
+    "StairMaster 8FC FreeClimber (Core Health & Fitness, página do produto e ficha técnica): \"Patented Independent Pedal Geometry with Four-Bar Linkage: ... keeps pedals level\"; \"Step Height: 1 - 14\\\" (2.5 - 36cm)\"; \"Product Dimensions: 43 x 27 x 68\\\" (110 x 69 x 173cm)\"; \"Step Rate: 20 Levels, 24-162 steps per minute (SPM)\"; \"built to target the glutes\" — as medidas do stepper (equip3d.stepper).",
+    "Potts LL. Stair climbing exercise apparatus. US 4,708,338 A (1987): \"The right pedal oscillates between an upper position at rest and a lower, rearward position under the weight of the user\"; \"Given that the pedal arm and support arm are parallel and equal to each other, the pad 44 will remain parallel to the floor whether in the depressed position or at rest.\"; \"The weight of the exerciser, thus, activates the pedal.\"",
+    "Graham VL, Gehlsen GM, Edwards JA. Electromyographic evaluation of closed and open kinetic chain knee rehabilitation exercises. J Athl Train. 1993;28(1):23-30 (PMC1317886): \"Stairmaster 4000 (manual setting, level 7, steady climb)\"; \"2 seconds per one complete movement of the lateral step-ups, Fitter, Stairmaster, and slideboard movements\"; Tabela 1, Stairmaster: \"range of motion\" 72.0 ± 11.7°, \"maximum velocity\" 138.8 ± 26.8°/s, \"minimum angle\" 4.9 ± 7.8° (o joelho); Tabela 2: \"% MVC quadriceps\" 36.0 ± 19.7, \"% MVC hamstrings\" 22.6 ± 10.6.",
+    "Hylland R, Thomason ME, Tan CL, Herrington M. An analysis of two stairstepping machines at two speeds. ISBS Conference Proceedings Archive (ojs.ub.uni-konstanz.de/cpa/article/view/1715): \"The Stairmaster 4000PT is an independent machine, with unlinked pedals\"; Tabela 1, \"Relative joint angles\" (amplitude), SM4: quadril 25.70, joelho 43.11, tornozelo 13.07; SM8: 29.06, 45.37, 20.78; \"the step height on the SM was 5 to 30 cm\".",
+    "Zimmermann CL et al. J Orthop Sports Phys Ther. 1994;19(3):173-180 (resumo): \"forward stair stepping at 35 and 95 steps/minute and forward and retrograde stair stepping at 60 steps/minute\"; \"Faster cadences result in increased peak activity of shorter duration for the gluteus maximus, quadriceps, and gastrocnemius.\"; \"stair-stepping exercise would not be recommended for strengthening of the hamstrings musculature.\" Cook TM et al. J Orthop Sports Phys Ther. 1992;16(3):108-113 (resumo): \"Mean G activity was significantly greater for stepping machine exercise.\" Butts NK et al. Med Sci Sports Exerc. 1993;25(3):378-382 (resumo): \"predetermined rates of 60, 77, 95, and 112 steps.min-1\". Howley ET et al. Med Sci Sports Exerc. 1992;24(9):1055-1058 (resumo): \"Support resulted in lower HR (P = 0.017) and VO2 (P = 0.002) values at 10 METs.\"",
+    "ACE — \"Best Cardio Machines to Meet Your Fitness Goals\" (Consumer Reports, 17/09/2022): \"(Some stair machines, which look more like two paddles that go up and down with your feet, don’t require you to lift your feet and are lower-impact.)\" NSCA, Kinetic Select, \"Knee Movement and Exercise Guidelines\" (Essentials of Personal Training, 2ª ed.), Tabela 21.7: \"Stair stepper with large steps\" (contraindicado) × \"Stair stepper with short, choppy steps\" (indicado), pra dor na frente do joelho.",
+    "Konor MM, Morton S, Eckerson JM, Grindstaff TL. Reliability of three measures of ankle dorsiflexion range of motion. Int J Sports Phys Ther. 2012;7(3):279-287 (PMC3362988): dorsiflexão com carga (lunge na parede, inclinômetro na tíbia) \"38.8 ± 5.2°\", 20 adultos saudáveis — o teto do tornozelo com o pé chapado no pedal de cima."
+  ],
+  "checagens": {
+    "pes_no_chao": false,
+    "pes_no_chao_fonte": "Os pés ficam nos pedais, não no chão: em pé nos 2 pedais o ciclo todo (ACE/Consumer Reports: \"two paddles that go up and down with your feet, don’t require you to lift your feet\"), com 3/4 do pé em cima e o calcanhar um pouco pra fora da borda de trás (manual do FreeClimber: \"Place 3/4 of each foot on the pedals, heels slightly off the edge\"). As zonas medem o pé encostando no pedal em todo quadro (o pé anda com o pedal, sem escorregar: o info da cena mostra a sola × pedal) e as alturas, que os pés nunca descem até o chão (\"driving the pedals down but not all the way to the floor\").",
+    "tecnica_padrao": false,
+    "tecnica_padrao_motivo": "As regras padrão são de base parada com os 2 pés no chão (pés paralelos, um não à frente do outro); no stepper os pés estão nos pedais, um mais alto e ~7 cm à frente do outro na troca (o pedal desce num arco pra trás). As regras do stepper estão nos ângulos abaixo (pés pra frente, joelho na linha do pé, coluna reta, cabeça olhando pra frente, quadril sem balançar).",
+    "zonas": [
+      {
+        "nome": "pé esquerdo no pedal",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "equipamento": "stepper_pedal_E",
+        "mm": [
+          -3,
+          3
+        ],
+        "t": "todos"
+      },
+      {
+        "nome": "pé direito no pedal",
+        "partes": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "equipamento": "stepper_pedal_D",
+        "mm": [
+          -3,
+          3
+        ],
+        "t": "todos"
+      }
+    ],
+    "alturas": [
+      {
+        "nome": "pé esquerdo longe do chão (o pedal não desce até embaixo)",
+        "partes": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "acima_de": "chao",
+        "mm": [
+          180,
+          420
+        ],
+        "t": "todos"
+      },
+      {
+        "nome": "pé direito longe do chão (o pedal não desce até embaixo)",
+        "partes": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "acima_de": "chao",
+        "mm": [
+          180,
+          420
+        ],
+        "t": "todos"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "joelho quase esticado embaixo, sem travar (direito, pedal embaixo)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          5,
+          12
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Legs - Use a full, pain-free range of motion with each step, straightening your legs as far as possible without causing discomfort or letting your knees lock out.\"; \"Do not hyperextend your knees.\"); Graham 1993, Tabela 1, Stairmaster: \"minimum angle\" 4.9 ± 7.8° (o boneco em pé, no repouso, já tem 7,5°)"
+      },
+      {
+        "nome": "joelho quase esticado embaixo, sem travar (esquerdo, pedal embaixo)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 0.5,
+        "graus": [
+          5,
+          12
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Legs - Use a full, pain-free range of motion with each step, straightening your legs as far as possible without causing discomfort or letting your knees lock out.\"; \"Do not hyperextend your knees.\"); Graham 1993, Tabela 1, Stairmaster: \"minimum angle\" 4.9 ± 7.8° (o boneco em pé, no repouso, já tem 7,5°)"
+      },
+      {
+        "nome": "joelho dobrado em cima (esquerdo, pedal em cima)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          70,
+          86
+        ],
+        "fonte": "Graham 1993, Tabela 1, Stairmaster 4000: \"range of motion\" 72.0 ± 11.7° e \"minimum angle\" 4.9 ± 7.8° (o joelho vai a ~77° em cima); manual do FreeClimber (\"Take deep, comfortable steps.\"); NSCA, Kinetic Select, Tabela 21.7: \"Closed chain knee movements with >90˚ knee flexion\" contraindicado (dor na frente do joelho)"
+      },
+      {
+        "nome": "joelho dobrado em cima (direito, pedal em cima)",
+        "medida": "flexao",
+        "junta": "Leg",
+        "lado": "D",
+        "t": 0.5,
+        "graus": [
+          70,
+          86
+        ],
+        "fonte": "Graham 1993, Tabela 1, Stairmaster 4000: \"range of motion\" 72.0 ± 11.7° e \"minimum angle\" 4.9 ± 7.8° (o joelho vai a ~77° em cima); manual do FreeClimber (\"Take deep, comfortable steps.\"); NSCA, Kinetic Select, Tabela 21.7: \"Closed chain knee movements with >90˚ knee flexion\" contraindicado (dor na frente do joelho)"
+      },
+      {
+        "nome": "joelho entre quase reto e ~80° o ciclo todo",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          5,
+          86
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Legs - Use a full, pain-free range of motion with each step, straightening your legs as far as possible without causing discomfort or letting your knees lock out.\"; \"Do not hyperextend your knees.\"); Graham 1993, Tabela 1, Stairmaster: \"minimum angle\" 4.9 ± 7.8° (o boneco em pé, no repouso, já tem 7,5°); Graham 1993, Tabela 1, Stairmaster 4000: \"range of motion\" 72.0 ± 11.7° e \"minimum angle\" 4.9 ± 7.8° (o joelho vai a ~77° em cima); manual do FreeClimber (\"Take deep, comfortable steps.\"); NSCA, Kinetic Select, Tabela 21.7: \"Closed chain knee movements with >90˚ knee flexion\" contraindicado (dor na frente do joelho)"
+      },
+      {
+        "nome": "coxa à frente com o pedal em cima (esquerdo)",
+        "medida": "coxa_em_pe",
+        "lado": "E",
+        "t": 0.0,
+        "graus": [
+          40,
+          55
+        ],
+        "fonte": "Hylland et al. (ISBS), Tabela 1, StairMaster 4000PT: amplitude do quadril 25.70°/29.06° com a do joelho 43.11°/45.37° (o quadril anda ~0,6 do joelho; aqui o joelho anda ~71° e a coxa ~43°); manual do FreeClimber, foto da figura 5 (a coxa de cima ~45–50° à frente da vertical e a de baixo quase vertical — observação, não frase)"
+      },
+      {
+        "nome": "coxa à frente com o pedal em cima (direito)",
+        "medida": "coxa_em_pe",
+        "lado": "D",
+        "t": 0.5,
+        "graus": [
+          40,
+          55
+        ],
+        "fonte": "Hylland et al. (ISBS), Tabela 1, StairMaster 4000PT: amplitude do quadril 25.70°/29.06° com a do joelho 43.11°/45.37° (o quadril anda ~0,6 do joelho; aqui o joelho anda ~71° e a coxa ~43°); manual do FreeClimber, foto da figura 5 (a coxa de cima ~45–50° à frente da vertical e a de baixo quase vertical — observação, não frase)"
+      },
+      {
+        "nome": "coxa quase vertical com o pedal embaixo (direito)",
+        "medida": "coxa_em_pe",
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          0,
+          10
+        ],
+        "fonte": "Hylland et al. (ISBS), Tabela 1, StairMaster 4000PT: amplitude do quadril 25.70°/29.06° com a do joelho 43.11°/45.37° (o quadril anda ~0,6 do joelho; aqui o joelho anda ~71° e a coxa ~43°); manual do FreeClimber, foto da figura 5 (a coxa de cima ~45–50° à frente da vertical e a de baixo quase vertical — observação, não frase)"
+      },
+      {
+        "nome": "coxa quase vertical com o pedal embaixo (esquerdo)",
+        "medida": "coxa_em_pe",
+        "lado": "E",
+        "t": 0.5,
+        "graus": [
+          0,
+          10
+        ],
+        "fonte": "Hylland et al. (ISBS), Tabela 1, StairMaster 4000PT: amplitude do quadril 25.70°/29.06° com a do joelho 43.11°/45.37° (o quadril anda ~0,6 do joelho; aqui o joelho anda ~71° e a coxa ~43°); manual do FreeClimber, foto da figura 5 (a coxa de cima ~45–50° à frente da vertical e a de baixo quase vertical — observação, não frase)"
+      },
+      {
+        "nome": "perna de baixo quase vertical, o quadril em cima do pé (direito)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Foot"
+        ],
+        "lado": "D",
+        "t": 0.0,
+        "graus": [
+          84,
+          90
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Keep your hips directly under you\"; \"Although the whole body is in a slightly forward slant\"); a foto da figura 5 (a perna de baixo esticada e quase vertical — observação, não frase)"
+      },
+      {
+        "nome": "perna de baixo quase vertical, o quadril em cima do pé (esquerdo)",
+        "medida": "inclinacao",
+        "segmento": [
+          "UpLeg",
+          "Foot"
+        ],
+        "lado": "E",
+        "t": 0.5,
+        "graus": [
+          84,
+          90
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Keep your hips directly under you\"; \"Although the whole body is in a slightly forward slant\"); a foto da figura 5 (a perna de baixo esticada e quase vertical — observação, não frase)"
+      },
+      {
+        "nome": "tornozelo: pé chapado no pedal nivelado, de ~0° a ~30° de dorsiflexão",
+        "medida": "tornozelo",
+        "t": "todos",
+        "graus": [
+          74,
+          110
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Place 3/4 of each foot on the pedals, heels slightly off the edge with your toes facing forward.\"): o pé chapado no pedal, que fica nivelado (patente US 4,708,338: \"the pad 44 will remain parallel to the floor\"); com o joelho a ~79° a canela inclina à frente (a foto da figura 5 mostra a canela de cima ainda mais inclinada — observação); Konor et al. 2012 (dorsiflexão com carga, joelho dobrado, na parede: \"38.8 ± 5.2°\"): o teto. O boneco em pé (neutro) mede 76°: −2° a +34° = 74° a 110°"
+      },
+      {
+        "nome": "joelho na linha do pé (sem entrar nem abrir)",
+        "medida": "joelho_valgo",
+        "t": "todos",
+        "mm": [
+          -15,
+          15
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Knees - Keep your knees aligned with your toes.\")"
+      },
+      {
+        "nome": "joelho sem passar muito da ponta dos dedos",
+        "medida": "joelho_alem_dos_dedos",
+        "t": "todos",
+        "mm": [
+          -300,
+          60
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Avoid training with your knees too far past your toes\"); a foto da figura 5 mostra o joelho de cima um pouco à frente dos dedos (observação)"
+      },
+      {
+        "nome": "pés apontando pra frente",
+        "medida": "ponta_pe",
+        "t": "todos",
+        "graus": [
+          -5,
+          5
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"keep your feet pointing forward\"; \"with your toes facing forward\")"
+      },
+      {
+        "nome": "corpo todo levemente inclinado à frente",
+        "medida": "tronco",
+        "t": "todos",
+        "graus": [
+          3,
+          9
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Back - Although the whole body is in a slightly forward slant, keep your back straight and avoid bending at the waist.\"; \"Relax and stand up straight while exercising.\")"
+      },
+      {
+        "nome": "costas retas (sem dobrar na cintura)",
+        "medida": "coluna",
+        "t": "todos",
+        "graus": [
+          0,
+          6
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"keep your back straight and avoid bending at the waist\")"
+      },
+      {
+        "nome": "cabeça olhando pra frente (queixo paralelo ao chão)",
+        "medida": "cabeca_tronco",
+        "t": "todos",
+        "graus": [
+          -16,
+          0
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Head - Keep your chin parallel to the floor. Avoid staring at your feet or the computer console.\"). O boneco em pé, no repouso, mede ~−11°"
+      },
+      {
+        "nome": "quadril sem balançar de lado: nivelado",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -1,
+          1
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Avoid letting your hips rock from side to side with each step.\")"
+      },
+      {
+        "nome": "quadril sem balançar de lado: sem girar",
+        "medida": "pelve_giro",
+        "t": "todos",
+        "graus": [
+          -1,
+          1
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Avoid letting your hips rock from side to side with each step.\")"
+      },
+      {
+        "nome": "ombros nivelados e de frente",
+        "medida": "ombros_nivel",
+        "t": "todos",
+        "graus": [
+          -2,
+          2
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Chest/Shoulders - Keep your shoulders square and centered over your hips with your chest lifted.\")"
+      },
+      {
+        "nome": "tórax de frente com a pelve",
+        "medida": "tronco_giro",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Keep your shoulders square and centered over your hips\")"
+      },
+      {
+        "nome": "cotovelos levemente dobrados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          35,
+          65
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Elbows - Keep both elbows slightly bent.\"); a foto da figura 5 (cotovelo ~50° — observação, não frase)"
+      },
+      {
+        "nome": "cotovelos perto do corpo",
+        "medida": "cotovelo_tronco",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "Manual do FreeClimber, foto da figura 5, e free-exercise-db, foto 1 (cotovelos perto do tronco, mãos nos pegadores da frente — observação)"
+      },
+      {
+        "nome": "braços à frente, mãos nos pegadores da frente",
+        "medida": "braco_frente",
+        "t": "todos",
+        "graus": [
+          30,
+          50
+        ],
+        "fonte": "Manual do FreeClimber, figura 5 (\"Hands - Rest your hands lightly on the side rails or front handlebars.\"); free-exercise-db, foto 1 (as 2 mãos nos pegadores da frente, na altura do peito — observação)"
+      },
+      {
+        "nome": "punho sem dobrar de lado demais",
+        "medida": "punho_desvio",
+        "t": "todos",
+        "graus": [
+          -25,
+          20
+        ],
+        "fonte": "limites.py/tecnica3d.punho_desvio (Norkin & White, valores da AAOS): desvio radial normal até 20° e ulnar até 30°"
+      }
+    ]
+  }
+}
