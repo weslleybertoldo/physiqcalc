@@ -223,9 +223,25 @@ def seco(o, area: str) -> None:
         B.sql_marcar_avisos("public", uid, [uid], "x")
     except SystemExit:
         recusas += 1
-    o.ok(recusas == 8 and B.sql_apagar_avisos("staging", uid, [uid, "x"]).count("'") == 4
-         and B.sql_marcar_avisos("staging", uid, [uid], "r1").startswith("update staging.avisos set titulo = titulo || "),
-         f"[seco] a escrita da massa: só o UPDATE da marca e o DELETE em staging.avisos, só os ids da conta de teste, 1 instrução ({recusas}/8 recusadas)")
+    try:
+        B.sql_desmarcar_lidos("public", uid, [uid])
+    except SystemExit:
+        recusas += 1
+    o.ok(recusas == 9 and B.sql_apagar_avisos("staging", uid, [uid, "x"]).count("'") == 4
+         and B.sql_marcar_avisos("staging", uid, [uid], "r1").startswith("update staging.avisos set titulo = titulo || ")
+         and B.sql_desmarcar_lidos("staging", uid, [uid, "x"]).startswith("update staging.avisos set lido_em = null where destino_user_id = "),
+         f"[seco] a escrita no staging: só o UPDATE da marca, o que devolve o não lido do sino de antes e o DELETE em staging.avisos, só os ids "
+         f"da conta de teste, 1 instrução ({recusas}/9 recusadas)")
+    # o LegalDesligado da 21a: a situação pelo `ler` da conta com o legal desligado e o aviso de mudança visto (só no item da situação)
+    ped = {"acao": "ler", "itens": [{"q": "avisos"}, {"q": "situacao"}]}
+    resp = {"ok": True, "itens": [{"ok": True, "linhas": [{"id": uid}]},
+                                  {"ok": True, "valor": {"papel": "aluno", "legal": {"aceite_pendente": True}, "aviso_mudanca": {"versao": "1", "visto": False}}}]}
+    v = B.tirar_legal_do_ler(ped, json.loads(json.dumps(resp)))["itens"]
+    o.ok(v[0] == resp["itens"][0] and v[1]["valor"]["legal"]["aceite_pendente"] is False and v[1]["valor"]["aviso_mudanca"]["visto"] is True
+         and v[1]["valor"]["papel"] == "aluno" and B.tirar_legal_do_ler({"acao": "perfil_nome"}, {"ok": True}) == {"ok": True},
+         "[seco] o LegalDesligado da 21a: o item da situacao do `ler` com o aceite desligado e o aviso de mudança visto; o resto igual")
+    o.ok("physiq_aviso_visto:" in B.JS_SEM_AVISO_VISTO and "removeItem" in B.JS_SEM_AVISO_VISTO,
+         "[seco] a produção abre sem a marca local de aviso visto (o 🟡1: a sessão gravaria o aviso_mudanca_marcar sozinha)")
     o.ok(B.objetos("fotos-perfil-staging", ["../x", "nao-uuid/foto.png"]) == 0 and B.objetos("outro", [f"{uid}/foto-1.png"]) == 0,
          "[seco] a contagem dos arquivos só aceita <uuid>/<arquivo> nos 2 buckets das fotos (o resto nem vai ao banco)")
 
@@ -308,7 +324,7 @@ def p_e_n1_casca(o, L, s: str, estado, rodada: str, casos: set) -> None:
     # gravar) e o w13-dono já dono/membro de uma conta (a criar_minha_conta volta ja_existia/ja_tem_conta antes de gravar); sem ela, o caso
     # fica no Vitest (PADRÃO)
     com_prof = B.ler_principal(f"select count(*)::int as n from {s}.pacientes p where p.user_id = {C.txt(uid)} and p.deleted_at is null "
-                               f"and p.ativo and p.conta_id is distinct from {s}.conta_do_app()")[0]["n"]
+                               f"and p.ativo and p.conta_id is distinct from (select c.id from {s}.contas c where c.origem = 'app' order by c.criado_em limit 1)")[0]["n"]
     if com_prof:
         pac_antes = B.ler_principal(f"select count(*)::int as n from {s}.pacientes where user_id = {C.txt(uid)}")[0]["n"]
         for corpo in ({"objetivo": "manter", "plano": "treino"},
@@ -345,34 +361,60 @@ def p_e_n_app(o, L, s: str, estado, rodada: str, casos: set) -> None:
          f"P/N4/N5 perfil_nome (o mesmo nome; dados_profissionais/email/id no corpo CAEM) → só o nome; o resto igual ({st})")
     st, r, _h, _ms = B.conta(tok, "mudar_objetivo_app", {"objetivo": "manter"})
     o.ok(st == 200 and (r.get("resultado") or {}).get("erro") == "sem_matricula_app", f"P mudar_objetivo_app (a aluna, sem matrícula do app) → sem_matricula_app ({st})")
-    # ── a foto: a de antes guardada (URL no Estado + cópia no TMPDIR) — volta no finally do rodar (B.devolver_foto)
-    B.guardar_foto(o, estado, s, uid)
-    antes = (estado.d.get("hml21_foto") or {}).get("url")
+    # ── a foto (⚪5 da revisão, corrigido 23:53): a troca de teste roda quando a aluna NÃO tem foto (no fim, perfil_foto_tirar: sem foto
+    # e 0 arquivo dela no bucket) ou tem uma da pasta dela (no fim, a cópia volta); só é PULADA com uma foto de fora da pasta — aí ficam o
+    # preparar, o 404 de um arquivo que não subiu e o N8, que não gravam. A volta é o fechar_rodada (B.limpar_foto), mesmo se cair no meio.
+    troca, motivo = B.foto_pode_trocar(s, uid)
+    o.linha(f"   a foto da aluna: {motivo}")
+    if troca:
+        B.guardar_foto(o, estado, s, uid)
+    antes = B.foto_da_conta(s, uid)
+    bucket = B.bucket_das_fotos(s)
+
+    def preparar(rotulo: str) -> dict:
+        st, p, _h, _ms = B.conta(tok, "perfil_foto_preparar", {"tipo": "image/png", "tamanho": len(png)})
+        o.ok(st == 200 and str(p.get("caminho", "")).startswith(f"{uid}/foto-") and p.get("token") and p.get("bucket") == bucket,
+             f"P perfil_foto_preparar ({rotulo}) → o link na pasta da aluna, no bucket do ambiente ({st})", parar=troca)
+        return p
+
+    def subir_e_salvar(p: dict, rotulo: str) -> str | None:
+        put = B.subir_no_link(p["bucket"], p["caminho"], p["token"], png, "image/png", tok)
+        estado.objeto(p["bucket"], p["caminho"])  # o arquivo de teste, na hora (o limpar_foto confere que não fica no bucket)
+        o.ok(put in (200, 201) and B.objetos(bucket, [p["caminho"]]) == 1,
+             f"P ({rotulo}) o PUT no link assinado (o uploadToSignedUrl da tela) → o arquivo na pasta <uid>/ do bucket ({put})")
+        st, r, _h, _ms = B.conta(tok, "perfil_foto_salvar", {"caminho": p["caminho"]})
+        url = r.get("url")
+        o.ok(st == 200 and url == f"{B.URL_API_PROPRIA}/storage/v1/object/public/{bucket}/{p['caminho']}" and B.foto_da_conta(s, uid) == url,
+             f"P ({rotulo}) perfil_foto_salvar → a URL pública (a do getPublicUrl, no domínio próprio) gravada no perfil ({st})")
+        o.ok(B.baixar_bytes(url)[0] == 200 if url else False, f"P ({rotulo}) a foto nova abre pela URL pública (200)")
+        return url
+
     png = B.png_sintetico(16)
-    st, p, _h, _ms = B.conta(tok, "perfil_foto_preparar", {"tipo": "image/png", "tamanho": len(png)})
-    o.ok(st == 200 and str(p.get("caminho", "")).startswith(f"{uid}/foto-") and p.get("token") and p.get("bucket") == B.bucket_das_fotos(s),
-         f"P perfil_foto_preparar → o link na pasta da aluna, no bucket do ambiente ({st})", parar=True)
-    put = B.subir_no_link(p["bucket"], p["caminho"], p["token"], png, "image/png", tok)
-    estado.objeto(p["bucket"], p["caminho"])  # o arquivo de teste, na hora (o limpar_foto confere que não fica no bucket)
-    o.ok(put in (200, 201) and B.objetos(p["bucket"], [p["caminho"]]) == 1, f"P o PUT no link assinado (o uploadToSignedUrl da tela) → o arquivo no bucket ({put})")
+    p1 = preparar("1ª")
+    if not troca and p1.get("caminho"):
+        st4, r4, _h, _ms = B.conta(tok, "perfil_foto_salvar", {"caminho": p1.get("caminho")})
+        o.ok(st4 == 404 and r4.get("erro") == "nao_encontrado" and B.foto_da_conta(s, uid) == antes and B.objetos(bucket, [p1["caminho"]]) == 0,
+             f"P perfil_foto_salvar de um arquivo que NÃO subiu → 404 nao_encontrado; nada gravado ({st4})")
     if "N1" in casos or "N8" in casos:
-        st8, r8, _h, _ms = B.conta(L.token(B.OUTRA), "perfil_foto_salvar", {"caminho": p.get("caminho")})
+        alvo = p1.get("caminho") or f"{uid}/foto-1760000000000.png"
+        st8, r8, _h, _ms = B.conta(L.token(B.OUTRA), "perfil_foto_salvar", {"caminho": alvo})
         o.ok(st8 == 400 and r8.get("erro") == "dados_invalidos" and B.foto_da_conta(s, uid) == antes,
              f"N1/N8 OUTRA conta salva a foto na pasta da aluna → 400 dados_invalidos; a foto da aluna não mudou ({st8})")
         for ruim in (f"{uid}/../{OUTRO}/foto-1.png", f"{uid}/sub/foto-1.png", f"{OUTRO}/foto-1.png", f"{uid}/foto-1.gif"):
             st8, r8, _h, _ms = B.conta(tok, "perfil_foto_salvar", {"caminho": ruim})
             o.ok(st8 == 400 and r8.get("erro") == "dados_invalidos" and B.foto_da_conta(s, uid) == antes,
                  f"N8 o caminho fora da pasta/do formato → 400 dados_invalidos; nada gravado ({st8})")
-    st, r, _h, _ms = B.conta(tok, "perfil_foto_salvar", {"caminho": p.get("caminho")})
-    url = r.get("url")
-    o.ok(st == 200 and url == f"{B.URL_API_PROPRIA}/storage/v1/object/public/{p['bucket']}/{p['caminho']}" and B.foto_da_conta(s, uid) == url,
-         f"P perfil_foto_salvar → a URL pública (a do getPublicUrl, no domínio próprio) gravada no perfil ({st})")
-    o.ok(B.baixar_bytes(url)[0] == 200 if url else False, "P a foto nova abre pela URL pública (200)")
-    anterior = B.caminho_da_url(antes, p["bucket"], uid)
+    if not troca:
+        return
+    subir_e_salvar(p1, "1ª troca")
+    anterior = B.caminho_da_url(antes, bucket, uid)
     if anterior:
-        o.ok(B.objetos(p["bucket"], [anterior]) == 0, "P a foto de ANTES (da pasta da aluna, neste bucket) saiu do bucket (achado 2; SQL só leitura)")
-    else:
-        o.linha("   (a foto de antes não era um arquivo da pasta da aluna neste bucket: nada a apagar — como o servidor decide)")
+        o.ok(B.objetos(bucket, [anterior]) == 0, "P a foto de ANTES (da pasta da aluna, neste bucket) saiu do bucket (achado 2; SQL só leitura)")
+    # a troca de novo: a de teste anterior sai do bucket (achado 2); no fim, o perfil_foto_tirar (o fechar_rodada) deixa sem foto e 0 arquivo
+    p2 = preparar("2ª")
+    subir_e_salvar(p2, "2ª troca")
+    o.ok(B.objetos(bucket, [p1["caminho"]]) == 0 and B.objetos(bucket, [p2["caminho"]]) == 1,
+         "P a troca de novo: a foto de teste anterior saiu do bucket (achado 2) e a nova ficou (SQL só leitura, só contagem)")
 
 
 def n_gerais(o, L, area: str, casos: set, estado=None) -> None:
@@ -423,7 +465,7 @@ def so_leitura(o, base: str) -> None:
          f"[{base}] OPTIONS → {st}; a origem do site volta ela mesma e a de fora, o padrão ({st2})")
     st, r, _h, _ms = B.ler(None, [B.item("avisos")], sem_auth=True, origem=origem)
     o.ok(st == 401, f"[{base}] sem login → 401 ({st})")
-    L = B.Sessoes(f"api21 so-leitura {base}" + (" (prod)" if base == "prod" else ""))
+    L = B.Sessoes(f"api21 so-leitura {base}")  # na produção o motivo termina em "prod" (a linha do registro em "prod)": fora do teto do staging, dentro do da produção)
     try:
         tok = L.token(B.PROD_CONTA if base == "prod" else B.ALUNA)
         st, r, _h, _ms = B.ler(tok, [B.item("avisos")], schema_="outro", origem=origem)
@@ -494,13 +536,16 @@ def main() -> int:
     g.add_argument("--limpar", action="store_true")
     g.add_argument("--so-leitura", action="store_true")
     g.add_argument("--sair", action="store_true")
+    g.add_argument("--guardar-sino", action="store_true", help="antes da 1ª rodada que abre o sino: os não lidos de antes da aluna (TMPDIR)")
+    g.add_argument("--devolver-sino", action="store_true", help="no fim da etapa 2: os não lidos de antes voltam a não lidos")
     a = ap.parse_args()
     B.corte_vira_saida()
     casos = {c.strip() for c in a.casos.split(",") if c.strip()}
     fora = casos - set(CASOS)
     if fora:
         raise SystemExit(f"casos desconhecidos: {sorted(fora)}")
-    nome = f"api21_{a.area}_" + ("seco" if a.seco else "limpar" if a.limpar else "sair" if a.sair else f"{a.base}_so_leitura" if a.so_leitura else a.base)
+    nome = f"api21_{a.area}_" + ("seco" if a.seco else "limpar" if a.limpar else "sair" if a.sair else f"{a.base}_so_leitura" if a.so_leitura
+                                 else "guardar_sino" if a.guardar_sino else "devolver_sino" if a.devolver_sino else a.base)
     o = C.Saida(nome)
     try:
         if a.seco:
@@ -511,6 +556,10 @@ def main() -> int:
             sair(o)
         elif a.so_leitura:
             so_leitura(o, a.base)
+        elif a.guardar_sino:
+            B.guardar_sino(o, B.usar_base(a.base))
+        elif a.devolver_sino:
+            B.devolver_sino(o, B.usar_base(a.base))
         else:
             rodar(o, a.area, a.base, casos)
     except (Exception, SystemExit) as e:  # noqa: BLE001

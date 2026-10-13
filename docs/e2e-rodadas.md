@@ -29,6 +29,27 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 13/10 00:51 | hml-21a | `fe02c27` | `e2e/hml21/rede.py --area app --base staging --canal msedge` | staging | 13/13 | F6 o ANTES de novo (o staging serve o `3e52fbd`), com a linha de base corrigida (só o Início frio lê direto: 2 RPCs) |
+| 13/10 00:31 | hml-21a | `fe02c27` | `e2e/w18/api.py` | staging | 81/81 | F6 regressão: a regra do prontuário no banco igual |
+| 13/10 00:30 | hml-21a | `fe02c27` | `e2e/w07/api.py api` | staging | 12 ✅ e parou | F6 regressão: o `meu_perfil_aluno`/`minha_agenda` como a pessoa e as prévias iguais; para no `excluir1` (a conta apagada na hml-09 — a base conhecida) |
+| 13/10 00:29 | hml-21a | `fe02c27` | `e2e/w16/api.py --so aviso` | staging | 6/6 | F6 regressão: o aviso "plano atualizado" no sino, sem repetir, por papel |
+| 13/10 00:27 | hml-21a | `fe02c27` | `e2e/w25/api.py` | staging | 23/30 | F6 regressão: a MESMA base da 19a–20d (as 7 da massa do dia, sem o `massa.py`) |
+| 13/10 00:25 | hml-21a | `fe02c27` | `e2e/w10/api.py` | staging | 22/22 | F6 regressão |
+| 13/10 00:25 | hml-21a | `fe02c27` | `e2e/hml19/rede.py --area prontuario --base local --canal msedge` | local | 18/18 | F6 regressão: a casca do painel pela `conta` |
+| 13/10 00:23 | hml-21a | `fe02c27` | `e2e/hml20/rede.py --area painel-aluno --base local --canal msedge` | local | 60/60 | F6 regressão: o sino e a sessão do painel pela `conta` |
+| 13/10 00:21 | hml-21a | `fe02c27` | `e2e/hml20/rede.py --area aluno --base local --canal msedge` | local | 22/22 | F6 regressão: o Início e o Perfil do aluno; o desvio 23 igual |
+| 13/10 00:17 | hml-21a | `fe02c27` | `e2e/hml21/telas.py --area app --base local --canal msedge` | local | 16/16 | F6: prints `local_a_perfil/conta/conta_foto/agenda/meu_plano`; a foto de teste PELA TELA pelo link assinado (1 PUT, 0 upload direto) e devolvida (sem foto, 0 arquivo); tempos ≤ antes + 0,3 s |
+| 13/10 00:13 | hml-21a | `fe02c27` | `e2e/hml21/telas.py --area casca --base local --canal msedge` | local | 12/12 | F6: prints `local_a_inicio/sino_aberto/sino_vazio/erro`; o sino aberto 0,11 s ≤ 0,11 + 0,3; massa limpa |
+| 13/10 00:09 | hml-21a | `fe02c27` | `e2e/hml21/telas.py --area app --base staging --canal msedge --prefixo antes_staging` | staging | 11/11 | F6 o ANTES: prints `antes_staging_a_*` e os tempos de referência; a foto de teste (upload direto do código antigo) devolvida |
+| 13/10 00:06 | hml-21a | `fe02c27` | `e2e/hml21/telas.py --area casca --base staging --canal msedge --prefixo antes_staging` | staging | 11/11 | F6 o ANTES: prints e o tempo do sino; massa limpa |
+| 13/10 00:04 | hml-21a | `fe02c27` | `e2e/hml21/rede.py --area app --base local --canal msedge` | local | 21/22 | F6 o DEPOIS: 0 chamada direta da área em todas as telas, 0 gravação ao abrir; o ❌ = o Início frio com 4 `ler` (a série — `## TEMPO inicio série`, decisão da sessão principal) |
+| 13/10 00:01 | hml-21a | `fe02c27` | `e2e/hml21/rede.py --area casca --base local --canal msedge` | local | 35/36 | F6 o DEPOIS: 0 direta; o sino com não lidos = 1 ação `avisos_marcar_lidos` + 1 `ler`, 0 PATCH/GET em `avisos`; o ❌ = a mesma série do Início |
+| 13/10 00:00 | hml-21a | `fe02c27` | `e2e/hml21/rede.py --area app --base staging --canal msedge` | staging | 14/15 | F6 o ANTES: o ❌ = a expectativa da linha de base (o Perfil sem leitura direta: o cache); refeita às 00:51 |
+| 12/10 23:57 | hml-21a | `fe02c27` | `e2e/hml21/rede.py --area casca --base staging --canal msedge` | staging | 23/23 | F6 o ANTES: 2 GET em `avisos` no Início; o sino = 1 PATCH + 1 GET direto |
+| 12/10 23:55 | hml-21a | `fe02c27` | `e2e/hml21/api.py --area app --base local` | local | 34/34 | F6: o P das 6 consultas = o SQL da lib; a foto de ponta a ponta (preparar → PUT no link → salvar ×2, a anterior apagada) e devolvida sem foto; N1/N8 |
+| 12/10 23:53 | hml-21a | `fe02c27` | `e2e/hml21/api.py --area casca --base local` | local | 29/29 | F6: o P das 3 consultas; push; a massa do sino (marca + DELETE); aceite/onboarding sem gravar; N1–N11 |
+| 12/10 23:44 | hml-21a | `fe02c27` | `e2e/hml21/api.py --area casca --base prod --so-leitura` | produção | 4/4 | smoke da sessão principal logo depois de publicar a `conta` v1 |
+| 12/10 23:44 | hml-21a | `fe02c27` | `e2e/hml21/api.py --area casca --base staging --so-leitura` | staging | 4/4 | smoke da sessão principal logo depois de publicar a `conta` v1 |
 | 12/10 21:49 | W-A P1 | `a28fc3f` | `e2e/wa/sql_wa.py` | staging | 53/53 | a reversa ida e volta (wa3 → wa2 → wa1 `--so staging`: 0 tabela e 0 função da W-A; os 6 corpos da LGPD com o md5 de antes) e as 3 reaplicadas: 45 casos + K1–K8 |
 | 12/10 21:46 | W-A P1 | `a28fc3f` | `e2e/w10/api.py` | staging | 22/22 | regressão com as 3 migrations no staging |
 | 12/10 21:45 | W-A P1 | `a28fc3f` | `e2e/hml01/banco.py --schema staging` | staging | 12/12 | regressão: as 10 tabelas novas sem privilégio do visitante e sem TRUNCATE do logado |

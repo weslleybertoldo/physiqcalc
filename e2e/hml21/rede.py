@@ -67,8 +67,10 @@ SELETORES = {
 }
 # depois: o teto de `ler` por tela (o Início pode ter a casca e os cards em 2 voltas; o sino relê a lista depois de marcar)
 TETO_LER = {"inicio": 2, "sino": 1, "sino_vazio": 1, "perfil": 1, "conta": 1, "agenda": 1, "meu_plano": 1}
-# as telas onde o ANTES tinha leitura direta da área (o rede_por_tela.tsv da spec): a linha de base confere que o código antigo lia direto
-ANTES_DIRETO = {"casca": {"inicio"}, "app": {"inicio", "perfil", "conta"}}
+# as telas onde o ANTES SEMPRE lê direto da área (a carga fria do Início: o sino, o card do aluno e a agenda): a linha de base confere que o
+# código antigo lia direto. Nas outras telas o antes depende do cache do React Query na mesma navegação (a 1ª rodada antes, 13/10 00:00: o
+# Perfil sem nenhuma — a agenda do Início ainda fresca — e a Conta com a minha_agenda): só anotado na planilha
+ANTES_DIRETO = {"casca": {"inicio"}, "app": {"inicio"}}
 NAO_LIDOS = re.compile(r"\((\d+) novos?\)")
 
 
@@ -117,7 +119,9 @@ def conferir(o, base: str, fase: str, area: str, tela: str, cont: dict, pronta: 
     o.ok(diretas == 0, f"[depois] {tela}: 0 chamada direta da área {area} ({cont['diretas'] or '—'})")
     o.ok(ler <= TETO_LER[tela], f"[depois] {tela}: {ler} `ler` (≤ {TETO_LER[tela]}; consultas {cont['consultas'] or '—'}) — t_pronto {pronta['t_pronto_s']} s")
     if ler > 1:
-        o.linha(f"SÉRIE {tela}: {ler} `ler` na mesma tela (consultas {cont['consultas']}) — o ## TEMPO {tela} série, se não juntar sem mudar componente")
+        instantes = [(p.get("t"), ",".join(B.B20.consultas_do_corpo(p.get("corpo")))) for p in pronta["pedidos"] if B.chamada_da_conta(p) == "ler"]
+        o.linha(f"SÉRIE {tela}: {ler} `ler` na mesma tela — os instantes (s desde a navegação) e as consultas: {instantes} — o ## TEMPO {tela} "
+                "série, se não juntar sem mudar componente")
     if tela != "sino" and acoes:
         o.ok(False, f"[depois] {tela}: nenhuma ação da conta ao abrir ({acoes})")
     if cont["outra_area"] or cont["fora"]:
@@ -196,6 +200,10 @@ def seco(o) -> None:
          and [x[0] for x in telas_da_rodada("app", "staging")] == ["inicio", "perfil", "conta", "agenda", "meu_plano"]
          and [x[0] for x in telas_da_rodada("casca", "local")] == [t for t, _r, _m in TELAS] and set(TETO_LER) == {t for t, _r, _m in TELAS},
          "a produção nunca clica no sino (decisão N); o sino só na casca; cada tela tem o teto de `ler` do depois")
+    fonte = Path(__file__).read_text(encoding="utf-8")
+    o.ok('if base == "prod":\n                t.ctx.add_init_script(B.JS_SEM_AVISO_VISTO)' in fonte and "class LegalDesligado(B19.LegalDesligado)" in
+         (B.REPO / "e2e" / "hml21" / "_base.py").read_text(encoding="utf-8"),
+         "a produção abre sem a marca local de aviso visto (o 🟡1) e o LegalDesligado da 21a cobre a situação pelo `ler` da conta")
     o.ok(NAO_LIDOS.search("Avisos (2 novos)").group(1) == "2" and NAO_LIDOS.search("Avisos (1 novos)") and not NAO_LIDOS.search("Avisos"),
          "os não lidos saem do rótulo do sino (\"Avisos (N novos)\")")
     o.ok(B.fase_do_codigo("local", "x") == "depois" and B.fase_do_codigo("staging", "53f2583") == "antes" and B.fase_do_codigo("staging", "HEAD") == "depois",
@@ -206,7 +214,7 @@ def rodar(o, area: str, base: str, canal: str | None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     s = B.usar_base(base)
-    L = B.Sessoes(f"rede21 {area} {base}" + (" (prod)" if base == "prod" else ""))
+    L = B.Sessoes(f"rede21 {area} {base}")  # na produção o motivo termina em "prod" (o registro: fora do teto do staging)
     commit = B.commit_medido(base)
     fase = B.fase_do_codigo(base, commit)
     massa = area == "casca" and base != "prod"
@@ -214,12 +222,15 @@ def rodar(o, area: str, base: str, canal: str | None) -> None:
     try:
         B.exigir_saude(o, f"o rede.py --area {area} da hml-21a")
         if massa:
+            B.guardar_sino(o, s)  # os não lidos de ANTES da etapa 2 (abrir o sino marca todos): voltam no api.py --devolver-sino
             estado = B.abrir_rodada(o, s)
             B.criar_massa_avisos(o, estado, L, s, L.uid(B.ALUNA), estado.d["rodada"])
         guarda = B.guarda_da_w() if base == "prod" else None
         with sync_playwright() as pw:
             nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
             t = B.Tela(nav, B.BASES[base], f"hml21_{base}", f"rede_{area}", desktop=False, guarda=guarda)
+            if base == "prod":
+                t.ctx.add_init_script(B.JS_SEM_AVISO_VISTO)  # o 🟡1: sem a marca local de aviso visto (a sessão gravaria sozinha)
             B.LegalDesligado().instalar(t.ctx)
             pend = B.Pendentes(t.pg)
             try:
@@ -247,7 +258,7 @@ def rodar(o, area: str, base: str, canal: str | None) -> None:
                 if guarda:
                     o.ok(not guarda.bloqueadas, f"[prod] a Guarda não barrou nada (as telas só leram; o `ler` passa): {guarda.bloqueadas or '—'}")
             finally:
-                B.sair_do_treino(o, t.pg, f"[{base}] rede {area}")
+                B.sair_do_treino(o, t.pg, f"[{base}] rede {area}", t)
                 L.do_navegador(B.ALUNA, t.pg)
                 t.fim()
                 nav.close()

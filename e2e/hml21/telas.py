@@ -168,31 +168,38 @@ def prints_app(o, t, pend, L, nav, base: str, fase: str, s: str, estado, prefixo
     r = abrir(t, pend, "/perfil/conta", "[data-pagina-conta]", "/perfil")
     o.ok(t.n("[data-conta-foto-arquivo]") > 0 and t.n("[data-conta-nome]") > 0, f"[{base}] a_conta: a Conta com os dados (pronta em {r['t_pronto_s']} s)")
     pr("a_conta")
-    # a_conta_foto: trocar a foto PELA TELA (o PNG de teste) — a de antes guardada e devolvida no fim (o fechar_rodada)
+    # a_conta_foto: trocar a foto PELA TELA (o PNG de teste) — a aluna sem foto (no fim, perfil_foto_tirar) ou com uma da pasta dela (a
+    # cópia volta); PULADO só com uma foto de fora da pasta (⚪5, corrigido 23:53)
     uid = L.uid(B.ALUNA)
-    B.guardar_foto(o, estado, s, uid)
-    antes = (estado.d.get("hml21_foto") or {}).get("url")
-    t.zerar_pedidos()
-    t.pg.set_input_files("[data-conta-foto-arquivo]", files=[{"name": "teste-hml21.png", "mimeType": "image/png", "buffer": B.png_sintetico(48)}])
-    ok = t.esperar(lambda: "Foto trocada." in t.texto("body"), 45)
-    B.esperar_pronto(t, pend, min_s=2.0)
-    subidos, diretos = arquivos_de_teste(t.pedidos)
-    for bucket, caminho in subidos:
-        estado.objeto(bucket, caminho)  # o arquivo de teste: o limpar_foto confere que não fica no bucket
-    agora = B.foto_da_conta(s, uid)
-    cont = B.contar_area(t.pedidos, "app")
-    if fase == "depois":
-        o.ok(ok and diretos == 0 and len(subidos) == 1 and cont["acoes"] == {"perfil_foto_preparar": 1, "perfil_foto_salvar": 1}
-             and not cont["diretas"] and agora and agora != antes and B.caminho_da_url(agora, B.bucket_das_fotos(s), uid) == subidos[0][1],
-             f"[{base}] a_conta_foto: a foto de teste pela tela → o link que o servidor assinou (1 PUT, 0 upload direto; ações {cont['acoes']}) "
-             f"e a URL nova no perfil")
-        anterior = B.caminho_da_url(antes, B.bucket_das_fotos(s), uid)
-        if anterior:
-            o.ok(B.objetos(B.bucket_das_fotos(s), [anterior]) == 0, f"[{base}] a_conta_foto: a foto anterior (da pasta da aluna) saiu do bucket (achado 2)")
+    troca, motivo = B.foto_pode_trocar(s, uid)
+    if not troca:
+        o.linha(f"   PADRÃO (⚪5): [{base}] a_conta_foto PULADO — {motivo}: a aluna tem uma foto de fora da pasta dela (não voltaria exatamente "
+                "como estava); a troca pelo link assinado fica no api.py e no Vitest")
     else:
-        o.ok(ok and len(subidos) >= 1 and agora != antes,
-             f"[{base}] a_conta_foto (antes): a foto de teste pela tela — upload direto {diretos}, diretas {cont['diretas']}")
-    pr("a_conta_foto")
+        o.linha(f"   a foto da aluna: {motivo}")
+        B.guardar_foto(o, estado, s, uid)
+        antes = (estado.d.get("hml21_foto") or {}).get("url")
+        t.zerar_pedidos()
+        t.pg.set_input_files("[data-conta-foto-arquivo]", files=[{"name": "teste-hml21.png", "mimeType": "image/png", "buffer": B.png_sintetico(48)}])
+        ok = t.esperar(lambda: "Foto trocada." in t.texto("body"), 45)
+        B.esperar_pronto(t, pend, min_s=2.0)
+        subidos, diretos = arquivos_de_teste(t.pedidos)
+        for bucket, caminho in subidos:
+            estado.objeto(bucket, caminho)  # o arquivo de teste: o limpar_foto confere que não fica no bucket
+        agora = B.foto_da_conta(s, uid)
+        cont = B.contar_area(t.pedidos, "app")
+        if fase == "depois":
+            o.ok(ok and diretos == 0 and len(subidos) == 1 and cont["acoes"] == {"perfil_foto_preparar": 1, "perfil_foto_salvar": 1}
+                 and not cont["diretas"] and agora and agora != antes and B.caminho_da_url(agora, B.bucket_das_fotos(s), uid) == subidos[0][1],
+                 f"[{base}] a_conta_foto: a foto de teste pela tela → o link que o servidor assinou (1 PUT, 0 upload direto; ações {cont['acoes']}) "
+                 f"e a URL nova no perfil")
+            anterior = B.caminho_da_url(antes, B.bucket_das_fotos(s), uid)
+            if anterior:
+                o.ok(B.objetos(B.bucket_das_fotos(s), [anterior]) == 0, f"[{base}] a_conta_foto: a foto anterior (da pasta da aluna) saiu do bucket (achado 2)")
+        else:
+            o.ok(ok and len(subidos) >= 1 and agora != antes,
+                 f"[{base}] a_conta_foto (antes): a foto de teste pela tela — upload direto {diretos}, diretas {cont['diretas']}")
+        pr("a_conta_foto")
     r = abrir(t, pend, "/perfil/agenda", "[data-pagina-agenda]", "/perfil")
     o.ok(t.n("[data-pagina-agenda]") > 0, f"[{base}] a_agenda: a Agenda do aluno (pronta em {r['t_pronto_s']} s)")
     pr("a_agenda")
@@ -208,7 +215,7 @@ def prints_app(o, t, pend, L, nav, base: str, fase: str, s: str, estado, prefixo
             o.ok(ok and estado_pg in ("app", "sem-plano"), f"[{base}] a_meu_plano: o Meu plano do aluno SEM profissional (w7b-sozinho: {estado_pg})")
             pr("a_meu_plano", t2.pg)
         finally:
-            B.sair_do_treino(o, t2.pg, f"[{base}] telas (w7b-sozinho)")
+            B.sair_do_treino(o, t2.pg, f"[{base}] telas (w7b-sozinho)", t2)
             L.do_navegador(B.SOZINHO, t2.pg)
             t2.fim()
     else:
@@ -286,6 +293,8 @@ def rodar(o, area: str, base: str, canal: str | None, casos: list[str], prefixo:
     try:
         B.exigir_saude(o, f"o telas.py --area {area} da hml-21a")
         if "prints" in casos:
+            if area == "casca":
+                B.guardar_sino(o, s)  # os não lidos de ANTES da etapa 2: voltam no api.py --devolver-sino
             estado = B.abrir_rodada(o, s)
             if area == "casca":
                 B.criar_massa_avisos(o, estado, L, s, L.uid(B.ALUNA), estado.d["rodada"])
@@ -306,7 +315,7 @@ def rodar(o, area: str, base: str, canal: str | None, casos: list[str], prefixo:
                 if "tempo" in casos:
                     caso_tempo(o, t, pend, area, base, commit, fase)
             finally:
-                B.sair_do_treino(o, t.pg, f"[{base}] telas {area}")
+                B.sair_do_treino(o, t.pg, f"[{base}] telas {area}", t)
                 L.do_navegador(B.ALUNA, t.pg)
                 t.fim()
                 nav.close()

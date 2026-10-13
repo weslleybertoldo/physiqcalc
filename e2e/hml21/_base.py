@@ -84,10 +84,24 @@ nova_rodada = B19.nova_rodada
 cors = B19.cors
 Guarda = B17.Guarda
 Tela = B17.Tela
-LegalDesligado = B19.LegalDesligado
 navegar, esperar_pronto, Pendentes, mediana = B20.navegar, B20.esperar_pronto, B20.Pendentes, B20.mediana
 MAX_S, MIN_S, QUIETO_S = B20.MAX_S, B20.MIN_S, B20.QUIETO_S  # a regra do "pronto" da hml-20 (medir_leituras20.py)
-sair_do_treino = B20.sair_do_treino
+
+
+def sair_do_treino(o, pg, rotulo: str, t=None, espera_s: float = 40.0) -> None:
+    """O logout (scope=local) da sessão do Treino que a troca do app abriu (decisão 23 da hml-20) — ESPERANDO a troca terminar quando a
+    tela pediu a trocar-token (até 40 s, o teto do app: na etapa 2, o contexto do w7b-sozinho fechou antes de a sessão chegar ao
+    localStorage e 2 sessões do Treino dele ficaram abertas). `t` = a Tela (os pedidos anotados)."""
+    if t is not None and any(p.get("tipo") == "fn" and p.get("nome") == "trocar-token" for p in getattr(t, "pedidos", [])):
+        fim = time.time() + espera_s
+        while time.time() < fim and not B20.token_do_treino_no_navegador(pg):
+            try:
+                pg.wait_for_timeout(500)
+            except Exception:  # noqa: BLE001 — a página fechou
+                break
+    B20.sair_do_treino(o, pg, rotulo)
+
+
 commit_medido = B20.commit_medido
 anotar_planilha_hml20 = B20.anotar_planilha
 ler_principal = B20.ler_principal
@@ -95,6 +109,59 @@ ler_principal = B20.ler_principal
 CONTA_LEITURAS_TS = REPO / "supabase-principal" / "functions" / "_shared" / "conta-leituras.ts"
 CONTA_REGRAS_TS = REPO / "supabase-principal" / "functions" / "_shared" / "conta-regras.ts"
 MOTOR_TS = REPO / "supabase-principal" / "functions" / "_shared" / "leitura-lote.ts"
+
+
+# ───────────────────────── a porta do aceite e o aviso de mudança fora da tela (o LegalDesligado da hml-19 + a conta) ─────────────────────────
+def tirar_legal_do_ler(pedido: object, resposta: object) -> object:
+    """A resposta do `ler` da conta com o `legal` desligado e o aviso de mudança visto no item da q "situacao" (a minha_situacao saiu do
+    navegador na 21a: o recarregar da sessão — depois de salvar o nome/a foto, a volta da internet, a abertura com o pos-login feito — vem
+    pelo `ler`, e o LegalDesligado da hml-19 só pegava o pos-login e a RPC). Só no que o navegador recebe; nada grava."""
+    itens_pedidos = pedido.get("itens") if isinstance(pedido, dict) and pedido.get("acao") == "ler" else None
+    itens = resposta.get("itens") if isinstance(resposta, dict) else None
+    if not isinstance(itens_pedidos, list) or not isinstance(itens, list):
+        return resposta
+    for i, it in enumerate(itens_pedidos):
+        if isinstance(it, dict) and it.get("q") == "situacao" and i < len(itens) and isinstance(itens[i], dict) and isinstance(itens[i].get("valor"), dict):
+            B19._tirar_legal(itens[i]["valor"])
+    return resposta
+
+
+class LegalDesligado(B19.LegalDesligado):
+    """O LegalDesligado da hml-19 (o pos-login e a RPC minha_situacao — o código antigo) + o `ler` da conta com a q "situacao" (o novo):
+    a porta do aceite (hml-12) e o aviso "o Physiq mudou" não cobrem a tela em nenhum dos dois. Instale depois da Guarda."""
+
+    def instalar(self, ctx) -> None:
+        ctx.route(re.compile(r"https://api(-principal)?\.physiqcalc\.com\.br/"), self._legal21)
+
+    @staticmethod
+    def _legal21(route, req) -> None:
+        tipo, nome = B17.alvo(req.url)
+        if req.method == "POST" and tipo == "fn" and nome == "conta":
+            try:
+                pedido = json.loads(req.post_data or "{}")
+            except Exception:  # noqa: BLE001
+                pedido = {}
+            itens = pedido.get("itens") if isinstance(pedido, dict) and pedido.get("acao") == "ler" else None
+            if isinstance(itens, list) and any(isinstance(x, dict) and x.get("q") == "situacao" for x in itens):
+                try:
+                    r = route.fetch()
+                    try:
+                        corpo = json.dumps(tirar_legal_do_ler(pedido, r.json()))
+                    except Exception:  # noqa: BLE001
+                        route.fulfill(response=r)
+                        return
+                    route.fulfill(response=r, body=corpo, headers={**r.headers, "content-type": "application/json"})
+                except Exception:  # noqa: BLE001 — a página fechou no meio
+                    pass
+                return
+        B19.LegalDesligado._legal(route, req)
+
+
+# a produção (decisão N + o 🟡1 da revisão): o aparelho abre SEM a marca local de "aviso visto" (physiq_aviso_visto:<uid>:<versão>) — com
+# ela e o servidor dizendo "não visto", a sessão grava o aviso_mudanca_marcar sozinha (a Guarda barraria); o contexto novo já nasce sem,
+# e este script garante (roda antes do app em cada documento)
+JS_SEM_AVISO_VISTO = ("(() => { try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); "
+                      "if (k && k.startsWith('physiq_aviso_visto:')) localStorage.removeItem(k); } } catch (e) {} })()")
 
 
 # ───────────────────────── a função como a tela chama ─────────────────────────
@@ -409,15 +476,68 @@ def sql_apagar_avisos(s: str, destino: str, ids: list[str]) -> str:
 
 def sql_escrever_staging(sql: str) -> None:
     """A escrita da massa/limpeza SÓ no schema staging (decisão I do contrato da 21a): o sqlrw.py com PERMITIR_ESCRITA=1 e o --confirmo,
-    pelo com_pat.py. Só o UPDATE da marca e o DELETE em staging.avisos passam aqui, 1 instrução (o resto é recusado antes de sair)."""
+    pelo com_pat.py. Só o UPDATE da marca, o UPDATE que devolve o não lido e o DELETE em staging.avisos passam aqui, 1 instrução (o resto
+    é recusado antes de sair)."""
     if re.search(r"\bpublic\.", sql) or sql.count(";") != 1 or \
-            not re.fullmatch(r"(?is)\s*(update staging\.avisos set titulo = titulo \|\| |delete from staging\.avisos where destino_user_id = ).*;\s*", sql):
+            not re.fullmatch(r"(?is)\s*(update staging\.avisos set titulo = titulo \|\| |delete from staging\.avisos where destino_user_id = "
+                             r"|update staging\.avisos set lido_em = null where destino_user_id = ).*;\s*", sql):
         raise SystemExit("escrita fora do combinado (só o update da marca e o delete em staging.avisos) — recusado")
     env = dict(os.environ, PERMITIR_ESCRITA="1")
     r = subprocess.run(["python3", str(COM_PAT), "python3", str(SQLRW), PRINCIPAL_REF, "--confirmo"], input=sql, capture_output=True,
                        text=True, env=env, timeout=180)
     if r.returncode != 0 or "status 20" not in r.stdout:
         raise RuntimeError(f"sqlrw (staging): {(r.stdout + r.stderr).strip()[:200]}")
+
+
+SINO_ANTES = SCRATCH / "tmp" / "hml21_sino_antes.json"
+
+
+def sql_desmarcar_lidos(s: str, destino: str, ids: list[str]) -> str:
+    """Devolve o "não lido" dos avisos que a aluna de TESTE tinha não lidos ANTES da etapa 2 (abrir o sino marca todos): só no staging, só
+    a destino de TESTE, só os ids guardados."""
+    if s != "staging":
+        raise SystemExit("o sino só é devolvido no staging")
+    validos = [i for i in ids if C.eh_uuid(i)]
+    if not validos:
+        raise SystemExit("nenhum aviso guardado para devolver")
+    return (f"update {s}.avisos set lido_em = null where destino_user_id = {C.txt(C.uuid_ok(destino))} "
+            f"and id = any(array[{', '.join(C.txt(i) for i in validos)}]::uuid[]);")
+
+
+def guardar_sino(o, s: str) -> None:
+    """Antes da 1ª rodada que abre o sino: os ids dos avisos NÃO LIDOS da aluna de TESTE (sem a marca) num arquivo do TMPDIR da W (600) —
+    o --devolver-sino do api.py devolve o lido_em nulo a eles no fim da etapa. Não sobrescreve um guardado (o 1º é o "antes")."""
+    if s != "staging":
+        return
+    if SINO_ANTES.exists():
+        o.linha(f"   (o sino de antes já está guardado: {len(json.loads(SINO_ANTES.read_text(encoding='utf-8')).get('ids', []))} aviso(s))")
+        return
+    uid = uid_da_conta(ALUNA)
+    ids = [x.get("id") for x in ler_principal(
+        f"select id from {s}.avisos where destino_user_id = {C.txt(C.uuid_ok(uid))} and lido_em is null and titulo not like {C.txt('%' + MARCA + '%')}")
+        if C.eh_uuid(x.get("id"))]
+    SINO_ANTES.parent.mkdir(parents=True, exist_ok=True)
+    SINO_ANTES.write_text(json.dumps({"destino": uid, "ids": ids}), encoding="utf-8")
+    SINO_ANTES.chmod(0o600)
+    o.ok(True, f"o sino da aluna antes da etapa 2: {len(ids)} aviso(s) não lido(s) guardado(s) (os ids no TMPDIR, 600) — voltam no --devolver-sino")
+
+
+def devolver_sino(o, s: str) -> None:
+    """No fim da etapa 2: os avisos que estavam não lidos antes voltam a não lidos (o UPDATE do lido_em = null, só eles), conferido por SQL
+    só leitura (todos não lidos de novo)."""
+    if not SINO_ANTES.exists():
+        o.ok(True, "devolver o sino: nada guardado")
+        return
+    d = json.loads(SINO_ANTES.read_text(encoding="utf-8"))
+    destino, ids = d.get("destino"), [i for i in d.get("ids", []) if C.eh_uuid(i)]
+    if ids and C.eh_uuid(destino):
+        sql_escrever_staging(sql_desmarcar_lidos(s, destino, ids))
+        n = ler_principal(f"select count(*) filter (where lido_em is null)::int as n from {s}.avisos where destino_user_id = {C.txt(destino)} "
+                          f"and id = any(array[{', '.join(C.txt(i) for i in ids)}]::uuid[])")[0]["n"]
+    else:
+        n = 0
+    if o.ok(n == len(ids), f"o sino da aluna devolvido: {n} de {len(ids)} aviso(s) não lido(s) de novo, como antes da etapa 2 (SQL só leitura)"):
+        SINO_ANTES.unlink()
 
 
 def ids_com_a_marca(s: str, destino: str) -> list[str]:
@@ -512,11 +632,33 @@ def sozinho_no_staging(s: str) -> int:
 TMP = SCRATCH / "tmp"
 
 
+def foto_pode_trocar(s: str, uid: str) -> tuple[bool, str]:
+    """⚪5 da revisão (corrigido pela sessão principal 23:53): a troca de teste roda quando a pessoa NÃO tem foto (no fim, o
+    perfil_foto_tirar: sem foto de novo e 0 arquivo dela no bucket) ou quando a foto de hoje é um arquivo da pasta dela no bucket do
+    ambiente (no fim, a cópia volta pelo caminho novo). Só é PULADA quando ela TEM uma foto de fora da pasta (o Google, outra
+    pasta/bucket): o perfil não voltaria exatamente como estava."""
+    url = foto_da_conta(s, uid)
+    if not url:
+        return True, "sem foto (no fim: perfil_foto_tirar)"
+    caminho = caminho_da_url(url, bucket_das_fotos(s), uid)
+    if caminho and objetos(bucket_das_fotos(s), [caminho]) == 1:
+        return True, "foto da pasta dela (no fim: a cópia volta)"
+    return False, "foto de fora da pasta dela (PULADO)"
+
+
+def objetos_da_pasta(bucket: str, uid: str) -> int:
+    """Quantos arquivos a pessoa tem na pasta dela no bucket das fotos (SQL só leitura, só contagem)."""
+    if bucket not in ("fotos-perfil", "fotos-perfil-staging"):
+        return 0
+    return int(ler_principal(f"select count(*)::int as n from storage.objects where bucket_id = {C.txt(bucket)} "
+                             f"and name like {C.txt(C.uuid_ok(uid) + '/%')}")[0].get("n") or 0)
+
+
 def guardar_foto(o, estado, s: str, uid: str) -> None:
     """Antes de trocar a foto: anota a URL de hoje no Estado e guarda uma CÓPIA do arquivo (o bucket é público) no TMPDIR da W (600) —
     a cópia é o que volta no fim (pelo caminho novo: a foto anterior da pasta sai do bucket quando a de teste é salva — achado 2)."""
     antes = foto_da_conta(s, uid)
-    info: dict = {"url": antes, "arquivo": None, "tipo": None}
+    info: dict = {"url": antes, "arquivo": None, "tipo": None, "pasta_antes": objetos_da_pasta(bucket_das_fotos(s), uid)}
     if antes:
         st, conteudo, tipo = baixar_bytes(antes)
         tipo = (tipo or "").split(";")[0].strip()
@@ -578,6 +720,8 @@ def limpar_foto(o, estado, s: str, L) -> None:
     if not (isinstance(estado.d.get("hml21_foto"), dict) or fotos):
         return
     tok, uid = L.token(ALUNA), L.uid(ALUNA)
+    info = estado.d.get("hml21_foto") if isinstance(estado.d.get("hml21_foto"), dict) else {}
+    pasta_antes = info.get("pasta_antes")
     devolver_foto(o, estado, s, tok, uid)
     agora = caminho_da_url(foto_da_conta(s, uid), bucket_das_fotos(s), uid)
     for bucket, caminho in fotos:
@@ -587,6 +731,9 @@ def limpar_foto(o, estado, s: str, L) -> None:
     if o.ok(sobra == 0, f"limpeza: os {len(fotos)} arquivo(s) de teste da foto fora do bucket (SQL só leitura: {sobra})", parar=False):
         estado.d["storage"] = [x for x in (estado.d.get("storage") or []) if x not in fotos]
         estado.salvar()
+    if isinstance(pasta_antes, int):
+        n = objetos_da_pasta(bucket_das_fotos(s), uid)
+        o.ok(n == pasta_antes, f"a pasta da aluna no {bucket_das_fotos(s)} como antes: {n} arquivo(s) (antes {pasta_antes}; SQL só leitura)", parar=False)
 
 
 def bucket_das_fotos(s: str) -> str:
