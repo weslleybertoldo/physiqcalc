@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { perfil } from "@/test/fixturesPerfilAluno";
+import { TopoCtx } from "@/ui/casca/topoContexto";
 import type { PerfilAluno } from "../dados/tipos";
 
 const h = vi.hoisted(() => ({
@@ -71,6 +72,42 @@ describe("W14 — cabeçalho da tela 7", () => {
     expect(screen.getByText("TREINO · LUCAS")).toBeInTheDocument();
     expect(screen.getByText("NUTRIÇÃO · CAMILA")).toBeInTheDocument();
   });
+  it("W-A P4: ⋯ › 'Acesso do aluno' abre a aba Acessos (o login do aluno mora lá)", async () => {
+    function Onde() {
+      const l = useLocation();
+      return <div data-testid="rota">{l.pathname}</div>;
+    }
+    // as ações do cabeçalho vão para o topo da casca (TopoPagina, por portal): aqui, um alvo próprio
+    const alvo = document.createElement("div");
+    document.body.appendChild(alvo);
+    render(
+      <MemoryRouter useTransitions={false} initialEntries={["/painel/alunos/p1"]}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <TopoCtx.Provider value={{ alvoTitulo: null, alvoAcoes: alvo, definirProprio: () => {} }}>
+            <Routes>
+              <Route path="/painel/alunos/:id" element={<Cabecalho alunoId="p1" />} />
+              <Route path="*" element={<Onde />} />
+            </Routes>
+          </TopoCtx.Provider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByText("Rafael Moura");
+    const menu = await waitFor(() => {
+      const m = document.querySelector("[data-menu-perfil]");
+      if (!m) throw new Error("o ⋯ ainda não apareceu");
+      return m;
+    });
+    fireEvent.pointerDown(menu, { button: 0, ctrlKey: false, pointerType: "mouse" });
+    fireEvent.keyDown(menu, { key: "Enter" });
+    fireEvent.click(await waitFor(() => {
+      const item = document.querySelector('[data-acao-perfil="acesso"]');
+      if (!item) throw new Error("o menu não abriu");
+      return item;
+    }));
+    await waitFor(() => expect(screen.getByTestId("rota").textContent).toBe("/painel/alunos/p1/acessos"));
+    alvo.remove();
+  });
   it("bloqueado e desativado aparecem como chips; erro de acesso vira a frase da tela", async () => {
     h.perfil.mockResolvedValue(perfil({ bloqueado: true }));
     const r = montar(<Cabecalho alunoId="p1" />);
@@ -106,25 +143,30 @@ describe("W14 — cards do Resumo", () => {
     expect(document.querySelector("[data-dados-grade]")!.nextElementSibling).toBe(secao);
     expect(secao.querySelector("[data-responsavel-registrar]")).not.toBeNull();
   });
-  it("Ajustes: os 4 (com o texto novo do link) e o interruptor grava o ajuste", async () => {
+  it("W-A P4: o card 'Mensagens automáticas' (era Ajustes do aluno) tem só o WhatsApp; o interruptor grava o ajuste", async () => {
     h.ajuste.mockResolvedValue({ acesso_app: true, mensagens_automaticas: true, diario_alimentar: true, acesso_link: true });
     montar(<CardAjustesAluno alunoId="p1" />);
-    expect(await screen.findByText("Envio de fotos pelo link")).toBeInTheDocument();
+    expect(await screen.findByText("Mensagens automáticas")).toBeInTheDocument();
+    expect(screen.queryByText("Ajustes do aluno")).toBeNull();
+    expect(document.querySelectorAll("[data-ajuste]").length).toBe(1);
+    for (const fora of ["Acesso ao app", "Diário alimentar com fotos", "Envio de fotos pelo link"]) expect(screen.queryByText(fora)).toBeNull();
     const msgs = screen.getByRole("switch", { name: "Mensagens automáticas no WhatsApp" });
     expect(msgs).toHaveAttribute("aria-checked", "false");
     fireEvent.click(msgs);
     await waitFor(() => expect(h.ajuste).toHaveBeenCalledWith("p1", "mensagens_automaticas", true));
     await waitFor(() => expect(screen.getByRole("switch", { name: "Mensagens automáticas no WhatsApp" })).toHaveAttribute("aria-checked", "true"));
   });
-  it("Ajustes: aluno só de treino não vê diário nem link; sem login, o acesso ao app fica travado com o aviso", async () => {
-    h.perfil.mockResolvedValue(perfil({ modulos: ["treino"], tem_login: false, ajustes: { acesso_app: false, mensagens_automaticas: false, diario_alimentar: true, acesso_link: true } }));
+  it("Mensagens automáticas: sem telefone, o aviso; quem não pode editar vê o interruptor desligado (e o aluno sem login também liga — é só o WhatsApp)", async () => {
+    h.perfil.mockResolvedValue(perfil({ telefone: null, pode_editar: false }));
+    const r = montar(<CardAjustesAluno alunoId="p1" />);
+    expect(await screen.findByText(/Sem telefone no cadastro/)).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Mensagens automáticas no WhatsApp" })).toBeDisabled();
+    r.unmount();
+    h.perfil.mockResolvedValue(perfil({ tem_login: false }));
     montar(<CardAjustesAluno alunoId="p1" />);
-    expect(await screen.findByText("Acesso ao app")).toBeInTheDocument();
-    expect(screen.queryByText("Diário alimentar com fotos")).toBeNull();
-    expect(screen.getByRole("switch", { name: "Acesso ao app" })).toBeDisabled();
-    expect(screen.getByText(/ainda não tem login/)).toBeInTheDocument();
+    expect(await screen.findByRole("switch", { name: "Mensagens automáticas no WhatsApp" })).not.toBeDisabled();
   });
-  it("Link do diário: /d/<código> (F1); desligado nos ajustes mostra o motivo; só com Nutrição", async () => {
+  it("Link do diário: /d/<código> (F1); desligado na aba Acessos mostra o motivo; só com Nutrição", async () => {
     const r = montar(<CardLinkDiario alunoId="p1" />);
     const url = await waitFor(() => document.querySelector("[data-link-diario]")!.getAttribute("data-link-diario"));
     expect(url).toMatch(/\/d\/abc234xyz9$/);
@@ -133,7 +175,7 @@ describe("W14 — cards do Resumo", () => {
     h.perfil.mockResolvedValue(perfil({ ajustes: { acesso_app: true, mensagens_automaticas: false, diario_alimentar: true, acesso_link: false } }));
     const r2 = montar(<CardLinkDiario alunoId="p1" />);
     expect(await screen.findByText("DESLIGADO")).toBeInTheDocument();
-    expect(screen.getByText(/envio de fotos pelo link está desligado/)).toBeInTheDocument();
+    expect(screen.getByText(/envio de fotos pelo link está desligado na aba Acessos/)).toBeInTheDocument();
     r2.unmount();
     h.perfil.mockResolvedValue(perfil({ modulos: ["treino"] }));
     montar(<CardLinkDiario alunoId="p1" />);
@@ -200,6 +242,7 @@ describe("W14 (P15) — aviso único das mensagens desligadas", () => {
     fireEvent.click(screen.getByRole("button", { name: /Ver quais/ }));
     expect(await screen.findByText("Marina Alves")).toBeInTheDocument();
     expect(document.querySelectorAll("[data-mensagens-aluno]").length).toBe(2);
+    expect(screen.getByText(/no perfil do aluno, no card Mensagens automáticas/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Ligar para os 2/ }));
     await waitFor(() => expect(h.ligar).toHaveBeenCalledWith(["a", "b"]));
     await waitFor(() => expect(document.querySelector("[data-faixa-mensagens]")).toBeNull());

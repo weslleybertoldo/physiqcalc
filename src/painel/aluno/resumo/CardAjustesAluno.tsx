@@ -5,15 +5,15 @@ import { Interruptor } from "@/app-aluno/perfil/pecas/Interruptor";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Esqueleto } from "@/ui/premium/Estados";
 import { ErroPerfil, salvarAjusteAluno } from "../dados/api";
-import { ajustesVisiveis, mensagemErroPerfil, observacaoDoAjuste } from "../dados/regras";
+import { AJUSTES, mensagemErroPerfil, observacaoDoAjuste } from "../dados/regras";
 import type { ChaveAjuste, PerfilAluno } from "../dados/tipos";
 import { chavePerfilAluno, usePerfilAluno } from "../dados/usePerfilAluno";
 
 /**
- * Card "Ajustes do aluno" do Resumo (W14 — N-27; falha F2 / R12): os 4 ajustes do site antigo do Nutri, agora VALENDO —
- * acesso ao app (a trava GateAcessoApp fecha o app), mensagens automáticas no WhatsApp (o enfileirador só manda para quem está
- * ligado), diário alimentar com fotos (app e link) e envio de fotos pelo link (F1). O diário e o link só para aluno com Nutrição.
- * Grava no mesmo pacientes.config do site antigo (as 2 telas mostram o mesmo valor).
+ * Card "Mensagens automáticas" do Resumo (era o "Ajustes do aluno" da W14 — N-27; falha F2 / R12): o ajuste das mensagens automáticas no
+ * WhatsApp (o enfileirador só manda para quem está ligado). W-A P4 (P2/P3 do Weslley, 12/10/2026): o acesso ao app, o diário alimentar com
+ * fotos e o envio de fotos pelo link foram para a aba Acessos — aqui fica só o WhatsApp. Grava no mesmo pacientes.config (dados/api.ts —
+ * a hml-21c troca só o miolo, com a mesma assinatura).
  */
 export default function CardAjustesAluno({ alunoId }: { alunoId: string }) {
   const q = usePerfilAluno(alunoId);
@@ -37,17 +37,16 @@ export default function CardAjustesAluno({ alunoId }: { alunoId: string }) {
 
   return (
     <Cartao className="flex min-h-[240px] flex-col px-[18px] py-4" data-card-ajustes-aluno={p ? p.paciente_id : "carregando"}>
-      <CabecalhoCartao titulo="Ajustes do aluno" />
+      <CabecalhoCartao titulo="Mensagens automáticas" />
       {q.isLoading ? (
         <Esqueleto className="h-[160px] w-full" />
       ) : !p ? (
         <p className="text-[12.5px] text-texto-3">{mensagemErroPerfil(q.error instanceof Error ? q.error.message : "")}</p>
       ) : (
         <ul className="flex flex-col" data-ajustes-lista>
-          {ajustesVisiveis(p).map((a) => {
+          {AJUSTES.map((a) => {
             const obs = observacaoDoAjuste(a.chave, p);
             const ligado = p.ajustes[a.chave];
-            const semLogin = a.chave === "acesso_app" && !p.tem_login;
             return (
               <li key={a.chave} className="flex items-start gap-3 border-b border-linha py-2.5 last:border-b-0" data-ajuste={a.chave} data-ajuste-ligado={ligado ? "1" : "0"}>
                 <div className="min-w-0 flex-1">
@@ -59,7 +58,7 @@ export default function CardAjustesAluno({ alunoId }: { alunoId: string }) {
                   ligado={ligado}
                   aoMudar={(v) => void mudar(a.chave, v)}
                   rotulo={a.rotulo}
-                  desligado={!p.pode_editar || salvando !== null || semLogin}
+                  desligado={!p.pode_editar || salvando !== null}
                   data-ajuste-botao={a.chave}
                 />
               </li>

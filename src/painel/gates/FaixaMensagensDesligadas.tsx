@@ -98,7 +98,7 @@ export default function FaixaMensagensDesligadas({ children }: { children: React
           ))}
         </ul>
         <p className="mt-3 text-[12px] leading-relaxed text-texto-3">
-          Você também liga ou desliga um por um no perfil do aluno, em Ajustes do aluno.
+          Você também liga ou desliga um por um no perfil do aluno, no card Mensagens automáticas.
         </p>
       </PainelDeslizante>
       {children}
