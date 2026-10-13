@@ -22,7 +22,7 @@ import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
 import { acaoTreinos, codigoDoTreino, lerTreinos, type AcaoTreinos, type ConsultaDoTreino } from "@/treino/servidor";
 import { listarAlunos } from "@/lib/saasApi";
-import { ErroTreinoPainel, exerciciosDaLista, invocar, tirarTreino, type ItemHistorico, type PaginaDaBiblioteca } from "@/treino/editor/api";
+import { ErroTreinoPainel, exerciciosDaLista, invocar, tirarTreino, type ItemHistorico } from "@/treino/editor/api";
 import type { CamposEquivalencia } from "@/treino/equivalencia";
 import { LIMITE_SELETOR_TREINO, alunoDaLista } from "./regras";
 import type {
@@ -174,40 +174,7 @@ export async function carregarModeloPorId(meuId: string | null, id: string): Pro
 
 /** hml-14d (B21 · D24): uma página da biblioteca (painel) com as contagens do topo — a RPC exercicios_da_lista. */
 export const listarExercicios = (filtros: FiltrosExercicios, pagina: number, porPagina = POR_PAGINA) =>
-  porPagina === 1 ? contagemDaBiblioteca<ExercicioCatalogo>(filtros, pagina) : exerciciosDaLista<ExercicioCatalogo>(filtros, pagina, porPagina);
-
-/**
- * hml-21d (perf — a mitigação da spec §2.6 e do risco 5: "um item lento segura o lote → as consultas pesadas vão `sozinha`"): a contagem
- * da biblioteca do Meus treinos (1 item por página: só os totais — o "com GIF" do topo) vai SOZINHA, num `ler` à parte e em paralelo — a
- * página e as pastas não esperam por ela (antes ela entrava no MESMO lote da página, que só voltava com o item mais lento). A mesma RPC,
- * os mesmos p_filtros, offset e limite e o MESMO tipo de volta do exerciciosDaLista (src/treino/editor/api.ts) — só o lote muda.
- */
-async function contagemDaBiblioteca<T>(filtros: FiltrosExercicios, pagina: number): Promise<PaginaDaBiblioteca<T>> {
-  if (!online()) throw new ErroTreinoPainel("sem_internet");
-  const p_filtros: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(filtros)) {
-    if (v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
-    p_filtros[k] = v;
-  }
-  let valor: unknown;
-  try {
-    valor = (await lerTreinos("exercicios_lista", { filtros: p_filtros, offset: deslocamento(pagina, 1), limite: 1 }, { sozinha: true })).valor ?? null;
-  } catch (e) {
-    throw new ErroTreinoPainel(codigoDoTreino(e));
-  }
-  const r = (valor ?? {}) as Record<string, unknown>;
-  const n = (k: string) => Number(r[k] ?? 0) || 0;
-  return {
-    itens: (Array.isArray(r.itens) ? r.itens : []) as T[],
-    total: n("total"),
-    totalGlobal: n("total_global"),
-    totalMeu: n("total_meu"),
-    totalProfessores: n("total_professores"),
-    comGif: n("com_gif"),
-    totalEscopo: n("total_escopo"),
-    semClassificacao: n("sem_classificacao"),
-  };
-}
+  exerciciosDaLista<ExercicioCatalogo>(filtros, pagina, porPagina);
 
 /** Quais dos meus alunos recebem cada modelo (função — a RLS só deixa ler os que têm o profissional como professor). */
 export async function carregarQuemRecebe(grupos: string[]): Promise<PerfilRecebe[]> {
