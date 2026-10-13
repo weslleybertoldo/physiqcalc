@@ -33,6 +33,7 @@ const PUBLICADAS = [
   "espelho-nucleo",
   "delete-my-account",
   "treino-acessos", // W-A P2 (nova): a linha "Treino — séries" da aba Acessos, com o login do principal — nasce com o log da hml-10
+  "treinos", // hml-21d (nova): o jeito 2 do Treino (a porta _shared/porta-treino.ts) — nasce com o log da hml-10 e o catch final no index.ts
 ] as const;
 
 /** hml-14 (D10): respondem 410 {"error":"migrado"} a qualquer pedido (fora o preflight, com o CORS de antes). */
@@ -74,6 +75,7 @@ const RESPOSTA_DO_CATCH_FINAL: Record<(typeof PUBLICADAS)[number], string> = {
   "espelho-nucleo": 'resultados.push({ principal_user_id: pid, resultado: "erro", erro: String((e as { message?: string })?.message || e).slice(0, 200) });',
   "delete-my-account": 'return jsonServidor({ ok: false, erro: "interno" }, 500);',
   "treino-acessos": 'return json({ ok: false, erro: "erro_interno" }, 500, origin);',
+  treinos: 'return json({ ok: false, erro: "erro_interno" }, 500, origin);',
 };
 
 // ───────────────────────── o leitor ─────────────────────────
@@ -284,6 +286,13 @@ describe("hml-10: toda função do Treino está numa das listas (as publicadas n
       "supabase/functions/_shared/paginas.ts",
       // W-A P2: as regras da treino-acessos
       "supabase/functions/_shared/treino-acessos-regras.ts",
+      // hml-21d: a porta do jeito 2 do Treino, o JWKS, a cópia do motor comum e as regras/o catálogo da treinos
+      "supabase/functions/_shared/porta-treino.ts",
+      "supabase/functions/_shared/jwks-treino.ts",
+      "supabase/functions/_shared/leitura-lote.ts",
+      "supabase/functions/_shared/leitura-servidor.ts",
+      "supabase/functions/_shared/treinos-leituras.ts",
+      "supabase/functions/_shared/treinos-regras.ts",
     ]) {
       expect(relativos).toContain(arquivo);
     }
