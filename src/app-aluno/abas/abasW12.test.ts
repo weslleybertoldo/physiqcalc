@@ -28,9 +28,9 @@ describe("W12 — a aba Início entra pelo registro e vira a tela de abertura (t
     expect(destinoDaRotaAntiga("/pagamentos", "")).toBe("/perfil/pagamentos");
   });
 
-  it("os 5 cards da tela 1 estão registrados em src/app-aluno/inicio (as peças ficam na subpasta, fora do registro)", () => {
+  it("os 5 cards da tela 1 + o das rotinas (W-A P3) estão registrados em src/app-aluno/inicio (as peças ficam na subpasta, fora do registro)", () => {
     const nomes = listar("inicioApp").map((i) => i.nome).sort();
-    expect(nomes).toEqual(["CardDietaHoje", "CardMetasHoje", "CardPeso", "CardProximaConsulta", "CardTreinoHoje"]);
+    expect(nomes).toEqual(["CardDietaHoje", "CardMetasHoje", "CardPeso", "CardProximaConsulta", "CardRotinasHoje", "CardTreinoHoje"]);
   });
 
   it("a faixa 'Escolha um treino pronto' (W7b) saiu: o card do treino de hoje é que oferece o treino pronto", () => {
