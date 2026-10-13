@@ -381,8 +381,9 @@ def casos() -> dict[str, tuple[str, str, dict]]:
                + f"  v_j := {S}.dia_extra_salvar(null, jsonb_build_object('dia', v_hoje, 'nome', '  Lanche   da tarde ', 'horario', '16:00'));\n"
                + "  v_id := (v_j -> 'extra' ->> 'id')::uuid;\n"
                + res(nome="v_j -> 'extra' ->> 'nome'", comi="(v_j -> 'extra' ->> 'concluida_em') is not null",
-                     matricula="(v_j -> 'extra' ->> 'paciente_id')::uuid = (select pl.paciente_id from " + S + ".planos_alimentares pl where pl.id = "
-                               f"(select (({S}.meu_dia(v_hoje) -> 'plano_ativo') ->> 'plano_id')::uuid))",
+                     # P2 (Task 1): comparado com o paciente_id do plano_ativo do meu_dia (definer) — NÃO com o plano lido como a aluna: o RLS
+                     # dela é o meu_paciente_id() (limit 1 sem order by) e o preâmbulo cria a 2ª matrícula viva dela (deu null 1× no staging)
+                     matricula=f"(v_j -> 'extra' ->> 'paciente_id') = ({S}.meu_dia(v_hoje) -> 'plano_ativo' ->> 'paciente_id')",
                      pus=f"{S}.dia_adicionar(v_hoje, jsonb_build_object('extra_id', v_id, 'alimento_id', v_taco, 'quantidade_g', 80)) -> 'ok'",
                      desmarcar=f"{S}.dia_extra_marcar(v_id, false) -> 'concluida_em'",
                      sem_dia=f"{S}.dia_extra_salvar(null, '{{\"nome\": \"x\"}}'::jsonb) ->> 'erro'",
@@ -480,7 +481,9 @@ def casos() -> dict[str, tuple[str, str, dict]]:
                 + negado("uuid", f"perform {S}.wa_uuid('x');") + VOLTA,
                 {"matriculas": "negado", "plano": "negado", "refeicao": "negado", "visivel": "negado", "lgpd": "negado", "uuid": "negado"})
     # ───────────── LGPD (wa3: o corpo vivo + as tabelas novas) ─────────────
-    massa_lgpd = (liberar() + como("v_aluna") + criar
+    # P2 (Task 1): a rotina de TODO dia — a do `criar` (seg/qua/dom) não aceita marcar hoje nas terças, quintas, sextas e sábados (o L1 caía
+    # com rotinas_feitas 0 nesses dias: o rotina_marcar responde dados_invalidos fora dos dias da rotina)
+    massa_lgpd = (liberar() + como("v_aluna") + todos_os_dias
                   + f"  perform {S}.rotina_marcar(v_id, v_hoje, true);\n"
                   + f"  perform {S}.dia_tirar(v_hoje, v_item);\n  perform {S}.dia_extra_salvar(null, jsonb_build_object('dia', v_hoje, 'nome', 'Lanche'));\n"
                   + f"  v_id2 := ({S}.meu_alimento_salvar(null, '{{\"nome\": \"{B.MARCA} pão\"}}'::jsonb) -> 'alimento' ->> 'id')::uuid;\n"

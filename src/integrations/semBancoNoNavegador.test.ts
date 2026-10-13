@@ -42,6 +42,7 @@ export const LOGIN = [
 export const SESSAO_ANTES_DA_FUNCAO = [
   "src/ui/premium/useAvisos.ts", "src/treino/editor/api.ts", "src/painel/aluno/avaliacao/fontes.ts", "src/painel/aluno/avaliacao/avaliacaoApi.ts",
   "src/painel/configuracoes/excluirConta/api.ts", "src/painel/configuracoes/excluirConta/zip.ts",
+  "src/acessos/api.ts", // W-A P2: o token do principal para a treino-acessos (o fetch do Treino), com o ok da hml-21
 ] as const;
 
 const OPS_DE_TABELA = new Set(["select", "insert", "update", "upsert", "delete"]);

@@ -13,9 +13,12 @@ pedidos de mentira passam pela decisão de cada uma.
                       W2 (LINUX 3): a mp-conectar-retorno e a mp-contas-renovar (Mercado Pago do personal) gravam sempre.
                       hml-21a (decisão F): a conta grava em TODA ação, menos o { acao: "ler" }; o prof_planos da pagamentos-aluno
                       é leitura (H-113).
+                      W-A P2 (LINUX 3): as 3 da W-A (acessos e aluno-dia no principal; treino-acessos no Treino) gravam em TODA ação,
+                      menos o { acao: "ler" } (o campo que as 3 leem é o `acao` — a do Treino também, não o `action` da treino-leitura).
   e2e/w26/prod.py     eh_escrita: o POST na nutricao, na financeiro e na mp-contas-renovar (W2) é escrita (como o POST em tabela); a
                       leitura passa. hml-20a: o POST com o corpo { acao: "ler" } na nutricao/financeiro é leitura (na
                       mp-contas-renovar, não: ela não lê o `acao`). hml-21a: a conta também (o POST grava; o { acao: "ler" } lê).
+                      W-A P2: as 3 da W-A também (o POST grava; o { acao: "ler" } lê).
 Uso: python3 e2e/hml19/guarda_teste.py   (sai 1 se algum caso falhar)
 """
 from __future__ import annotations
@@ -185,6 +188,26 @@ def casos_hml17(b) -> list[tuple]:
         # H-113 (combinado com a LINUX 3): o prof_planos da pagamentos-aluno (a aba Planos da W-P) é LEITURA
         ("H-113: pagamentos-aluno › prof_planos (leitura)", fn("pagamentos-aluno", "prof_planos"), False),
         ("H-113: pagamentos-aluno › prof_plano_salvar (grava)", fn("pagamentos-aluno", "prof_plano_salvar"), True),
+        # W-A P2 (LINUX 3): as 3 da W-A — o `ler` passa; toda gravação (do aluno, da Dieta e do profissional) é barrada; o disfarçado, o corpo
+        # sem a ação e o ilegível também; a treino-acessos (Treino) lê o campo `acao`
+        ("W-A: acessos › ler", g.escrita(Pedido("POST", f"{P}/functions/v1/acessos", {"acao": "ler", "aluno": "x"})), False),
+        ("W-A: acessos › salvar (grava)", fn("acessos", "salvar"), True),
+        ("W-A: acessos › sem ação", fn("acessos"), True),
+        ("W-A: acessos › disfarçado {action: ler, acao: salvar}", g.escrita(Pedido("POST", f"{P}/functions/v1/acessos", {"action": "ler", "acao": "salvar"})), True),
+        ("W-A: acessos › OPTIONS (preflight)", fn("acessos", "salvar", "OPTIONS"), False),
+        ("W-A: aluno-dia › ler q=rotinas (o app)", g.escrita(Pedido("POST", f"{P}/functions/v1/aluno-dia", {"acao": "ler", "q": "rotinas"})), False),
+        ("W-A: aluno-dia › ler q=aluno_dia (o painel)", g.escrita(Pedido("POST", f"{P}/functions/v1/aluno-dia", {"acao": "ler", "q": "aluno_dia"})), False),
+        *[(f"W-A: aluno-dia › {a} (grava)", fn("aluno-dia", a), True) for a in (
+            "rotina_salvar", "rotina_arquivar", "rotina_marcar", "rotinas_ordenar", "dia_adicionar", "dia_tirar", "dia_desfazer", "extra_salvar",
+            "extra_excluir", "extra_marcar", "alimento_salvar", "alimento_excluir", "receita_salvar", "receita_excluir", "prof_rotina_salvar",
+            "prof_rotina_arquivar")],
+        ("W-A: aluno-dia › {action: ler} (ela lê o campo acao)", g.escrita(Pedido("POST", f"{P}/functions/v1/aluno-dia", {"action": "ler"})), True),
+        ("W-A: aluno-dia › corpo ilegível", g.escrita(Pedido("POST", f"{P}/functions/v1/aluno-dia", cru="{acao: ler")), True),
+        ("W-A: treino-acessos (Treino) › ler", g.escrita(Pedido("POST", f"{T}/functions/v1/treino-acessos", {"acao": "ler", "aluno": "x"})), False),
+        ("W-A: treino-acessos (Treino) › salvar (grava)", fn("treino-acessos", "salvar", host=T), True),
+        ("W-A: treino-acessos › {action: ler} (lê o acao, não o action)", g.escrita(Pedido("POST", f"{T}/functions/v1/treino-acessos", {"action": "ler"})), True),
+        ("W-A: funcao_grava SEM o corpo: aluno-dia 'ler' segue gravação (só o corpo libera)", b.funcao_grava("aluno-dia", "ler"), True),
+        ("W-A: acessos-x (outra função, desconhecida: grava)", fn("acessos-x", "ler"), True),
     ]
     # toda função das pastas do repo está decidida (conhecida ou "sempre grava"): função nova sem decisão falha aqui
     pastas = {d.name for raiz in ("supabase-principal/functions", "supabase/functions") for d in (REPO / raiz).iterdir()
@@ -199,6 +222,9 @@ def casos_hml17(b) -> list[tuple]:
         True, ("sim", "não")))
     saida.append(("hml-21a: a conta fora das 'conhecidas', nas que gravam sempre e com o `ler` pelo corpo", "conta" not in b.FUNCOES_CONHECIDAS
                   and "conta" in b.FUNCOES_QUE_SEMPRE_GRAVAM and b.LEITURAS_PELO_CORPO.get("conta") == ("acao", frozenset({"ler"})), True, ("sim", "não")))
+    saida.append(("W-A P2: as 3 fora das 'conhecidas', nas que gravam sempre e com o `ler` pelo corpo", all(
+        f not in b.FUNCOES_CONHECIDAS and f in b.FUNCOES_QUE_SEMPRE_GRAVAM and b.LEITURAS_PELO_CORPO.get(f) == ("acao", frozenset({"ler"}))
+        for f in ("acessos", "aluno-dia", "treino-acessos")), True, ("sim", "não")))
     return saida
 
 
@@ -246,6 +272,17 @@ def casos_w26(w) -> list[tuple]:
         ("w26 · hml-21a: POST conta disfarçado {action: ler, acao: perfil_nome}", e("POST", f"{P}/functions/v1/conta", json.dumps({"action": "ler", "acao": "perfil_nome"})), True),
         ("w26 · hml-21a: OPTIONS conta", e("OPTIONS", f"{P}/functions/v1/conta"), False),
         ("w26 · hml-21a: POST conta-x (outra função)", e("POST", f"{P}/functions/v1/conta-x"), False),
+        # W-A P2: as 3 da W-A são escrita (antes, função desconhecida = leitura aqui); o `ler` delas passa pelo corpo
+        ("w26 · W-A: POST acessos", e("POST", f"{P}/functions/v1/acessos"), True),
+        ("w26 · W-A: POST acessos {acao: ler}", e("POST", f"{P}/functions/v1/acessos", json.dumps({"acao": "ler", "aluno": "x"})), False),
+        ("w26 · W-A: POST acessos {acao: salvar}", e("POST", f"{P}/functions/v1/acessos", json.dumps({"acao": "salvar"})), True),
+        ("w26 · W-A: POST aluno-dia {acao: ler, q: dia}", e("POST", f"{P}/functions/v1/aluno-dia", json.dumps({"acao": "ler", "q": "dia"})), False),
+        ("w26 · W-A: POST aluno-dia {acao: rotina_marcar}", e("POST", f"{P}/functions/v1/aluno-dia", json.dumps({"acao": "rotina_marcar"})), True),
+        ("w26 · W-A: POST aluno-dia disfarçado {action: ler, acao: dia_adicionar}", e("POST", f"{P}/functions/v1/aluno-dia", json.dumps({"action": "ler", "acao": "dia_adicionar"})), True),
+        ("w26 · W-A: POST treino-acessos (Treino) {acao: ler}", e("POST", f"{T}/functions/v1/treino-acessos", json.dumps({"acao": "ler"})), False),
+        ("w26 · W-A: POST treino-acessos (Treino) {acao: salvar}", e("POST", f"{T}/functions/v1/treino-acessos", json.dumps({"acao": "salvar"})), True),
+        ("w26 · W-A: OPTIONS aluno-dia", e("OPTIONS", f"{P}/functions/v1/aluno-dia"), False),
+        ("w26 · W-A: POST aluno-dia-x (outra função)", e("POST", f"{P}/functions/v1/aluno-dia-x"), False),
     ]
 
 
