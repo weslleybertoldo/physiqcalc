@@ -462,9 +462,10 @@ TERMO_BUSCA = "treino"  # a Busca (Ctrl K): um termo comum nos nomes dos treinos
 # (tela, como abrir, o seletor do "pronto", o teto de `ler` da treinos no depois). Como abrir: ("rota", r) pela navegação do app; ("clique", s)
 # na tela de cima já aberta (o Detalhe: o 1º treino da lista; a Folha: o 1º exercício da Biblioteca); ("busca", termo) o Ctrl K; ("editor",
 # None) a aba Treino do aluno de TESTE (a rota com a matrícula). A série aceita (## TEMPO treinos série, DECISÃO 12:1x): Meus treinos com 2.
+# hml-21d F7: Meus treinos = 3 `ler` — os 2 em série + a contagem com GIF SOZINHA, em paralelo (perf 89d8e30, DECISÃO 15:06; FICA 15:30).
 MEUS_TREINOS = ("meus_treinos", ("rota", "/painel/treinos?aba=treinos"),
                 '[data-pagina-treinos-painel][data-aba-treinos="treinos"] [data-lista-modelos] [data-lista="modelos"], '
-                '[data-pagina-treinos-painel][data-aba-treinos="treinos"] [data-sem-modelos]', 2)
+                '[data-pagina-treinos-painel][data-aba-treinos="treinos"] [data-sem-modelos]', 3)
 DETALHE = ("detalhe", ("clique", '[data-lista="modelos"] [data-modelo]'), "[data-modelo-detalhe] [data-modelo-exercicios], "
            "[data-modelo-detalhe] [data-modelo-sem-exercicios]", 1)
 BIBLIOTECA = ("biblioteca", ("rota", "/painel/treinos?aba=biblioteca"), "[data-biblioteca-lista-painel]", 1)

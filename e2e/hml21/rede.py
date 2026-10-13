@@ -37,7 +37,8 @@ abrir — PULADA com o motivo; SQL só leitura, só contagem); na produção a n
 hml-21d (decisões H, I e N do contrato da 21d): --area treinos (e2e/hml21/treinos21d.py): o personal (Meus treinos, o Detalhe — o 1º treino da
 lista —, a Biblioteca, a Folha — o 1º exercício —, os Modelos › Treinos, a Busca e o Aluno › Treino da aluna de TESTE) e o aluno sem
 profissional (os Treinos prontos), cada conta no seu contexto; em cada tela 0 chamada direta da área (as tabelas, as RPCs e o bucket do Treino
-que saíram do navegador e a aluno_treino do principal), o `ler` da treinos ≤ o teto (2 em Meus treinos — a série aceita, DECISÃO 12:1x), 0
+que saíram do navegador e a aluno_treino do principal), o `ler` da treinos ≤ o teto (3 em Meus treinos — 2 em série, a série
+aceita, DECISÃO 12:1x, + a contagem com GIF sozinha em paralelo, 89d8e30), 0
 gravação e 0 ação ao abrir; as de fora à parte; a planilha hml21/medicao/rede_hml21d.tsv (antes × depois). Na produção a nutri-legado (só com
 o Treino na conta ativa) e a aluno-calc (só sem profissional), só leitura, com a Guarda — o editor fica de fora (sem aluno de TESTE lá).
 """
@@ -593,10 +594,10 @@ def seco_21d(o) -> None:  # noqa: PLR0915
          and [x[0] for x in T21.telas_da_conta("nutri-legado", "prod")] == ["meus_treinos", "detalhe", "biblioteca", "folha", "modelos_treinos", "busca"]
          and [x[0] for x in T21.telas_da_conta(T21.SOZINHO, "local")] == ["treinos_prontos_aluno"]
          and [x[0] for x in T21.telas_da_conta("aluno-calc", "prod")] == ["treinos_prontos_aluno"]
-         and {x[0]: x[3] for x in T21.TELAS_DO_PAINEL + (T21.PRONTOS,)} == {"meus_treinos": 2, "detalhe": 1, "biblioteca": 1, "folha": 1, "modelos_treinos": 1,
+         and {x[0]: x[3] for x in T21.TELAS_DO_PAINEL + (T21.PRONTOS,)} == {"meus_treinos": 3, "detalhe": 1, "biblioteca": 1, "folha": 1, "modelos_treinos": 1,
                                                                              "busca": 1, "editor": 1, "treinos_prontos_aluno": 1},
          "as telas de cada conta (o Detalhe e a Folha pelo clique na tela de cima; o editor fora da produção — sem aluno de TESTE lá) e o teto de "
-         "`ler` (2 só em Meus treinos — a série aceita, DECISÃO 12:1x)")
+         "`ler` (3 só em Meus treinos — 2 em série, a série aceita, DECISÃO 12:1x, + a contagem com GIF sozinha, 89d8e30)")
     # a trava das telas que PULAM (decisão N): sem o Treino na conta ativa / com profissional / sem a matrícula de teste — com valores FALSOS
     originais = (T21.painel_tem_treino, T21.aluno_sem_profissional, T21.matricula_do_aluno, T21.exige_identidade)
 
