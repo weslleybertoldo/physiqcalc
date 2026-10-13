@@ -40,10 +40,12 @@ ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 # é escrita, como o POST em tabela. hml-19d (decisão I): a financeiro também. W2: a mp-contas-renovar também. A mp-conectar-retorno
 # NÃO entra: ela só grava no GET da volta do OAuth (o POST nela volta ?mp=invalido sem tocar no banco) e o GET é leitura aqui — um E2E
 # "só leitura" de produção NUNCA pode seguir uma volta do OAuth (o GET com o state certo grava a conexão). Teste: python3 e2e/hml19/guarda_teste.py.
-ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar)(?:[/?#]|$)")
+# hml-21a (achado 5 da spec hml-21): a conta também — sem ela aqui, a w26 tratava a função DESCONHECIDA como leitura (o E2E "só leitura"
+# da produção gravaria o sino); o `ler` dela passa pelo corpo, como o da nutricao/financeiro.
+ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar|conta)(?:[/?#]|$)")
 # hml-20a (decisão I): as funções em que o corpo { "acao": "ler" } é LEITURA — só a nutricao e a financeiro. A mp-contas-renovar (W2) não
 # lê o `acao` (o corpo dela é { schema, forcar_conta? }: com o schema certo, a rodada roda e grava) → segue escrita.
-LEITURA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro)(?:[/?#]|$)")
+LEITURA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|conta)(?:[/?#]|$)")
 
 
 def leitura_da_funcao(corpo: str | None) -> bool:

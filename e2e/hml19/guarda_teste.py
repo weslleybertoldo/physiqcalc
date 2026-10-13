@@ -11,9 +11,11 @@ pedidos de mentira passam pela decisão de cada uma.
                       "minha_evolucao" } na admin-avaliacoes passam; o corpo "disfarçado" (o campo que a função NÃO lê com a
                       leitura), ilegível ou sem a ação segue barrado.
                       W2 (LINUX 3): a mp-conectar-retorno e a mp-contas-renovar (Mercado Pago do personal) gravam sempre.
+                      hml-21a (decisão F): a conta grava em TODA ação, menos o { acao: "ler" }; o prof_planos da pagamentos-aluno
+                      é leitura (H-113).
   e2e/w26/prod.py     eh_escrita: o POST na nutricao, na financeiro e na mp-contas-renovar (W2) é escrita (como o POST em tabela); a
                       leitura passa. hml-20a: o POST com o corpo { acao: "ler" } na nutricao/financeiro é leitura (na
-                      mp-contas-renovar, não: ela não lê o `acao`).
+                      mp-contas-renovar, não: ela não lê o `acao`). hml-21a: a conta também (o POST grava; o { acao: "ler" } lê).
 Uso: python3 e2e/hml19/guarda_teste.py   (sai 1 se algum caso falhar)
 """
 from __future__ import annotations
@@ -153,6 +155,36 @@ def casos_hml17(b) -> list[tuple]:
         ("hml-20a: funcao_grava COM o corpo de leitura: passa", b.funcao_grava("nutricao", "ler", json.dumps({"acao": "ler"})), False),
         ("revisão: POST em tabela com /functions/v1/nutricao na query e {acao: ler} (a Guarda lê o caminho)",
          g.escrita(Pedido("POST", f"{P}/rest/v1/anexos?x=/functions/v1/nutricao", {"acao": "ler"})), True),
+        # hml-21a (decisão F): a conta — o `ler` passa; TODA ação dela é barrada (o sino, a foto, o push, o aceite, o onboarding); o `ler`
+        # disfarçado (o campo que ela NÃO lê) e o corpo sem a ação também
+        ("hml-21a: conta › ler (a casca e o app do aluno)", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"acao": "ler", "itens": [{"q": "avisos"}]})), False),
+        ("hml-21a: conta › OPTIONS (preflight)", fn("conta", "ler", "OPTIONS"), False),
+        ("hml-21a: conta › avisos_marcar_lidos (o sino ao abrir: grava)", fn("conta", "avisos_marcar_lidos"), True),
+        ("hml-21a: conta › aviso_membro_ok", fn("conta", "aviso_membro_ok"), True),
+        ("hml-21a: conta › aviso_mudanca_marcar", fn("conta", "aviso_mudanca_marcar"), True),
+        ("hml-21a: conta › senha_definida", fn("conta", "senha_definida"), True),
+        ("hml-21a: conta › push_registrar", fn("conta", "push_registrar"), True),
+        ("hml-21a: conta › push_esquecer", fn("conta", "push_esquecer"), True),
+        ("hml-21a: conta › aceitar_textos", fn("conta", "aceitar_textos"), True),
+        ("hml-21a: conta › criar_minha_conta", fn("conta", "criar_minha_conta"), True),
+        ("hml-21a: conta › entrar_sem_profissional", fn("conta", "entrar_sem_profissional"), True),
+        ("hml-21a: conta › perfil_nome", fn("conta", "perfil_nome"), True),
+        ("hml-21a: conta › perfil_foto_preparar", fn("conta", "perfil_foto_preparar"), True),
+        ("hml-21a: conta › perfil_foto_salvar", fn("conta", "perfil_foto_salvar"), True),
+        ("hml-21a: conta › perfil_foto_tirar", fn("conta", "perfil_foto_tirar"), True),
+        ("hml-21a: conta › mudar_objetivo_app", fn("conta", "mudar_objetivo_app"), True),
+        ("hml-21a: conta › sem ação", fn("conta"), True),
+        ("hml-21a: conta › disfarçado {action: ler, acao: perfil_nome}", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"action": "ler", "acao": "perfil_nome"})), True),
+        ("hml-21a: conta › {action: ler} (a conta lê o campo acao)", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"action": "ler"})), True),
+        ("hml-21a: conta › corpo ilegível", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", cru="{acao: ler")), True),
+        ("hml-21a: funcao_grava SEM o corpo: conta 'ler' segue gravação (só o corpo libera)", b.funcao_grava("conta", "ler"), True),
+        ("hml-21a: conta-x (outra função, desconhecida: grava)", fn("conta-x", "ler"), True),
+        ("hml-21a: Storage: a foto do perfil pelo link assinado (PUT)", g.escrita(Pedido("PUT", f"{P}/storage/v1/object/upload/sign/fotos-perfil/u/foto-1.png?token=x")), True),
+        ("hml-21a: RPC minha_situacao (saiu do front; o front ANTIGO lê: a Guarda barra — o E2E do antes soma à lista dele)",
+         g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/minha_situacao", {})), True),
+        # H-113 (combinado com a LINUX 3): o prof_planos da pagamentos-aluno (a aba Planos da W-P) é LEITURA
+        ("H-113: pagamentos-aluno › prof_planos (leitura)", fn("pagamentos-aluno", "prof_planos"), False),
+        ("H-113: pagamentos-aluno › prof_plano_salvar (grava)", fn("pagamentos-aluno", "prof_plano_salvar"), True),
     ]
     # toda função das pastas do repo está decidida (conhecida ou "sempre grava"): função nova sem decisão falha aqui
     pastas = {d.name for raiz in ("supabase-principal/functions", "supabase/functions") for d in (REPO / raiz).iterdir()
@@ -165,6 +197,8 @@ def casos_hml17(b) -> list[tuple]:
     saida.append(("W2: as 2 fora das 'conhecidas' e nas que gravam sempre", all(
         f not in b.FUNCOES_CONHECIDAS and f in b.FUNCOES_QUE_SEMPRE_GRAVAM for f in ("mp-conectar-retorno", "mp-contas-renovar")),
         True, ("sim", "não")))
+    saida.append(("hml-21a: a conta fora das 'conhecidas', nas que gravam sempre e com o `ler` pelo corpo", "conta" not in b.FUNCOES_CONHECIDAS
+                  and "conta" in b.FUNCOES_QUE_SEMPRE_GRAVAM and b.LEITURAS_PELO_CORPO.get("conta") == ("acao", frozenset({"ler"})), True, ("sim", "não")))
     return saida
 
 
@@ -205,6 +239,13 @@ def casos_w26(w) -> list[tuple]:
         ("w26 · revisão: POST em tabela com /functions/v1/nutricao na query e {acao: ler}", e("POST", f"{P}/rest/v1/anexos?x=/functions/v1/nutricao", json.dumps({"acao": "ler"})), True),
         ("w26 · revisão: POST na RPC que grava com /functions/v1/financeiro na query e {acao: ler}", e("POST", f"{P}/rest/v1/rpc/lixeira_restaurar?y=/functions/v1/financeiro", json.dumps({"acao": "ler"})), True),
         ("w26 · revisão: POST nutricao com query (o caminho é da função) e {acao: ler}", e("POST", f"{P}/functions/v1/nutricao?x=1", json.dumps({"acao": "ler"})), False),
+        # hml-21a (achado 5): a conta é escrita (antes, função desconhecida = leitura aqui); o `ler` dela passa pelo corpo
+        ("w26 · hml-21a: POST conta", e("POST", f"{P}/functions/v1/conta"), True),
+        ("w26 · hml-21a: POST conta {acao: avisos_marcar_lidos} (o sino)", e("POST", f"{P}/functions/v1/conta", json.dumps({"acao": "avisos_marcar_lidos", "ids": []})), True),
+        ("w26 · hml-21a: POST conta {acao: ler}", e("POST", f"{P}/functions/v1/conta", json.dumps({"acao": "ler", "itens": []})), False),
+        ("w26 · hml-21a: POST conta disfarçado {action: ler, acao: perfil_nome}", e("POST", f"{P}/functions/v1/conta", json.dumps({"action": "ler", "acao": "perfil_nome"})), True),
+        ("w26 · hml-21a: OPTIONS conta", e("OPTIONS", f"{P}/functions/v1/conta"), False),
+        ("w26 · hml-21a: POST conta-x (outra função)", e("POST", f"{P}/functions/v1/conta-x"), False),
     ]
 
 
