@@ -1,0 +1,300 @@
+{
+ "uuid": "1e857840-e81a-579f-acb6-9df841c2c5b9",
+ "nome": "Mobilidade de Ombro com Bastão",
+ "cena": "mobilidade_de_ombro_com_bastao",
+ "grupo": "Mobilidade",
+ "subgrupo": "Deltoide · rotadores do ombro",
+ "padrao_movimento": "along_ombro",
+ "equipamento": "peso_corporal",
+ "variacao": "em pé, bastão nas mãos",
+ "alvos": [
+  "deltoide",
+  "costas"
+ ],
+ "auxiliares": [
+  "peitoral",
+  "dorsal"
+ ],
+ "camera": {
+  "az": 50,
+  "el": 18,
+  "dist": 5.0,
+  "alvo": [
+   0.0,
+   0.05,
+   1.0
+  ]
+ },
+ "camera_vistas": {
+  "dist": 5.0,
+  "alvo": [
+   0.0,
+   0.0,
+   1.0
+  ]
+ },
+ "ida_s": 3.0,
+ "ida_s_motivo": "Ida e volta do app (sem \"ciclo\"): a passagem do bastão é um vaivém entre 2 extremos — t = 0 ATRÁS DA CABEÇA (o fim de trás, a foto parada: os braços esticados no alto com o bastão acima e atrás da cabeça, a posição da foto 1 do free-exercise-db, que identifica o exercício) e t = 1 NA FRENTE DO QUADRIL (o outro extremo); o app volta pelo mesmo caminho e a desaceleração do vaivém para o bastão nos 2 extremos, como numa repetição de verdade. Com a foto no outro extremo (o bastão nas coxas, pegada aberta) o exercício pareceria o começo de um exercício de barra; o \"ciclo\" com a foto em cima (a sugestão pras mobilidades) não foi preciso porque o extremo de trás já identifica o exercício. 3 s em cada sentido: devagar (\"Carefully\", \"Slowly\", free-exercise-db; \"Control the movement as you slowly lower\", Physitrack) e nenhuma fonte dá os segundos; o osso mais rápido anda 65 mm por quadro (o limite é 80).",
+ "movimento": "Em pé, com os pés quase juntos, os joelhos soltos e o corpo parado, segure um bastão leve (um cano de PVC ou um cabo de vassoura) com as 2 mãos bem afastadas, as palmas pra baixo e o polegar dando a volta no bastão. Com os braços esticados o tempo todo, leve o bastão da frente do quadril pra cima, pela frente, devagar, até ele passar por cima da cabeça, e continue levando os braços um pouco pra trás até o bastão ficar acima e atrás da cabeça, sem forçar quando começar a ficar difícil. Volte pelo mesmo caminho: passe de novo por cima da cabeça e desça pela frente até o quadril. As mãos ficam na mesma largura o tempo todo; o tronco fica em pé e parado, sem arquear a lombar, os ombros não sobem em direção às orelhas e a cabeça fica parada, olhando pra frente, com o bastão passando por cima dela sem encostar. Faça devagar, sem balançar, e respire normalmente.",
+ "cinesiologia": {
+  "plano": "mobilidade ATIVA dos 2 ombros juntos, em cadeia aberta e simétrica: os braços esticados giram como um só em volta da reta que passa pelos 2 ombros — sobem pela frente (flexão do ombro somada à abdução da pegada aberta) até em cima e passam um pouco pra trás do plano do corpo (até os 45° da \"horizontal extension 45° past neutral\" da ACE) — com o úmero girando pra fora (rotação externa) conforme o bastão sobe e vai pra trás da cabeça; ida e volta lenta, sem segurar no fim (não é alongamento parado)",
+  "articulacoes": "ombros: de ~29° de elevação (os braços pendurados um pouco à frente, o bastão a 12 mm do quadril) a ~155° em cima e ~143° atrás da cabeça, com o braço chegando a 45° atrás do plano do corpo (o limite da ACE); o úmero gira em volta do próprio eixo de ~50° pra dentro (rotação interna, na frente do quadril) a ~43° pra fora (rotação externa, com os braços no alto e atrás da cabeça), quase todo o giro quando os braços passam da horizontal pra cima — dentro da ACE (interna 70–80°, externa 90–100°); cotovelos esticados (5° de flexão, parados); antebraços girando por igual, de pronados (~35° além do neutro, na frente) a supinados (~60° além do neutro, atrás da cabeça) — dentro da ACE (pronação 90°, supinação 90°); punhos sem dobrar pra frente nem pra trás (−6 a 0°) e com 15–19° de desvio pro lado do polegar (ACE: até 20°), o bastão 12° oblíquo na palma; escápulas, tronco, cabeça e pernas parados (as pernas juntas, os joelhos a 4°)",
+  "agonistas": "na subida pela frente, deltoide anterior e a parte clavicular do peitoral maior (flexão do ombro), com o deltoide médio e o supraespinhal (a abdução da pegada aberta); atrás da cabeça, os rotadores externos (infraespinhal e redondo menor) e o deltoide posterior; na volta pela frente o mesmo deltoide segura a descida (excêntrico) — os músculos do subgrupo do catálogo (\"Deltoide · rotadores do ombro\") e da lista da AAOS pro programa do ombro (\"Deltoids\", \"Infraspinatus\", \"Supraspinatus\", \"Teres muscles\"). Músculos ALONGADOS: o peitoral maior e menor (free-exercise-db: \"primaryMuscles\": [\"chest\"]; ExRx: \"Pectoralis Minor\") e o grande dorsal (ACE: \"the muscles of your shoulders and your lats\"), com os braços no alto, e os rotadores internos — subescapular e redondo maior — na rotação externa atrás da cabeça (ExRx, Subscapularis: \"so shoulder is externally rotated\")",
+  "sinergistas": "trapézio e serrátil anterior giram as escápulas pra cima junto com os braços no alto (ritmo escapuloumeral); bíceps e tríceps seguram os cotovelos esticados; os flexores dos dedos fecham as mãos no bastão",
+  "estabilizadores": "o manguito rotador centra a cabeça do úmero; abdômen e eretores da espinha seguram o tronco em pé sem arquear a lombar (ACE: \"without arching your lower back\"); o trapézio inferior segura os ombros embaixo (ACE: \"keep your shoulders depressed (avoid any upward shrugging)\"); as pernas, juntas e com os joelhos soltos, seguram o corpo parado (free-exercise-db: \"standing with your legs together\")",
+  "fases": "a foto parada é o fim de trás (o bastão acima e atrás da cabeça, os braços no alto). Ida (3 s): os braços esticados passam o bastão por cima da cabeça e descem pela frente até ele parar logo na frente do quadril (free-exercise-db: \"hold it in front of you\"); volta (3 s): sobe pela frente, passa por cima da cabeça e vai pra trás até onde o ombro deixa (free-exercise-db: \"Carefully lift the pole up and behind your head.\"; \"Don't force it if it gets hard to lift further.\"). Devagar e sem balançar (Mayo: \"Don't bounce. Stretch in a smooth movement, without bouncing.\"), até sentir tensão sem dor (AAOS: \"to the point of feeling a pull without pain\"; ACSM: \"Stretch to the point of feeling tightness or slight discomfort.\"), respirando normalmente (Mayo: \"Breathe normally\"). Nenhuma fonte dá os segundos: 3 s em cada sentido (escolha da fábrica pro \"Slowly\" / \"Carefully\"); o app repete a ida e a volta (prescrição em segundos, como a Prancha)"
+ },
+ "referencias": [
+  "free-exercise-db (Yuhonas, domínio público) — Chest And Front Of Shoulder Stretch. https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Chest_And_Front_Of_Shoulder_Stretch.json (lido em 13/10/2026, com as 2 fotos): \"Start off by standing with your legs together, holding a bodybar or a broomstick.\" / \"Take a slightly wider than shoulder width grip on the pole and hold it in front of you with your palms facing down.\" / \"Carefully lift the pole up and behind your head.\"; \"primaryMuscles\": [\"chest\"], \"secondaryMuscles\": [\"shoulders\"]. Fotos: na 0 o bastão na frente do corpo, os braços esticados e as mãos perto das pontas (~1,8× a largura de fora a fora dos deltoides do modelo, medida do agente de fontes); na 1 o bastão logo acima e atrás da cabeça, com os cotovelos um pouco dobrados.",
+  "free-exercise-db — Round The World Shoulder Stretch. https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Round_The_World_Shoulder_Stretch.json (lido em 13/10/2026): \"Stand up straight with your legs together, holding a bodybar or broomstick.\" / \"Hold the pole behind your hips with a wider than shoulder width grip. Your palms should be down and your thumbs facing out.\" / \"Slowly lift your arms up behind your head. Don't force it if it gets hard to lift further.\"; \"primaryMuscles\": [\"shoulders\"], \"secondaryMuscles\": [\"biceps\", \"chest\"]. É a metade de TRÁS, com outra pegada (os polegares pra fora): pela passagem, sem trocar a pegada, os polegares ficam pro meio do bastão o caminho todo.",
+  "Physitrack (plataforma de exercícios de fisioterapia) — Seated Wide Grip Shoulder Flexion (Stick). https://ca.physitrack.com/home-exercise-video/seated-wide-grip-shoulder-flexion-%2528stick%2529 (lido em 13/10/2026): \"Sit on a chair, feet firmly on the floor. Hold a stick in front with both hands wide apart and palms facing down.\" / \"Keeping your arms straight lift the stick from the front over your head and downward behind your back. Change the width of the grip during the exercise.\" / \"Required equipment: Chair, Stick\". A passagem inteira, mas SENTADO (o vídeo não foi visto).",
+  "Physitrack — Shoulder flexion in supine with stick (full range) (lido em 13/10/2026): \"Your arms should be around shoulder width apart, or slightly wider depending on what is comfortable.\" / \"Continue to raise the stick up and over your head, aiming to touch the floor above you.\" / \"It's ok if your elbows soften a little here.\" / \"Control the movement as you slowly lower your arms back down again, and repeat.\"",
+  "ACE (American Council on Exercise), Exercise Library 123 — Supine Shoulder Flexion. https://www.acefitness.org/resources/everyone/exercise-library/123/supine-shoulder-flexion/ (lido em 13/10/2026): \"Exhale and gently lift and rotate your arms overhead, continuing to rotate them towards the floor without arching your lower back, bending your elbows or changing your wrist position.\" / \"In this overhead position, attempt to: (1) fully extend the elbows without arching your low back or shrugging your shoulders and (2) keep your shoulders depressed (avoid any upward shrugging).\" / \"This exercise stretches the muscles of your shoulders and your lats in a stable and isolated manner.\"",
+  "ACE — Flexibility Assessment Form: Upper Body (formulário de avaliação da ACE, PDF). https://www.acefitness.org/images/webcontent/assets/certification/ace-answers/forms/pt/10_Flexibility_Assessment_Form-Upper_Body.pdf (lido em 13/10/2026): \"Shoulder range of motion in the transverse plane: Horizontal adduction (flexion) 130°, horizontal abduction to 0°, horizontal extension 45° past neutral\" / \"Shoulder rotation range of motion in the sagittal plane: External rotation 90–100°, internal rotation 70–80°\"; na tabela: \"Flexion\" 150–180, \"External/lateral rotation\" 90, \"Internal/medial rotation\" 70–80, \"Shoulder horizontal abduction\" 30–40, \"Pronation\" 90, \"Supination\" 90, \"Radial deviation\" 20, \"Ulnar deviation\" 45, cotovelo \"Extension\" 0.",
+  "ExRx.net — Broom Stick Infraspinatus Stretch e Broom Stick Subscapularis Stretch (o site direto responde 403; lidos pelas cópias do Internet Archive https://web.archive.org/web/20231121054338/https://exrx.net/Stretches/Infraspinatus/Broomstick e https://web.archive.org/web/20250421105756/https://exrx.net/Stretches/Subscapularis/Broomstick, 13/10/2026): \"Pull upper end of pole forward so shoulder is internally rotated. Hold stretch.\" (Target \"Teres Minor\"; Other \"Infraspinatus\") / \"Pull lower end of pole forward and upward so shoulder is externally rotated. Hold stretch.\" (Target \"Subscapularis\"; Other \"Pectoralis Minor\"). Rotações paradas, de UM braço por vez e com o cotovelo dobrado: não é o movimento escolhido (fica como alternativa).",
+  "AAOS (OrthoInfo) — Rotator Cuff and Shoulder Conditioning Program (PDF, modificado em 09/07/2026). https://preview.orthoinfo.org/globalassets/pdfs/rotator-cuff-and-shoulder-conditioning-program-2026.pdf (lido em 13/10/2026): \"Target Muscles: The muscle groups targeted in this conditioning program include:\" \"Deltoids (front, back and over the shoulder)\", \"Infraspinatus (supporting the shoulder joint)\", \"Subscapularis (front of shoulder)\", \"Teres muscles (supporting the shoulder joint)\", \"Supraspinatus (supporting the shoulder joint)\"; \"Passive Internal Rotation\" (\"Main muscles worked: Supraspinatus\") e \"Passive External Rotation\" (\"Main muscles worked: Infraspinatus, teres minor\"), \"Equipment needed: Light stick, such as a yardstick\", \"to the point of feeling a pull without pain.\", \"Hold for 30 seconds and then relax for 30 seconds.\"",
+  "Mayo Clinic — Stretching: Focus on flexibility (cópia de 01/01/2026): \"Don't bounce. Stretch in a smooth movement, without bouncing.\" / \"Breathe normally and hold each stretch for about 30 seconds\" / \"Expect to feel tension while you're stretching, not pain.\"",
+  "ACSM — blog Stretching and Flexibility Guidelines Update (18/03/2021): \"Stretch to the point of feeling tightness or slight discomfort.\"",
+  "Tubo Soldável para Água Fria Tigre 25mm 3m, norma NBR 5648 — catálogo de loja (Telhanorte), https://www.telhanorte.com.br/tubo-soldavel-nbr-5648-3-00m-25mm-tigre-170208/p (lido em 13/10/2026): \"25mm de diâmetro, 3,00m de comprimento e 1,7mm de espessura\"; \"PVC Rígido\"; \"Liso\" — o diâmetro do bastão.",
+  "Stick Mobility — Perform Better (loja/distribuidor de equipamento de treino), https://www.performbetter.com/Stick-Mobility/ (lido em 13/10/2026): \"Unique PVC blend with silicone grips\"; \"Length Options 56\\\" Short, 76\\\" Long\"; \"Short Training Stick | 56\\\"\" = 1,42 m — o comprimento do bastão.",
+  "Vassoura Plástica Tramontina para Jardim 18 dentes Cabo em Madeira Alt: 120cm — Telhanorte, https://www.telhanorte.com.br/vassoura-plastica-tramontina-para-jardim-18-dentes-cabo-em-madeira-alt-120cm-preta-1642545/p (lido em 13/10/2026): \"Tamanho do Cabo: 120 cm.\" / \"Possui olho de 23 mm de diâmetro.\" — o cabo de vassoura de madeira tem quase a grossura do cano de 25 mm."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "zonas": [
+   {
+    "nome": "na frente: o bastão logo na frente do quadril, sem encostar",
+    "equipamento": "bastao",
+    "partes": [
+     "Hips",
+     "Spine",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "t": 1.0,
+    "mm": [
+     8,
+     30
+    ],
+    "fonte": "free-exercise-db (\"hold it in front of you\") e Physitrack (\"Hold a stick in front\"): o começo com o bastão na frente do corpo; a cena para a 12 mm da pele (os braços esticados pendurados um pouco à frente); medido do bastão até a pele"
+   },
+   {
+    "nome": "o bastão não encosta no tronco nem nas coxas",
+    "equipamento": "bastao",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     8,
+     5000
+    ],
+    "fonte": "regra da fábrica (o equipamento nunca entra no corpo); medido do bastão até a pele"
+   },
+   {
+    "nome": "o bastão passa longe do rosto e do pescoço",
+    "equipamento": "bastao",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "mm": [
+     100,
+     5000
+    ],
+    "fonte": "free-exercise-db (\"lift the pole up and behind your head\"): o bastão passa por cima da cabeça; com os braços esticados ele fica longe do rosto; medido do bastão até a pele"
+   },
+   {
+    "nome": "o bastão não encosta nos braços e antebraços",
+    "equipamento": "bastao",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftArm",
+     "RightArm"
+    ],
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "regra da fábrica (o equipamento nunca entra no corpo; fica entre as mãos, longe dos antebraços); medido até a pele"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "o bastão passa por cima da cabeça sem encostar no cabelo",
+    "equipamento": "bastao",
+    "de": "cabelo",
+    "mm": [
+     80,
+     5000
+    ],
+    "fonte": "free-exercise-db (\"Carefully lift the pole up and behind your head\") e pedido (o bastão não entra na cabeça nem no cabelo); medido de superfície a superfície, todo quadro"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos não entram no tronco, nas coxas nem na cabeça",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "Head",
+     "Neck"
+    ],
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o próprio corpo): as mãos ficam longe do corpo com a pegada aberta"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelos esticados o caminho todo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "Physitrack, Seated Wide Grip Shoulder Flexion (Stick) (\"Keeping your arms straight\"); ACE, Supine Shoulder Flexion (\"fully extend the elbows\"); a cena fica a 5° (um resto de flexão pro IK)"
+   },
+   {
+    "nome": "tronco em pé e parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     6
+    ],
+    "fonte": "free-exercise-db (\"Stand up straight\"); ACE (\"without arching your low back\"): o tronco não mexe (medido do quadril ao pescoço × vertical)"
+   },
+   {
+    "nome": "cabeça parada, olhando pra frente",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "fotos do free-exercise-db (a cabeça parada, olhando à frente, com o bastão passando por cima); o boneco em pé, no repouso, mede ~−11°"
+   },
+   {
+    "nome": "ombros nivelados (sem subir de um lado)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ACE (\"avoid any upward shrugging\"): as escápulas ficam paradas e os 2 lados iguais"
+   },
+   {
+    "nome": "pegada bem aberta, a mesma o caminho todo",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.9,
+     2.3
+    ],
+    "fonte": "Physitrack (\"both hands wide apart\"); foto 0 do free-exercise-db (as mãos a ~1,8× a largura de fora a fora dos deltoides); a cena: 0,84 m vão a vão. Medida: distância entre as bases dos dedos médios ÷ entre os ombros"
+   },
+   {
+    "nome": "atrás: o braço no máximo 45° atrás do plano do corpo",
+    "medida": "braco_plano",
+    "t": [
+     0.0,
+     0.25
+    ],
+    "graus": [
+     -46,
+     90
+    ],
+    "fonte": "ACE, Flexibility Assessment Form (\"horizontal extension 45° past neutral\"); free-exercise-db (\"Don't force it if it gets hard to lift further\"). Medida: tecnica3d.braco_plano (− = atrás do plano do corpo)"
+   },
+   {
+    "nome": "atrás da cabeça: os braços no alto",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     130,
+     155
+    ],
+    "fonte": "free-exercise-db (\"lift the pole up and behind your head\"); medido do braço × o tronco (180 = reto pra cima)"
+   },
+   {
+    "nome": "na frente: os braços pendurados um pouco à frente",
+    "medida": "braco_elevacao",
+    "t": 1.0,
+    "graus": [
+     15,
+     45
+    ],
+    "fonte": "free-exercise-db (\"hold it in front of you\"); Physitrack (\"Hold a stick in front\"); medido do braço × o tronco (0 = pendurado)"
+   },
+   {
+    "nome": "punho sem dobrar pra frente nem pra trás",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "ACE, Supine Shoulder Flexion (\"without arching your lower back, bending your elbows or changing your wrist position\")"
+   },
+   {
+    "nome": "desvio do punho pro lado do polegar dentro da amplitude normal",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -5,
+     20
+    ],
+    "fonte": "ACE, Flexibility Assessment Form (\"Radial deviation\" 20): com a pegada aberta o antebraço chega na mão vindo de dentro; o resto vira bastão oblíquo na palma (12°). Medida: tecnica3d.punho_desvio (+ = pro lado do polegar)"
+   }
+  ]
+ }
+}

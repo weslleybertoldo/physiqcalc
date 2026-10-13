@@ -9176,3 +9176,37 @@ def elevacao_pelvica_maquina(nome="glute_drive", pivo=(0.0, 0.47), encosto=(-0.2
     return ElevacaoPelvicaMaquina({"estrutura": estr, "plataforma": plat, "banco": ban, "encosto": enc, "cinto": cin}, P, batente, pegs,
                                   medidas)
 # ===== fim: Elevação pélvica na máquina =============================================================================================
+
+
+# ===== Bastão =======================================================================================================================
+# ── BASTÃO DE MOBILIDADE (bastão leve e liso nas 2 mãos; Mobilidade de Ombro com Bastão, lote 15, 13/10/2026) ───────────────────────────
+# O bastão da passagem por cima da cabeça ("holding a bodybar or a broomstick", free-exercise-db; "Hold a stick in front with both hands
+# wide apart", Physitrack): um TUBO reto e liso ao longo do X (a mão fecha em volta dele em qualquer giro) com uma PONTEIRA de borracha em
+# cada ponta (o "bodybar" das fotos do free-exercise-db tem ponteiras). A barra() não serve (o eixo tem raio fixo de 14,5 mm e ela sempre
+# põe as anilhas, os miolos e as travas; 22 cenas a usam): peça nova, só com o que já existe aqui em cima (_cilindro, _em_aneis, materiais).
+# Medidas: Ø 25 mm = o tubo de PVC rígido soldável de 25 mm (Tigre, norma NBR 5648; catálogo de loja, Telhanorte: "25mm de diâmetro, 3,00m
+# de comprimento e 1,7mm de espessura", "Material PVC Rígido", "Acabamento Liso") — o cano que se corta pra fazer o bastão; o cabo de
+# vassoura de madeira tem quase a mesma grossura (vassoura de jardim Tramontina, na loja: "Tamanho do Cabo: 120 cm" e "Possui olho de
+# 23 mm de diâmetro", o encaixe do cabo). Comprimento 1,42 m = o "Short Training Stick | 56"" da Stick Mobility, o bastão de mobilidade
+# de PVC (Perform Better: "Unique PVC blend with silicone grips", "Length Options 56" Short, 76" Long"); com a pegada de 0,84 m da
+# Mobilidade de Ombro com Bastão sobram 29 cm de bastão de cada lado do vão da mão (o cabo de vassoura de 1,20 m deixaria 18 cm). Ponteiras:
+# escolha da fábrica (25 mm de comprimento, 1 mm mais grossas que o tubo: a capa de borracha encaixada por fora). Material: o cinza claro
+# fosco que já existe (o da lona da esteira, cara de PVC) no tubo e a borracha nas ponteiras.
+# Uso numa cena (bastão rígido nas 2 mãos):
+#   b = e3.bastao("bastao")                       # raiz = vazio no meio do bastão, X local ao longo dele (mover/girar a raiz move tudo)
+#   b.matrix_world = M
+#   Cena(pose, [b], pegadas=[("Left", ck.Barra(b, raio, comprimento / 2)), ("Right", ck.Barra(b, raio, comprimento / 2))])
+# Filhos: "<nome>_tubo" (em anéis: num tubo comprido a checagem espalhava pontos demais, como na barra fixa) e "<nome>_ponteira±1".
+# Não encosta no corpo (as mãos é que fecham nele).
+def bastao(nome="bastao", comprimento=1.42, raio=0.0125, ponteira=0.025, capa=0.001):
+    """Bastão de mobilidade ao longo do X, centrado na origem do vazio devolvido: o tubo de `raio` m e, nas 2 pontas, uma ponteira de
+    borracha de `ponteira` m de comprimento, `capa` m mais grossa que o tubo; `comprimento` m de ponta a ponta."""
+    raiz = bpy.data.objects.new(nome, None)
+    bpy.context.scene.collection.objects.link(raiz)
+    rot = (0, math.radians(90), 0)
+    _em_aneis(_cilindro(nome + "_tubo", raio, comprimento - 2 * ponteira, (0, 0, 0), rot, mat_faixa_lona(), pai=raiz))
+    for s in (-1, 1):
+        _cilindro(nome + "_ponteira%+d" % s, raio + capa, ponteira, (s * (comprimento - ponteira) / 2, 0, 0), rot, mat_borracha(),
+                  pai=raiz)
+    return raiz
+# ===== fim: Bastão ==================================================================================================================
