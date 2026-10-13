@@ -420,6 +420,39 @@ def seco_21b(o, area: str) -> None:
     o.ok(P21.fase_do_codigo_21b("local", "x") == "depois" and P21.fase_do_codigo_21b("staging", "d357719") == "antes"
          and P21.fase_do_codigo_21b("staging", "HEAD") == "depois",
          "antes × depois vem do CÓDIGO medido (o d357719 lê a Agenda direto: antes; o HEAD pela conta: depois)")
+    # 🟡3: a tela Alunos GRAVA ao abrir sem o codigo_convite da conta ativa (meuLink.ts:13 → garantir_meu_codigo): PULADA, em toda base —
+    # conferido com a situação e as contagens FALSAS (nada vai ao banco)
+    meu_link = (B.REPO / "src/painel/alunos/meuLink.ts").read_text(encoding="utf-8")
+    originais = (P21.situacao_como, P21.agenda_abre_sem_gravar, B.uid_da_conta)
+    situacoes = {"com": {"contas": [{"id": uid, "papeis": ["nutricionista"], "modulos": ["nutricao"], "codigo_convite": "NUTRI-AB12"}]},
+                 "sem": {"contas": [{"id": uid, "papeis": ["nutricionista"], "modulos": ["nutricao"], "codigo_convite": None}]},
+                 "nenhuma": {"contas": []}}
+    qual = {"v": "com"}
+
+    class Calado:
+        def ok(self, c: object, _t: str, parar: object = None) -> bool:
+            return bool(c)
+
+        def linha(self, _t: str) -> None:
+            pass
+
+    try:
+        P21.situacao_como = lambda _s, _uid, _conta: situacoes[qual["v"]]  # type: ignore[assignment]
+        P21.agenda_abre_sem_gravar = lambda _s, _uid: (True, "falso")  # type: ignore[assignment]
+        B.uid_da_conta = lambda _conta: uid  # type: ignore[assignment]
+        resultado = {}
+        for k in ("com", "sem", "nenhuma"):
+            qual["v"] = k
+            resultado[k] = ([x[0] for x in P21.telas_que_abrem(Calado(), "staging", "staging", "alunos", P21.NUTRI)], P21.alunos_abre_sem_gravar("staging", uid, P21.NUTRI)[0])
+        qual["v"] = "sem"
+        agenda_sem = [x[0] for x in P21.telas_que_abrem(Calado(), "public", "prod", "agenda", P21.PROD_PAINEL)]
+    finally:
+        P21.situacao_como, P21.agenda_abre_sem_gravar, B.uid_da_conta = originais
+    o.ok("codigoConta ?? (await garantirMeuCodigo(conta!.id))" in meu_link and "conta?.codigo_convite" in meu_link
+         and resultado == {"com": (["alunos", "dashboard", "busca"], True), "sem": (["dashboard", "busca"], False), "nenhuma": (["alunos", "dashboard", "busca"], True)}
+         and agenda_sem == ["agenda_semana", "agenda_mes", "agenda_novo", "agenda_regras", "agenda_travas"],
+         "🟡3: a tela Alunos só abre com o codigo_convite da conta ativa (sem ele o useMeuLink grava — garantir_meu_codigo): PULADA, em toda base; "
+         "sem conta ativa ela abre (o useMeuLink não roda); a Agenda não depende do código")
 
 
 def main() -> int:

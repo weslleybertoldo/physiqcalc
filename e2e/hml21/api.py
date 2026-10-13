@@ -693,6 +693,66 @@ def seco_21b(o, area: str) -> None:
          "[seco] a marca cabe no nome da tag (1–40 no banco)")
     o.ok(cons["minhas_regras_agenda"]["params"] == {} and cons["minhas_regras_agenda"]["rpc"] == "minhas_regras_agenda",
          "[seco] o `ler` novo do smoke só leitura (minhas_regras_agenda) não pede param: serve à conta de teste de qualquer base (1 login por base)")
+    # 🟡2: o N11/N1 só reprova a linha da nutri/da conta dela que NÃO é de quem chama (o recorte devolve, com razão, as linhas de quem chama)
+    nutri, aluna, pac = "11111111-1111-4111-8111-111111111111", uid, "22222222-2222-4222-8222-222222222222"
+    painel = [{"q": "agenda_agendamentos"}, {"q": "agenda_alunos"}, {"q": "agenda_calendarios"}, {"q": "agenda_travas"}, {"q": "aluno_convites"},
+              {"q": "alunos_da_conta"}, {"q": "equipe_da_conta"}]
+    resp = {"itens": [
+        {"ok": True, "linhas": [{"id": "a1", "nutricionista_id": nutri, "conta_id": CONTA_X, "paciente_id": pac}]},  # a consulta DELA
+        {"ok": True, "linhas": [{"id": pac, "nutricionista_id": nutri, "user_id": aluna}]},  # a matrícula DELA
+        {"ok": True, "linhas": [{"id": "c1", "nutricionista_id": nutri, "conta_id": CONTA_X}]},  # o calendário da nutri: VAZOU
+        {"ok": True, "linhas": [{"id": "t1", "profissional_id": OUTRO, "conta_id": "outra"}]},  # a trava de outra pessoa/conta: não é da nutri
+        {"ok": True, "valor": [{"id": "x"}]},  # um convite da conta para quem não é dela: VAZOU
+        {"ok": True, "valor": {"ok": False, "erro": "sem_acesso"}}, {"ok": False, "erro": "sem_acesso"}]}
+    da_outra = {"itens": [{"ok": True, "linhas": [{"id": "c9", "nutricionista_id": OUTRO, "conta_id": CONTA_X}]}]}  # a DELA, com a conta da nutri (o ⚪)
+    o.ok(vazamentos(painel, resp, nutri, CONTA_X, aluna, {pac}) == ["agenda_calendarios:c1", "aluno_convites:1 item(ns)"]
+         and vazamentos(painel[:1], da_outra, nutri, CONTA_X, OUTRO, set()) == []
+         and vazamentos(painel[:1], {"itens": [{"ok": True, "linhas": [{"id": "a1", "nutricionista_id": nutri, "paciente_id": pac}]}]}, nutri, CONTA_X, OUTRO, set())
+         == ["agenda_agendamentos:a1"],
+         "[seco] 🟡2: o N11/N1 reprova SÓ a linha da nutri/da conta dela que não é de quem chama (a consulta e a matrícula da aluna passam; a "
+         "linha DELA com a conta da nutri passa; o calendário da nutri e o convite da conta reprovam)")
+    # 🟡1: o calendario_excluir espera as consultas VIVAS contadas antes e anota os avisos do excluir
+    import inspect  # noqa: PLC0415
+    fonte = inspect.getsource(p_acoes_agenda)
+    corte = fonte.index('"calendario_excluir", {"id": cal})\n    n_av')
+    o.ok('r.get("agendamentos") == vivas' in fonte and "deleted_at is null" in fonte[:corte] and "P21.anotar_avisos(estado, s, [ctx[\"uid_a\"], uid], t0)" in fonte[corte:],
+         "[seco] 🟡1: o P do calendario_excluir conta as consultas VIVAS do calendário por SQL ANTES (a da aluna segue viva) e anota os avisos do "
+         "excluir DEPOIS (a limpeza pega)")
+    # ⚪8: os avisos pelo destino de teste + o tipo + o INTERVALO [t0, t1]; o --limpar com o schema gravado no Estado
+    sql = P21.sql_avisos_novos("staging", [uid], "2026-10-13 06:00:00+00", "2026-10-13 06:01:00+00")
+    recusas = 0
+    for args in (([uid], "t0", ""), ([], "t0", "t1"), ([uid], "", "t1")):
+        try:
+            P21.sql_avisos_novos("staging", *args)
+        except SystemExit:
+            recusas += 1
+
+    class Placar:
+        def __init__(self) -> None:
+            self.r: list[bool] = []
+
+        def ok(self, c: object, _t: str, parar: object = None) -> bool:
+            self.r.append(bool(c))
+            return bool(c)
+
+        def linha(self, _t: str) -> None:
+            pass
+
+    cheio = B.Estado({"rodada": "x", "schema": "staging", "area": "hml21b", "linhas": [], "storage": [], "n8": None,
+                      B.CHAVE_21B: {"donos": [uid], "linhas": [["calendarios", FALSO, uid]], "avisos": []}})
+    cheio.salvar = lambda: None
+    cheio.d["schema"] = "public"
+    pl = Placar()
+    P21.limpar_massa_21b(pl, cheio, "public")
+    vazio = B.Estado({"rodada": "x", "schema": "public", "area": "hml21b", "linhas": [], "storage": [], "n8": None, B.CHAVE_21B: {"donos": [], "linhas": [], "avisos": []}})
+    vazio.salvar = lambda: None
+    pl2 = Placar()
+    P21.limpar_massa_21b(pl2, vazio, "public")
+    o.ok(f"destino_user_id = any(array['{uid}']::uuid[])" in sql and "tipo = 'consulta_marcada'" in sql and "criado_em >= '2026-10-13 06:00:00+00'" in sql
+         and "criado_em <= '2026-10-13 06:01:00+00'" in sql and recusas == 3 and B.CHAVE_21B in cheio.d and pl.r == [False]
+         and B.CHAVE_21B not in vazio.d and pl2.r == [True],
+         "[seco] ⚪8: os avisos da limpeza = destino de TESTE + tipo + o intervalo [t0, t1] da rodada (sem um deles → recusado); o --limpar usa o "
+         "schema GRAVADO no Estado — num Estado fora do staging com massa anotada nada sai e a chave hml21b fica; vazia, sai")
 
 
 def um(sql: str) -> dict:
@@ -880,11 +940,20 @@ def p_acoes_agenda(o, L, s: str, estado, rodada: str, ctx: dict, casos: set) -> 
     st, r, _h, _ms = B.conta(tok, "agendamento_criar", P21.corpo_consulta(rodada, cal, tag, conta["id"], None, 32, 13))
     ag2 = (r.get("linha") or {}).get("id")
     P21.anotar_linha(estado, "agendamentos", ag2, uid)
+    # 🟡1 da revisão: as consultas VIVAS do calendário contadas por SQL só leitura ANTES (a de teste da aluna — p_agenda_do_aluno — segue viva
+    # quando o desistir só muda o status ou foi recusado): a RPC devolve esse número; o excluir pode avisar a aluna ("Consulta desmarcada")
+    # → os avisos anotados de novo DEPOIS (a limpeza pega)
+    vivas_sql = f"select count(*)::int as n from {s}.agendamentos where calendario_id = {C.txt(cal)} and deleted_at is null"
+    vivas = int(um(vivas_sql).get("n") or 0)
+    t0 = P21.agora_db()
     st, r, _h, _ms = B.conta(tok, "calendario_excluir", {"id": cal})
+    n_av = P21.anotar_avisos(estado, s, [ctx["uid_a"], uid], t0)
     lin = um(f"select (select deleted_at from {s}.calendarios where id = {C.txt(cal)})::text as cal, (select deleted_at from {s}.agendamentos "
              f"where id = {C.txt(C.uuid_ok(ag2))})::text as ag2") if C.eh_uuid(ag2) else {}
-    o.ok(st == 200 and r.get("agendamentos") == 1 and lin.get("cal") and lin.get("cal") == lin.get("ag2"),
-         f"P calendario_excluir (a RPC nova agenda_excluir_calendario) → 1 consulta viva e o calendário na Lixeira com o MESMO instante ({st})")
+    o.ok(st == 200 and vivas >= 1 and r.get("agendamentos") == vivas and lin.get("cal") and lin.get("cal") == lin.get("ag2")
+         and int(um(vivas_sql).get("n") or 0) == 0,
+         f"P calendario_excluir (a RPC nova agenda_excluir_calendario) → as {vivas} consulta(s) viva(s) do calendário (SQL antes) e o calendário "
+         f"na Lixeira com o MESMO instante; 0 viva depois; {n_av} aviso(s) da agenda anotado(s) (saem no fim) ({st}: {r.get('agendamentos')})")
     st, r, _h, _ms = B.conta(tok, "calendario_excluir", {"id": cal})
     o.ok(st == 404 and r.get("erro") == "nao_encontrado", f"P calendario_excluir de novo (já na Lixeira) → 404 nao_encontrado; nada muda ({st})")
     st, r, _h, _ms = B.conta(tok, "tag_excluir", {"id": tag})
@@ -1007,29 +1076,47 @@ def n_gerais_21b(o, L, area: str, casos: set, ctx: dict) -> None:
     painel = [B.item("agenda_calendarios", conta=conta), B.item("agenda_agendamentos", de=de, ate=ate, conta=conta), B.item("agenda_travas", conta=conta),
               B.item("agenda_alunos", conta=conta), B.item("alunos_da_conta", conta=conta, filtros={"situacao": "ativos"}, offset=0, limite=20),
               B.item("aluno_convites", conta=conta), B.item("alunos_pendentes", conta=conta), B.item("equipe_da_conta", conta=conta)]
-    ids_da_nutri = {ctx["uid_n"], conta}
-
-    def nada_da_nutri(r: dict) -> bool:
-        for i in B.itens_de(r):
-            if not i.get("ok"):
-                continue
-            if i.get("linhas"):
-                return False
-            v = i.get("valor")
-            if isinstance(v, list) and v:
-                return False
-            if isinstance(v, dict) and v.get("ok") is not False and (v.get("itens") or v.get("membros") or v.get("total")):
-                return False
-        texto = json.dumps(r)
-        return not any(x in texto for x in ids_da_nutri if x != conta)
-
+    s = B.schema()
     if "N11" in casos:
+        uid_a = ctx["uid_a"]
         st, r, _h, _ms = B.ler(L.token(P21.ALUNA), painel)
-        o.ok(st == 200 and nada_da_nutri(r), f"N11 a aluna pede o PAINEL pela conta (as consultas da 21b, com a conta da nutri) → nada (o RLS: 0 linha; as RPCs "
-             f"recusam) ({st}: {[i.get('erro') or ('linhas' if 'linhas' in i else (i.get('valor') or {}).get('erro') if isinstance(i.get('valor'), dict) else 'valor') for i in B.itens_de(r)]})")
+        achados = vazamentos(painel, r, ctx["uid_n"], conta, uid_a, P21.matriculas_de(s, uid_a))
+        o.ok(st == 200 and not achados, f"N11 a aluna pede o PAINEL pela conta (as consultas da 21b, com a conta da nutri) → nada da nutri que não seja "
+             f"dela (o RLS e as RPCs; as linhas DELA — a matrícula, as consultas — o recorte devolve com razão) ({st}; vazou: {achados or '—'})")
     if "N1" in casos:
+        uid_o = ctx["uid_o"]
         st, r, _h, _ms = B.ler(L.token(P21.OUTRA), painel)
-        o.ok(st == 200 and nada_da_nutri(r), f"N1 OUTRA conta (w13-dono) pede a agenda e os alunos da conta da nutri → nada dela ({st})")
+        achados = vazamentos(painel, r, ctx["uid_n"], conta, uid_o, P21.matriculas_de(s, uid_o))
+        o.ok(st == 200 and not achados, f"N1 OUTRA conta (w13-dono) pede a agenda e os alunos da conta da nutri → nada da nutri (as linhas DELA — os "
+             f"calendários, as travas — o recorte devolve com razão) ({st}; vazou: {achados or '—'})")
+
+
+DONOS_DA_LINHA = ("nutricionista_id", "profissional_id", "personal_id")
+
+
+def vazamentos(painel: list[dict], r: dict, uid_nutri: str, conta_nutri: str, quem: str, matriculas: set[str]) -> list[str]:
+    """🟡2 da revisão: só é vazamento a linha da NUTRI (o dono = a nutri) ou da CONTA dela (conta_id = a conta) que NÃO é de quem chama
+    (o dono, o user_id ou a matrícula dele) — o recorte "meu ou da conta" devolve, com razão, as linhas de quem chama (a matrícula e as
+    consultas da aluna; os calendários e as travas da outra conta). As RPCs de lista (os convites, os pendentes) e a lista/a equipe da conta:
+    qualquer item para quem não é da conta é vazamento."""
+    achados: list[str] = []
+    for it, i in zip(painel, B.itens_de(r)):
+        if not i.get("ok"):
+            continue
+        for x in i.get("linhas") or []:
+            if not isinstance(x, dict):
+                continue
+            da_nutri = any(x.get(k) == uid_nutri for k in DONOS_DA_LINHA) or x.get("conta_id") == conta_nutri
+            de_quem_chama = (any(x.get(k) == quem for k in (*DONOS_DA_LINHA, "user_id")) or x.get("paciente_id") in matriculas
+                             or x.get("id") in matriculas)
+            if da_nutri and not de_quem_chama:
+                achados.append(f"{it.get('q')}:{x.get('id')}")
+        v = i.get("valor")
+        if isinstance(v, list) and v:
+            achados.append(f"{it.get('q')}:{len(v)} item(ns)")
+        elif isinstance(v, dict) and v.get("ok") is not False and (v.get("itens") or v.get("membros")):
+            achados.append(f"{it.get('q')}:itens")
+    return achados
 
 
 def so_leitura(o, base: str, area: str = "casca") -> None:
@@ -1123,6 +1210,7 @@ def limpar_21b(o, base: str) -> None:
     estado = B.Estado.ler()
     if estado.d.get("area") not in (None, "hml21b"):
         o.ok(False, f"a rodada pendente é de outra área ({estado.d.get('area')}): rode o --limpar dela", parar=True)
+    s = estado.d.get("schema") or s  # ⚪8 da revisão: o schema GRAVADO no Estado (onde a rodada rodou), não o da linha de comando
     if s == "staging":
         sobra = B.ler_principal(P21.sql_contar_massa(s))[0]
         if any(int(v or 0) for v in sobra.values()):

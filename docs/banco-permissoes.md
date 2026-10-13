@@ -322,8 +322,9 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
     Trava por pessoa (`pg_advisory_xact_lock`): 2 abas não duplicam; o `created_at` do relógio (`clock_timestamp`), a ordem de hoje.
 - **Leituras (`acao: "ler"`, em lote):** o catálogo `_shared/conta-leituras.ts` ganha 19 consultas (13 da Agenda, 6 dos Alunos), as mesmas
   linhas que as libs liam no navegador, como a pessoa: os calendários, as tags, os agendamentos (a janela; os 1000 mais recentes), os
-  bloqueios (a janela e os futuros), as travas, as regras, os alunos do seletor da Agenda e o do `?aluno=` (o recorte "meu ou da conta" — o
-  `.or()` de hoje), o aluno já escolhido no seletor (só desta conta e vivo; o CPF só quando o Recibo pede) e as RPCs de leitura de hoje pelo
+  bloqueios (a janela e os futuros), as travas, as regras, os alunos do seletor da Agenda (o recorte "meu ou da conta" — o `.or()` de hoje),
+  o aluno do `?aluno=` (pelo id, vivo — o RLS de hoje decide se é visível), o aluno já escolhido no seletor (só desta conta e vivo; o CPF só
+  quando o Recibo pede) e as RPCs de leitura de hoje pelo
   EXECUTE do `authenticated`: `agenda_horarios`, `aluno_compromissos`, `minhas_regras_agenda`, `aluno_agenda_horarios`, `alunos_da_conta`
   (a lista, a exportação, o seletor, a Busca e o número do menu), `aluno_convites`, `alunos_pendentes`, `alunos_novos_por_mes` e
   `equipe_da_conta` (só a leitura). Colunas em lista fechada (as da Agenda = a linha inteira de hoje, escrita coluna por coluna).

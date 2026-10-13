@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lerPedidoDeLeitura, type CatalogoLeitura } from "../../supabase-principal/functions/_shared/leitura-lote";
-import { CATALOGO_CONTA } from "../../supabase-principal/functions/_shared/conta-leituras";
+import { CATALOGO_CONTA, FILTRO_ALUNOS_MAX } from "../../supabase-principal/functions/_shared/conta-leituras";
 import { CORPOS_DAS_ACOES, lerCorpoDaAcao, moduloDoPedido, type AcaoConta } from "../../supabase-principal/functions/_shared/conta-regras";
 import { mensagemErroTag } from "@/agenda/regras";
 
@@ -380,6 +380,19 @@ describe("hml-21b — Painel › Alunos (src/painel/alunos/api.ts e novosPorMes.
     h.corpos = [];
     await alunos.buscarAlunosDoSeletor(CONTA, "  Zé ", "todos", 20, true);
     expect(daConta()).toEqual([{ acao: "ler", itens: [{ conta: CONTA, filtros: { situacao: "todos", q: "Zé", exportar: "true" }, offset: 0, limite: 20, q: "alunos_da_conta" }] }]);
+    todosPassam();
+  });
+
+  it("o termo da busca vai no teto do servidor (⚪6: 200 — o FILTRO_ALUNOS_MAX): a lista, a exportação e o seletor; sem meio emoji; passa no leitor real", async () => {
+    h.banco = { rpc: () => ({ data: LISTA, error: null }) };
+    expect(alunos.TERMO_BUSCA_MAX).toBe(FILTRO_ALUNOS_MAX);
+    await alunos.listarAlunos(CONTA, { ...FILTROS_PADRAO, q: "a".repeat(250) }, 0, 20);
+    await alunos.paginaDaExportacao(CONTA, { ...FILTROS_PADRAO, q: "c".repeat(201) }, 0, 500);
+    await alunos.buscarAlunosDoSeletor(CONTA, `${"b".repeat(199)}😀mais`, "todos", 20);
+    await alunos.buscarAlunosDoSeletor(CONTA, "Zé", "todos", 20);
+    const qs = daConta().flatMap((c) => (c.itens as Array<{ filtros: { q?: string } }>).map((i) => i.filtros.q));
+    expect(qs).toEqual(["a".repeat(200), "c".repeat(200), "b".repeat(199), "Zé"]);
+    expect(alunos.cortarTermo("x".repeat(200))).toBe("x".repeat(200));
     todosPassam();
   });
 

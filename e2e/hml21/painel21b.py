@@ -65,12 +65,34 @@ def situacao_como(s: str, uid: str, conta: str) -> dict:
 
 
 def conta_ativa(sit: dict) -> dict | None:
-    """A conta ativa como o app escolhe sem preferência guardada (escolherConta: a 1ª conta da situação) — {id, papeis, modulos}."""
+    """A conta ativa como o app escolhe sem preferência guardada (escolherConta: a 1ª conta da situação) — {id, papeis, modulos,
+    codigo_convite} (o código da pessoa nesta conta: sem ele, a tela Alunos GRAVA ao abrir — o useMeuLink chama o garantir_meu_codigo)."""
     contas = sit.get("contas") if isinstance(sit, dict) else None
     c = contas[0] if isinstance(contas, list) and contas and isinstance(contas[0], dict) else None
     if not c or not C.eh_uuid(c.get("id")):
         return None
-    return {"id": c["id"], "papeis": [str(x) for x in (c.get("papeis") or [])], "modulos": [str(x) for x in (c.get("modulos") or [])]}
+    return {"id": c["id"], "papeis": [str(x) for x in (c.get("papeis") or [])], "modulos": [str(x) for x in (c.get("modulos") or [])],
+            "codigo_convite": c.get("codigo_convite") if isinstance(c.get("codigo_convite"), str) and c.get("codigo_convite") else None}
+
+
+def alunos_abre_sem_gravar(s: str, uid: str, conta: str) -> tuple[bool, str]:
+    """A tela Alunos abre SEM gravar? (🟡3 da revisão: src/painel/alunos/meuLink.ts:13 — sem o codigo_convite da conta ativa na situação,
+    o useMeuLink chama o garantir_meu_codigo ao abrir, que GRAVA o código em conta_membros). A situação como a pessoa, SQL só leitura (sem
+    login); sem conta ativa a tela mostra o "sem conta" e o useMeuLink nem roda."""
+    c = conta_ativa(situacao_como(s, uid, conta))
+    if c is None:
+        return True, "sem conta ativa (a tela mostra o \"sem conta\"; o useMeuLink não roda)"
+    if not c.get("codigo_convite"):
+        return False, "a conta ativa sem codigo_convite — abrir os Alunos chamaria o garantir_meu_codigo (GRAVA)"
+    return True, "a conta ativa com o codigo_convite (o useMeuLink só lê)"
+
+
+def matriculas_de(s: str, uid: str) -> set[str]:
+    """As matrículas VIVAS de uma pessoa (o user_id dela em pacientes) — SQL só leitura, só os ids: o N1/N11 aceita as linhas DELA."""
+    if not C.eh_uuid(uid):
+        return set()
+    return {x["id"] for x in B.ler_principal(f"select id::text as id from {s}.pacientes where user_id = {C.txt(uid)} and deleted_at is null")
+            if C.eh_uuid(x.get("id"))}
 
 
 def sql_agenda_sem_gravar(s: str, uid: str) -> str:
@@ -220,20 +242,27 @@ def anotar_dono(estado, dono: object) -> None:
         estado.salvar()
 
 
-def avisos_novos(s: str, destinos: list[str], t0: str) -> list[list[str]]:
-    """Os avisos da agenda (tipo consulta_marcada) que o banco pôs no sino destas contas de TESTE desde o t0 — SQL só leitura, só os ids."""
+def sql_avisos_novos(s: str, destinos: list[str], t0: str, t1: str) -> str:
+    """Os avisos da agenda que o banco pôs no sino destas contas de TESTE DENTRO do intervalo da rodada [t0, t1] (⚪8 da revisão: o destino
+    de teste + o tipo + o intervalo — nunca só o tipo e a hora: um aviso de outra sessão, fora do intervalo ou de outra pessoa, não entra)."""
     dests = [C.uuid_ok(d) for d in destinos if C.eh_uuid(d)]
-    if not dests or not isinstance(t0, str):
-        return []
-    linhas = B.ler_principal(
-        f"select destino_user_id::text as d, id::text as id from {s}.avisos where destino_user_id = any(array[{', '.join(C.txt(d) for d in dests)}]::uuid[]) "
-        f"and tipo = {C.txt(TIPO_AVISO_AGENDA)} and criado_em >= {C.txt(t0)}::timestamptz")
+    if not dests or not (isinstance(t0, str) and t0 and isinstance(t1, str) and t1):
+        raise SystemExit("os avisos da rodada pedem os destinos de teste e o intervalo [t0, t1]")
+    return (f"select destino_user_id::text as d, id::text as id from {s}.avisos where destino_user_id = any(array[{', '.join(C.txt(d) for d in dests)}]::uuid[]) "
+            f"and tipo = {C.txt(TIPO_AVISO_AGENDA)} and criado_em >= {C.txt(t0)}::timestamptz and criado_em <= {C.txt(t1)}::timestamptz")
+
+
+def avisos_novos(s: str, destinos: list[str], t0: str, t1: str) -> list[list[str]]:
+    """Os ids (SQL só leitura) dos avisos da agenda das contas de TESTE no intervalo [t0, t1] da rodada."""
+    linhas = B.ler_principal(sql_avisos_novos(s, destinos, t0, t1))
     return [[x["d"], x["id"]] for x in linhas if C.eh_uuid(x.get("d")) and C.eh_uuid(x.get("id"))]
 
 
 def anotar_avisos(estado, s: str, destinos: list[str], t0: str) -> int:
+    """Anota (na hora, no Estado) os avisos da agenda que a ação de agora pôs no sino das contas de TESTE: o intervalo vai do t0 (antes da
+    ação) ao agora do banco (logo depois dela)."""
     m = _massa(estado)
-    novos = [a for a in avisos_novos(s, destinos, t0) if a not in m["avisos"]]
+    novos = [a for a in avisos_novos(s, destinos, t0, agora_db()) if a not in m["avisos"]]
     if novos:
         m["avisos"].extend(novos)
         estado.salvar()
@@ -292,7 +321,14 @@ def limpar_massa_21b(o, estado, s: str) -> None:
     m = estado.d.get(B.CHAVE_21B)
     if not isinstance(m, dict):
         return
+    # ⚪8 da revisão: o schema é o GRAVADO no Estado (onde a rodada rodou), não o da linha de comando — o --limpar --base prod de uma
+    # rodada do staging limpa o staging; na produção a massa nunca nasce (o api.py recusa): nada a apagar, e a chave só sai vazia
+    s = estado.d.get("schema") or s
     if s != "staging":
+        if any(m.get(k) for k in ("linhas", "avisos")):
+            o.ok(False, f"limpeza (21b): massa anotada num Estado de schema {s} (a massa só nasce no staging) — nada apagado; confira à mão",
+                 parar=False)
+            return
         o.ok(True, "limpeza (21b): a massa só existe no staging (nada a apagar)")
         estado.d.pop(B.CHAVE_21B, None)
         estado.salvar()
@@ -449,18 +485,31 @@ def anotar_rede(base: str, commit: str, fase: str, area: str, conta: str, tela: 
 
 
 def telas_que_abrem(o, s: str, base: str, area: str, conta: str) -> list[tuple]:
-    """As telas da conta que abrem SEM gravar: a Agenda do painel só com calendário próprio e as 3 tags base (SQL só leitura, só contagem —
-    sem login); sem elas, PULADA com o motivo (nunca deixa a ação sair), em toda base (decisão N na produção)."""
+    """As telas da conta que abrem SEM gravar (decisão N — vale para QUALQUER tela que grave ao abrir, em toda base): a Agenda do painel só
+    com calendário próprio e as 3 tags base (senão o agenda_garantir/tags_garantir); os Alunos só com o codigo_convite da conta ativa (senão
+    o garantir_meu_codigo — 🟡3 da revisão). SQL só leitura (sem login); sem a pré-condição, a tela é PULADA com o motivo (nunca deixa a
+    gravação sair)."""
     telas = telas_da_conta(area, conta)
-    if not any(x[0] in AGENDA_DO_PAINEL for x in telas):
+    precisa_agenda = any(x[0] in AGENDA_DO_PAINEL for x in telas)
+    precisa_alunos = any(x[0] == "alunos" for x in telas)
+    if not (precisa_agenda or precisa_alunos):
         return telas
     uid = B.uid_da_conta(conta)
-    abre, motivo = agenda_abre_sem_gravar(s, uid) if uid else (False, "a conta não existe nesta base")
-    if abre:
-        o.linha(f"   [{base}] {conta}: a Agenda abre sem gravar ({motivo})")
-        return telas
-    o.ok(True, f"[{base}] {conta}: a Agenda PULADA — {motivo} (SQL só leitura, só contagem; nada aberto)")
-    return [x for x in telas if x[0] not in AGENDA_DO_PAINEL]
+    if precisa_agenda:
+        abre, motivo = agenda_abre_sem_gravar(s, uid) if uid else (False, "a conta não existe nesta base")
+        if abre:
+            o.linha(f"   [{base}] {conta}: a Agenda abre sem gravar ({motivo})")
+        else:
+            o.ok(True, f"[{base}] {conta}: a Agenda PULADA — {motivo} (SQL só leitura, só contagem; nada aberto)")
+            telas = [x for x in telas if x[0] not in AGENDA_DO_PAINEL]
+    if precisa_alunos:
+        abre, motivo = alunos_abre_sem_gravar(s, uid, conta) if uid else (False, "a conta não existe nesta base")
+        if abre:
+            o.linha(f"   [{base}] {conta}: os Alunos abrem sem gravar ({motivo})")
+        else:
+            o.ok(True, f"[{base}] {conta}: os Alunos PULADOS — {motivo} (SQL só leitura como a pessoa; nada aberto)")
+            telas = [x for x in telas if x[0] != "alunos"]
+    return telas
 
 
 def abrir_conta(nav, base: str, conta: str, nome: str, guarda=None):

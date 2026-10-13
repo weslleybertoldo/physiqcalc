@@ -74,8 +74,21 @@ async function funcaoAlunos<T = Record<string, unknown>>(corpo: Record<string, u
 
 // ───────────────────────── leituras ─────────────────────────
 
+/**
+ * hml-21b (⚪6 da revisão): o termo da busca vai no teto do servidor — o FILTRO_ALUNOS_MAX do catálogo da conta (200; acima dele o servidor
+ * recusaria o lote inteiro com dados_invalidos). O campo da tela não tem limite: o termo vai cortado, sem deixar meio emoji no corte.
+ */
+export const TERMO_BUSCA_MAX = 200;
+export function cortarTermo(q: string): string {
+  if (q.length <= TERMO_BUSCA_MAX) return q;
+  const c = q.slice(0, TERMO_BUSCA_MAX);
+  const u = c.charCodeAt(c.length - 1);
+  return u >= 0xd800 && u <= 0xdbff ? c.slice(0, -1) : c;
+}
+const comTermoCortado = (f: Record<string, string>): Record<string, string> => (f.q && f.q.length > TERMO_BUSCA_MAX ? { ...f, q: cortarTermo(f.q) } : f);
+
 export async function listarAlunos(contaId: string, filtros: FiltrosAlunos, offset: number, limite: number): Promise<ListaAlunos> {
-  const r = await ler("alunos_da_conta", { conta: contaId, filtros: filtrosParaServidor(filtros), offset, limite }, pesada(limite));
+  const r = await ler("alunos_da_conta", { conta: contaId, filtros: comTermoCortado(filtrosParaServidor(filtros)), offset, limite }, pesada(limite));
   const lista = normalizarLista(r);
   if (!lista) throw new ErroAlunos("erro_interno");
   return lista;
@@ -83,7 +96,7 @@ export async function listarAlunos(contaId: string, filtros: FiltrosAlunos, offs
 
 /** H4 (N-66): uma página da exportação — a mesma lista e os mesmos filtros, com as colunas do CSV (apelido, CPF, nascimento, gênero). */
 export async function paginaDaExportacao(contaId: string, filtros: FiltrosAlunos, offset: number, limite: number): Promise<ListaAlunos> {
-  const r = await ler("alunos_da_conta", { conta: contaId, filtros: { ...filtrosParaServidor(filtros), exportar: "true" }, offset, limite }, pesada(limite));
+  const r = await ler("alunos_da_conta", { conta: contaId, filtros: { ...comTermoCortado(filtrosParaServidor(filtros)), exportar: "true" }, offset, limite }, pesada(limite));
   const lista = normalizarLista(r);
   if (!lista) throw new ErroAlunos("erro_interno");
   return lista;
@@ -105,7 +118,7 @@ export async function buscarAlunosDoSeletor(
   limite = LIMITE_SELETOR,
   comCpf = false,
 ): Promise<{ itens: AlunoDoSeletor[]; total: number }> {
-  const q = termoDoSeletor(termo);
+  const q = cortarTermo(termoDoSeletor(termo));
   const r = await ler("alunos_da_conta", { conta: contaId, filtros: { situacao, ...(q ? { q } : {}), ...(comCpf ? { exportar: "true" } : {}) }, offset: 0, limite });
   const lista = normalizarLista(r);
   if (!lista) throw new ErroAlunos("erro_interno");
