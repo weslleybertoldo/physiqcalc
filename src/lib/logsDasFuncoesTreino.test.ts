@@ -32,6 +32,7 @@ const PUBLICADAS = [
   "mp-payments",
   "espelho-nucleo",
   "delete-my-account",
+  "treino-acessos", // W-A P2 (nova): a linha "Treino — séries" da aba Acessos, com o login do principal — nasce com o log da hml-10
 ] as const;
 
 /** hml-14 (D10): respondem 410 {"error":"migrado"} a qualquer pedido (fora o preflight, com o CORS de antes). */
@@ -72,6 +73,7 @@ const RESPOSTA_DO_CATCH_FINAL: Record<(typeof PUBLICADAS)[number], string> = {
   // a espelho-nucleo não tem catch em volta de tudo: o final é o de cada resumo, que anota o erro e segue para o próximo
   "espelho-nucleo": 'resultados.push({ principal_user_id: pid, resultado: "erro", erro: String((e as { message?: string })?.message || e).slice(0, 200) });',
   "delete-my-account": 'return jsonServidor({ ok: false, erro: "interno" }, 500);',
+  "treino-acessos": 'return json({ ok: false, erro: "erro_interno" }, 500, origin);',
 };
 
 // ───────────────────────── o leitor ─────────────────────────
@@ -280,6 +282,8 @@ describe("hml-10: toda função do Treino está numa das listas (as publicadas n
       // hml-14: o tempo do MP (mp-webhook) e as páginas (master-professores); o cobertura.ts da mp-payments ficou só para o Vitest
       "supabase/functions/_shared/tempo.ts",
       "supabase/functions/_shared/paginas.ts",
+      // W-A P2: as regras da treino-acessos
+      "supabase/functions/_shared/treino-acessos-regras.ts",
     ]) {
       expect(relativos).toContain(arquivo);
     }
@@ -467,5 +471,56 @@ describe("hml-10: controle positivo (os detectores acham o que procuram — sen�
     expect(est).not.toMatch(/supabase|comentário|bloco|aspas/);
     expect(chamadasDeLog(fonte).filter(corpoNoLog)).toHaveLength(1);
     for (const [abre, fecha] of [["(", ")"], ["{", "}"], ["[", "]"]]) expect(est.split(abre).length).toBe(est.split(fecha).length);
+  });
+});
+
+// ───────────────────────── W-A P2: a guarda de fonte da treino-acessos (revisão C4, spec §5.6) ─────────────────────────
+/** Uma gravação pelo supabase-js (na estrutura: comentário e texto não contam). GRAVACOES = a mesma, global, para o matchAll. */
+const GRAVACAO = /\.\s*(update|insert|upsert|delete)\s*\(/;
+const GRAVACOES = new RegExp(GRAVACAO.source, "g");
+const SO_SERIES = /^\{\s*series_travadas\s*:[^,{}]*\}$/;
+
+describe("W-A P2 (C4, spec §5.6): a treino-acessos grava UMA coisa só — series_travadas do treino_user_id que o principal deu", () => {
+  const fonte = ler(indice("treino-acessos"));
+  const est = estrutura(fonte);
+  const regras = ler(resolve(FUNCOES, "_shared/treino-acessos-regras.ts"));
+
+  it('uma única gravação: .from("physiq_profiles").update({ series_travadas: … }).eq("id", treinoUserId)', () => {
+    const todas = [...est.matchAll(GRAVACOES)];
+    expect(todas.map((m) => m[1])).toEqual(["update"]);
+    const i = todas[0].index ?? 0;
+    expect(fonte.slice(Math.max(0, i - 40), i)).toMatch(/\.from\("physiq_profiles"\)\s*$/);
+    const abre = i + todas[0][0].length - 1;
+    const fim = fechamento(est, abre);
+    expect(est.slice(abre + 1, fim - 1).trim()).toMatch(SO_SERIES);
+    expect(fonte.slice(fim)).toMatch(/^\s*\.eq\("id", treinoUserId\)/);
+    expect(estrutura(regras)).not.toMatch(GRAVACAO);
+  });
+
+  it("nada mais: nem .rpc( no Treino, nem Storage; as tabelas são só physiq_identidades e physiq_profiles", () => {
+    expect(est).not.toMatch(/\.\s*rpc\s*\(|\.\s*storage\b/);
+    expect([...new Set([...fonte.matchAll(/\.from\("([a-z_]+)"\)/g)].map((x) => x[1]))].sort()).toEqual(["physiq_identidades", "physiq_profiles"]);
+  });
+
+  it("o principal: só a acessos_ler e a acessos_registrar_series, COMO A PESSOA (o Bearer de quem chama)", () => {
+    expect([...new Set([...fonte.matchAll(/rpcDoPrincipal\("([a-z_]+)"/g)].map((x) => x[1]))].sort()).toEqual(["acessos_ler", "acessos_registrar_series"]);
+    expect(fonte).toContain("`${PRINCIPAL_URL}/rest/v1/rpc/${nome}`");
+    expect(fonte).toContain("Authorization: `Bearer ${token}`");
+  });
+
+  it("as chaves: só SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (a automática), PRINCIPAL_URL e PRINCIPAL_ANON_KEY; as regras sem Deno", () => {
+    expect([...fonte.matchAll(/Deno\.env\.get\("([A-Z_]+)"\)/g)].map((x) => x[1]).sort())
+      .toEqual(["PRINCIPAL_ANON_KEY", "PRINCIPAL_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"]);
+    expect(regras).not.toMatch(/\bDeno\./);
+  });
+
+  it("controle positivo: o detector acha a 2ª gravação e o update com outra coluna; comentário e texto não contam", () => {
+    const duas = 'await admin.from("physiq_profiles").update({ series_travadas: x }).eq("id", t);\nawait admin.from("tb_x").insert({ a: 1 });';
+    expect([...estrutura(duas).matchAll(GRAVACOES)].map((m) => m[1])).toEqual(["update", "insert"]);
+    const e2 = estrutura('admin.from("physiq_profiles").update({ series_travadas: x, professor_id: y })');
+    const [m] = [...e2.matchAll(GRAVACOES)];
+    const abre = (m.index ?? 0) + m[0].length - 1;
+    expect(e2.slice(abre + 1, fechamento(e2, abre) - 1).trim()).not.toMatch(SO_SERIES);
+    expect(estrutura('// .update({ x: 1 })\nconst t = ".insert(";')).not.toMatch(GRAVACAO);
   });
 });

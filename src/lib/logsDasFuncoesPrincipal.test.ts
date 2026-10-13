@@ -29,10 +29,13 @@ const FUNCOES = [
   "mp-conectar-retorno", // W2 Task 8: a volta do OAuth do Mercado Pago
   "mp-contas-renovar", // W2 Task 11: a renovação do MP do personal + a conferência diária (pg_cron → pg_net, S10)
   "conta", // hml-21a: o jeito 2 do resto do principal (a casca e o app do aluno), pela porta-pessoa (com o JWKS só no `ler`)
+  "acessos", // W-A P2: a aba Acessos do Painel › Aluno, pela porta-pessoa
+  "aluno-dia", // W-A P2: as rotinas e a dieta livre (o app do aluno e o painel), pela porta-pessoa
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
-/** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro; hml-21a: + a conta). */
-const PESSOA = ["nutricao", "financeiro", "conta"];
+/** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro; hml-21a: + a conta;
+ *  W-A P2: + a acessos e a aluno-dia). */
+const PESSOA = ["nutricao", "financeiro", "conta", "acessos", "aluno-dia"];
 /** Onde mora o catch final: na index.ts, menos nas 3 master-* (servir, da master-porta) e na erro-avisar (atenderPedido). */
 const CATCH_FINAL: Record<string, string> = {
   ...Object.fromEntries(MASTER.map((f) => [f, "_shared/master-porta.ts"])),
@@ -151,6 +154,9 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     // hml-21a: a conta — o motor comum, a conferência local do JWT e o catálogo/as regras dela passam pelas mesmas guardas
     for (const s of ["leitura-servidor", "jwks-principal", "conta-leituras", "conta-regras"]) expect(todos).toContain(`_shared/${s}.ts`);
     for (const m of ["casca", "app", "comum"]) expect(todos).toContain(`conta/${m}.ts`);
+    // W-A P2: as regras das 2 da W-A e os módulos da aluno-dia passam pelas mesmas guardas
+    for (const s of ["acessos-regras", "aluno-dia-regras"]) expect(todos).toContain(`_shared/${s}.ts`);
+    for (const m of ["comum", "rotinas", "dieta", "profissional"]) expect(todos).toContain(`aluno-dia/${m}.ts`);
     expect(todos).not.toContain(LOG);
   });
 
@@ -313,5 +319,29 @@ describe("hml-10 (D10): a resposta de erro leva só o código", () => {
     expect(catchFinal(ler("whatsapp-agente/index.ts")).bloco).toContain('return erro("erro_interno", 500);');
     expect(ler("whatsapp-conectar/index.ts")).toContain("const erro = (codigo: string, status: number, origin: string | null) => json({ error: codigo }, status, origin);");
     expect(ler("whatsapp-agente/index.ts")).toContain("const erro = (codigo: string, status: number) => json({ error: codigo }, status);");
+  });
+});
+
+describe("W-A P2 (spec §5.2, §5.6): acessos e aluno-dia COMO A PESSOA — 1 .rpc( (a RPC sai das regras); nada de tabela, Storage, cliente próprio nem chave", () => {
+  const DA_FUNCAO: Record<string, string[]> = {
+    acessos: ["acessos/index.ts", "_shared/acessos-regras.ts"],
+    "aluno-dia": ["aluno-dia/index.ts", "aluno-dia/comum.ts", "aluno-dia/rotinas.ts", "aluno-dia/dieta.ts", "aluno-dia/profissional.ts", "_shared/aluno-dia-regras.ts"],
+  };
+  /** sem as linhas de comentário (as que começam com //, /* ou *) */
+  const semComentario = (t: string) => t.split("\n").map((l) => (/^\s*(\/\/|\/\*|\*)/.test(l) ? "" : l)).join("\n");
+
+  it.each(Object.keys(DA_FUNCAO))("%s", (f) => {
+    const fontes = DA_FUNCAO[f].map((rel) => ({ rel, t: semComentario(ler(rel)) }));
+    for (const { rel, t } of fontes) {
+      expect(t, rel).not.toMatch(/(?<!\bArray)\.from\s*\(|\.storage\b|createClient\s*\(|SERVICE_ROLE|service_role|Deno\.env/);
+    }
+    expect(fontes.reduce((n, { t }) => n + (t.match(/\.rpc\s*\(/g) ?? []).length, 0), f).toBe(1);
+    expect(arquivosDa(f), f).toEqual(expect.arrayContaining(DA_FUNCAO[f]));
+  });
+
+  it("decisão 13: as 2 SEM a opção jwtLeitura da hml-21a — o getUser no Auth em todo pedido, leitura também (a revogação vale na hora)", () => {
+    expect(ler("acessos/index.ts")).toContain('servirComoPessoa("acessos", { freio: 120 }, ');
+    expect(ler("aluno-dia/index.ts")).toContain('servirComoPessoa("aluno-dia", { freio: 240 }, ');
+    for (const f of Object.keys(DA_FUNCAO)) expect(ler(`${f}/index.ts`), f).not.toMatch(/jwtLeitura/);
   });
 });
