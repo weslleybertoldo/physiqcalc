@@ -125,7 +125,7 @@ describe("aba Perfil (tela 5)", () => {
     expect(screen.getByText("Personal trainer")).toBeInTheDocument();
     expect(screen.getByText("Nutricionista")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /no WhatsApp/ })).toHaveLength(1);
-    for (const l of ["Agenda", "Pagamentos", "Lembrete de treino", "Som do descanso", "Aparência", "Exportar meus dados", "Excluir minha conta", "Sair"]) {
+    for (const l of ["Agenda", "Pagamentos", "Rotinas e lembretes", "Lembrete de treino", "Som do descanso", "Aparência", "Exportar meus dados", "Excluir minha conta", "Sair"]) {
       expect(screen.getByText(l)).toBeInTheDocument();
     }
     expect(await screen.findByText("sáb, 18/07")).toBeInTheDocument();
@@ -194,7 +194,7 @@ describe("aba Perfil (tela 5)", () => {
     expect(screen.getByText("Exportar meus dados")).toBeInTheDocument();
     expect(screen.getByText("Excluir minha conta")).toBeInTheDocument();
     expect(screen.getByText("Sair")).toBeInTheDocument();
-    for (const l of ["Meus profissionais", "Agenda", "Pagamentos", "Lembrete de treino", "Som do descanso", "Aparência"]) {
+    for (const l of ["Meus profissionais", "Agenda", "Pagamentos", "Rotinas e lembretes", "Lembrete de treino", "Som do descanso", "Aparência"]) {
       expect(screen.queryByText(l)).toBeNull();
     }
     expect(screen.queryByRole("button", { name: "Conta" })).toBeNull();

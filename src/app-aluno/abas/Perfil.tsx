@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, BellRing, CalendarDays, Download, Moon, Receipt, Settings, Sun, Trash2, Volume2 } from "lucide-react";
+import { AlarmClock, Ban, BellRing, CalendarDays, Download, Moon, Receipt, Settings, Sun, Trash2, Volume2 } from "lucide-react";
 import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
 import { lerSomDescanso, nomeDoSom, type SomDescanso } from "@/lib/somDescanso";
 import { useSessao } from "@/nucleo/sessao";
@@ -131,6 +131,8 @@ export default function Perfil() {
               } />
             <ItemLista icone={Receipt} rotulo="Pagamentos" para="/perfil/pagamentos"
               valor={chipPag ? <Chip tom={chipPag.tom} data-perfil-pagamentos-chip>{chipPag.texto}</Chip> : undefined} />
+            {/* W-A P3 (spec §4.3, §2.2-15): as rotinas (creatina, remédio…) e os lembretes — todo aluno */}
+            <ItemLista icone={AlarmClock} rotulo="Rotinas e lembretes" para="/perfil/rotinas" />
             {temTreino && (
               <ItemLista icone={BellRing} rotulo="Lembrete de treino" aoTocar={() => setFolha("lembrete")}
                 valor={<span data-perfil-lembrete-valor>{valorDoLembrete(lembrete)}</span>} />
