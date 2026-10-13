@@ -1730,7 +1730,7 @@ def p_acoes_21d(o, L, s: str, estado, rodada: str, ctx: dict, casos: set) -> Non
         if ok_prep:
             T21.anotar_objeto(estado, bucket, caminho)
         o.ok(ok_prep, f"P exercicio_foto_preparar → 200, o caminho <id do exercício>.png no {bucket} e o token do link ({st})", parar=True)
-        put = B19.subir_no_link_treino(bucket, caminho, r["token"], png, "image/png", tok)
+        put = B.B19.subir_no_link_treino(bucket, caminho, r["token"], png, "image/png", tok)
         url = T21.url_publica(bucket, caminho, int(time.time() * 1000))
         st2, _r, _h, _ms = T21.treinos(tok, "exercicio_editar", {"id": ex, "imagem_url": url})
         v = um_treino(f"select imagem_url = {q(url)} as url_ok from {s}.tb_exercicios where id = {q(ex)}")

@@ -869,6 +869,36 @@ def esperar_prontos(itens: list[tuple], min_s: float = B.MIN_S, max_s: float = B
     return saida
 
 
+# o staleTime das consultas de Meus treinos (src/painel/treinos/useTreinos.ts: 30 s) — uma abertura do gate depois dele busca DE VERDADE
+VELHO_MEUS_TREINOS_S = 31
+ultima_medida: dict[str, float] = {}
+
+
+def preparar_medida(t, pend, conta: str, tela_nome: str) -> None:
+    """Antes de cada abertura MEDIDA do gate, o dado da tela fica VELHO (a abertura busca de verdade, como a 1ª visita — nunca o cache do
+    React Query): o painel (Meus treinos, staleTime 30 s) espera ≥ 31 s desde a medida anterior dele, na entrada (o pré-busca do painel
+    só roda na carga e o recarregar o dispararia — por isso não recarrega); o app (Treinos prontos, staleTime 5 min) RECARREGA a entrada
+    (o cliente do React Query nasce vazio; o app do aluno não tem pré-busca). Fora da medida."""
+    T21.fechar_janelas(t)
+    if T21.eh_do_app(conta):
+        t.ir(T21.ENTRADA_APP)
+        t.esperar(lambda: t.n("[data-aba-perfil]") > 0, 60)
+        B.esperar_pronto(t, pend, max_s=40)
+        return
+    B.navegar(t, T21.ENTRADA_PAINEL)
+    falta = VELHO_MEUS_TREINOS_S - (time.time() - ultima_medida.get(tela_nome, 0.0))
+    if falta > 0:
+        t.pg.wait_for_timeout(int(falta * 1000))
+
+
+def medir_gate(t, pend, tela: tuple, conta: str, s: str) -> dict:
+    """Uma abertura medida do gate (o antes e o quente): o dado velho (preparar_medida) e a tela pela navegação do app."""
+    preparar_medida(t, pend, conta, tela[0])
+    r = T21.abrir_tela(t, pend, tela, s)
+    ultima_medida[tela[0]] = time.time()
+    return r
+
+
 def ociosa_agora(ultimo: dict) -> tuple[bool, int, str]:
     """A treinos está parada há ≥ OCIOSA_S? A escuta deste processo E a borda (os logs da função: QUALQUER quem chama — outro processo, outro
     E2E). → (ociosa?, há quantos s, a nota). Os logs da borda fora do ar → só a escuta deste processo (anotado)."""
@@ -914,7 +944,7 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
                 for conta, tela, t, pend in abertos:
                     pedidos_treinos = 0
                     for _ in range(ABERTURAS_ANTES_GATE):
-                        r = abrir_para_medir(t, pend, tela, conta, s)
+                        r = medir_gate(t, pend, tela, conta, s)
                         medidas[tela[0]]["antes"].append(r["t_pronto_s"])
                         pedidos_treinos += sum(1 for x in r["pedidos"] if x.get("tipo") == "fn" and x.get("nome") == "treinos")
                     anotar_gate(base, commit, fase, conta, tela[0], "antes", medidas[tela[0]]["antes"], None, None)
@@ -924,9 +954,12 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
         feitas, tentativas = 0, 0
         while feitas < ABERTURAS_OCIOSA and tentativas < ABERTURAS_OCIOSA + 3:
             tentativas += 1
-            for conta, _tl, t, _p in abertos:  # as 2 telas paradas na entrada (nada chama a treinos enquanto espera)
-                T21.fechar_janelas(t)
-                B.navegar(t, T21.ENTRADA_APP if T21.eh_do_app(conta) else T21.ENTRADA_PAINEL)
+            for conta, tl, t, pnd in abertos:  # as 2 telas paradas na entrada, o dado velho (nada chama a treinos enquanto espera)
+                if T21.eh_do_app(conta):
+                    preparar_medida(t, pnd, conta, tl[0])
+                else:
+                    T21.fechar_janelas(t)
+                    B.navegar(t, T21.ENTRADA_PAINEL)
             teto = time.time() + 3 * OCIOSA_S  # algo chamando a treinos sem parar (a espera não acaba): a rodada não conta como ociosa
             while True:
                 ociosa, desde, nota = ociosa_agora(ultimo)
@@ -944,6 +977,8 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
                         T21.fechar_janelas(t)
                         B.navegar(t, tela[1][1])
                     rs = esperar_prontos([(t, p, tela[2]) for _c, tela, t, p in abertos])
+                    for _c, tela, _t, _p in abertos:
+                        ultima_medida[tela[0]] = time.time()
             if not ociosa:
                 o.linha(f"   gate ociosa (tentativa {tentativas}): um pedido à treinos durante a espera do lock ({nota}) — a rodada recomeça")
                 continue
@@ -955,7 +990,7 @@ def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str) -> None:  # n
         with LockPesado():
             for conta, tela, t, pend in abertos:
                 for _ in range(ABERTURAS_QUENTE):
-                    medidas[tela[0]]["quente"].append(abrir_para_medir(t, pend, tela, conta, s)["t_pronto_s"])
+                    medidas[tela[0]]["quente"].append(medir_gate(t, pend, tela, conta, s)["t_pronto_s"])
         for conta, tela, _t, _pend in abertos:
             m = medidas[tela[0]]
             todas = m["ociosa"] + m["quente"]
