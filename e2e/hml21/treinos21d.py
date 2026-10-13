@@ -621,11 +621,14 @@ def abrir_tela(t, pend, tela: tuple, s: str | None = None) -> dict:
 
 
 def fase_do_codigo_21d(base: str, commit: str) -> str:
-    """depois = o commit medido lê o Treino pela treinos (src/treino/servidor.ts com o lerTreinos); antes = o código antigo (lia direto). Um
-    commit que este repo não tem (a branch de outra W no staging) é ANTES (o mesmo critério da 21a/21b)."""
+    """depois = o commit medido lê o Treino pela treinos (a lib src/painel/treinos/api.ts chama o lerTreinos); antes = lê direto — o código
+    antigo e, desde o F7, o HEAD da 21d (o gate de latência reprovou as leituras pela treinos: o desvio; as gravações seguem pela treinos e o
+    src/treino/servidor.ts com o lerTreinos fica, é do F3a). No local, a árvore da worktree. Um commit que este repo não tem (a branch de
+    outra W no staging) é ANTES (o mesmo critério da 21a/21b)."""
     if base == "local":
-        return "depois"
-    r = subprocess.run(["git", "-C", str(B.REPO), "show", f"{commit}:src/treino/servidor.ts"], capture_output=True, text=True, timeout=20)
+        arq = B.REPO / "src" / "painel" / "treinos" / "api.ts"
+        return "depois" if arq.exists() and "lerTreinos(" in arq.read_text(encoding="utf-8") else "antes"
+    r = subprocess.run(["git", "-C", str(B.REPO), "show", f"{commit}:src/painel/treinos/api.ts"], capture_output=True, text=True, timeout=20)
     return "depois" if r.returncode == 0 and "lerTreinos(" in r.stdout else "antes"
 
 

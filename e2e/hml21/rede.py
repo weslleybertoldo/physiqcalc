@@ -583,8 +583,9 @@ def seco_21d(o) -> None:  # noqa: PLR0915
     o.ok(not any(g.escrita(x) for x in passam) and all(g.escrita(x) for x in barram),
          f"a Guarda da produção: passam o `ler` da treinos e da conta e as 3 RPCs de leitura do front antigo da 21d ({len(passam)}); barram as ações "
          f"da treinos (as do Master inclusive), o `ler` disfarçado, a escrita direta no Treino, as 2 RPCs novas e o upload ({len(barram)})")
-    o.ok(not B.B17.Guarda().leitura & B.RPCS_DE_LEITURA_DA_21D,
-         "a lista da Guarda do repo (o RPC_SO_LEITURA do repeticao.ts) já não tem as 3 (saíram do front na 21d) — só a guarda_da_w() as soma")
+    o.ok(B.RPCS_DE_LEITURA_DA_21D <= B.B17.Guarda().leitura,
+         "a lista da Guarda do repo (o RPC_SO_LEITURA do repeticao.ts) tem as 3 de novo — o desvio do gate do F7: as leituras do Treino voltaram ao "
+         "navegador (a guarda_da_w() também as soma)")
     # as contas e as telas de cada base (decisão N): a produção NUNCA com a conta do staging
     staging = {T21.PERSONAL, T21.SOZINHO, T21.OUTRA}
     o.ok(T21.contas_da_area("prod") == ["nutri-legado", "aluno-calc"] and not staging & set(T21.contas_da_area("prod"))
@@ -635,8 +636,9 @@ def seco_21d(o) -> None:  # noqa: PLR0915
     o.ok(not any(T21.ENTRADA_PAINEL.startswith(r) for r in ("/painel/treinos", "/painel/modelos", "/painel/alunos")) and T21.ENTRADA_APP == "/perfil"
          and not T21.efeitos_que_gravam("src/painel/configuracoes/Perfil.tsx"),
          "a entrada é de fora da 21d (a carga fria não entra na medida da 1ª tela) e não grava ao abrir (o espelho do Treino só no salvar)")
-    o.ok(T21.fase_do_codigo_21d("local", "x") == "depois" and T21.fase_do_codigo_21d("staging", "7c1a637") == "antes"
-         and T21.fase_do_codigo_21d("staging", "HEAD") == "depois", "antes × depois vem do CÓDIGO medido (o 7c1a637: antes; o HEAD: depois)")
+    o.ok(T21.fase_do_codigo_21d("local", "x") == "antes" and T21.fase_do_codigo_21d("staging", "7c1a637") == "antes"
+         and T21.fase_do_codigo_21d("staging", "fd49b66") == "depois" and T21.fase_do_codigo_21d("staging", "HEAD") == "antes",
+         "antes × depois vem do CÓDIGO medido (o 7c1a637 e o HEAD — o desvio do gate —: antes; o fd49b66: depois)")
 
 
 def main() -> int:

@@ -226,8 +226,9 @@ def casos_hml17(b) -> list[tuple]:
         ("hml-21b: RPC agenda_excluir_calendario (nova; só a conta chama: direta = grava)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/agenda_excluir_calendario", {})), True),
         ("hml-21b: RPC agenda_garantir_inicio (nova; só a conta chama: direta = grava)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/agenda_garantir_inicio", {})), True),
         # hml-21d (decisão F): a treinos (Treino) — o `ler` com as consultas novas passa (inclusive as do Master e a especial); TODA ação dela é
-        # barrada (as do painel, a foto, o perfil e as do Master); a conta com q=aluno_treino passa (leitura); as RPCs que saíram do front e as
-        # 2 novas, diretas, são gravação na Guarda de base (o rede.py da 21d soma as 3 de leitura na guarda_da_w — o front antigo as chama)
+        # barrada (as do painel, a foto, o perfil e as do Master); a conta com q=aluno_treino passa (leitura); as 2 RPCs novas, diretas, são
+        # gravação na Guarda de base. F7: o gate de latência reprovou as leituras pela treinos → as 3 RPCs de leitura voltaram ao front (o
+        # desvio) e ao RPC_SO_LEITURA: diretas, passam como leitura
         ("hml-21d: treinos (Treino) › ler (Meus treinos, os detalhes, as pastas, a busca, os treinos prontos)", g.escrita(Pedido("POST", f"{T}/functions/v1/treinos", {"acao": "ler", "itens": [
             {"filtros": {}, "offset": 0, "limite": 20, "q": "modelos"}, {"ids": ["x"], "q": "modelos_detalhes"}, {"q": "pastas"}, {"termo": "a", "q": "busca_treinos"},
             {"q": "treinos_prontos"}, {"q": "catalogo_modelos"}, {"q": "catalogo_pastas"}, {"q": "grupos_musculares"}, {"id": "x", "q": "modelo"}]})), False),
@@ -248,7 +249,7 @@ def casos_hml17(b) -> list[tuple]:
         ("hml-21d: treinos-x (outra função, desconhecida: grava)", fn("treinos-x", "ler", host=T), True),
         ("hml-21d: conta › ler (q=aluno_treino — o editor do Aluno › Treino)", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"acao": "ler", "itens": [
             {"aluno": "x", "q": "aluno_treino"}]})), False),
-        *[(f"hml-21d: RPC {n} direta (saiu do front; a Guarda de base grava)", g.escrita(Pedido("POST", f"{h}/rest/v1/rpc/{n}", {})), True)
+        *[(f"hml-21d F7: RPC {n} direta (voltou ao front — o desvio do gate; leitura)", g.escrita(Pedido("POST", f"{h}/rest/v1/rpc/{n}", {})), False)
           for h, n in ((T, "modelos_da_lista"), (T, "exercicios_da_lista"), (P, "aluno_treino"))],
         ("hml-21d: RPC treino_pronto_salvar (nova; só a treinos chama: direta = grava)", g.escrita(Pedido("POST", f"{T}/rest/v1/rpc/treino_pronto_salvar", {})), True),
         ("hml-21d: RPC modelo_ordenar (nova; só a treinos chama: direta = grava)", g.escrita(Pedido("POST", f"{T}/rest/v1/rpc/modelo_ordenar", {})), True),

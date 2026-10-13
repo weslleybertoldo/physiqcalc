@@ -1554,9 +1554,11 @@ def seco_21d(o) -> None:  # noqa: PLR0915
     o.ok(B.CHAVE_21D in cheio.d and pl1.r == [False], "[seco] o --limpar usa o schema GRAVADO no Estado: num Estado fora do staging com massa anotada "
                                                        "nada sai (e avisa); a chave hml21d fica")
     o.ok(len(T21.marca("10131234-ab12")) <= 200 and T21.corpo_exercicio("x", "y")["nome"].startswith(B.MARCA), "[seco] a marca cabe no nome (até 200)")
-    o.ok(T21.fase_do_codigo_21d("local", "x") == "depois" and T21.fase_do_codigo_21d("staging", "7c1a637") == "antes"
-         and T21.fase_do_codigo_21d("staging", "HEAD") == "depois" and T21.fase_do_codigo_21d("staging", "0123abc") == "antes",
-         "[seco] antes × depois vem do CÓDIGO medido (o 7c1a637 lia o Treino direto: antes; o HEAD pela treinos: depois; um commit que o repo não tem: antes)")
+    o.ok(T21.fase_do_codigo_21d("local", "x") == "antes" and T21.fase_do_codigo_21d("staging", "7c1a637") == "antes"
+         and T21.fase_do_codigo_21d("staging", "fd49b66") == "depois" and T21.fase_do_codigo_21d("staging", "HEAD") == "antes"
+         and T21.fase_do_codigo_21d("staging", "0123abc") == "antes",
+         "[seco] antes × depois vem do CÓDIGO medido (o 7c1a637 e o HEAD — o desvio do gate — leem o Treino direto: antes; o fd49b66 lia pela "
+         "treinos: depois; um commit que o repo não tem: antes)")
     # 🟡1 da revisão: o N1 da biblioteca — a OUTRA conta com o filtros.professor = o personal (o arg da RPC de hoje passa no leitor do servidor)
     rb = T21.regras_treinos([{"acao": "ler", "itens": [B.item("exercicios_lista", filtros={"professor": FALSO, "q": B.MARCA}, offset=0, limite=20)]}])
     ib = rb["pedidos"][0]["itens"][0]
