@@ -2,15 +2,17 @@
 """Physiq W14 — E2E de telas do Perfil do aluno no painel (tela 7: cabeçalho e cards do Resumo) e das travas do app (F2).
 
 Casos (em série; /health do Treino antes de cada um):
-  resumo    o cabeçalho (Mensagem, Nova avaliação, ⋯, linha e chips) e os 6 cards novos; o "Dados" antigo saiu (herdado W6)
+  resumo    o cabeçalho (Mensagem, Nova avaliação, ⋯, linha e chips) e os 5 cards novos (W-A P4: o de login foi para a aba Acessos); o
+            "Dados" antigo saiu (herdado W6)
   editar    Editar dados (cadastro no principal) + erro de validação (negativo)
   pdf       ⋯ → Gerar PDF "Dados & Evolução" (quem veio do Nutri, pelas antropometrias)
-  acesso    ajuste "Acesso ao app" desligado → o app do aluno fecha com a mensagem própria; religado → abre
+  acesso    "Acesso ao app" Bloqueado na aba Acessos (W-A P4: com a confirmação do app) → o app do aluno fecha com a mensagem própria;
+            Liberado → abre
   diario    ajuste "Diário" desligado → a aba Dieta do app não oferece a foto (mensagem da spec 9); religado → oferece
   link      o card mostra /d/<código>; /p/<código> e /p/abc abrem o diário (F1 — R13)
   resumo_privado  salvar e voltar
   aviso     aviso único da P15 (Camila): o número = a lista; "Ligar para todos" liga exatamente os da lista
-  acoes     Acesso do aluno › Desativar / Reativar e ⋯ › Remover da lista (função alunos da W13) com a Diego (sem login)
+  acoes     Login do aluno (aba Acessos — W-A P4) › Desativar / Reativar e ⋯ › Remover da lista (função alunos da W13) com a Diego (sem login)
   negativo  P1: o 2º personal não abre o perfil do Rafael
 Prints: site 1280 × 883 × 2 (= 2560 × 1766, tela 7) e app 390 × 844 × 3,4 em ~/projetos/physiqcalc-scratch/prints/w14/.
 Uso: python3 e2e/w14/telas.py --base http://localhost:5173 --prefixo local [--casos resumo,acesso]
@@ -83,13 +85,17 @@ def config(pid: str) -> dict:
     return q(f"select config from {S}.pacientes where id = '{pid}'")[0]["config"] or {}
 
 
-def ajuste_ui(c, chave: str, ligar: bool) -> bool:
-    """Clica no interruptor do ajuste (se precisar) e espera a tela e o banco concordarem."""
-    sel = f'[data-ajuste="{chave}"]'
-    atual = attr(c, sel, "data-ajuste-ligado") == "1"
-    if atual != ligar:
-        c.pg.click(f'[data-ajuste-botao="{chave}"]')
-    return c.esperar(lambda: attr(c, sel, "data-ajuste-ligado") == ("1" if ligar else "0"), 20)
+def acesso_ui(c, liberar: bool) -> bool:
+    """W-A P4: a linha "Acesso ao app" da aba Acessos (rádios; bloquear pede a confirmação do app) — espera a tela concordar."""
+    sel = '[data-acessos-linha="acesso_app"]'
+    alvo = "liberado" if liberar else "bloqueado"
+    if attr(c, sel, "data-acessos-nivel") != alvo:
+        c.pg.click(f'[data-acessos-radio="acesso_app:{alvo}"]')
+        if not liberar:
+            c.confirmar_no_app()
+    livre = f'[data-acessos-radio="acesso_app:{alvo}"]'
+    # a gravação TERMINADA: o nível certo e os rádios ligados de novo (o otimista muda o nível antes do servidor)
+    return c.esperar(lambda: attr(c, sel, "data-acessos-nivel") == alvo and c.pg.locator(livre).first.is_enabled(), 20)
 
 
 # ───────────────────────── casos ─────────────────────────
@@ -98,9 +104,10 @@ def resumo(nav, base, pref):
     raf = rafael()
     c = caso(nav, base, pref, "resumo", "w13-dono", f"/painel/alunos/{raf['id']}", esperar="[data-cabecalho-w14] [data-cabecalho-nome]")
     try:
-        ok = c.esperar(lambda: all(c.tem(s) for s in ("[data-card-dados-aluno]", "[data-card-acesso-aluno]", "[data-card-ajustes-aluno]",
-                                                      "[data-card-link-diario]", "[data-card-resumo-privado]", "[data-card-fluxo-consulta]")), 60)
-        p.check(ok, "[resumo] os 6 cards da W14 no Resumo (dados, acesso, ajustes, link, resumo privado, fluxo de consulta)")
+        ok = c.esperar(lambda: all(c.tem(s) for s in ("[data-card-dados-aluno]", "[data-card-ajustes-aluno]", "[data-card-link-diario]",
+                                                      "[data-card-resumo-privado]", "[data-card-fluxo-consulta]")), 60)
+        p.check(ok, "[resumo] os 5 cards da W14 no Resumo (dados, mensagens automáticas, link, resumo privado, fluxo de consulta)")
+        p.check(not c.tem("[data-card-acesso-aluno]"), "[resumo] W-A P4: o card de login saiu do Resumo (mora na aba Acessos)")
         linha = texto(c, "[data-cabecalho-linha]")
         p.check(linha.startswith("28 anos · 1,78 m · objetivo: definição · aluno desde"), f"[cabeçalho] linha da tela 7: {linha!r}")
         chips = texto(c, "[data-cabecalho-chips]").upper()
@@ -180,11 +187,11 @@ def pdf(nav, base, pref):
 
 def acesso(nav, base, pref):
     raf = rafael()
-    c = caso(nav, base, pref, "acesso", "w13-dono", f"/painel/alunos/{raf['id']}", esperar='[data-ajuste="acesso_app"]')
+    c = caso(nav, base, pref, "acesso", "w13-dono", f"/painel/alunos/{raf['id']}/acessos", esperar='[data-acessos-linha="acesso_app"]')
     try:
-        ok = ajuste_ui(c, "acesso_app", False)
-        p.check(ok and config(raf["id"]).get("acesso_app") is False, "[acesso] o profissional desliga o \"Acesso ao app\" (gravou acesso_app=false)")
-        c.pg.locator("[data-card-ajustes-aluno]").scroll_into_view_if_needed()
+        ok = acesso_ui(c, False)
+        p.check(ok and config(raf["id"]).get("acesso_app") is False,
+                "[acesso] o profissional bloqueia o \"Acesso ao app\" na aba Acessos, com a confirmação (gravou acesso_app=false)")
         foto(c, "ajuste_acesso_desligado")
     finally:
         c.fim()
@@ -199,10 +206,10 @@ def acesso(nav, base, pref):
         foto(a, "app_acesso_desligado")
     finally:
         a.ctx.close()
-    c2 = caso(nav, base, pref, "acesso_religar", "w13-dono", f"/painel/alunos/{raf['id']}", esperar='[data-ajuste="acesso_app"]')
+    c2 = caso(nav, base, pref, "acesso_religar", "w13-dono", f"/painel/alunos/{raf['id']}/acessos", esperar='[data-acessos-linha="acesso_app"]')
     try:
-        ok = ajuste_ui(c2, "acesso_app", True)
-        p.check(ok and config(raf["id"]).get("acesso_app") is True, "[acesso] religado")
+        ok = acesso_ui(c2, True)
+        p.check(ok and config(raf["id"]).get("acesso_app") is True, "[acesso] liberado de novo (sem confirmação)")
     finally:
         c2.fim()
     B.saude_ok("app com o acesso religado")
@@ -320,7 +327,7 @@ def acoes(nav, base, pref):
     assert diego, "Diego"
     did = diego["id"]
     q(f"update {S}.pacientes set ativo = true, deleted_at = null where id = '{did}'")
-    c = caso(nav, base, pref, "acoes", "w13-dono", f"/painel/alunos/{did}", esperar='[data-acesso-acao="desativar"]')
+    c = caso(nav, base, pref, "acoes", "w13-dono", f"/painel/alunos/{did}/acessos", esperar='[data-acesso-acao="desativar"]')
     try:
         c.pg.locator("[data-card-acesso-aluno]").scroll_into_view_if_needed()
         foto(c, "acesso_sem_login")

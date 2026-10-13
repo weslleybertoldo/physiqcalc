@@ -7,7 +7,8 @@ Casos (na ordem):
   espera       w8b-bloqueio pelo formulário (390 px): 3 erradas → "E-mail ou senha incorretos."; a 4ª → "Muitas tentativas. Tente de
                novo em 1:00" com o botão travado; relógio acelerado → 5:00, 15:00, 30:00, 60:00; a seguinte → "Conta bloqueada por
                tentativas…" + botão do Google; a senha CERTA continua recusada
-  card         w8b-personal no painel (1280 × 883 × 2): Resumo do Rafael (bloqueado de vez) com o card Acesso do aluno; "Criar
+  card         w8b-personal no painel (1280 × 883 × 2): a aba Acessos do Rafael (bloqueado de vez) com o card Login do aluno (W-A P4: era o
+               "Acesso do aluno" do Resumo); "Criar
                senha nova" → a folha com a senha gerada → salva → mostra o que passar ao aluno; o card vira SENHA PROVISÓRIA
   provisoria   Rafael entra com a senha provisória (390 px) → "Crie a sua senha"; "Agora não" → o app abre; entra de novo → a
                tela volta; cria a dele → o app abre; entra com a nova → a tela NÃO aparece
@@ -117,10 +118,10 @@ def entrar_ui(nav, a, nome: str, email: str, senha: str) -> B.Caso:
     return c
 
 
-def esperar_resumo(c: B.Caso, nome: str) -> bool:
-    """O Resumo inteiro carregado (cabeçalho com o nome e o card Financeiro sem o esqueleto) antes do print."""
+def esperar_acessos(c: B.Caso, nome: str) -> bool:
+    """W-A P4: a aba Acessos carregada (cabeçalho com o nome e as linhas sem o esqueleto) antes do print — o card de login mora nela."""
     return c.esperar(lambda: nome in c.pg.locator("[data-perfil-aluno]").inner_text()
-                     and (c.tem("[data-card-financeiro-vazio]") or c.tem("[data-card-financeiro-linhas]")), 60)
+                     and (c.tem('[data-aba-acessos="pronto"]') or c.tem('[data-estado="erro"]')), 60)
 
 
 def caso_card(nav, a) -> None:
@@ -130,11 +131,11 @@ def caso_card(nav, a) -> None:
             on conflict (email) do update set erros = 9, bloqueado_de_vez_em = now(), bloqueado_ate = null""")
     B.q(f"update auth.users set raw_app_meta_data = raw_app_meta_data - 'senha_provisoria' where lower(email) = '{email_a}'")
     c = B.Caso(nav, a.base, a.prefixo, "card", desktop=True)
-    c.entrar("w8b-personal", f"/painel/alunos/{pid}", zerar=False)
+    c.entrar("w8b-personal", f"/painel/alunos/{pid}/acessos", zerar=False)
     c.fechar_avisos()
     ok = c.esperar(lambda: c.tem("[data-card-acesso-aluno][data-acesso-estado='bloqueado_de_vez']"), 60)
-    p.check(ok, "Resumo do aluno mostra o card Acesso do aluno (bloqueado de vez)")
-    esperar_resumo(c, "Rafael Moura")
+    p.check(ok, "a aba Acessos do aluno mostra o card Login do aluno (bloqueado de vez)")
+    esperar_acessos(c, "Rafael Moura")
     card = c.pg.locator("[data-card-acesso-aluno]")
     t = card.inner_text()
     p.check("BLOQUEADO" in t and email_a in t and "Bloqueado de vez por tentativas de senha" in t, "card: chip, e-mail do login e o aviso do bloqueio")
@@ -219,10 +220,10 @@ def caso_criar(nav, a) -> None:
         sp = B.service(B.PRINCIPAL_REF)
         B.http("DELETE", f"{B.PRINCIPAL_URL}/auth/v1/admin/users/{n['u']}", None, {"apikey": sp, "Authorization": f"Bearer {sp}"})
     c = B.Caso(nav, a.base, a.prefixo, "criar", desktop=True)
-    c.entrar("w8b-personal", f"/painel/alunos/{n['id']}", zerar=False)
+    c.entrar("w8b-personal", f"/painel/alunos/{n['id']}/acessos", zerar=False)
     c.fechar_avisos()
     ok = c.esperar(lambda: c.tem("[data-card-acesso-aluno][data-acesso-estado='sem']"), 60)
-    esperar_resumo(c, B.NOME_NOVO)
+    esperar_acessos(c, B.NOME_NOVO)
     p.check(ok and "SEM ACESSO" in c.pg.locator("[data-card-acesso-aluno]").inner_text(), "aluno sem login: card SEM ACESSO com 'Criar acesso'")
     c.pg.locator("[data-card-acesso-aluno]").scroll_into_view_if_needed()
     c.print("card_sem_acesso")
@@ -241,11 +242,11 @@ def caso_criar(nav, a) -> None:
 
 def caso_celular(nav, a) -> None:
     c = B.Caso(nav, a.base, a.prefixo, "celular", desktop=False)
-    c.entrar("w8b-personal", f"/painel/alunos/{aluno_pid()}", zerar=False)
+    c.entrar("w8b-personal", f"/painel/alunos/{aluno_pid()}/acessos", zerar=False)
     c.fechar_avisos()
     ok = c.esperar(lambda: c.tem("[data-card-acesso-aluno]") and c.pg.locator("[data-card-acesso-aluno]").get_attribute("data-acesso-estado") != "carregando", 60)
-    esperar_resumo(c, "Rafael Moura")
-    p.check(ok, "o card aparece no painel em 390 px")
+    esperar_acessos(c, "Rafael Moura")
+    p.check(ok, "o card aparece no painel em 390 px (na aba Acessos, embaixo das linhas)")
     # o card inteiro entre a barra de cima e a de baixo (a barra flutuante cobre o fim da tela)
     c.pg.evaluate("() => { const el = document.querySelector('[data-card-acesso-aluno]'); window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 64); }")
     c.print("card_celular")
@@ -254,7 +255,7 @@ def caso_celular(nav, a) -> None:
 
 def caso_negativo(nav, a) -> None:
     c = B.Caso(nav, a.base, a.prefixo, "negativo", desktop=True)
-    c.entrar("w8b-outro", f"/painel/alunos/{aluno_pid()}", zerar=False)
+    c.entrar("w8b-outro", f"/painel/alunos/{aluno_pid()}/acessos", zerar=False)
     c.fechar_avisos()
     c.esperar(lambda: c.tem("[data-card-acesso-aluno]") or "não" in c.texto().lower(), 40)
     c.pg.wait_for_timeout(2000)
