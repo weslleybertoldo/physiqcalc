@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { listar, tela } from "@/rotas/registro";
@@ -8,7 +8,7 @@ import { LimiteDeErro } from "@/ui/casca/LimiteDeErro";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Esqueleto, EstadoVazio } from "@/ui/premium/Estados";
 import { ModuloForaDoPlano } from "@/ui/casca/ModuloForaDoPlano";
-import { ABAS_ALUNO, ORDEM_RESUMO, abaAtualDaRota, estadoDaAbaAluno } from "./catalogoAbas";
+import { ABAS_ALUNO, ORDEM_RESUMO, abaAtualDaRota, estadoDaAbaAluno, rolagemParaMostrar } from "./catalogoAbas";
 import CabecalhoPadrao from "./CabecalhoPadrao";
 import { AlunoCtx } from "./contexto";
 import { modulosDoPerfil } from "./dados/regras";
@@ -28,7 +28,8 @@ const COR_PONTO = { treino: "var(--p-violeta)", nutricao: "var(--p-verde)" } as 
 
 /**
  * Perfil do aluno no painel (tela 7): cabeçalho (o padrão da W1 ou o de src/painel/aluno/Cabecalho.tsx),
- * as 6 abas (Resumo · Treino · Dieta · Avaliação · Prontuário · Financeiro) e o conteúdo da aba.
+ * as 7 abas (Resumo · Treino · Dieta · Avaliação · Prontuário · Financeiro · Acessos) e o conteúdo da aba. W-A P4: no celular a barra
+ * rola na horizontal e a aba ativa rola para a vista (a Acessos, a última, fica fora da tela).
  */
 export default function AlunoLayout() {
   const { id = "" } = useParams();
@@ -38,6 +39,21 @@ export default function AlunoLayout() {
   const abaAtual = abaAtualDaRota(location.pathname, id);
   const abas = ABAS_ALUNO.filter((a) => estadoDaAbaAluno(a, modulos) !== null);
   const base = `/painel/alunos/${encodeURIComponent(id)}`;
+  const barra = useRef<HTMLElement>(null);
+  const nAbas = abas.length;
+
+  useEffect(() => {
+    const nav = barra.current;
+    const el = nav?.querySelector<HTMLElement>(`[data-aba-aluno="${abaAtual}"]`);
+    if (!nav || !el) return;
+    // a posição da aba DENTRO da barra (o getBoundingClientRect não depende de quem é o offsetParent)
+    const r = el.getBoundingClientRect();
+    const esquerda = r.left - nav.getBoundingClientRect().left + nav.scrollLeft;
+    const alvo = rolagemParaMostrar({ esquerda, largura: r.width }, { rolagem: nav.scrollLeft, largura: nav.clientWidth });
+    if (alvo === null) return;
+    if (typeof nav.scrollTo === "function") nav.scrollTo({ left: alvo, behavior: "smooth" });
+    else nav.scrollLeft = alvo;
+  }, [abaAtual, nAbas]);
 
   return (
     <AlunoCtx.Provider value={{ alunoId: id }}>
@@ -50,7 +66,7 @@ export default function AlunoLayout() {
           <CabecalhoPadrao alunoId={id} />
         )}
 
-        <nav aria-label="Abas do aluno" data-abas-aluno className="pq-sem-barra mt-4 flex gap-1 overflow-x-auto border-b border-linha">
+        <nav ref={barra} aria-label="Abas do aluno" data-abas-aluno className="pq-sem-barra mt-4 flex gap-1 overflow-x-auto border-b border-linha">
           {abas.map((a) => {
             const ativa = a.id === abaAtual;
             const Icone = a.icone;

@@ -320,8 +320,9 @@ describe("site do profissional: rotas antigas do Calc abrem a mesma função na 
     await waitFor(() => expect(onde()).toBe(para), { timeout: 4000 });
     await waitFor(() => expect(document.querySelector(`[data-aba-aluno="${aba}"]`)?.getAttribute("aria-current")).toBe("page"), { timeout: 4000 });
     await waitFor(() => expect(document.querySelector("[data-aba-aluno-conteudo='avaliacao']")).not.toBeNull(), { timeout: 4000 });
-    // W18: o Prontuário (as anotações da equipe) vale também na conta só de Treino — o personal lê e escreve as "Equipe"
-    expect([...document.querySelectorAll("[data-aba-aluno]")].map((a) => a.getAttribute("data-aba-aluno"))).toEqual(["resumo", "treino", "avaliacao", "prontuario", "financeiro"]);
+    // W18: o Prontuário (as anotações da equipe) vale também na conta só de Treino — o personal lê e escreve as "Equipe"; W-A P4: a aba
+    // Acessos depois de Financeiro, para todo aluno
+    expect([...document.querySelectorAll("[data-aba-aluno]")].map((a) => a.getAttribute("data-aba-aluno"))).toEqual(["resumo", "treino", "avaliacao", "prontuario", "financeiro", "acessos"]);
   }, 15_000);
 
   // W6: a aba Financeiro do aluno é a nova (src/painel/aluno/abas/Financeiro.tsx) — o "Plano & Cobrança" antigo não abre mais
