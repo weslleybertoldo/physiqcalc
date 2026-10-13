@@ -326,7 +326,9 @@ describe("hml-21d — F3b: as leituras do Painel › Treinos pela treinos (o MES
     id, nome: `Ex ${id}`, grupo_muscular: "Peito", emoji: null, tipo: "musculacao", imagem_url: null, subgrupo: null, dica: null, professor_id,
     padrao_movimento: null, equipamento: null, variacao: null,
   });
-  it("Meus treinos: a página (modelos_da_lista) + as pastas + a contagem com GIF na MESMA ida; os detalhes na 2ª (dependem dos ids) — 2 idas", async () => {
+  // hml-21d (perf — a mitigação da spec §2.6 e do risco 5, decisão da sessão principal 15:06): a contagem com GIF vai SOZINHA, em paralelo —
+  // a página não espera por ela (antes: no MESMO lote da página, que só voltava com o item mais lento)
+  it("Meus treinos: a página (modelos_da_lista) + as pastas na MESMA ida; a contagem com GIF sozinha, em paralelo; os detalhes depois (dependem dos ids) — 3 idas", async () => {
     const valor = { ok: true, total: 2, total_geral: 5, por_pasta: { [PASTA]: 1 }, itens: [{ id: M1, nome: "A", professor_id: EU }] };
     const linhaA = (id: string, ordem: number, exercicio: unknown, ex_id: string) => ({
       id, grupo_id: M1, exercicio_id: ex_id, ordem, num_series: 3, reps_alvo: null, descanso_segundos: null, carga_sugerida_kg: null, exercicio,
@@ -340,9 +342,16 @@ describe("hml-21d — F3b: as leituras do Painel › Treinos pela treinos (o MES
     const [pagina, pastas, resumo] = await Promise.all([
       painel.carregarPaginaDeModelos(EU, { q: " supino ", pasta: PASTA }, 2), painel.carregarPastas(EU), painel.listarExercicios({ escopo: "visiveis" }, 1, 1),
     ]);
-    expect(itensDaTreinos()).toEqual([["modelos", "pastas", "exercicios_lista"], ["modelos_detalhes"]]);
+    const idas = itensDaTreinos();
+    expect(idas).toHaveLength(3);
+    expect(idas.slice(0, 2)).toEqual(expect.arrayContaining([["exercicios_lista"], ["modelos", "pastas"]]));
+    expect(idas[2]).toEqual(["modelos_detalhes"]);
     todosPassam();
-    expect(daTreinos()[0].itens).toContainEqual({ q: "modelos", filtros: { q: "supino", pasta: PASTA }, offset: 20, limite: 20 });
+    const daPagina = daTreinos().find((c) => (c.itens as Array<{ q?: unknown }>).some((i) => i.q === "modelos"));
+    expect(daPagina?.itens).toContainEqual({ q: "modelos", filtros: { q: "supino", pasta: PASTA }, offset: 20, limite: 20 });
+    expect(daTreinos().find((c) => (c.itens as Array<{ q?: unknown }>).some((i) => i.q === "exercicios_lista"))?.itens).toEqual([
+      { q: "exercicios_lista", filtros: { escopo: "visiveis" }, offset: 0, limite: 1 },
+    ]);
     expect(pastas).toEqual([{ id: PASTA, nome: "P", professor_id: EU }]);
     expect(resumo.comGif).toBe(9);
     expect(pagina).toEqual({
