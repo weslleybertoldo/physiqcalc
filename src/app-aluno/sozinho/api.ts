@@ -2,8 +2,13 @@
 // entrar_sem_profissional, meu_plano_app, mudar_objetivo_app, pratos_prontos_do_app; trocar o plano pela pagamentos-aluno, que
 // acompanha a cobrança automática no cartão) e o catálogo dos treinos prontos no Banco do Treino (lido com internet e guardado
 // no aparelho — escolher o treino funciona sem internet depois de aberto 1 vez).
+// hml-21a (H-43 · jeito 2): as 4 do banco principal vão pela função conta, com a sessão da pessoa — as leituras pelo `ler`
+// (meu_plano_app, pratos_prontos_do_app) e as gravações pelas ações (entrar_sem_profissional, mudar_objetivo_app), com os MESMOS
+// argumentos; o { ok, erro } das RPCs chega como hoje e vira o ErroApp com o código. Sem internet → sem_internet sem chamar. Os treinos
+// prontos (Banco do Treino) seguem como estão até a hml-21d.
+import { acaoConta, codigoDaGravacao, resultadoDaAcao } from "@/conta/gravar";
+import { codigoDaLeitura, lerConta } from "@/conta/ler";
 import { acaoFinanceiro, invalidarResumo } from "@/financeiro/api";
-import { principal } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizarMeuPlano, normalizarPratos, ordenarTreino, type MeuPlanoApp, type Objetivo, type RespostaPratos, type TreinoPronto } from "./regras";
 
@@ -17,11 +22,24 @@ function semInternet(): boolean {
   return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
-async function rpc<T>(nome: string, args: Record<string, unknown> = {}): Promise<T> {
+/** Uma leitura pela conta (o valor da RPC de hoje); o erro vira ErroApp com o código. */
+async function lerDoApp(q: "meu_plano_app" | "pratos_prontos_do_app", params?: Record<string, unknown>): Promise<unknown> {
   if (semInternet()) throw new ErroApp("sem_internet");
-  const { data, error } = await principal.rpc(nome as never, args as never);
-  if (error) throw new ErroApp(error.message?.includes("Failed to fetch") ? "sem_internet" : "erro_interno");
-  return data as T;
+  try {
+    return (await lerConta(q, params)).valor ?? null;
+  } catch (e) {
+    throw new ErroApp(codigoDaLeitura(e));
+  }
+}
+
+/** Uma gravação pela conta (o { ok, erro } da RPC de hoje no resultado); a falha da chamada vira ErroApp com o código. */
+async function gravarDoApp(acao: "entrar_sem_profissional" | "mudar_objetivo_app", corpo: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (semInternet()) throw new ErroApp("sem_internet");
+  try {
+    return resultadoDaAcao(await acaoConta<{ resultado?: unknown }>(acao, corpo));
+  } catch (e) {
+    throw new ErroApp(codigoDaGravacao(e));
+  }
 }
 
 /**
@@ -44,21 +62,21 @@ export async function entrarSemProfissional(
   plano: string,
   extra?: ExtraSemProfissional,
 ): Promise<{ paciente_id: string; teste_ate: string | null; ja_era: boolean }> {
-  const args = extra
-    ? { p_objetivo: objetivo, p_plano: plano, p_nascimento: extra.nascimento, p_consentimento: extra.consentimento, p_origem: extra.origem }
-    : { p_objetivo: objetivo, p_plano: plano };
-  const r = await rpc<{ ok?: boolean; erro?: string; paciente_id?: string; teste_ate?: string | null; ja_era?: boolean }>("entrar_sem_profissional", args);
+  const corpo = extra
+    ? { objetivo, plano, nascimento: extra.nascimento, consentimento: extra.consentimento, origem: extra.origem }
+    : { objetivo, plano };
+  const r = (await gravarDoApp("entrar_sem_profissional", corpo)) as { ok?: boolean; erro?: string; paciente_id?: string; teste_ate?: string | null; ja_era?: boolean };
   if (!r?.ok || !r.paciente_id) throw new ErroApp(r?.erro ?? "erro_interno");
   invalidarResumo();
   return { paciente_id: r.paciente_id, teste_ate: r.teste_ate ?? null, ja_era: r.ja_era === true };
 }
 
 export async function buscarMeuPlano(): Promise<MeuPlanoApp> {
-  return normalizarMeuPlano(await rpc("meu_plano_app"));
+  return normalizarMeuPlano(await lerDoApp("meu_plano_app"));
 }
 
 export async function mudarObjetivo(objetivo: Objetivo): Promise<void> {
-  const r = await rpc<{ ok?: boolean; erro?: string }>("mudar_objetivo_app", { p_objetivo: objetivo });
+  const r = (await gravarDoApp("mudar_objetivo_app", { objetivo })) as { ok?: boolean; erro?: string };
   if (!r?.ok) throw new ErroApp(r?.erro ?? "erro_interno");
 }
 
@@ -73,7 +91,7 @@ export async function trocarPlano(pacienteId: string, plano: string): Promise<{ 
 }
 
 export async function buscarPratos(objetivo: Objetivo | null): Promise<RespostaPratos> {
-  const r = normalizarPratos(await rpc("pratos_prontos_do_app", objetivo ? { p_objetivo: objetivo } : {}));
+  const r = normalizarPratos(await lerDoApp("pratos_prontos_do_app", objetivo ? { objetivo } : {}));
   if (!r.ok) throw new ErroApp(r.erro ?? "erro_interno");
   return r;
 }

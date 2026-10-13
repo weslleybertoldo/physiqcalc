@@ -1,8 +1,6 @@
 {
   "sobre": "hml-14 (D8): dívida aceita do scripts/ci/checar-funcoes.mjs (só diminui). Gerar: node scripts/ci/checar-funcoes.mjs --gerar-base",
   "itens": [
-    {"arquivo":"src/nucleo/senha.ts","regra":"R2","trecho":"await principal.rpc(\"minha_senha_definida\" as never);","motivo":"melhor esforço: a senha já gravou; sem a marca, o aviso de senha provisória volta no próximo login"},
-    {"arquivo":"src/nucleo/sessao.tsx","regra":"R2","trecho":"await principal.rpc(\"marcar_aviso_mudanca\" as never, { p_versao: versao } as never);","motivo":"melhor esforço: o aviso já fica visto neste aparelho e a próxima abertura com internet grava de novo"},
     {"arquivo":"supabase-principal/functions/alunos/index.ts","regra":"R1","trecho":"const { data: regras } = await db.rpc(\"login_regras\");","motivo":"falha fechada: sem as regras do login, o captcha fica ligado"},
     {"arquivo":"supabase-principal/functions/cobranca-conta/index.ts","regra":"R1","trecho":"const { data: c } = await db.from(\"contas\").select(\"situacao, vence_em, teste_ate\").eq(\"id\", conta.id).maybeSingle();","motivo":"falha fechada: o pix_status devolve conta: null e a tela (PixAberto) só usa a fatura"},
     {"arquivo":"supabase-principal/functions/cobranca-conta/index.ts","regra":"R1","trecho":"const { data: ja } = await db.from(\"conta_faturas\").select(\"id, status\").eq(\"mp_payment_id\", pid).maybeSingle();","motivo":"falha fechada: só confere de novo no MP; o registrar relê pelo mp_payment_id e aplica 1 vez"},

@@ -2,13 +2,12 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, KeyRound, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { principal } from "@/integrations/principal/client";
-import type { Json } from "@/integrations/principal/types";
+import { acaoConta } from "@/conta/gravar";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
 import { useSessao } from "@/nucleo/sessao";
 import { salvarMinhaSenha } from "@/nucleo/senha";
-import { enviarFotoPerfil, validarFoto } from "@/painel/configuracoes/perfil/foto";
-import { comFoto, formasDeEntrar, validarNovaSenha } from "@/painel/configuracoes/perfil/regras";
+import { subirFotoPerfil, validarFoto } from "@/painel/configuracoes/perfil/foto";
+import { formasDeEntrar, validarNovaSenha } from "@/painel/configuracoes/perfil/regras";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
@@ -18,12 +17,6 @@ import { meuPerfilAluno } from "./pecas/api";
 import { CLASSE_PAGINA_APP, TopoItem } from "./pecas/TopoItem";
 
 const NOME_MAX = 80;
-
-async function dadosDoPerfil(uid: string): Promise<unknown> {
-  const { data, error } = await principal.from("profiles").select("dados_profissionais").eq("id", uid).maybeSingle();
-  if (error) throw error;
-  return (data as { dados_profissionais?: unknown } | null)?.dados_profissionais ?? null;
-}
 
 function Secao({ titulo, children, marca, descricao }: { titulo: string; children: React.ReactNode; marca: string; descricao?: string }) {
   return (
@@ -41,6 +34,9 @@ function Secao({ titulo, children, marca, descricao }: { titulo: string; childre
  * Perfil › Conta (a engrenagem da tela 5): foto, nome, e-mail, como a pessoa entra e a senha — trocar para quem entra com senha
  * (P22) ou criar uma para quem entra com o Google (o aviso da P25 promete: "Pode criar uma senha no Perfil"). "Esqueci a senha"
  * continua com o profissional. Tudo no banco principal (profiles da própria pessoa; a foto no bucket fotos-perfil, pasta dela).
+ * hml-21a (H-43 · jeito 2): o nome e a foto gravam pela função conta, com a sessão da pessoa — perfil_nome; a foto sobe pelo link que o
+ * servidor assina e perfil_foto_salvar grava a URL (e tira do bucket a foto de antes); "Tirar" = perfil_foto_tirar. O servidor lê o
+ * dados_profissionais e grava só a foto (o resto do JSON fica, como o comFoto de antes). A senha (o login) segue no navegador.
  */
 export default function Conta() {
   const { usuario, recarregarSituacao } = useSessao();
@@ -69,8 +65,7 @@ export default function Conta() {
     if (n.length > NOME_MAX) return setErroNome(`O nome pode ter até ${NOME_MAX} caracteres.`);
     setSalvandoNome(true);
     try {
-      const { error } = await principal.from("profiles").update({ nome: n }).eq("id", uid);
-      if (error) throw error;
+      await acaoConta("perfil_nome", { nome: n });
       await recarregar();
       toast.success("Nome salvo.");
     } catch {
@@ -80,10 +75,10 @@ export default function Conta() {
     }
   };
 
-  const gravarFoto = async (url: string | null) => {
-    const atual = await dadosDoPerfil(uid);
-    const { error } = await principal.from("profiles").update({ dados_profissionais: comFoto(atual, url) as Json }).eq("id", uid);
-    if (error) throw error;
+  /** a foto nova (o caminho que subiu pelo link assinado) ou null = tirar */
+  const gravarFoto = async (caminho: string | null) => {
+    if (caminho) await acaoConta("perfil_foto_salvar", { caminho });
+    else await acaoConta("perfil_foto_tirar");
     await recarregar();
   };
 
@@ -95,7 +90,7 @@ export default function Conta() {
     if (problema) return void toast.error(problema);
     setEnviandoFoto(true);
     try {
-      await gravarFoto(await enviarFotoPerfil(uid, arquivo));
+      await gravarFoto((await subirFotoPerfil(arquivo)).caminho);
       toast.success("Foto trocada.");
     } catch {
       toast.error("Não foi possível enviar a foto.");

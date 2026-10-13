@@ -28,10 +28,11 @@ const FUNCOES = [
   "financeiro", // hml-19d: o jeito 2 do Financeiro, pela mesma porta-pessoa
   "mp-conectar-retorno", // W2 Task 8: a volta do OAuth do Mercado Pago
   "mp-contas-renovar", // W2 Task 11: a renovação do MP do personal + a conferência diária (pg_cron → pg_net, S10)
+  "conta", // hml-21a: o jeito 2 do resto do principal (a casca e o app do aluno), pela porta-pessoa (com o JWKS só no `ler`)
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
-/** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro). */
-const PESSOA = ["nutricao", "financeiro"];
+/** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro; hml-21a: + a conta). */
+const PESSOA = ["nutricao", "financeiro", "conta"];
 /** Onde mora o catch final: na index.ts, menos nas 3 master-* (servir, da master-porta) e na erro-avisar (atenderPedido). */
 const CATCH_FINAL: Record<string, string> = {
   ...Object.fromEntries(MASTER.map((f) => [f, "_shared/master-porta.ts"])),
@@ -147,6 +148,9 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     expect(todos).toContain("nutricao/prontuario.ts");
     // hml-19d: as regras da financeiro também
     expect(todos).toContain("_shared/financeiro-gravar-regras.ts");
+    // hml-21a: a conta — o motor comum, a conferência local do JWT e o catálogo/as regras dela passam pelas mesmas guardas
+    for (const s of ["leitura-servidor", "jwks-principal", "conta-leituras", "conta-regras"]) expect(todos).toContain(`_shared/${s}.ts`);
+    for (const m of ["casca", "app", "comum"]) expect(todos).toContain(`conta/${m}.ts`);
     expect(todos).not.toContain(LOG);
   });
 

@@ -269,3 +269,38 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
   no `public`, `--so public` e DEPOIS `--compartilhado`; no staging só `--so staging`); reversas em `supabase-principal/reversas/` (wa3 → wa2 →
   wa1; tabela com linha vira `<nome>_reversa_waN`). Prova: `python3 e2e/wa/sql_wa.py` (staging, blocos desfeitos) e
   `python3 e2e/wa/sql_wa.py --so-catalogo --schema staging|public` (só leitura).
+
+## Principal: a casca e o app do aluno pela função `conta` (hml-21a, H-43 parte 1 + H-112/H-109 parte 1 · jeito 2, etapa 3)
+- **A função NOVA `conta`** (principal, `verify_jwt` true; a porta `servirComoPessoa("conta", { freio: 240, jwtLeitura: "jwks" })`) roda
+  tudo **como a pessoa** (a chave anon + o token de quem chama; nenhuma chave secreta): o dono vem do `user` do token, nunca do corpo;
+  o erro do banco vira o código (`sem_acesso`, `nao_encontrado`, `dados_invalidos`, `conflito`, `tempo_esgotado`, `erro_interno`), nunca a
+  mensagem crua; o log tem só campos fixos (ação, n, ms, códigos).
+- **Leituras (`acao: "ler"`, em lote):** o motor COMUM `_shared/leitura-servidor.ts` (H-112: o catálogo é parâmetro; a `nutricao` e a
+  `financeiro` migram para ele na 21c — até lá, 3 cópias) com o catálogo `_shared/conta-leituras.ts`, 9 consultas, as mesmas linhas que as
+  libs liam no navegador: o sino (`avisos`, os 30 mais novos — o RLS de hoje: a única policy de leitura é `destino_user_id = auth.uid()`),
+  o aviso de membro removido (o mais novo não lido, tipo `membro_removido`), a situação (`minha_situacao`), o perfil e a agenda do aluno
+  (`meu_perfil_aluno`, `minha_agenda`, `minha_agenda_lista`), o Meu plano e os pratos do aluno sem profissional (`meu_plano_app`,
+  `pratos_prontos_do_app`) — as RPCs de leitura de hoje, definer com o `auth.uid()` dentro, o EXECUTE do `authenticated` de hoje — e a foto
+  do perfil (o `profiles` de quem chama, `id = user`, só a chave `foto_url` do `dados_profissionais`). Colunas em lista fechada (nenhum `*`).
+  No `ler`, o token é conferido localmente pelo JWKS do principal (H-109: `_shared/jwks-principal.ts` — o emissor `<SUPABASE_URL>/auth/v1`,
+  a audiência `authenticated` e o prazo; falhou por rede/chave → o `getUser` de reserva; inválido ou vencido → 401); as ações seguem com o
+  `getUser`. Sem a opção (`nutricao`, `financeiro`, as outras), a porta é a de antes.
+- **Gravações (14 ações, o MESMO efeito de hoje):** a casca — `avisos_marcar_lidos` (o `lido_em` só das linhas com os ids pedidos E
+  `destino_user_id` = quem chama, até 30; a ação não repete), `aviso_membro_ok` (o `lido_em` daquela linha, se é da pessoa), e as RPCs de
+  hoje pelo EXECUTE do `authenticated`: `marcar_aviso_mudanca`, `minha_senha_definida` (o `auth.updateUser` da senha fica no navegador: é o
+  login), `push_registrar`/`push_esquecer`, `aceitar_no_acesso`, `criar_minha_conta`, `entrar_sem_profissional`; o app — o `profiles.nome`
+  de quem chama, `mudar_objetivo_app` e a foto do perfil (abaixo). Corpo de cada ação em lista fechada (chave fora da lista cai).
+- **Storage (`fotos-perfil`/`fotos-perfil-staging`, 5 MB, jpeg/png/webp — as policies da pasta própria da migration
+  `20260929120000_w05_equipe`):** `perfil_foto_preparar` decide o caminho NO SERVIDOR (`<user>/foto-<ms>.<ext>`) e assina o link de upload
+  como a pessoa (`createSignedUploadUrl`); o navegador sobe o arquivo nesse link (o PUT do `uploadToSignedUrl` — é gravação e fica);
+  `perfil_foto_salvar` só aceita EXATAMENTE esse formato na pasta de quem chama (fora → `dados_invalidos`), confere que o arquivo está lá,
+  grava a URL pública como hoje (o domínio próprio — o `getPublicUrl` virou a função pura `urlPublicaDaFoto`) e apaga a foto anterior se ela
+  é um arquivo da pasta da pessoa nesse bucket (achado 2); `perfil_foto_tirar` limpa a URL e apaga o arquivo pela mesma regra.
+- **Ficam no navegador:** o login e a sessão (`auth.*`), a Agenda do aluno (as regras, os horários e as gravações dela — 21b), os treinos
+  prontos (Treino — 21d), a parte do Treino do Início/Evolução (desvio 23) e o PowerSync (desvio 3). A guarda nova
+  `src/integrations/semBancoNoNavegador.test.ts` conta o que ainda vai direto (a `BASE`, que só diminui) e o que fica de vez (`FICA`, 4
+  arquivos).
+- O fetch repete o `ler` da `conta` 1 vez (`ACOES_DE_LEITURA`); as ações não repetem; as 14 RPCs que a `conta` chama saíram das listas de
+  RPC do front (`src/integrations/repeticao.ts`).
+- Nenhuma migration: os grants e as policies **ficam** (decisão 12 da spec hml-21: a função usa a sessão da pessoa, que precisa deles; os
+  APKs antigos e o AAB ainda chamam direto — desvio 2). Fechar o `rest` é a etapa 4 do jeito 2.

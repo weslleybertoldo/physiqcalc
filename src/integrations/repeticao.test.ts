@@ -17,7 +17,7 @@ describe("podeRepetir", () => {
     ["HEAD", `${P}/rest/v1/pacientes?select=id`, true],
     ["GET", `${P}/auth/v1/user`, true],
     ["GET", `${P}/storage/v1/object/public/avatars/a.png`, true],
-    ["POST", `${P}/rest/v1/rpc/minha_situacao`, true],
+    ["POST", `${P}/rest/v1/rpc/minha_dieta`, true],
     ["POST", `${P}/rest/v1/rpc/alunos_da_conta`, true],
     ["post", `${T}/rest/v1/rpc/aluno_treino`, true],
     ["POST", `${P}/rest/v1/rpc/diario_enviar`, false],
@@ -50,11 +50,13 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 45 de leitura repetem; as 37 que gravam não; os 2 conjuntos não se cruzam", () => {
-    expect(RPC_SO_LEITURA.size).toBe(45);
+  it("as 39 de leitura repetem; as 29 que gravam não; os 2 conjuntos não se cruzam", () => {
+    // hml-21a: as 6 de leitura que a função conta chama saíram — eram 45
+    expect(RPC_SO_LEITURA.size).toBe(39);
     // hml-19b: a paciente_marcar_refeicao e a aluno_marcar_meta saíram do front (o app marca pela função nutricao) — eram 40
     // hml-19c: a aluno_avisar_avaliacao saiu do front (o aviso vai pela função nutricao) — eram 38
-    expect(RPC_QUE_GRAVAM.size).toBe(37);
+    // hml-21a: as 8 que gravam e a função conta chama saíram — eram 37
+    expect(RPC_QUE_GRAVAM.size).toBe(29);
     expect(RPC_QUE_GRAVAM.has("aluno_avisar_avaliacao")).toBe(false);
     for (const nome of RPC_SO_LEITURA) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     for (const nome of RPC_QUE_GRAVAM) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
@@ -65,7 +67,21 @@ describe("podeRepetir", () => {
     expect(podeRepetir(`${P}/rest/v1/rpc/aluno_responsavel`, { method: "POST" })).toBe(true);
     expect(podeRepetir(`${P}/rest/v1/rpc/aceitar_no_acesso`, { method: "POST" })).toBe(false);
     expect(podeRepetir(`${P}/rest/v1/rpc/aluno_responsavel_registrar`, { method: "POST" })).toBe(false);
-    expect(RPC_QUE_GRAVAM.has("aceitar_no_acesso") && RPC_QUE_GRAVAM.has("aluno_responsavel_registrar")).toBe(true);
+    // hml-21a: o aceite saiu do front (vai pela função conta, ação aceitar_textos); o registro do responsável segue
+    expect(RPC_QUE_GRAVAM.has("aceitar_no_acesso")).toBe(false);
+    expect(RPC_QUE_GRAVAM.has("aluno_responsavel_registrar")).toBe(true);
+  });
+
+  it("hml-21a: as 14 RPCs da casca e do app do aluno saíram das 2 listas (a função conta as chama); a que não está numa lista nunca repete", () => {
+    const leituras = ["meu_perfil_aluno", "meu_plano_app", "minha_agenda", "minha_agenda_lista", "minha_situacao", "pratos_prontos_do_app"];
+    const gravacoes = [
+      "aceitar_no_acesso", "criar_minha_conta", "entrar_sem_profissional", "marcar_aviso_mudanca", "minha_senha_definida", "mudar_objetivo_app",
+      "push_esquecer", "push_registrar",
+    ];
+    for (const nome of [...leituras, ...gravacoes]) {
+      expect(RPC_SO_LEITURA.has(nome) || RPC_QUE_GRAVAM.has(nome), nome).toBe(false);
+      expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
+    }
   });
 
   it("hml-14b: as 5 RPCs das listas por página (STABLE) repetem — as do financeiro vão pelo rpcFinanceiro, que a guarda não lê", () => {
@@ -78,7 +94,8 @@ describe("podeRepetir", () => {
     for (const nome of ["modelos_da_lista", "exercicios_da_lista"]) {
       expect(podeRepetir(`${T}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     }
-    for (const nome of ["preconsulta_numeros", "minha_agenda_lista", "exames_do_aluno", "financeiro_totais_do_aluno"]) {
+    // hml-21a: a minha_agenda_lista saiu (vai pela função conta)
+    for (const nome of ["preconsulta_numeros", "exames_do_aluno", "financeiro_totais_do_aluno"]) {
       expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     }
   });
@@ -113,9 +130,9 @@ describe("criarFetchResiliente com fetch falso", () => {
     return { ...(await resultado), chamadas: base.mock.calls.length };
   }
 
-  it("503 → 200: GET e rpc/minha_situacao repetem (2 chamadas)", async () => {
+  it("503 → 200: GET e rpc/minha_dieta repetem (2 chamadas)", async () => {
     expect(await chamar([503, 200], `${P}/rest/v1/contas?select=*`)).toMatchObject({ status: 200, chamadas: 2 });
-    expect(await chamar([503, 200], `${P}/rest/v1/rpc/minha_situacao`, { method: "POST" })).toMatchObject({ status: 200, chamadas: 2 });
+    expect(await chamar([503, 200], `${P}/rest/v1/rpc/minha_dieta`, { method: "POST" })).toMatchObject({ status: 200, chamadas: 2 });
   });
 
   it("503 → 200: functions/v1/cobranca-conta e rpc/diario_enviar vão 1 vez (o 503 volta para quem chamou)", async () => {
@@ -190,7 +207,7 @@ describe("hml-14 (H-32, D5): quanto o front espera — função 25 s; tabela e R
     expect(tabela.largouEm).toEqual([15_000, 30_000, 45_000]);
 
     const leitura = pendurado();
-    void criarFetchResiliente(2, 15000, leitura.base)(`${P}/rest/v1/rpc/minha_situacao`, { method: "POST" }).catch(() => null);
+    void criarFetchResiliente(2, 15000, leitura.base)(`${P}/rest/v1/rpc/minha_dieta`, { method: "POST" }).catch(() => null);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(leitura.largouEm).toEqual([15_000, 30_000, 45_000]);
 
@@ -379,8 +396,11 @@ describe("guarda: toda rpc(\"…\") do front está decidida", () => {
   }
 
   it("acha as chamadas (o padrão de busca ainda pega o código)", () => {
-    expect(chamadas.size).toBeGreaterThanOrEqual(60);
-    expect(chamadas.has("minha_situacao") && chamadas.has("diario_enviar")).toBe(true);
+    // hml-21a: as 14 da casca e do app do aluno saíram do front (eram 63 achadas)
+    expect(chamadas.size).toBeGreaterThanOrEqual(45);
+    // hml-21a: a minha_situacao saiu do front (vai pela função conta) — o controle passa a ser a alunos_da_conta
+    expect(chamadas.has("alunos_da_conta") && chamadas.has("diario_enviar")).toBe(true);
+    expect(chamadas.has("minha_situacao")).toBe(false);
   });
 
   it("cada RPC está em RPC_SO_LEITURA ou em RPC_QUE_GRAVAM (RPC nova obriga a decidir)", () => {
@@ -392,11 +412,12 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
   const corpo = (o: unknown) => JSON.stringify(o);
   const post = (body: unknown): RequestInit => ({ method: "POST", body: body as BodyInit });
 
-  it("ACOES_DE_LEITURA: a `ler` da nutricao e da financeiro (campo acao) e a minha_evolucao da admin-avaliacoes (campo action)", () => {
+  it("ACOES_DE_LEITURA: a `ler` da nutricao, da financeiro e da conta (campo acao) e a minha_evolucao da admin-avaliacoes (campo action)", () => {
     expect(ACOES_DE_LEITURA).toEqual({
       nutricao: { campo: "acao", acoes: ["ler"] },
       financeiro: { campo: "acao", acoes: ["ler"] },
       "admin-avaliacoes": { campo: "action", acoes: ["minha_evolucao"] },
+      conta: { campo: "acao", acoes: ["ler"] },
     });
   });
 
@@ -406,6 +427,11 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
     [`${P}/functions/v1/financeiro`, corpo({ acao: "ler", itens: [] }), true],
     [`${T}/functions/v1/admin-avaliacoes`, corpo({ action: "minha_evolucao" }), true],
     [`${P}/functions/v1/nutricao?x=1`, corpo({ acao: "ler" }), true], // a query não muda a função
+    // hml-21a: o `ler` da conta repete; as ações dela (o sino, a foto, o push…) e o `ler` disfarçado não
+    [`${P}/functions/v1/conta`, corpo({ acao: "ler", itens: [{ q: "avisos" }] }), true],
+    [`${P}/functions/v1/conta`, corpo({ acao: "avisos_marcar_lidos", ids: [] }), false],
+    [`${P}/functions/v1/conta`, corpo({ acao: "perfil_foto_salvar" }), false],
+    [`${P}/functions/v1/conta`, corpo({ action: "ler", acao: "perfil_nome" }), false],
     // as gravações das mesmas funções vão 1 vez
     [`${P}/functions/v1/nutricao`, corpo({ acao: "anamnese_criar" }), false],
     [`${P}/functions/v1/nutricao`, corpo({ acao: "aluno_marcar_refeicao" }), false],

@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ avisos: [] as unknown[], lidos: [] as unknown[] }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u2" } }) }));
-vi.mock("@/integrations/principal/client", () => {
+// hml-21a: a leitura e o "Entendi" vão pela função conta; src/test/contaFalsa.ts roda os módulos de verdade sobre o MESMO banco falso
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
   const cadeia = () => {
     const c: Record<string, unknown> = {};
     for (const m of ["select", "eq", "is", "order"]) c[m] = () => c;
@@ -12,7 +14,8 @@ vi.mock("@/integrations/principal/client", () => {
     c.update = (v: unknown) => ({ eq: (_k: string, id: string) => { h.lidos.push({ ...(v as object), id }); return Promise.resolve({ error: null }); } });
     return c;
   };
-  return { principal: { from: () => cadeia() } };
+  const banco = { from: () => cadeia() };
+  return { principal: { ...banco, functions: { invoke: invocarComConta(banco, { userId: "u2" }) } } };
 });
 
 import AvisoMembroRemovido from "./AvisoMembroRemovido";

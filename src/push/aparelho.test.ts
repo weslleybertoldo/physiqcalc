@@ -29,7 +29,13 @@ vi.mock("@capacitor/core", () => ({
   }),
 }));
 vi.mock("@capacitor/push-notifications", () => ({ PushNotifications: h.push }));
-vi.mock("@/integrations/principal/client", () => ({ principal: { rpc: (...a: unknown[]) => h.rpc(...a) } }));
+// hml-21a: o push_registrar/push_esquecer vão pela função conta (src/test/contaFalsa.ts roda o módulo de verdade), que chama as MESMAS
+// RPCs (h.rpc) com os mesmos argumentos
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const banco = { rpc: (...a: unknown[]) => h.rpc(...a) };
+  return { principal: { ...banco, functions: { invoke: invocarComConta(banco) } } };
+});
 
 import { _zerarParaTestes, esquecerAparelhoPush, ouvir, permissaoAtual, pushDisponivel, registrar, salvarToken } from "./aparelho";
 import { guardarToken, tokenGuardado } from "./regras";

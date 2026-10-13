@@ -12,6 +12,10 @@
 // hml-20a (H-42 · decisão 18): as LEITURAS de saúde passam por funções (POST). Para não perder a nova tentativa que o GET tinha, o POST de
 // função repete quando o CORPO é de leitura, numa lista fechada (ACOES_DE_LEITURA: a `ler` da nutricao e da financeiro, a minha_evolucao
 // da admin-avaliacoes) — o campo é o que a função lê. Qualquer outra ação dessas funções (as gravações) segue indo 1 vez.
+// hml-21a (H-43 · jeito 2, etapa 3): + o `ler` da função conta em ACOES_DE_LEITURA (repete 1 vez, como o GET de hoje; as ações dela não);
+// as 14 RPCs que saíram do navegador (a casca e o app do aluno: 6 de leitura e 8 que gravam) saíram das 2 listas — o front não as chama
+// mais (a conta chama no servidor). O E2E que mede o front ANTIGO (o "antes" do staging) soma as 6 de leitura à lista da Guarda dele
+// (e2e/hml21/_base.py), no molde do RPCS_DO_APP da hml-19b.
 import type { BancoErro } from "../../supabase-principal/functions/_shared/erros";
 import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 
@@ -30,55 +34,59 @@ export const TEMPO_FUNCAO_MS = 25_000;
 export const TENTATIVAS_LEITURA = 1;
 
 /**
- * As 45 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
+ * As 39 RPCs STABLE/IMMUTABLE que o front chama (pg_proc, public = staging, lido em 08/10/2026; + a aluno_responsavel da hml-12,
  * STABLE pela migração 20261008200000; + as 5 das listas da hml-14b, STABLE pelas migrações 20261009010000 e 20261009040000; + as
  * 6 da hml-14d, STABLE pelas migrações 20261009050000 (Treino), 20261009070000 e 20261009080000; + as 3 do plano alimentar da
- * hml-17, STABLE pela migração 20261010100000): podem repetir.
+ * hml-17, STABLE pela migração 20261010100000): podem repetir. hml-21a: saíram as 6 que a função conta chama (meu_perfil_aluno,
+ * meu_plano_app, minha_agenda, minha_agenda_lista, minha_situacao, pratos_prontos_do_app) — eram 45.
  */
 export const RPC_SO_LEITURA = new Set<string>([
   "agenda_horarios", "aluno_agenda_horarios", "aluno_anotacoes", "aluno_compromissos", "aluno_convites", "aluno_evolucao",
   "aluno_perfil", "aluno_responsavel", "aluno_treino", "alunos_da_conta", "alunos_novos_por_mes", "alunos_pendentes",
   "equipe_da_conta", "financeiro_do_aluno", "grupos_alimentos", "lixeira_da_conta", "master_alunos_do_app", "mensagens_desligadas",
-  "meu_perfil_aluno", "meu_plano_app", "minha_agenda", "minha_dieta", "minha_evolucao", "minha_situacao",
-  "minhas_regras_agenda", "paciente_dado_livre", "painel_resumo", "pratos_prontos_do_app", "w2l_prontuarios_para_baixar",
+  "minha_dieta", "minha_evolucao",
+  "minhas_regras_agenda", "paciente_dado_livre", "painel_resumo", "w2l_prontuarios_para_baixar",
   "whatsapp_fila", "whatsapp_resumo",
   // hml-14b (B21): as listas do painel por página, com o total e as somas do banco
   "financeiro_lancamentos", "financeiro_recibos", "financeiro_resumo_periodo", "receitas_da_nutricionista", "respostas_da_conta",
   // hml-14d (B21): as listas do Treino (banco do Treino), os números da Pré-consulta e as listas/somas por aluno
-  "exames_do_aluno", "exercicios_da_lista", "financeiro_totais_do_aluno", "minha_agenda_lista", "modelos_da_lista",
+  "exames_do_aluno", "exercicios_da_lista", "financeiro_totais_do_aluno", "modelos_da_lista",
   "preconsulta_numeros",
   // hml-17 (H-38): o plano alimentar do aluno montado no banco (o painel lê por elas)
   "plano_alimentar", "planos_do_aluno", "planos_favoritos",
 ]);
 
 /**
- * As 37 VOLATILE que o front chama (+ as 2 da hml-12 que gravam o aceite e o consentimento do responsável): nunca repetem. hml-19b: a
+ * As 29 VOLATILE que o front chama (+ as 2 da hml-12 que gravam o aceite e o consentimento do responsável): nunca repetem. hml-19b: a
  * paciente_marcar_refeicao e a aluno_marcar_meta saíram do front (o app do aluno marca pela função nutricao, que chama as 2 lá); a
  * diario_enviar fica (o link público /d/:codigo segue chamando direto — decisão 13). hml-19c: a aluno_avisar_avaliacao saiu do front
- * (o aviso "avaliação nova" vai pela função nutricao, ação avaliacao_avisar, que chama a RPC lá).
+ * (o aviso "avaliação nova" vai pela função nutricao, ação avaliacao_avisar, que chama a RPC lá). hml-21a: saíram as 8 que a função conta
+ * chama (aceitar_no_acesso, criar_minha_conta, entrar_sem_profissional, marcar_aviso_mudanca, minha_senha_definida, mudar_objetivo_app,
+ * push_esquecer, push_registrar) — eram 37.
  */
 export const RPC_QUE_GRAVAM = new Set<string>([
-  // sem escrita direta no corpo, mas mexem no limite_publico / garantir_* / matricular_no_app (6)
-  "agenda_garantir_tags", "aluno_acesso", "diario_link", "diario_listar", "entrar_sem_profissional", "preconsulta_formulario",
-  // gravam (31)
-  "aceitar_no_acesso", "alterar_papeis_membro", "aluno_agenda_confirmar", "aluno_agenda_desistir", "aluno_agenda_marcar",
+  // sem escrita direta no corpo, mas mexem no limite_publico / garantir_* (5)
+  "agenda_garantir_tags", "aluno_acesso", "diario_link", "diario_listar", "preconsulta_formulario",
+  // gravam (24)
+  "alterar_papeis_membro", "aluno_agenda_confirmar", "aluno_agenda_desistir", "aluno_agenda_marcar",
   "aluno_agenda_reagendar", "aluno_avisar_plano", "aluno_definir_pacote",
-  "aluno_novo_link", "aluno_responsavel_registrar", "aluno_salvar_ajustes", "aluno_salvar_dados", "criar_minha_conta",
-  "diario_enviar", "garantir_meu_codigo", "lixeira_apagar", "lixeira_restaurar", "marcar_aviso_mudanca", "mensagens_aviso_fechar",
-  "mensagens_ligar_para_todos", "minha_senha_definida", "mudar_objetivo_app", "paciente_criar_acesso",
-  "paciente_redefinir_senha", "preconsulta_responder", "push_esquecer", "push_registrar", "remover_membro",
+  "aluno_novo_link", "aluno_responsavel_registrar", "aluno_salvar_ajustes", "aluno_salvar_dados",
+  "diario_enviar", "garantir_meu_codigo", "lixeira_apagar", "lixeira_restaurar", "mensagens_aviso_fechar",
+  "mensagens_ligar_para_todos", "paciente_criar_acesso",
+  "paciente_redefinir_senha", "preconsulta_responder", "remover_membro",
   "whatsapp_limpar_falhas", "whatsapp_reenviar", "whatsapp_salvar_config",
 ]);
 
 /**
  * hml-20a (decisão 18): as ações de LEITURA das funções do jeito 2 — o POST com um destes corpos repete 1 vez, como o GET de hoje.
  * `campo` = o campo do corpo que a FUNÇÃO lê (a nutricao e a financeiro leem `acao`; a admin-avaliacoes, `action`): um corpo com
- * { action: "ler", acao: "<gravação>" } não engana (a nutricao faria a gravação → não repete).
+ * { action: "ler", acao: "<gravação>" } não engana (a nutricao faria a gravação → não repete). hml-21a: + o `ler` da conta.
  */
 export const ACOES_DE_LEITURA: Readonly<Record<string, { campo: "acao" | "action"; acoes: readonly string[] }>> = {
   nutricao: { campo: "acao", acoes: ["ler"] },
   financeiro: { campo: "acao", acoes: ["ler"] },
   "admin-avaliacoes": { campo: "action", acoes: ["minha_evolucao"] },
+  conta: { campo: "acao", acoes: ["ler"] },
 };
 
 /** O corpo (o texto JSON que o supabase-js manda) é de uma ação de LEITURA da função? Corpo ilegível, sem a ação ou outra → não. */

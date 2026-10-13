@@ -220,7 +220,8 @@ def rpcs_de_leitura() -> set[str]:
     return set(re.findall(r'"([a-z0-9_]+)"', bloco))
 
 
-LEITURAS_PAGAMENTOS = {"prof_resumo", "prof_aluno", "prof_aluno_cobrancas", "aluno_status", "aluno_historico"}
+# hml-21a (H-113, "pode ir" da LINUX 3): + o prof_planos (a aba Planos da W-P lê pela pagamentos-aluno › prof_planos; antes, gravação)
+LEITURAS_PAGAMENTOS = {"prof_resumo", "prof_aluno", "prof_aluno_cobrancas", "aluno_status", "aluno_historico", "prof_planos"}
 LEITURAS_SEMANA = {"get", "volume", "volumePraticado", "getSeriesPadrao", "exerciciosTreino", "semanaAtual", "resolverAluno", "quemRecebe",
                    "quemRecebeLista", "modelos"}
 # hml-19a (risco 2 da spec hml-19 §8): função que a Guarda NÃO conhece é gravação (barrada na produção) — uma função nova do jeito 2
@@ -245,14 +246,16 @@ FUNCOES_CONHECIDAS = {
 # hml-19d (decisão I): a financeiro (jeito 2 do Financeiro: as gravações pelo servidor) grava em TODA ação, como a nutricao.
 # W2 (LINUX 3, 11/10): a mp-contas-renovar (a renovação do MP do personal, chamada só pelo pg_cron com o S10) e a mp-conectar-retorno
 # (a volta do OAuth do MP: o GET que grava a conexão) gravam — se um dia saírem do navegador, é gravação.
+# hml-21a (decisão F): a conta (jeito 2 do resto do principal: a casca e o app do aluno) grava em TODA ação, como a nutricao e a financeiro.
 FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno", "financeiro", "mp-conectar-retorno",
-                             "mp-contas-renovar"}
+                             "mp-contas-renovar", "conta"}
 # hml-20a (decisão I da hml-20a, H-42): as LEITURAS do jeito 2 passam pelo CORPO — { "acao": "ler" } na nutricao e na financeiro e
 # { "action": "minha_evolucao" } na admin-avaliacoes. O campo é o que a FUNÇÃO lê (um { "action": "ler", "acao": "<gravação>" } na
 # nutricao grava → barrado); corpo ilegível, sem a ação ou com outra ação = gravação, como antes. Sem o corpo (quem só tem a ação), a
 # regra de antes. Teste: python3 e2e/hml19/guarda_teste.py.
+# hml-21a (decisão F): + o { "acao": "ler" } da conta (o campo que ela lê é o `acao`).
 LEITURAS_PELO_CORPO = {"nutricao": ("acao", frozenset({"ler"})), "financeiro": ("acao", frozenset({"ler"})),
-                       "admin-avaliacoes": ("action", frozenset({"minha_evolucao"}))}
+                       "admin-avaliacoes": ("action", frozenset({"minha_evolucao"})), "conta": ("acao", frozenset({"ler"}))}
 
 
 def corpo_de_leitura(nome: str, corpo: str | None) -> bool:

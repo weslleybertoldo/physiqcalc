@@ -8,8 +8,13 @@
 // responde só o código (erro_interno). Nenhuma chave secreta aqui: o dono do que a função grava vem do user do token.
 // A chave anon legada (SUPABASE_ANON_KEY) é lida só aqui (spec hml-19 §8, risco 6: quando as legadas saírem, troca num lugar só).
 // O app (APK: https://localhost e capacitor://localhost) entra como o site — o CORS já aceita as 2 origens.
+// hml-21a (H-109): a opção jwtLeitura: "jwks" — SÓ no `acao: "ler"` o token é conferido aqui (_shared/jwks-principal.ts: a assinatura
+// pelo JWKS do principal, o emissor, a audiência e o prazo), sem a ida ao Auth; inválido/vencido → 401 sem_login, como o getUser; a rede
+// ou a chave falharam → o getUser de sempre (a reserva, com o aviso jwks_reserva no log). As gravações seguem no getUser (a revogação
+// vale na hora). SEM a opção (a nutricao, a financeiro e as da W-A), o caminho é o de antes: o getUser em todo pedido.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "./avisar-erro.ts";
+import { conferirJwtLocal } from "./jwks-principal.ts";
 import { criarLog, type Log } from "./log.ts";
 import { origemPermitida } from "./login-regras.ts";
 import { schemaDoPedido, type Schema } from "./master-regras.ts";
@@ -37,7 +42,8 @@ export interface ContextoPessoa {
   schema: Schema;
   origin: string | null;
   corpo: Record<string, unknown>;
-  /** o id de quem chama (o user do token, conferido no Auth) — o dono de tudo o que a função grava */
+  /** o id de quem chama (o user do token, conferido no Auth — hml-21a: no `ler` com jwtLeitura, pela assinatura do token) — o dono
+   *  de tudo o que a função grava */
   userId: string;
   /** o cliente com o token da pessoa, no schema do pedido: tabelas, RPCs e Storage pelo RLS dela */
   comoPessoa: SupabaseClient;
@@ -50,6 +56,11 @@ export interface ContextoPessoa {
 export interface OpcoesPorta {
   /** pedidos por minuto por pessoa (nesta instância), em cada schema */
   freio: number;
+  /**
+   * hml-21a (H-109): "jwks" = no `acao: "ler"` o token é conferido aqui (jwks-principal.ts), sem o getUser; as outras ações seguem no
+   * getUser. Sem a opção, o getUser em todo pedido (o de sempre).
+   */
+  jwtLeitura?: "jwks";
 }
 
 // freio por pessoa nesta instância (segura laço de tela e abuso; o RLS segue valendo em cada gravação)
@@ -81,7 +92,23 @@ async function lerCorpo(req: Request): Promise<Record<string, unknown> | null> {
   }
 }
 
-/** Abre o pedido: OPTIONS, método, schema, login (no Auth) e freio. Devolve o contexto ou a resposta de recusa. */
+/**
+ * Quem chama: o id do user do token, ou null (401 sem_login). O de sempre: o getUser no Auth (a sessão conferida na hora). hml-21a: com
+ * jwtLeitura "jwks", SÓ no `ler`, a conferência local — inválido/vencido → null; a rede ou a chave → o getUser (a reserva, com o aviso).
+ */
+async function quemChama(token: string, corpo: Record<string, unknown>, opcoes: OpcoesPorta, comoPessoa: SupabaseClient, log: Log, schema: Schema): Promise<string | null> {
+  if (opcoes.jwtLeitura === "jwks" && corpo.acao === "ler") {
+    const local = await conferirJwtLocal(token);
+    if (local.ok === true) return local.userId;
+    if (local.motivo === "invalido") return null;
+    log.aviso({ codigo: "jwks_reserva", schema, resultado: local.causa });
+  }
+  const { data: ud, error: eu } = await comoPessoa.auth.getUser(token);
+  return eu || !ud?.user ? null : ud.user.id;
+}
+
+/** Abre o pedido: OPTIONS, método, schema, login (no Auth; hml-21a: ou local, no `ler` com jwtLeitura) e freio. Devolve o contexto
+ * ou a resposta de recusa. */
 async function abrirPedido(req: Request, nome: string, opcoes: OpcoesPorta, log: Log): Promise<ContextoPessoa | Response> {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
@@ -102,13 +129,13 @@ async function abrirPedido(req: Request, nome: string, opcoes: OpcoesPorta, log:
       fetch: (entrada: string | URL | Request, init?: RequestInit) => buscarComTempo(entrada, init ?? {}, Math.max(1, p.restante())),
     },
   });
-  const { data: ud, error: eu } = await comoPessoa.auth.getUser(token);
-  if (eu || !ud?.user) return json({ ok: false, erro: "sem_login" }, 401, origin);
-  if (!permitido(`${nome}:${schema}:${ud.user.id}`, opcoes.freio, 60_000)) {
-    log.aviso({ codigo: "muitas_acoes", schema, ref: ud.user.id });
+  const userId = await quemChama(token, corpo, opcoes, comoPessoa, log, schema);
+  if (!userId) return json({ ok: false, erro: "sem_login" }, 401, origin);
+  if (!permitido(`${nome}:${schema}:${userId}`, opcoes.freio, 60_000)) {
+    log.aviso({ codigo: "muitas_acoes", schema, ref: userId });
     return json({ ok: false, erro: "muitas_acoes" }, 429, origin);
   }
-  return { schema, origin, corpo, userId: ud.user.id, comoPessoa, log, prazo: p };
+  return { schema, origin, corpo, userId, comoPessoa, log, prazo: p };
 }
 
 /** Serve a função: abre o pedido e chama o handler; erro inesperado vira 500 erro_interno (sem vazar detalhe) + aviso ao Weslley. */
