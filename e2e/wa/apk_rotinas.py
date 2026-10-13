@@ -209,8 +209,13 @@ def webview(ap: Aparelho, espera: float = 60) -> CDP:
                 lista = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORTA_LOCAL}/json/list", timeout=15).read())
                 pagina = next((x for x in lista if x.get("type") == "page" and str(x.get("url", "")).startswith("https://localhost")), None)
                 if pagina:
-                    return CDP(pagina["webSocketDebuggerUrl"])
-            except (OSError, ValueError):
+                    w = CDP(pagina["webSocketDebuggerUrl"])
+                    # o /json/list já mostra a URL do app enquanto o documento ainda é o about:blank do início (no emulador: o
+                    # location.pathname deu "blank" e o localStorage dali, "Uncaught" no A3) → só devolve com a origem do app de fato
+                    if esperar(lambda: w.avaliar("location.origin", timeout=10) == "https://localhost", max(1.0, fim - time.time()), 0.5):
+                        return w
+                    w.fechar()
+            except (OSError, ValueError, RuntimeError):
                 pass
         time.sleep(2)
     raise RuntimeError("a WebView do app não abriu o DevTools (o APK é o de teste, com a depuração ligada na cópia gerada?)")
