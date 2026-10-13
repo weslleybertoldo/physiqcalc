@@ -193,24 +193,18 @@ export const FICA: Readonly<Record<string, { motivo: string; achados: Readonly<R
  * equipe_da_conta; as 3 gravações e o invólucro da Equipe ficam para a 21c) → 18 arquivos, 91 achados.
  */
 export const BASE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  "src/app-aluno/sozinho/api.ts": { "tabela:physiq_treinos_prontos.select": 1 },
   "src/ferramentas/lixeira/dados.ts": { "rpc:?": 1, "rpc:lixeira_apagar": 1, "rpc:lixeira_da_conta": 1, "rpc:lixeira_restaurar": 1 },
   "src/ferramentas/modelos/dados.ts": { "tabela:?": 1, "tabela:?.select": 1, "tabela:?.update": 1 },
-  "src/master/app/treinosProntos.ts": { "tabela:physiq_treinos_prontos.select": 1, "tabela:tb_exercicios.select": 1 },
   "src/nucleo/dadoLivre.ts": { "rpc:paciente_dado_livre": 1 },
-  "src/pages/master/BibliotecaPage.tsx": { "rpc:exercicios_da_lista": 1, "tabela:?": 1, "tabela:grupos_musculares.select": 1, "tabela:tb_exercicios.select": 1 },
   "src/painel/aluno/dados/api.ts": { "rpc:?": 1, "rpc:aluno_novo_link": 1, "rpc:aluno_salvar_ajustes": 1, "rpc:aluno_salvar_dados": 1, "rpc:mensagens_aviso_fechar": 1, "rpc:mensagens_desligadas": 1, "rpc:mensagens_ligar_para_todos": 1 },
   "src/painel/aluno/envio/api.ts": { "rpc:aluno_avisar_plano": 1 },
   "src/painel/aluno/resumo/acesso/api.ts": { "rpc:aluno_acesso": 1, "rpc:paciente_criar_acesso": 1, "rpc:paciente_redefinir_senha": 1 },
-  "src/painel/busca/Treinos.tsx": { "tabela:tb_grupos_treino.select": 1 },
   "src/painel/configuracoes/Conta.tsx": { "tabela:contas.update": 1 },
   "src/painel/configuracoes/Perfil.tsx": { "tabela:profiles.select": 1, "tabela:profiles.update": 2 },
   "src/painel/configuracoes/equipe/api.ts": { "rpc:?": 1, "rpc:alterar_papeis_membro": 1, "rpc:garantir_meu_codigo": 1, "rpc:remover_membro": 1 },
   "src/painel/configuracoes/excluirConta/api.ts": { "rpc:w2l_prontuarios_para_baixar": 1 },
   "src/painel/mensagens/api.ts": { "rpc:?": 1, "rpc:whatsapp_fila": 1, "rpc:whatsapp_limpar_falhas": 1, "rpc:whatsapp_reenviar": 1, "rpc:whatsapp_resumo": 1, "rpc:whatsapp_salvar_config": 1, "tabela:profiles.select": 1 },
-  "src/painel/treinos/api.ts": { "rpc:modelos_da_lista": 1, "tabela:?": 1, "tabela:grupos_musculares.select": 1, "tabela:tb_exercicios.select": 2, "tabela:tb_grupos_exercicios.select": 1, "tabela:tb_grupos_treino.select": 2, "tabela:tb_pastas_treino.select": 1, "tabela:tb_pastas_treino_grupos.select": 2 },
   "src/publico/legal/responsavel/api.ts": { "rpc:?": 1, "rpc:aluno_responsavel": 1, "rpc:aluno_responsavel_registrar": 2 },
-  "src/treino/editor/api.ts": { "rpc:aluno_treino": 1, "rpc:exercicios_da_lista": 1 },
 };
 
 function fontesDoSrc(): string[] {
@@ -325,11 +319,12 @@ describe("hml-21a — o src/ inteiro ⊆ BASE ∪ FICA (nada novo em lugar nenhu
     expect(excessos(arquivo, menos, permitido)).toEqual([]);
   });
 
-  it("a BASE só diminui: hoje 18 arquivos e 60 achados (a próxima sub-W tira os dela; nunca sobe)", () => {
+  it("a BASE só diminui: hoje 12 arquivos e 39 achados (a próxima sub-W tira os dela; nunca sobe)", () => {
     // hml-21a: 22 arquivos e 136 achados; hml-21b: −4 arquivos e −45 achados (a Agenda, a Agenda do aluno, os Alunos e a leitura da Equipe);
-    // hml-21d (F3a, as gravações do Treino): −31 achados (o Painel › Treinos, os treinos prontos e a Biblioteca do master, o espelho do Perfil)
-    expect(Object.keys(BASE).length).toBeLessThanOrEqual(18);
-    expect(Object.values(BASE).reduce((n, c) => n + Object.values(c).reduce((m, x) => m + x, 0), 0)).toBeLessThanOrEqual(60);
+    // hml-21d (F3a, as gravações do Treino): −31 achados (o Painel › Treinos, os treinos prontos e a Biblioteca do master, o espelho do Perfil);
+    // hml-21d (F3b, as leituras do Treino): −6 arquivos e −21 achados (as 6 libs do Treino inteiras: o painel, a busca, o editor, o master e o app)
+    expect(Object.keys(BASE).length).toBeLessThanOrEqual(12);
+    expect(Object.values(BASE).reduce((n, c) => n + Object.values(c).reduce((m, x) => m + x, 0), 0)).toBeLessThanOrEqual(39);
   });
 
   it("o FICA são só os 4 arquivos (a fila do PowerSync, o desvio 23 e os 2 links públicos), cada um com o motivo; nenhum deles na BASE", () => {
@@ -350,8 +345,9 @@ describe("hml-21a — o src/ inteiro ⊆ BASE ∪ FICA (nada novo em lugar nenhu
       expect(BASE[arquivo], arquivo).toBeUndefined();
       expect(agora.get(arquivo), arquivo).toEqual({});
     }
-    // o app do aluno sem profissional: só os treinos prontos do Treino (a 21d) seguem direto
-    expect(agora.get("src/app-aluno/sozinho/api.ts")).toEqual({ "tabela:physiq_treinos_prontos.select": 1 });
+    // o app do aluno sem profissional: só os treinos prontos do Treino (a 21d) seguem direto — hml-21d: os treinos prontos também saíram
+    // (pela função treinos) — a decisão da sessão principal 13/10 11:57 (só este esperado: a peça que o caso deixava para a 21d)
+    expect(agora.get("src/app-aluno/sozinho/api.ts")).toEqual({});
   });
 
   it("hml-21b: a Agenda, os Alunos e o Dashboard não estão na BASE — 0 acesso direto nas libs que a 21b levou para a função conta", () => {
@@ -363,6 +359,19 @@ describe("hml-21a — o src/ inteiro ⊆ BASE ∪ FICA (nada novo em lugar nenhu
     }
     // a Equipe: só a leitura (buscarEquipe) saiu; as 3 gravações e o invólucro são da 21c
     expect(agora.get("src/painel/configuracoes/equipe/api.ts")).toEqual({ "rpc:?": 1, "rpc:alterar_papeis_membro": 1, "rpc:garantir_meu_codigo": 1, "rpc:remover_membro": 1 });
+  });
+
+  it("hml-21d: o Treino não está na BASE — 0 acesso direto nas libs que a 21d levou para a função treinos (e o aluno_treino para a conta)", () => {
+    const da21d = [
+      "src/painel/treinos/api.ts", "src/painel/busca/Treinos.tsx", "src/treino/editor/api.ts", "src/master/app/treinosProntos.ts", "src/pages/master/BibliotecaPage.tsx",
+      "src/app-aluno/sozinho/api.ts", "src/treino/servidor.ts",
+    ];
+    for (const arquivo of da21d) {
+      expect(BASE[arquivo], arquivo).toBeUndefined();
+      expect(agora.get(arquivo), arquivo).toEqual({});
+    }
+    // as Configurações › Perfil: só o espelho do Treino saiu; as 3 do principal (o profiles) são da 21c
+    expect(agora.get("src/painel/configuracoes/Perfil.tsx")).toEqual({ "tabela:profiles.select": 1, "tabela:profiles.update": 2 });
   });
 
   it("o aviso (sem falhar): o achado da BASE que sumiu — quem tirou a chamada tira a linha da BASE", () => {

@@ -13,11 +13,14 @@
  * dono do token; o RLS decide de novo): a mesma assinatura, o mesmo erro da tela (o ErroTreinoPainel com os códigos de hoje — repetido,
  * em_uso, sem_permissao, sem_internet —; a mensagem crua do banco não chega mais à tela). A ordem do modelo vira 1 ação (a RPC atômica
  * modelo_ordenar); a foto sobe pelo link que o servidor assina (o caminho <id>.<ext> de hoje).
+ * hml-21d (as LEITURAS): Meus treinos, o treino aberto pelo id, as pastas, os grupos musculares e o catálogo da aba Treinos dos Modelos
+ * também vão pela treinos (lerTreinos — o lote automático: as leituras da MESMA volta numa ida; o "global ou meu" montado no servidor com o
+ * usuário do token): os detalhes da página (as linhas, os vínculos de pasta e os exercícios citados — antes 3 pedidos em série) vêm numa
+ * consulta só; o `tabela()` saiu. As MESMAS linhas, a mesma ordem e o mesmo tipo de hoje.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any -- os tipos gerados do supabase não conhecem professor_id/colunas novas (como no admin antigo) */
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
-import { acaoTreinos, codigoDoTreino, type AcaoTreinos } from "@/treino/servidor";
+import { acaoTreinos, codigoDoTreino, lerTreinos, type AcaoTreinos, type ConsultaDoTreino } from "@/treino/servidor";
 import { listarAlunos } from "@/lib/saasApi";
 import { ErroTreinoPainel, exerciciosDaLista, invocar, tirarTreino, type ItemHistorico } from "@/treino/editor/api";
 import type { CamposEquivalencia } from "@/treino/equivalencia";
@@ -31,13 +34,6 @@ import type {
 export const BUCKET_EXERCICIOS = DB_SCHEMA === "staging" ? "exercicios-staging" : "exercicios";
 
 const online = () => (typeof navigator === "undefined" ? true : navigator.onLine !== false);
-const tabela = (nome: string) => (supabase.from as any)(nome);
-
-function falhou(error: { message?: string; code?: string } | null | undefined): never {
-  if (!online()) throw new ErroTreinoPainel("sem_internet");
-  const codigo = error?.code === "23505" ? "repetido" : error?.code === "23503" ? "em_uso" : error?.code === "42501" ? "sem_permissao" : error?.message || "erro_interno";
-  throw new ErroTreinoPainel(codigo);
-}
 
 function exigirInternet(): void {
   if (!online()) throw new ErroTreinoPainel("sem_internet");
@@ -56,6 +52,9 @@ export function codigoDoPainel(codigo: string): string {
       return "sem_permissao";
     case "muitas_acoes":
       return "rate_limited";
+    // a lista que passou do teto de leituras do servidor (50 × 1000) — o "lista_grande_demais" de hoje
+    case "muitas_linhas":
+      return "lista_grande_demais";
     default:
       return codigo;
   }
@@ -71,104 +70,89 @@ async function gravar<T = Record<string, unknown>>(acao: AcaoTreinos, corpo: Rec
   }
 }
 
-async function emLotes<T>(ids: string[], ler: (lote: string[]) => Promise<T[]>, tamanho = 150): Promise<T[]> {
-  const saida: T[] = [];
-  for (let i = 0; i < ids.length; i += tamanho) saida.push(...(await ler(ids.slice(i, i + tamanho))));
-  return saida;
-}
-
-/** O filtro "global ou meu" no servidor (o de outros profissionais não precisa nem descer). */
-const doEscopo = (q: any, meuId: string | null) => (meuId ? q.or(`professor_id.is.null,professor_id.eq.${meuId}`) : q.is("professor_id", null));
-
 // ───────────────────────── leitura ─────────────────────────
 
-const COLS_LINHA = "grupo_id, exercicio_id, ordem, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg";
-const COLS_EXERCICIO = "id, nome, grupo_muscular, emoji, tipo, imagem_url, subgrupo, dica, professor_id, padrao_movimento, equipamento, variacao";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** O max_rows do PostgREST no Treino: uma leitura nunca traz mais que isso. */
-const POR_LEITURA = 1000;
-
-/**
- * hml-14d (B21 · D18/D23): todas as páginas de 1000 de uma leitura (a consulta com ordem ESTÁVEL — desempate pelo id — e
- * `.range(de, ate)`), sem o corte calado do PostgREST (antes: `.limit(2000/3000)`, que valiam 1000). Erro do banco → lança.
- */
-async function todasAsPaginas<T>(montar: (de: number, ate: number) => PromiseLike<{ data: unknown; error: { message?: string; code?: string } | null }>): Promise<T[]> {
-  const saida: T[] = [];
-  for (let de = 0; de < 100 * POR_LEITURA; de += POR_LEITURA) {
-    const r = await montar(de, de + POR_LEITURA - 1);
-    if (r.error) falhou(r.error);
-    const linhas = (r.data ?? []) as T[];
-    saida.push(...linhas);
-    if (linhas.length < POR_LEITURA) return saida;
+/** hml-21d: uma leitura pela treinos (o lote da volta); o erro vira o ErroTreinoPainel com o código da tela (nunca a mensagem do banco). */
+async function ler(q: ConsultaDoTreino, params?: Record<string, unknown>): Promise<{ linhas?: unknown[]; valor?: unknown; total?: number }> {
+  exigirInternet();
+  try {
+    return await lerTreinos(q, params);
+  } catch (e) {
+    throw new ErroTreinoPainel(codigoDoPainel(codigoDoTreino(e)));
   }
-  throw new ErroTreinoPainel("lista_grande_demais");
 }
 
-const linhasDosModelos = (ids: string[]) =>
-  emLotes(ids, (lote) => todasAsPaginas<LinhaModelo>((de, ate) => tabela("tb_grupos_exercicios").select(COLS_LINHA).in("grupo_id", lote).order("ordem").order("id").range(de, ate)));
+type ComId = { id: string };
+/** A linha do modelo como o servidor devolve (com o id dela — a ordem de hoje — e o exercício citado embutido). */
+type LinhaDoServidor = LinhaModelo & ComId & { exercicio?: ExercicioCatalogo | null };
+type ModeloDoServidor = ModeloRow & { linhas?: LinhaDoServidor[]; vinculos?: Array<VinculoPasta & ComId> };
 
-const vinculosDasPastas = (ids: string[]) =>
-  emLotes(ids, (lote) => todasAsPaginas<VinculoPasta>((de, ate) => tabela("tb_pastas_treino_grupos").select("pasta_id, grupo_id").in("pasta_id", lote).order("id").range(de, ate)));
+/** A ordem de hoje: as linhas por (ordem, id) — o .order("ordem").order("id") —; os vínculos e os exercícios por id. */
+const porOrdemEId = (a: LinhaDoServidor, b: LinhaDoServidor) => (a.ordem ?? 0) - (b.ordem ?? 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+const porId = (a: ComId, b: ComId) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+/** A linha no tipo de hoje (sem o id e sem o exercício embutido — as 7 colunas do COLS_LINHA). */
+const linhaDeHoje = ({ grupo_id, exercicio_id, ordem, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg }: LinhaDoServidor): LinhaModelo =>
+  ({ grupo_id, exercicio_id, ordem, num_series, reps_alvo, descanso_segundos, carga_sugerida_kg });
+const vinculoDeHoje = ({ pasta_id, grupo_id }: VinculoPasta): VinculoPasta => ({ pasta_id, grupo_id });
 
-const vinculosDosModelos = (ids: string[]) =>
-  emLotes(ids, (lote) => todasAsPaginas<VinculoPasta>((de, ate) => tabela("tb_pastas_treino_grupos").select("pasta_id, grupo_id").in("grupo_id", lote).order("id").range(de, ate)));
+/** Os detalhes que vieram embutidos nos modelos (1 consulta no servidor), no tipo e na ordem dos 3 pedidos de hoje. */
+function detalhesDoServidor(modelos: readonly ModeloDoServidor[]): DetalhesDosModelos {
+  const linhas = modelos.flatMap((m) => m.linhas ?? []).sort(porOrdemEId);
+  const exercicios = new Map<string, ExercicioCatalogo>();
+  for (const l of linhas) if (l.exercicio && !exercicios.has(l.exercicio.id)) exercicios.set(l.exercicio.id, l.exercicio);
+  return {
+    linhas: linhas.map(linhaDeHoje),
+    exercicios: [...exercicios.values()].sort(porId),
+    vinculos: modelos.flatMap((m) => m.vinculos ?? []).sort(porId).map(vinculoDeHoje),
+  };
+}
+const soOModelo = ({ id, nome, professor_id }: ModeloRow): ModeloRow => ({ id, nome, professor_id });
 
 /** As pastas que a pessoa vê (as dela e as globais) — inteiras (teto natural: 2 por profissional hoje). */
-export const carregarPastas = (meuId: string | null) => {
-  exigirInternet();
-  return todasAsPaginas<PastaRow>((de, ate) => doEscopo(tabela("tb_pastas_treino").select("id, nome, professor_id"), meuId).order("nome").order("id").range(de, ate));
-};
+export const carregarPastas = async (meuId: string | null): Promise<PastaRow[]> => ((await ler("pastas")).linhas ?? []) as PastaRow[];
 
 /** Os grupos musculares (globais e meus) — o formulário do exercício e a folha "Grupos musculares". */
-export const carregarMusculos = (meuId: string | null) => {
-  exigirInternet();
-  return todasAsPaginas<GrupoMuscularRow>((de, ate) => doEscopo(tabela("grupos_musculares").select("id, nome, professor_id"), meuId).order("nome").order("id").range(de, ate));
-};
+export const carregarMusculos = async (meuId: string | null): Promise<GrupoMuscularRow[]> => ((await ler("grupos_musculares")).linhas ?? []) as GrupoMuscularRow[];
 
 /**
- * O catálogo inteiro (Ferramentas › Modelos): tudo em páginas de 1000 com `order(nome, id)` — antes `.limit(2000/3000)` (= 1000,
- * calado: o exercício fora dos 1000 sumia do modelo sem aviso).
+ * O catálogo (Ferramentas › Modelos › aba Treinos): os modelos com as linhas e as pastas com os vínculos, em páginas de 1000 no servidor
+ * (as 2 na MESMA ida) — hml-21d: sem os exercícios e os grupos musculares que a aba lia e não usava (vêm vazios).
  */
 export async function carregarCatalogo(meuId: string | null): Promise<Catalogo> {
-  exigirInternet();
-  const [modelos, pastas, exercicios, musculos] = await Promise.all([
-    todasAsPaginas<ModeloRow>((de, ate) => doEscopo(tabela("tb_grupos_treino").select("id, nome, professor_id"), meuId).order("nome").order("id").range(de, ate)),
-    carregarPastas(meuId),
-    todasAsPaginas<ExercicioCatalogo>((de, ate) => doEscopo(tabela("tb_exercicios").select(COLS_EXERCICIO), meuId).order("nome").order("id").range(de, ate)),
-    carregarMusculos(meuId),
-  ]);
-  const [linhas, vinculos] = await Promise.all([linhasDosModelos(modelos.map((m) => m.id)), vinculosDasPastas(pastas.map((p) => p.id))]);
-  return { modelos, pastas, vinculos, linhas, exercicios, musculos };
+  const [m, p] = await Promise.all([ler("catalogo_modelos"), ler("catalogo_pastas")]);
+  const modelos = (m.linhas ?? []) as ModeloDoServidor[];
+  const pastas = (p.linhas ?? []) as Array<PastaRow & { vinculos?: Array<VinculoPasta & ComId> }>;
+  return {
+    modelos: modelos.map(soOModelo),
+    pastas: pastas.map(({ id, nome, professor_id }) => ({ id, nome, professor_id })),
+    vinculos: pastas.flatMap((x) => x.vinculos ?? []).sort(porId).map(vinculoDeHoje),
+    linhas: modelos.flatMap((x) => x.linhas ?? []).sort(porOrdemEId).map(linhaDeHoje),
+    exercicios: [],
+    musculos: [],
+  };
 }
 
 const SEM_DETALHES: DetalhesDosModelos = { linhas: [], exercicios: [], vinculos: [] };
 
 /** hml-14d (D23): as linhas, os exercícios citados (globais ou meus — o de fora do catálogo continua fora) e os vínculos de pasta
- * SÓ dos treinos pedidos (a página: até 20). */
+ * SÓ dos treinos pedidos (a página: até 20) — hml-21d: numa consulta só no servidor (antes 3 pedidos em série). */
 async function detalhesDosModelos(ids: string[], meuId: string | null): Promise<DetalhesDosModelos> {
   if (!ids.length) return SEM_DETALHES;
-  const [linhas, vinculos] = await Promise.all([linhasDosModelos(ids), vinculosDosModelos(ids)]);
-  const citados = [...new Set(linhas.map((l) => l.exercicio_id))];
-  const exercicios = await emLotes(citados, (lote) =>
-    todasAsPaginas<ExercicioCatalogo>((de, ate) => doEscopo(tabela("tb_exercicios").select(COLS_EXERCICIO), meuId).in("id", lote).order("id").range(de, ate)));
-  return { linhas, exercicios, vinculos };
+  return detalhesDoServidor(((await ler("modelos_detalhes", { ids })).linhas ?? []) as ModeloDoServidor[]);
 }
-
-const rpc = (nome: string, args: Record<string, unknown>) => (supabase.rpc as any)(nome, args) as PromiseLike<{ data: unknown; error: { message?: string; code?: string } | null }>;
 
 /**
  * hml-14d (B21 · D23): uma página de Meus treinos — a RPC modelos_da_lista (busca pelo nome do treino ou de um exercício dele,
- * sem acento; a pasta aberta; ordem e total no banco) e os detalhes SÓ dos 20 da página.
+ * sem acento; a pasta aberta; ordem e total no banco) e os detalhes SÓ dos 20 da página (hml-21d: a 2ª ida — eles dependem dos ids).
  */
 export async function carregarPaginaDeModelos(meuId: string | null, filtros: FiltrosModelos, pagina: number): Promise<PaginaModelos> {
-  exigirInternet();
   const p_filtros: Record<string, string> = {};
   if (filtros.q.trim()) p_filtros.q = filtros.q.trim();
   if (filtros.pasta) p_filtros.pasta = filtros.pasta;
-  const { data, error } = await rpc("modelos_da_lista", { p_filtros, p_offset: deslocamento(pagina), p_limite: POR_PAGINA });
-  if (error) falhou(error);
-  const r = (data ?? {}) as { total?: number; total_geral?: number; por_pasta?: Record<string, number>; itens?: ModeloRow[] };
+  const { valor } = await ler("modelos", { filtros: p_filtros, offset: deslocamento(pagina), limite: POR_PAGINA });
+  const r = (valor ?? {}) as { total?: number; total_geral?: number; por_pasta?: Record<string, number>; itens?: ModeloRow[] };
   const itens = Array.isArray(r.itens) ? r.itens : [];
   return {
     itens,
@@ -179,14 +163,13 @@ export async function carregarPaginaDeModelos(meuId: string | null, filtros: Fil
   };
 }
 
-/** hml-14d (D23): o `?treino=<id>` que não está na página abre pelo id (global ou meu; outro id → null, como antes). */
+/** hml-14d (D23): o `?treino=<id>` que não está na página abre pelo id (global ou meu; outro id → null, como antes) — hml-21d: com os
+ * detalhes na MESMA ida. */
 export async function carregarModeloPorId(meuId: string | null, id: string): Promise<ModeloAberto> {
   exigirInternet();
   if (!UUID.test(id)) return { modelo: null, detalhes: SEM_DETALHES };
-  const { data, error } = await doEscopo(tabela("tb_grupos_treino").select("id, nome, professor_id"), meuId).eq("id", id).maybeSingle();
-  if (error) falhou(error);
-  const modelo = (data as ModeloRow | null) ?? null;
-  return { modelo, detalhes: modelo ? await detalhesDosModelos([modelo.id], meuId) : SEM_DETALHES };
+  const [linha] = ((await ler("modelo", { id })).linhas ?? []) as ModeloDoServidor[];
+  return linha ? { modelo: soOModelo(linha), detalhes: detalhesDoServidor([linha]) } : { modelo: null, detalhes: SEM_DETALHES };
 }
 
 /** hml-14d (B21 · D24): uma página da biblioteca (painel) com as contagens do topo — a RPC exercicios_da_lista. */

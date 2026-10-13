@@ -21,7 +21,9 @@ describe("podeRepetir", () => {
     // hml-21b: a alunos_da_conta saiu da lista (vai pela função conta) — no lugar, outra de leitura que o front segue chamando
     ["POST", `${P}/rest/v1/rpc/planos_favoritos`, true],
     ["POST", `${P}/rest/v1/rpc/alunos_da_conta`, false],
-    ["post", `${T}/rest/v1/rpc/aluno_treino`, true],
+    // hml-21d: a aluno_treino saiu da lista (vai pela função conta) — no lugar, outra de leitura que o front segue chamando (o "post" minúsculo)
+    ["post", `${T}/rest/v1/rpc/aluno_perfil`, true],
+    ["POST", `${T}/rest/v1/rpc/aluno_treino`, false],
     ["POST", `${P}/rest/v1/rpc/diario_enviar`, false],
     ["POST", `${P}/rest/v1/rpc/aluno_acesso`, false],
     ["POST", `${P}/rest/v1/rpc/rpc_que_ninguem_conhece`, false],
@@ -52,10 +54,11 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 30 de leitura repetem; as 23 que gravam não; os 2 conjuntos não se cruzam", () => {
+  it("as 27 de leitura repetem; as 23 que gravam não; os 2 conjuntos não se cruzam", () => {
     // hml-21a: as 6 de leitura que a função conta chama saíram — eram 45
     // hml-21b: as 9 de leitura da Agenda e dos Alunos que a função conta chama saíram — eram 39
-    expect(RPC_SO_LEITURA.size).toBe(30);
+    // hml-21d: as 3 que a treinos (modelos_da_lista, exercicios_da_lista) e a conta (aluno_treino) chamam saíram — eram 30
+    expect(RPC_SO_LEITURA.size).toBe(27);
     // hml-19b: a paciente_marcar_refeicao e a aluno_marcar_meta saíram do front (o app marca pela função nutricao) — eram 40
     // hml-19c: a aluno_avisar_avaliacao saiu do front (o aviso vai pela função nutricao) — eram 38
     // hml-21a: as 8 que gravam e a função conta chama saíram — eram 37
@@ -95,12 +98,17 @@ describe("podeRepetir", () => {
   });
 
   it("hml-14d: as 6 RPCs novas das listas (STABLE) repetem — as 2 do Treino pelo cliente do Treino, as 4 pelo do principal", () => {
-    for (const nome of ["modelos_da_lista", "exercicios_da_lista"]) {
-      expect(podeRepetir(`${T}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
-    }
+    // hml-21d: as 2 do Treino (modelos_da_lista, exercicios_da_lista) saíram (vão pela função treinos — o `ler` dela repete 1 vez)
     // hml-21a: a minha_agenda_lista saiu (vai pela função conta)
     for (const nome of ["preconsulta_numeros", "exames_do_aluno", "financeiro_totais_do_aluno"]) {
       expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
+    }
+  });
+
+  it("hml-21d: as 3 RPCs de leitura que a treinos e a conta chamam saíram das 2 listas; a que não está numa lista nunca repete", () => {
+    for (const [base, nome] of [[T, "modelos_da_lista"], [T, "exercicios_da_lista"], [P, "aluno_treino"]] as const) {
+      expect(RPC_SO_LEITURA.has(nome) || RPC_QUE_GRAVAM.has(nome), nome).toBe(false);
+      expect(podeRepetir(`${base}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
     }
   });
 
@@ -428,6 +436,8 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
       acessos: { campo: "acao", acoes: ["ler"] },
       "aluno-dia": { campo: "acao", acoes: ["ler"] },
       "treino-acessos": { campo: "acao", acoes: ["ler"] },
+      // hml-21d: o `ler` da treinos (o Banco do Treino; o catálogo só lê)
+      treinos: { campo: "acao", acoes: ["ler"] },
     });
   });
 
@@ -450,6 +460,11 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
     [`${P}/functions/v1/aluno-dia`, corpo({ acao: "rotina_marcar" }), false],
     [`${T}/functions/v1/treino-acessos`, corpo({ acao: "salvar", valor: "mexer" }), false],
     [`${P}/functions/v1/aluno-dia`, corpo({ action: "ler", acao: "dia_adicionar" }), false],
+    // hml-21d: o `ler` da treinos repete; as ações dela (o modelo, a ordem, o treino pronto do master) e o `ler` disfarçado não
+    [`${T}/functions/v1/treinos`, corpo({ acao: "ler", itens: [{ q: "pastas" }] }), true],
+    [`${T}/functions/v1/treinos`, corpo({ acao: "modelo_ordenar", grupo: "x", ids: [] }), false],
+    [`${T}/functions/v1/treinos`, corpo({ acao: "treino_pronto_salvar" }), false],
+    [`${T}/functions/v1/treinos`, corpo({ action: "ler", acao: "modelo_excluir" }), false],
     // as gravações das mesmas funções vão 1 vez
     [`${P}/functions/v1/nutricao`, corpo({ acao: "anamnese_criar" }), false],
     [`${P}/functions/v1/nutricao`, corpo({ acao: "aluno_marcar_refeicao" }), false],

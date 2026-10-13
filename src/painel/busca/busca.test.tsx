@@ -16,9 +16,12 @@ vi.mock("@/nucleo/conta", () => ({ useConta: () => ({ conta: { id: "c1", nome: "
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: { id: "u-lucas" } }) }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: "t-lucas" } }) }));
 vi.mock("@/integrations/principal/client", () => ({ PRINCIPAL_SCHEMA: "staging", principal: { rpc: vi.fn(), from: vi.fn() } }));
-vi.mock("@/integrations/supabase/client", () => {
+// hml-21d: a busca dos treinos vai pela função treinos — os MÓDULOS DE VERDADE do servidor (src/test/treinosFalso.ts) sobre o MESMO banco
+// falso (a cadeia do h.treinos): a ida ao banco é a que a tela fazia (agora o servidor faz, como a pessoa)
+vi.mock("@/integrations/supabase/client", async () => {
+  const { invocarComTreinos } = await import("@/test/treinosFalso");
   const cadeia = { select: () => cadeia, or: () => cadeia, ilike: () => cadeia, order: () => cadeia, limit: () => h.treinos() };
-  return { DB_SCHEMA: "staging", supabase: { from: () => cadeia, functions: { invoke: vi.fn() } } };
+  return { DB_SCHEMA: "staging", supabase: { from: () => cadeia, functions: { invoke: invocarComTreinos({ from: () => cadeia }, { userId: "t-lucas" }) } } };
 });
 vi.mock("@/painel/alunos/api", async (orig) => ({ ...(await orig<typeof import("@/painel/alunos/api")>()), listarAlunos: h.listar }));
 // o módulo de alimentos inteiro trocado (sem carregar o real: o import dinâmico fica rápido no teste)
