@@ -506,7 +506,8 @@ def caso_dia_a_dia(o, nav, R: Rodada, so_ler: bool = False) -> None:
         # P9 — a nutri trava: a faixa e o que ela registrou continua
         ok = mudar_dieta(R, "w5p-nutri", e["pac_a"], "ver")
         t.ir(f"/painel/alunos/{e['pac_a']}/dieta?secao=dia-a-dia")
-        ok = ok and t.esperar(lambda: t.tem("[data-dia-a-dia-travada]"), 45)
+        # a faixa vem antes do dia relido (no staging, ~1 s depois; no local, junto): esperar os dois — 13/10, a 1ª rodada de staging pegou o meio
+        ok = ok and t.esperar(lambda: t.tem("[data-dia-a-dia-travada]") and t.tem(f'[data-dia-posto="{R.ids.get("posto")}"]'), 45)
         o.ok(ok and t.texto("[data-dia-a-dia-travada]") == TRAVADA and t.tem(f'[data-dia-posto="{R.ids.get("posto")}"]'),
              f"P9 travada: a faixa {t.texto('[data-dia-a-dia-travada]')!r} e o que ela registrou continua (§2.2-12)")
         t.pg.eval_on_selector("[data-dia-a-dia]", "e => e.scrollIntoView({ block: 'start' })")
