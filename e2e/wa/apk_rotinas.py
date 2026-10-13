@@ -214,8 +214,10 @@ class WebViewDoApp:
     def __init__(self, ap: Aparelho, espera: float = 60) -> None:
         self.ap = ap
         self.w = conectar(ap, espera)
+        self.reconexoes = 0  # vai para a saída (o A4): separa a demora do app da queda do DevTools
 
     def _refazer(self) -> None:
+        self.reconexoes += 1
         self.w.fechar()
         self.w = conectar(self.ap, 60)
 
@@ -431,12 +433,15 @@ def a4_criar_e_pendentes(o, ap: Aparelho, w: WebViewDoApp, R: dict) -> dict:
     esperar(lambda: tem(w, f'[data-rotina-linha="{ids.get("Antes", "x")}"]'), 60)
     dow = dia_da_semana_sp()
     hoje_agora, hoje_antes = 40000 + dow, 40010 + dow
-    ok = esperar(lambda: len(pendentes(w)) == 14, 30)
+    # 90 s (eram 30): na rodada 5, com o emulador carregado, as 14 estavam lá logo depois dos 30 s (a mesma linha mostrou 7 + 7)
+    t0 = time.time()
+    ok = esperar(lambda: len(pendentes(w)) == 14, 90)
+    demorou = round(time.time() - t0, 1)
     p = pendentes(w)
     por_rotina = {k: [x["id"] for x in p if x["rotina"] == v] for k, v in ids.items()}
     o.ok(ok and len(por_rotina.get("Agora", [])) == 7 and len(por_rotina.get("Antes", [])) == 7 and hoje_agora in por_rotina["Agora"]
          and hoje_antes in por_rotina["Antes"],
-         f"A4 getPending: 7 avulsas de cada uma, na faixa ({por_rotina})")
+         f"A4 getPending: 7 avulsas de cada uma, na faixa ({por_rotina}; em {demorou} s, {w.reconexoes} reconexão(ões) do DevTools)")
     guardados = ap.armazenamento()
     o.ok(guardados == sorted(x["id"] for x in p), f"A4 o armazenamento do plugin (o que ele reagenda ao reiniciar) = o getPending ({len(guardados)} ids)")
     return {"hoje_agora": hoje_agora, "hoje_antes": hoje_antes}
