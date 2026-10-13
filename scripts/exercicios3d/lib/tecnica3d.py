@@ -859,3 +859,29 @@ def canela_sinal(j):
 
 
 MEDIDAS.update({"tronco_sinal": tronco_sinal, "canela_sinal": canela_sinal})
+
+
+# ── supino declinado com barra (lote 14, 12/10/2026): em cima os braços ficam "perpendicular to the floor" (free-exercise-db, Decline
+# Barbell Bench Press: "The arms should be perpendicular to the floor.") — perpendiculares ao CHÃO, não ao tronco (no banco a −15° o
+# braço em pé fica ~15° inclinado pros pés em relação à normal do tronco) — e isso se vê de LADO: com a pegada média o punho fica mais
+# aberto que o ombro e a reta ombro → punho inclina pro lado vista de frente, o que não é erro (a "inclinacao" da checagem3d, segmento ×
+# horizontal, mede as 2 coisas juntas).
+def braco_lado(j):
+    """Reta ombro → punho (cabeça do úmero → cabeça da mão) × a vertical do mundo, vista de LADO — sem a parte de lado a lado do tronco
+    —, graus [E, D]: 0 = o punho bem em cima (ou bem embaixo) do ombro visto de lado, + = o punho pro lado dos pés, − = pro lado da
+    cabeça. No referencial do tronco (o lado a lado sai dos ombros e "os pés" do eixo quadril → pescoço): vale no banco reto, inclinado
+    ou declinado."""
+    cima, lado, _ = eixos_tronco(j)
+    v = _u(CIMA - lado * (CIMA @ lado))                  # a vertical do mundo no plano de lado do tronco
+    p = np.cross(lado, v)
+    if p @ -cima < 0:                                    # ⟂ à vertical, no mesmo plano, pro lado dos pés
+        p = -p
+    out = []
+    for L, _ in LADOS:
+        d = j[L + "Hand"] - j[L + "Arm"]
+        d = d - lado * (d @ lado)
+        out.append(math.degrees(math.atan2(float(d @ p), float(d @ v))))
+    return out
+
+
+MEDIDAS.update({"braco_lado": braco_lado})

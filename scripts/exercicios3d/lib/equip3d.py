@@ -8472,3 +8472,183 @@ def anilha(nome="anilha", diametro=0.350, espessura=0.030, furo=0.0506, miolo=0.
     bpy.context.view_layer.update()
     return an
 # ===== fim: Anilha solta ============================================================================================================
+
+
+# ===== Banco declinado ==============================================================================================================
+# ── BANCO DECLINADO OLÍMPICO COM O APOIO DAS PERNAS (Supino Declinado com Barra, lote 14, 12/10/2026) ──────────────────────────────────
+# O banco declinado olímpico de academia, fixo: o ESTOFADO DAS COSTAS descendo pra cabeça (a cabeça mais baixa que o quadril), o
+# ESTOFADO DA CABEÇA logo depois dele, no mesmo plano, cada um numa chapa de aço; a VIGA central embaixo deles, paralela, da ponta alta
+# até o chão na ponta da cabeça; a PERNA da ponta alta com o pé no chão; o APOIO DAS PERNAS — um braço que sai do pivô na ponta alta da
+# viga e passa no meio, por baixo das coxas e entre as canelas, até o eixo dos 2 ROLOS DOS TORNOZELOS (em cima do peito de cada pé), com
+# as 2 ALMOFADAS DA DOBRA DO JOELHO (uma por perna, atrás da panturrilha, paralelas à canela, encaixadas embaixo da coxa) num travessão
+# preso no braço por um poste — e, na ponta da cabeça, os 2 POSTES da barra com 2 GANCHOS cada um (o de cima, onde a barra fica, e o de
+# baixo, de segurança), em cima da base no chão. É o Life Fitness Signature Series Olympic Decline Bench (SODB / LBR-OD): no manual de
+# peças, "Center Frame" com o "Primary Pivot Shaft" na ponta (o apoio das pernas gira nele e trava no pino), "Support Leg", "Upright
+# Right/Left" com 2 "Bar Catch Hook" cada, "Leg Support", 2 "Pad, Angle Short", 2 "ASSY, ROLLER PAD SHORT", "Pad, Head Rest, Flat" e
+# o estofado das costas; o Legend 3109 tem o mesmo apoio ("Adjustable calf pad/rollers."; "Adjustable ankle roller keep users in place";
+# "Dual bar catches for safety.").
+# Medidas de fabricante: Life Fitness SODB (páginas do fabricante): "Footprint (L x W x H) 68" x 51" x 51" (metric cm: 173 x 130 x
+# 130)", "Vertical height from floor to Seat Pad 17" (43.2 cm)", "Vertical height from floor to Top Bar Support 37" (94 cm)", "Vertical
+# height from floor to Bottom Bar Support 30.5" (77.5 cm)", "Head Pad Size (at the widest point of the contoured sides) 10" x 9" (25.4 x
+# 22.8 cm)", "Back Pad Size (at the widest point of the contoured sides) 11" x 32" (27.9 x 81.3 cm)" (o manual de peças diz "Pad, 36 X
+# 11 Flat": ficou a do site); loja da Life Fitness (cópia do Internet Archive de 23/05/2024): "The Decline Bench is equipped with a
+# negative 15-degree back pad angle."; Legend 3109: "Pad angle is -15 degrees from horizontal."; rolos de 4" (REP Fitness, apoio de
+# pernas do declinado AB-5000/5100: "The pads are 4” in diameter"). O "Seat Pad" a 43,2 cm vira o topo da ponta alta (o fabricante
+# não diz o ponto). Nenhum fabricante dá a altura e o tamanho das almofadas do joelho, o comprimento dos rolos, as seções dos tubos e o
+# desenho dos ganchos: escolha da fábrica (almofada 20 × 18 × 6 cm, rolo de 18 cm, viga 8 × 6 cm, postes 5 × 8 cm, braço 5 × 5 cm,
+# gancho em J com a borracha em cima). Estofados e rolos com as quinas chanfradas (a medida da zona de apoio erra o sinal em quina viva);
+# peças compridas em anéis (_viga / _caixa_ao_longo / _em_aneis): a checagem fica rápida.
+# Uso numa cena (a pessoa deitada de costas, a cabeça pra +Y, mais baixa; s = +1 é o lado +X):
+#   g = dt.declinar(bon, 15.0, 0.432)                                   # o corpo no declínio: plano do estofado e ponta alta
+#   bd = e3.banco_declinado("declinado", 15.0, (g["E"].y, g["E"].z), joelhos={+1: (x, y, z, ang), -1: (...), "medidas": (c, l, e)},
+#                           rolos=(y, z, raio, comprimento, x), suportes=(y, x, altura, (0.94, 0.775)))
+#   Cena(pose, [barra] + bd.equipamentos, ..., apoios=bd.apoios)
+# As raízes (cada uma um equipamento da cena, a rigidez é por raiz): "<nome>_estrutura" (viga, chapas, perna, apoio das pernas: parada,
+# não encosta no corpo), "<nome>_suportes" (postes, ganchos e base: não encostam no corpo), "<nome>_costas", "<nome>_cabeca",
+# "<nome>_joelhos" e "<nome>_rolos" (APOIO: encostar é o certo).
+class BancoDeclinado:
+    """Banco declinado olímpico pronto na cena (banco_declinado())."""
+
+    def __init__(self, raizes, u, n, E, medidas):
+        self.raizes = raizes                  # {"estrutura", "suportes", "costas", "cabeca", "joelhos", "rolos"}
+        self.equipamentos = [raizes["estrutura"], raizes["suportes"]]
+        self.apoios = [raizes[k] for k in ("costas", "cabeca", "joelhos", "rolos")]
+        self.u, self.n = u, n                 # ao longo do estofado (descendo pra cabeça) e a normal dele (pro corpo)
+        self.E = E                            # meio (x = 0) da borda de cima do estofado das costas, na ponta alta
+        self.medidas = medidas                # as medidas usadas (m e graus), pro relatório da cena
+
+
+def _rolo_chanfrado(nome, centro, raio, compr, mat, pai, chanfro=0.012):
+    """Rolo de espuma ao longo do X com as bordas das 2 pontas arredondadas (BEVEL), preso na `pai` sem sair do lugar."""
+    o = _cilindro(nome, raio, compr, centro, (0, math.radians(90), 0), mat, vertices=40)
+    m = o.modifiers.new("chanfro", "BEVEL")
+    m.width = chanfro
+    m.segments = 3
+    m.limit_method = "ANGLE"
+    _prender([o], pai)
+    return o
+
+
+def banco_declinado(nome="declinado", angulo=15.0, ponta_alta=(0.0, 0.432), costas=(0.813, 0.279, 0.06),
+                    cabeca=(0.228, 0.254, 0.06, 0.01), joelhos=None, rolos=None, suportes=None, viga=(0.08, 0.06), chapa=0.016,
+                    pe_alto=0.10, z_chao=0.03):
+    """Banco declinado olímpico com o apoio das pernas (ver o bloco acima). Medidas no mundo, em m, com a pessoa deitada de costas, a
+    cabeça pra +Y (a ponta BAIXA) e as pernas pra −Y (a ponta ALTA):
+      angulo     = graus do estofado abaixo da horizontal (descendo pra cabeça);
+      ponta_alta = (y, z): meio (x = 0) da borda de cima do estofado das costas, na ponta alta (o topo do lado das pernas);
+      costas     = (comprimento, largura, espessura) do estofado das costas, da ponta alta descendo pra cabeça;
+      cabeca     = (comprimento, largura, espessura, folga) do estofado da cabeça, `folga` m depois do das costas, no mesmo plano;
+      joelhos    = {s: (x, y, z, ang), "medidas": (comprimento, largura, espessura)}: por lado (s = +1 no +X), (x, y, z) = meio da borda de
+                   cima da FACE da almofada da dobra do joelho (onde a parte de trás da panturrilha encosta), que desce pela canela no
+                   ângulo `ang` (graus no plano YZ, acima da horizontal apontando pra −Y: −70 = descendo pra fora do banco); a almofada
+                   fica atrás da face (do lado do banco), numa chapa;
+      rolos      = (y, z, raio, comprimento, x): eixo dos 2 rolos dos tornozelos ao longo do X em (y, z), cada rolo centrado em ±x;
+      suportes   = None ou (y, x, altura, ganchos): os 2 postes da barra em y, em ±x, com `altura` m, e os ganchos (alturas, m, da face
+                   de cima, onde a barra apoia — com a borracha);
+      viga       = seção (largura, altura) da viga central; chapa = espessura das chapas embaixo dos estofados;
+      pe_alto    = onde a perna da ponta alta desce da viga, a partir da ponta alta, ao longo do estofado (m); z_chao = eixo das peças do
+                   chão.
+    Devolve um BancoDeclinado (raizes, equipamentos, apoios, u, n, E, medidas)."""
+    if joelhos is None or rolos is None:
+        raise ValueError("banco_declinado: joelhos e rolos vêm da cena (o apoio das pernas é montado em volta do corpo)")
+    X = Vector((1.0, 0.0, 0.0))
+    a = math.radians(angulo)
+    u = Vector((0.0, math.cos(a), -math.sin(a)))            # ao longo do estofado, descendo pra cabeça
+    n = Vector((0.0, math.sin(a), math.cos(a)))             # normal do estofado (pro corpo)
+    E = Vector((0.0, ponta_alta[0], ponta_alta[1]))
+    L, larg, esp = costas
+    Lc, larg_c, esp_c, folga = cabeca
+    lv, av = viga
+    rot_e = (-a, 0.0, 0.0)                                  # caixa: Y local ao longo de u, Z local = n
+
+    def raiz_nova(sufixo):
+        r = bpy.data.objects.new(nome + "_" + sufixo, None)
+        bpy.context.scene.collection.objects.link(r)
+        return r
+
+    estr, sup, cos_, cab_, joe, rol = (raiz_nova(k) for k in ("estrutura", "suportes", "costas", "cabeca", "joelhos", "rolos"))
+    bpy.context.view_layer.update()
+    pecas, pecas_sup = [], []
+
+    # ── estofados das costas e da cabeça (APOIO), no mesmo plano declinado, com a chapa de aço embaixo de cada um ──────────────────
+    caixa(nome + "_costas_estofado", E + u * (L / 2) - n * (esp / 2), (larg, L, esp), mat_estofado(), rot=rot_e, pai=cos_,
+          chanfro=0.015)
+    caixa(nome + "_cabeca_estofado", E + u * (L + folga + Lc / 2) - n * (esp_c / 2), (larg_c, Lc, esp_c), mat_estofado(), rot=rot_e,
+          pai=cab_, chanfro=0.015)
+    for suf, s0, s1, lg, e_ in (("costas", 0.0, L, larg, esp), ("cabeca", L + folga, L + folga + Lc, larg_c, esp_c)):
+        pecas.append(_em_aneis(_reto(caixa(nome + "_chapa_" + suf, E + u * ((s0 + s1) / 2) - n * (e_ + chapa / 2),
+                                           (lg - 0.04, s1 - s0 - 0.02, chapa), mat_estrutura(), rot=rot_e, chanfro=0)), passo=0.06))
+    # ── viga central embaixo dos estofados: da ponta alta (o pivô do apoio das pernas fica nela) até o chão, na ponta da cabeça ──────
+    A = E + u * 0.04 - n * (esp + chapa + av / 2)
+    B = A + u * ((A.z - (z_chao + av / 2)) / math.sin(a))  # onde o eixo da viga chega na altura do chão
+    pecas.append(_viga(nome + "_viga", A, B, lv, av, mat_estrutura()))
+    # ── perna da ponta alta: da viga até o chão, com o pé (travessa no chão ao longo do X) e as sapatas ─────────────────────────────
+    P = A + u * pe_alto
+    pecas.append(_viga(nome + "_perna", P, Vector((0.0, P.y, z_chao + 0.02)), 0.06, 0.06, mat_estrutura()))
+    pecas.append(_viga(nome + "_pe_alto", (-0.26, P.y, z_chao), (0.26, P.y, z_chao), 0.07, 0.06, mat_estrutura()))
+    for s in (1, -1):
+        pecas.append(_reto(caixa(nome + "_sapata_alta%+d" % s, (s * 0.24, P.y, 0.004), (0.08, 0.08, 0.008), mat_borracha(), chanfro=0)))
+    # ── apoio das pernas: o braço sai do pivô e vai até o eixo dos rolos, no meio (x = 0); as almofadas da dobra do joelho num
+    #    travessão atrás delas, preso no braço por um poste ────────────────────────────────────────────────────────────────────────
+    y_r, z_r, raio_r, comp_r, x_r = rolos
+    R = Vector((0.0, y_r, z_r))
+    pecas.append(_cilindro(nome + "_pivo", 0.022, lv + 0.03, A, (0, math.radians(90), 0), mat_aco(), vertices=24))
+    pecas.append(_caixa_ao_longo(nome + "_braco_pernas", A, R, 0.05, 0.05, X, mat_estrutura()))
+    pecas.append(_em_aneis(_cilindro(nome + "_eixo_rolos", 0.014, 2 * x_r + comp_r - 0.02, R, (0, math.radians(90), 0), mat_aco())))
+    for s in (1, -1):
+        _rolo_chanfrado(nome + "_rolo%+d" % s, Vector((s * x_r, y_r, z_r)), raio_r, comp_r, mat_estofado(), rol)
+    comp_j, larg_j, esp_j = joelhos["medidas"]
+    bases = []
+    for s in (1, -1):
+        xj, yj, zj, ang = joelhos[s]
+        aj = math.radians(ang)
+        d = Vector((0.0, -math.cos(aj), math.sin(aj)))      # descendo pela face (ao longo da canela)
+        nj = Vector((0.0, math.sin(aj), math.cos(aj)))      # normal da face (pra panturrilha)
+        T = Vector((xj, yj, zj))
+        c = T + d * (comp_j / 2) - nj * (esp_j / 2)
+        rot_j = _rot_de(X, -d, nj)                          # caixa: X local = X, Y local subindo pela face, Z local = nj
+        caixa(nome + "_joelho_estofado%+d" % s, c, (larg_j, comp_j, esp_j), mat_estofado(), rot=rot_j, pai=joe, chanfro=0.015)
+        pecas.append(_reto(caixa(nome + "_joelho_chapa%+d" % s, c - nj * (esp_j / 2 + chapa / 2), (larg_j - 0.03, comp_j - 0.03, chapa),
+                                 mat_estrutura(), rot=rot_j, chanfro=0)))
+        bases.append(T + d * (comp_j * 0.75) - nj * (esp_j + chapa))   # embaixo, atrás da almofada (onde o travessão prende)
+    xb = max(abs(joelhos[1][0]), abs(joelhos[-1][0]))
+    trav = Vector((0.0, (bases[0].y + bases[1].y) / 2, (bases[0].z + bases[1].z) / 2 - 0.02))
+    pecas.append(_viga(nome + "_travessao_joelhos", Vector((-xb, trav.y, trav.z)), Vector((xb, trav.y, trav.z)), 0.04, 0.04,
+                       mat_estrutura()))
+    db = (R - A).normalized()                               # o poste desce na vertical do travessão até o braço
+    no_braco = A + db * ((trav.y - A.y) / db.y if abs(db.y) > 1e-6 else 0.0)
+    pecas.append(_viga(nome + "_poste_joelhos", no_braco, trav, 0.04, 0.04, mat_estrutura()))
+    medidas = dict(angulo=angulo, ponta_alta=tuple(ponta_alta), costas=costas, cabeca=cabeca, viga=viga, pivo=tuple(A), fim_viga=tuple(B),
+                   rolos=rolos, joelhos=joelhos)
+    # ── os 2 postes da barra com os ganchos em J (SUPORTES: não encostam no corpo) e a base no chão, na ponta da cabeça ────────────
+    if suportes is not None:
+        y_s, x_s, alt_s, ganchos = suportes
+        prof, lado_p = 0.08, 0.05                           # poste: 8 cm no Y × 5 cm no X
+        pecas_sup.append(_viga(nome + "_base_cabeca", (-(x_s + 0.06), y_s, z_chao), (x_s + 0.06, y_s, z_chao), 0.08, 0.06,
+                               mat_estrutura()))
+        for s in (1, -1):
+            pecas_sup.append(_viga(nome + "_poste%+d" % s, (s * x_s, y_s, z_chao + 0.03), (s * x_s, y_s, alt_s), lado_p, prof,
+                                   mat_estrutura()))
+            pecas_sup.append(_reto(caixa(nome + "_poste_tampa%+d" % s, (s * x_s, y_s, alt_s + 0.004), (lado_p + 0.004, prof + 0.004, 0.008),
+                                         mat_borracha(), chanfro=0)))
+            pecas_sup.append(_viga(nome + "_pe_poste%+d" % s, (s * x_s, y_s - 0.22, z_chao), (s * x_s, y_s + 0.22, z_chao), 0.07, 0.06,
+                                   mat_estrutura()))
+            for k, yk in enumerate((y_s - 0.20, y_s + 0.20)):
+                pecas_sup.append(_reto(caixa(nome + "_sapata_poste%+d%d" % (s, k), (s * x_s, yk, 0.004), (0.08, 0.08, 0.008),
+                                             mat_borracha(), chanfro=0)))
+            for k, h in enumerate(ganchos):                 # braço saindo da frente do poste (pra −Y), borracha em cima e a aba na ponta
+                y0 = y_s - prof / 2
+                pecas_sup.append(_reto(caixa(nome + "_gancho%+d%d" % (s, k), (s * x_s, y0 - 0.045, h - 0.016), (lado_p, 0.09, 0.024),
+                                             mat_estrutura(), chanfro=0)))
+                pecas_sup.append(_reto(caixa(nome + "_gancho_borracha%+d%d" % (s, k), (s * x_s, y0 - 0.040, h - 0.002),
+                                             (lado_p - 0.004, 0.07, 0.004), mat_borracha(), chanfro=0)))
+                pecas_sup.append(_reto(caixa(nome + "_gancho_aba%+d%d" % (s, k), (s * x_s, y0 - 0.084, h + 0.015), (lado_p, 0.012, 0.03),
+                                             mat_estrutura(), chanfro=0)))
+        medidas["suportes"] = suportes
+        medidas["barra_no_gancho_y"] = y_s - prof / 2 - 0.040
+    _prender(pecas, estr)
+    _prender(pecas_sup, sup)
+    bpy.context.view_layer.update()
+    return BancoDeclinado({"estrutura": estr, "suportes": sup, "costas": cos_, "cabeca": cab_, "joelhos": joe, "rolos": rol}, u, n, E,
+                          medidas)
+# ===== fim: Banco declinado =========================================================================================================

@@ -180,3 +180,83 @@ def polo_cotovelo_faixa(rig, ombro, punho, braco, antebraco, s, faixa, peso=3.0)
         if melhor is None or custo < melhor[0]:
             melhor = (custo, direcao)
     return ombro + u * a + melhor[1] * (rho + 0.4)
+
+
+
+# ── banco DECLINADO (Supino Declinado com Barra, lote 14, 12/10/2026): de cabeça pra baixo no declínio — o deitar deita reto com os pés
+# no chão e o inclinar senta no banco inclinado; aqui o tronco desce pra cabeça (a cabeça mais baixa que o quadril) e as pernas ficam
+# presas no apoio da ponta de cima (free-exercise-db, Decline Barbell Bench Press: "Secure your legs at the end of the decline bench and
+# slowly lay down on the bench."; ExRx, Barbell Decline Bench Press: "Lie supine on decline bench with feet under leg brace."). Como as
+# máquinas, o banco é montado em volta do corpo: o declinar() deita o corpo e devolve o plano do estofado e a ponta alta; a cena acha
+# na pele onde ficam a almofada da dobra do joelho e os rolos (e3.banco_declinado liga tudo com a estrutura).
+def _sagital(v):
+    """Ângulo (graus) do vetor no plano YZ, acima da horizontal, medido apontando pra −Y (o lado dos pés no banco)."""
+    return math.degrees(math.atan2(v.z, -v.y))
+
+
+def declinar(bon, angulo=15.0, alto=0.432, alem_gluteo=0.10, afunda=0.006, afunda_gluteo=0.004, afunda_cabeca=0.003, quadril=5.0,
+             joelho=90.0, tornozelo=None, abrir=0.0):
+    """Deitado de costas no banco DECLINADO: o tronco gira 90 + `angulo` graus em volta do quadril (a cabeça pra +Y, mais baixa); as
+    escápulas e o glúteo ficam no plano do estofado, `angulo` graus abaixo da horizontal (a pele das costas `afunda` m dentro dele e a
+    do glúteo `afunda_gluteo`: o corpo gira um pouco em volta do X, no quadril, até os 2 encostarem juntos); a cabeça no mesmo plano (o
+    pescoço estende até ela afundar `afunda_cabeca`); o estofado termina `alem_gluteo` m depois do glúteo (pros pés), com o topo a
+    `alto` m do chão ali. Pernas presas no apoio: a coxa sobe `quadril` graus acima da linha do estofado e o joelho dobra `joelho`
+    graus — a canela desce pra fora do banco (giros em volta do X) —; o pé fica na postura de repouso em relação à canela (tornozelo =
+    None) ou com canela × pé = `tornozelo` graus (tecnica3d.tornozelo); `abrir` = graus de abertura de cada coxa pro lado além da de
+    repouso. Devolve um dict: "n" (normal do estofado, pro corpo), "u" (ao longo dele, descendo pra cabeça), "d" (topo do estofado: n·p
+    = d), "E" (meio da borda de cima na ponta alta), "giro" (graus que o corpo girou pra escápulas e glúteo encostarem) e "pescoco"
+    (graus que o pescoço estendeu)."""
+    rig = bon.rig
+    a = math.radians(angulo)
+    n = Vector((0.0, math.sin(a), math.cos(a)))
+    u = Vector((0.0, math.cos(a), -math.sin(a)))
+    pivo = (p3.cabeca(rig, "LeftUpLeg") + p3.cabeca(rig, "RightUpLeg")) / 2
+    p3.girar_osso(rig, "Hips", p3.rot_x(-(90.0 + angulo)), pivo=pivo)
+
+    def pernas():
+        for lado, s in LADOS:
+            q, k = p3.cabeca(rig, lado + "UpLeg"), p3.cabeca(rig, lado + "Leg")
+            p3.girar_osso(rig, lado + "UpLeg", p3.rot_x(-((angulo + quadril) - _sagital(k - q))))
+            k, t = p3.cabeca(rig, lado + "Leg"), p3.cabeca(rig, lado + "Foot")
+            p3.girar_osso(rig, lado + "Leg", p3.rot_x(-((angulo + quadril - joelho) - _sagital(t - k))))
+            if tornozelo is not None:
+                k, t, b = p3.cabeca(rig, lado + "Leg"), p3.cabeca(rig, lado + "Foot"), p3.cabeca(rig, lado + "ToeBase")
+                p3.girar_osso(rig, lado + "Foot", p3.rot_x(-(math.degrees((t - k).angle(b - t)) - tornozelo)))
+
+    if abrir:
+        for lado, s in LADOS:
+            p3.girar_osso(rig, lado + "UpLeg", Matrix.Rotation(math.radians(s * abrir), 3, n))
+
+    def apoio(partes):
+        return float((malha(bon, partes) @ np.array(n)).min())
+
+    # escápulas e glúteo no mesmo plano: girar +δ em volta do X no quadril leva as costas (a `alav` m pra cabeça) ~alav·δ pra fora do
+    # estofado; as pernas são refeitas depois de cada giro (a coxa e a canela ficam nos ângulos pedidos em relação ao chão)
+    giro = 0.0
+    for _ in range(3):
+        pernas()
+        for _ in range(12):
+            dif = (apoio(("Spine1", "Spine2")) + afunda) - (apoio(("Hips",)) + afunda_gluteo)
+            if abs(dif) < 0.0002:
+                break
+            q = (p3.cabeca(rig, "LeftUpLeg") + p3.cabeca(rig, "RightUpLeg")) / 2
+            alav = float((Vector(malha(bon, ("Spine2",)).mean(axis=0)) - q).dot(u))
+            dg = math.degrees(dif / max(alav, 0.1))
+            p3.girar_osso(rig, "Hips", p3.rot_x(-dg), pivo=q)
+            giro += dg
+    pernas()
+    d = apoio(("Spine1", "Spine2")) + afunda
+    pescoco = 0
+    while float((malha(bon, ("Head",)) @ np.array(n)).min()) > d - afunda_cabeca and pescoco < 40:
+        p3.girar_osso(rig, "Neck", p3.rot_x(-1))
+        pescoco += 1
+    # altura: a ponta alta `alem_gluteo` depois do glúteo (o mais perto dos pés, ao longo do estofado), com o topo a `alto` m
+    s_alto = float((malha(bon, ("Hips",)) @ np.array(u)).min()) - alem_gluteo
+    E = u * s_alto + n * d
+    dz = alto - E.z
+    p3.girar_osso(rig, "Hips", Matrix.Identity(3), mover=Vector((0, 0, dz)))
+    d += n.z * dz
+    E = Vector((0.0, E.y, alto))
+    print("DECLINADO %.0f° | giro p/ escápulas + glúteo %.2f° | pescoço estendido %d° | ponta alta y %.4f z %.4f | d %.4f" % (
+        angulo, giro, pescoco, E.y, E.z, d))
+    return dict(n=n, u=u, d=d, E=E, giro=giro, pescoco=pescoco)

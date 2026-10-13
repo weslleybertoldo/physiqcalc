@@ -833,3 +833,21 @@ def test_tronco_e_canela_com_sinal_no_remo():
     assert tc.canela_sinal(reta) == pytest.approx([0, -10], abs=1e-6)        # o direito atrás (e aberto 5 cm pro lado: não conta)
     assert tc.canela_sinal(girar(reta, -40, (0, 0, 1))) == pytest.approx([0, -10], abs=1e-6)
     assert {"tronco_sinal", "canela_sinal"} <= set(tc.MEDIDAS)
+
+
+def test_braco_lado_perpendicular_ao_chao_no_banco_declinado():
+    """Supino declinado com barra (lote 14): deitado de costas no banco a −15° (a cabeça pra +Y, mais baixa), o braço em pé no mundo dá 0
+    visto de lado mesmo com o punho aberto pro lado (pegada média); perpendicular ao TRONCO ele fica 15° pro lado da cabeça; pros pés, +."""
+    deitado = girar(em_pe(), -105, (1, 0, 0), (0, 0, 0.95))       # cabeça pra +Y e 15° abaixo da horizontal, peito pra cima
+    assert tc.eixos_tronco(deitado)[0][2] == pytest.approx(-math.sin(math.radians(15)), abs=1e-6)
+    j = dict(deitado)
+    for L, s in (("Left", 1), ("Right", -1)):
+        j[L + "Hand"] = j[L + "Arm"] + np.array([s * 0.12, 0, 0.55])           # em pé no mundo, o punho 12 cm pro lado
+    assert tc.braco_lado(j) == pytest.approx([0, 0], abs=1e-6)
+    normal = np.array([0, math.sin(math.radians(15)), math.cos(math.radians(15))])
+    k = dict(j, LeftHand=j["LeftArm"] + 0.55 * normal)                          # perpendicular ao tronco
+    assert tc.braco_lado(k)[0] == pytest.approx(-15, abs=1e-6)
+    pes = dict(j, RightHand=j["RightArm"] + np.array([-0.12, -0.55 * math.tan(math.radians(10)), 0.55]))   # 10° pros pés
+    assert tc.braco_lado(pes)[1] == pytest.approx(10, abs=1e-6)
+    assert tc.braco_lado(girar(pes, 40, (0, 0, 1)))[1] == pytest.approx(10, abs=1e-6)   # girar o banco no chão não muda
+    assert "braco_lado" in tc.MEDIDAS

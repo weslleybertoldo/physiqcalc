@@ -1,0 +1,479 @@
+{
+ "uuid": "9f47cad3-438d-58c5-89fd-a55c33c66d6e",
+ "nome": "Supino Declinado com Barra",
+ "cena": "supino_declinado_com_barra",
+ "grupo": "Peitoral",
+ "subgrupo": "Peitoral inferior (fibras esternais/costais) · tríceps",
+ "padrao_movimento": "supino_declinado",
+ "equipamento": "barra",
+ "variacao": "banco declinado",
+ "alvos": [
+  "peitoral"
+ ],
+ "auxiliares": [
+  "deltoide",
+  "triceps"
+ ],
+ "camera": {
+  "az": 50,
+  "el": 20,
+  "dist": 3.8,
+  "alvo": [
+   0.0,
+   0.05,
+   0.55
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.4,
+  "alvo": [
+   0.0,
+   0.05,
+   0.6
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Deitado de costas no banco declinado (a cabeça mais baixa que o quadril, o estofado a 15° do chão), com a cabeça, as costas e o glúteo apoiados e as pernas presas no apoio da ponta de cima — a dobra dos joelhos por cima da almofada e o peito dos pés embaixo dos rolos —, segura a barra com as palmas viradas para os pés (pegada pronada), as mãos numa pegada média, um pouco mais abertas que os ombros, os punhos firmes e as escápulas para trás e para baixo; começa com os braços quase esticados e a barra em cima dos ombros, com os braços em pé (perpendiculares ao chão, não ao tronco). Desce a barra devagar, para baixo e um pouco para os pés, com os cotovelos abertos a cerca de 60° do tronco e os antebraços quase em pé embaixo dela, até a barra encostar de leve na parte de baixo do peito; empurra a barra de volta para cima dos ombros até os cotovelos quase esticarem, sem travar. O corpo não escorrega no banco: as pernas presas seguram o corpo no declínio.",
+ "cinesiologia": {
+  "plano": "sobretudo transverso/frontal no ombro, com o cotovelo a ~62° do tronco embaixo: adução horizontal do ombro e extensão do cotovelo na subida, cadeia cinética aberta. No banco a −15° o braço em pé no mundo fica ~15° inclinado pros pés em relação ao tronco: a barra vai em linha reta de cima das articulações dos ombros até a parte de baixo do peito (163 mm pros pés da articulação do ombro, ao longo do tronco), descendo 394 mm e andando 116 mm pros pés (o caminho a 16° da vertical)",
+  "articulacoes": "ombro (adução horizontal e flexão na subida, abdução horizontal na descida; embaixo o braço fica a ~62° do tronco, vista de cima do peito); cotovelo (extensão na subida, de ~131° de flexão embaixo até ~10°, sem travar; ~97° no meio do caminho); antebraço em pronação, quase em pé embaixo; punho firme, um pouco estendido (~18°); escápulas retraídas e deprimidas, paradas no banco; quadril (~7°), joelhos (~90°) e tornozelos parados, com as pernas presas no apoio e os pés no ar",
+  "agonistas": "peitoral maior, sobretudo a porção esternal (ExRx, Barbell Decline Bench Press: Target \"Pectoralis Major, Sternal\"; o catálogo do app: \"Peitoral inferior (fibras esternais/costais) · tríceps\"; free-exercise-db: \"primaryMuscles\": [\"chest\"])",
+  "sinergistas": "peitoral maior (porção clavicular), deltoide anterior, tríceps braquial e coracobraquial (ExRx: Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\"; free-exercise-db: \"secondaryMuscles\": [\"shoulders\", \"triceps\"]). A ênfase no peitoral de baixo é em relação ao supino INCLINADO (Glass & Armstrong 1997: \"significantly greater lower pectoral Con activation during decline bench press\"); em relação ao reto a ativação é parecida (Lauver 2016: −15° 100,4% × reto 100,1% da CVIM no peitoral de baixo; Saeterbakken 2017: \"Similar levels of activity in the PM\") ou um pouco menor na porção esternocostal (Barnett 1995, no Smith). A cabeça longa do tríceps trabalha mais no declinado e no reto que no inclinado (Barnett 1995; ExRx, Glass 1997); o grande dorsal participa pouco (ExRx: \"Latissimus Dorsi involvement is low on Decline Bench Press (Barnett 1995)\")",
+  "estabilizadores": "bíceps braquial, cabeça curta (ExRx: Dynamic Stabilizers \"Biceps Brachii, Short Head\"); as pernas presas no apoio seguram o corpo no declínio (free-exercise-db: \"Secure your legs at the end of the decline bench\")",
+  "fases": "descida excêntrica até a barra encostar de leve na parte de baixo do peito (free-exercise-db: \"As you breathe in, come down slowly until you feel the bar on your lower chest.\"; \"It should take at least twice as long to go down than to come up\") e subida concêntrica até os braços quase esticarem (ExRx: \"Press bar until arms are extended.\"; free-exercise-db: \"bring the bar back to the starting position as you breathe out\")"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público), \"Decline Barbell Bench Press\" — o fonte_en do catálogo (https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Decline_Barbell_Bench_Press.json, lido em 11/10/2026): \"Secure your legs at the end of the decline bench and slowly lay down on the bench.\"; \"Using a medium width grip (a grip that creates a 90-degree angle in the middle of the movement between the forearms and the upper arms), lift the bar from the rack and hold it straight over you with your arms locked. The arms should be perpendicular to the floor. This will be your starting position.\"; \"As you breathe in, come down slowly until you feel the bar on your lower chest.\"; \"After a second pause, bring the bar back to the starting position as you breathe out and push the bar using your chest muscles. Lock your arms and squeeze your chest in the contracted position, hold for a second and then start coming down slowly again. Tip: It should take at least twice as long to go down than to come up).\"; \"primaryMuscles\": [\"chest\"], \"secondaryMuscles\": [\"shoulders\", \"triceps\"]. Da mesma lista: Decline Dumbbell Bench Press (\"Tip: Throughout the motion, the forearms should always be perpendicular to the floor.\"), Decline Close-Grip Bench To Skull Crusher (\"lower the bar down to your lower chest\") e Decline Smith Press (\"lower the bar under control by allowing the elbows to flex, lightly contacting the torso\")",
+  "ExRx.net — Barbell Decline Bench Press (https://exrx.net/WeightExercises/PectoralSternal/BBDeclineBenchPress, cópia do Internet Archive de 02/02/2026; o site responde 403 direto): \"Utility: Basic or Auxiliary\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Lie supine on decline bench with feet under leg brace. Dismount barbell from rack over chest using wide oblique overhand grip.\"; Execution: \"Lower weight to chest. Press bar until arms are extended. Repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide.\" / \"Latissimus Dorsi involvement is low on Decline Bench Press (Barnett 1995). Also see Bench Press Analysis.\"; músculos: Target \"Pectoralis Major, Sternal\"; Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\"; Dynamic Stabilizers \"Biceps Brachii, Short Head\"",
+  "ExRx.net — Bench Press Analyses (https://exrx.net/Kinesiology/BenchPress, cópia do Internet Archive de 01/02/2025; a análise que a página do declinado manda ver): \"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso and can be customized according to individual goals and body mechanics.\"; \"Coach Rippetoe (2015), author of Starting Strength, suggests a 70º upper arm position with the forearms vertical at the lowest bench press position.\"; \"Position the wrists directly under the bar by turning the wrists out slightly so bar is placed on lower outer portion of palm. This grip positioning prevents the wrists from becoming completely hyperextended under the weight of the bar.\"; \"Grip the bar with an opposing thumb grip so that the barbell does not slide out of the hand onto the body.\"; \"With elbows extended, pull barbell so it is balanced directly over shoulder joint before proceeding with the exercise.\"; \"Lie on bench so eye level is just in front of the racked bar.\"; \"Keep the scapula back and down.\"; \"Glass (1997) reported that Barbell Decline Bench Press recruits a greater portion of the Pectoralis Major than does the Barbell Incline Bench Press.\"; \"The long head of the Triceps Brachii was more active on the Smith Decline bench press than the flat Smith Bench Press or Smith Incline Bench Press, particularly with narrow hand spacing (Glass 1997).\"; e, no arco das costas, \"it also declines the torso so the Pectoralis can push the bar upward in a stronger plane of movement: shoulder transverse flexion with slight shoulder adduction. This plan of motion is more similar to the Decline Bench Press.\". ExRx — Kinesiology/Errors (cópia de 04/08/2025), pegada aberta recomendada: \"elbow width, when elbow is same height/plane as shoulders\"",
+  "NSCA — Basics of Strength and Conditioning Manual (Sands, Wurth e Hewit; cópia do Internet Archive de 12/02/2022) — sem o declinado; o supino com barra no banco reto, mesma técnica de barra: \"Head in neutral position on bench or back pad\"; \"Shoulders and upper back set evenly on bench or back pad\"; \"Buttocks on bench or seat\" (p. 27; os 2 pés no chão dos 5 pontos não valem aqui: as pernas ficam presas no apoio); \"Lie flat on the bench in a five-point body contact position with eyes directly under the bar\"; \"Grasp the bar evenly with a closed, pronated grip with hands slightly wider than shoulder-width\"; \"Lift the bar from the hooks and position it directly above shoulders with elbows fully extended\"; \"Lower the bar slowly and under control, allowing it to touch the chest\"; \"Keep wrists rigid and directly above elbows\"; \"The movement of the bar should be down and slightly forward, and up and slightly back\"; \"Wrists should be in line with elbows with thumbs wrapped around the bar throughout the entire lift\"; \"Avoid bouncing the bar off the chest\" (pp. 53–54)",
+  "ACE Exercise Library — não tem o supino declinado com barra (4 páginas de peito e 25 exercícios de barra, conferidos em 11/10/2026); Seated Decline Cable Press (outro exercício, sentado na polia), só pelas escápulas e pelo ponto de chegada: \"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"; \"stopping when they lightly touch, or are close to, the lower portion of your chest\"",
+  "Glass SC, Armstrong T. Electromyographical Activity of the Pectoralis Muscle During Incline and Decline Bench Presses. J Strength Cond Res. 1997;11(3):163-167 — lido só o resumo (página da revista na cópia do Internet Archive de 16/08/2025): \"Fifteen young men experienced in weight lifting completed 6 repetitions of the bench press at incline and decline angles of +30 and −15° from horizontal, respectively.\"; \"Results showed significantly greater lower pectoral Con activation during decline bench press. The same result was seen during the Ecc phase. No significant differences were seen in upper pectoral activation between incline and decline bench press.\"",
+  "Lauver JD, Cayot TE, Scheuermann BW. Influence of bench angle on upper extremity muscular activation during bench press exercise. Eur J Sport Sci. 2016;16(3):309-316 — lido só o resumo (PubMed 25799093): \"a free-weight barbell bench press performed at 0°, 30°, 45° and -15° bench angles\"; \"The sEMG of lower pectoralis was greater during -15° (100.4 ± 5.7% MVIC), 30° (86.6 ± 4.8% MVIC) and horizontal (100.1 ± 5.2% MVIC) bench conditions compared to the 45° (71.9 ± 4.5% MVIC) for the whole concentric contraction.\"",
+  "Saeterbakken AH, Mo D-A, Scott S, Andersen V. The Effects of Bench Press Variations in Competitive Athletes on Muscle Activity and Performance. J Hum Kinet. 2017;57:61-71 (texto inteiro, PMC5504579): \"on a +25º inclined and −25º declined bench\"; \"the barbell had to touch the chest gently without any bouncing, before being lifted up to full elbow extension\"; \"participants were instructed to maintain the head, shoulder blades and buttocks in contact with the bench in all variations\"; \"Similar levels of activity in the PM (sternocostal and clavicular parts) were observed in the flat bench compared with the inclined and declined bench positions.\"; \"a lower displacement was observed when performing using the declined compared to the inclined bench position\"; \"No differences in the elbow position were found between the flat and declined or inclined bench positions\"; o ângulo do Barnett 1995: \"a +40º inclined and −18º declined bench was used\"",
+  "Barnett C, Kippers V, Turner P. Effects of Variations of the Bench Press Exercise on the EMG Activity of Five Shoulder Muscles. J Strength Cond Res. 1995;9(4):222-227 — lido só o resumo (página da revista na cópia do Internet Archive de 11/02/2015, salva pelo agente do Supino Fechado): \"The sternocostal head of the pectoralis major was more active during the press from a horizontal bench than from a decline bench.\"; \"The long head of the triceps brachii was more active during the decline and flat bench presses than the other two conditions\"; \"Latissimus dorsi exhibited low activity in all conditions.\" (no Smith; o ângulo, −18°, só pelo Saeterbakken 2017)",
+  "Life Fitness — Signature Series Olympic Decline Bench (LBR-OD; SODB na linha de casa), páginas do fabricante (https://www.lifefitness.com/en-gb/catalog/strength-training/benches/signature-series-olympic-decline-bench e /en-us/, lidas em 11/10/2026): \"Footprint (L x W x H) 68\\\" x 51\\\" x 51\\\" (metric cm: 173 x 130 x 130)\"; \"Vertical height from floor to Seat Pad 17\\\" (43.2 cm)\"; \"Vertical height from floor to Top Bar Support 37\\\" (94 cm)\"; \"Vertical height from floor to Bottom Bar Support 30.5\\\" (77.5 cm)\"; \"Head Pad Size (at the widest point of the contoured sides) 10\\\" x 9\\\" (25.4 x 22.8 cm)\"; \"Back Pad Size (at the widest point of the contoured sides) 11\\\" x 32\\\" (27.9 x 81.3 cm)\"; \"It has an adjustable kneepad to accommodate users of all sizes.\"; loja da Life Fitness (cópia do Internet Archive de 23/05/2024): \"The Decline Bench is equipped with a negative 15-degree back pad angle.\"; manual de peças SODB (Parts Manual, 1/5/2019): \"Pad, Angle Short Custom\" (Qty 2), \"ASSY, ROLLER PAD SHORT Custom\" (Qty 2), \"Pad, Head Rest, Flat Custom\", \"Pad, 36 X 11 Flat Custom\", \"Primary Pivot Shaft\", \"Bar Catch Hook\" (2 por poste) — ficaram o ângulo (−15°, fixo), o estofado das costas de 81,3 × 27,9 cm (o do site e da loja; o manual diz 36\\\"), o da cabeça de 22,8 × 25,4 cm, o topo da ponta alta a 43,2 cm (o \\\"Seat Pad\\\" lido como a ponta alta, onde a pessoa senta: o fabricante não diz o ponto), os postes de 130 cm e os ganchos a 94 e 77,5 cm; a altura das almofadas e dos rolos das pernas não está no manual",
+  "Legend Fitness — Olympic Decline Bench, Model #3109 (https://www.legendfitness.com/product/olympic-decline-bench/, lido em 11/10/2026): \"Pad angle is -15 degrees from horizontal.\"; \"Adjustable calf pad/rollers.\"; \"Adjustable ankle roller keep users in place\"; \"Dual bar catches for safety.\"",
+  "Precor — Discovery Olympic Decline Bench DBR0411 (folheto, https://static.precor.com/sell-sheet/all/DBR/DBR0411-Olympic-Decline-Bench-NA.pdf, lido em 11/10/2026): \"The adjustable roller pad foot catch ergonomically positions exercisers to execute decline pressing movements without excessive external shoulder rotation.\"; \"83 x 65 x 51 in / 211 x 165 x 130 cm\"",
+  "REP Fitness — AB-5000/5100 Leg Attachment (apoio de pernas do banco declinado, https://repfitness.com/ab-5000-5100-leg-attachment, lido em 12/10/2026): \"The pads are 4” in diameter\"; \"hook your feet into the roller\" — o diâmetro dos rolos dos tornozelos (o SODB não dá)",
+  "Bancos declinados reguláveis (só a faixa do ângulo): Life Fitness LBR-DB \"Back Pad Adjustments +10°, 0°, -10°, -20°, -30°\"; Precor DBR0113 \"six different exerciser positions at 5, 10, 15, 20, 25, and 30 degree angles\"; Hammer Strength FW-ADB \"Back Pad Adjustments -10°, -25°\" (páginas e folhetos dos fabricantes, lidos em 11/10/2026)",
+  "International Powerlifting Federation — Technical Rules Book (janeiro de 2026): barra \"Distance between the collar faces is not to exceed 1.32 m or be less than 1.31 m.\", \"Diameter of the bar is not to exceed 29 mm or be less than 28 mm.\"; anilhas \"The diameter of the largest discs shall not be more than 45 cm.\" (a barra e as anilhas do Supino Fechado com Barra)",
+  "Catálogo do app (scripts/conteudo/novos_61.json): grupo \"Peitoral\", subgrupo \"Peitoral inferior (fibras esternais/costais) · tríceps\", padrão \"supino_declinado\", variação \"banco declinado\", fonte_en \"Decline Barbell Bench Press\" (sem dica no app)"
+ ],
+ "checagens": {
+  "pes_no_chao": false,
+  "pes_no_chao_motivo": "no declinado as pernas ficam PRESAS no apoio da ponta de cima do banco (free-exercise-db: \"Secure your legs at the end of the decline bench\"; ExRx: \"Lie supine on decline bench with feet under leg brace.\"), com os pés no ar, ~13 cm acima do chão: as regras de pé chapado no chão (planta a 0 ± 5 mm, sem escorregar no chão) e as de técnica com os pés no chão (largura, ponta do pé, joelho na direção do pé, medidas no plano do chão) não servem — e os 5 pontos de contato da NSCA (\"Right foot flat on floor\", \"Left foot flat on floor\") são do banco reto. Quem confere as pernas são as zonas da panturrilha na almofada da dobra do joelho e do peito do pé nos rolos em todo quadro, os pés fora do chão (alturas) e os ângulos do joelho, do quadril e do tornozelo abaixo; o corpo não escorrega no declínio (a cena mede o tronco e os pés parados: 0 mm em todo quadro)",
+  "zonas": [
+   {
+    "nome": "cabeça apoiada no estofado da cabeça",
+    "equipamento": "declinado_cabeca",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 27 (\"Head in neutral position on bench or back pad\"); Saeterbakken 2017 (\"participants were instructed to maintain the head, shoulder blades and buttocks in contact with the bench in all variations\", com o banco a −25°)"
+   },
+   {
+    "nome": "escápulas (costas de cima) apoiadas no estofado",
+    "equipamento": "declinado_costas",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 27 (\"Shoulders and upper back set evenly on bench or back pad\"); Saeterbakken 2017 (\"participants were instructed to maintain the head, shoulder blades and buttocks in contact with the bench in all variations\", com o banco a −25°)"
+   },
+   {
+    "nome": "glúteo apoiado no estofado",
+    "equipamento": "declinado_costas",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA — Basics, p. 27 (\"Buttocks on bench or seat\"); Saeterbakken 2017 (\"participants were instructed to maintain the head, shoulder blades and buttocks in contact with the bench in all variations\", com o banco a −25°)"
+   },
+   {
+    "nome": "panturrilha esquerda na almofada da dobra do joelho",
+    "equipamento": "declinado_joelhos",
+    "partes": [
+     "LeftLeg"
+    ],
+    "mm": [
+     -12,
+     3
+    ],
+    "fonte": "free-exercise-db (\"Secure your legs at the end of the decline bench\"); Life Fitness SODB (\"adjustable kneepad\", \"Pad, Angle Short\" ×2); Legend 3109 (\"Adjustable calf pad/rollers.\") — a dobra do joelho por cima da almofada, a panturrilha encostada nela"
+   },
+   {
+    "nome": "panturrilha direita na almofada da dobra do joelho",
+    "equipamento": "declinado_joelhos",
+    "partes": [
+     "RightLeg"
+    ],
+    "mm": [
+     -12,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "peito do pé esquerdo preso embaixo do rolo",
+    "equipamento": "declinado_rolos",
+    "partes": [
+     "LeftLeg",
+     "LeftFoot"
+    ],
+    "mm": [
+     -10,
+     3
+    ],
+    "fonte": "ExRx (\"Lie supine on decline bench with feet under leg brace.\"); Legend 3109 (\"Adjustable ankle roller keep users in place\"); Life Fitness SODB (\"ASSY, ROLLER PAD SHORT\" ×2); Precor DBR0411 (\"roller pad foot catch\")"
+   },
+   {
+    "nome": "peito do pé direito preso embaixo do rolo",
+    "equipamento": "declinado_rolos",
+    "partes": [
+     "RightLeg",
+     "RightFoot"
+    ],
+    "mm": [
+     -10,
+     3
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "pés no ar, fora do chão (presos no apoio)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     50,
+     5000
+    ],
+    "fonte": "free-exercise-db (\"Secure your legs at the end of the decline bench\"): as pernas presas no apoio, os pés não tocam o chão"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "postes e ganchos longe da barra e das anilhas",
+    "equipamento": "declinado_suportes",
+    "de": "barra",
+    "t": "todos",
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "pedido do exercício: a barra em cima (t = 0) não encosta nos ganchos e as anilhas não batem nos suportes"
+   },
+   {
+    "nome": "estrutura do banco longe da barra e das anilhas embaixo",
+    "equipamento": "declinado_estrutura",
+    "de": "barra",
+    "t": 1.0,
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "pedido do exercício: as anilhas não batem no banco (embaixo é quando elas ficam mais baixas)"
+   },
+   {
+    "nome": "estofado das costas longe da barra e das anilhas embaixo",
+    "equipamento": "declinado_costas",
+    "de": "barra",
+    "t": 1.0,
+    "mm": [
+     3,
+     100000
+    ],
+    "fonte": "pedido do exercício"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braços quase esticados em cima, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ExRx — Barbell Decline Bench Press (\"Press bar until arms are extended\"); o free-exercise-db trava (\"with your arms locked\"): aqui quase esticados (~10°), como nos supinos com barra do app"
+   },
+   {
+    "nome": "braços perpendiculares ao chão em cima, vistos de lado (barra na vertical dos ombros)",
+    "medida": "braco_lado",
+    "t": 0.0,
+    "graus": [
+     -8,
+     8
+    ],
+    "fonte": "free-exercise-db (\"hold it straight over you with your arms locked. The arms should be perpendicular to the floor.\"); ExRx — Bench Press Analyses (\"pull barbell so it is balanced directly over shoulder joint\"); NSCA (\"position it directly above shoulders\") — tecnica3d.braco_lado: a reta ombro → punho × a vertical do MUNDO, vista de lado (0 = em pé; de frente ela abre pro lado com a pegada média, o que não conta)"
+   },
+   {
+    "nome": "em cima o braço fica ~15° inclinado pros pés em relação ao tronco (declínio)",
+    "medida": "braco_elevacao",
+    "t": 0.0,
+    "graus": [
+     65,
+     85
+    ],
+    "fonte": "free-exercise-db (\"The arms should be perpendicular to the floor.\") com o banco a −15° (Life Fitness: \"a negative 15-degree back pad angle\"): o braço em pé no mundo fica a ~75° do tronco (no banco reto, ~90°)"
+   },
+   {
+    "nome": "cotovelos a 45–70° do tronco",
+    "medida": "braco_abertura",
+    "t": "todos",
+    "graus": [
+     45,
+     70
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\"); Precor DBR0411 (\"without excessive external shoulder rotation\")"
+   },
+   {
+    "nome": "antebraço em pé embaixo",
+    "medida": "antebraco_vertical",
+    "t": 1.0,
+    "graus": [
+     0,
+     10
+    ],
+    "fonte": "free-exercise-db, Decline Dumbbell Bench Press (\"the forearms should always be perpendicular to the floor\"); ExRx — Bench Press Analyses (\"forearms vertical at the lowest bench press position\", Rippetoe); NSCA (\"Keep wrists rigid and directly above elbows\")"
+   },
+   {
+    "nome": "antebraço quase em pé o movimento todo",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ],
+    "fonte": "free-exercise-db, Decline Dumbbell Bench Press (\"Throughout the motion, the forearms should always be perpendicular to the floor\"); folga no meio do caminho, onde a barra anda pros pés em linha reta e o antebraço inclina um pouco (a mesma do Supino Reto com Barra)"
+   },
+   {
+    "nome": "cotovelo bem dobrado embaixo",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     110,
+     140
+    ],
+    "fonte": "free-exercise-db (\"come down slowly until you feel the bar on your lower chest\"): com a barra encostando e o antebraço em pé o cotovelo dobra ~130°"
+   },
+   {
+    "nome": "pegada média, um pouco mais aberta que os ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.45,
+     1.85
+    ],
+    "fonte": "free-exercise-db (\"a medium width grip (a grip that creates a 90-degree angle in the middle of the movement between the forearms and the upper arms)\"); ExRx (\"wide oblique overhand grip\"; \"Range of motion will be compromised if grip is too wide.\"; Errors: \"elbow width, when elbow is same height/plane as shoulders\"); NSCA (\"hands slightly wider than shoulder-width\"). Medida daqui: distância entre as bases dos dedos médios ÷ distância entre as articulações dos ombros (no boneco deitado, 391 mm)"
+   },
+   {
+    "nome": "pegada pronada (palmas pros pés, não neutra)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "ExRx (\"overhand grip\"); NSCA (\"closed, pronated grip\") — 0 = palma pros pés, 90 = palmas uma pra outra"
+   },
+   {
+    "nome": "palma de frente pros pés (nem pro teto nem pro peito)",
+    "medida": "palma_frente",
+    "t": "todos",
+    "graus": [
+     45,
+     120
+    ],
+    "fonte": "NSCA (\"closed, pronated grip\"; \"Keep wrists rigid\"): deitado, a frente do tronco é o teto; 90 = palma pros pés (a do Supino Fechado com Barra)"
+   },
+   {
+    "nome": "punho firme, quase reto, sem dobrar pra trás",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "NSCA (\"Keep wrists rigid and directly above elbows\"); ExRx — Bench Press Analyses (\"This grip positioning prevents the wrists from becoming completely hyperextended under the weight of the bar.\")"
+   },
+   {
+    "nome": "punho sem dobrar demais pro lado",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "amplitude normal do punho, desvio radial 0–20° e ulnar 0–30° (AAOS, Norkin & White — a fonte do lib/limites.py)"
+   },
+   {
+    "nome": "tronco deitado no banco declinado (cabeça mais baixa que o quadril)",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     100,
+     110
+    ],
+    "fonte": "Life Fitness (\"a negative 15-degree back pad angle\"); Legend 3109 (\"Pad angle is -15 degrees from horizontal.\") — o eixo quadril → pescoço a ~105° da vertical (90 = deitado reto)"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "NSCA (\"The lower back should remain in contact with the bench throughout the entire lift (do not arch the back or raise the chest to meet the bar)\")"
+   },
+   {
+    "nome": "quadril quase esticado (coxas subindo pouco acima da linha do banco)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "free-exercise-db (fotos do Decline Barbell Bench Press: as coxas seguem a ponta alta do banco até a almofada dos joelhos); a coxa sobe ~5° acima da linha do estofado"
+   },
+   {
+    "nome": "joelhos dobrados ~90° por cima da almofada",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "free-exercise-db (\"Secure your legs at the end of the decline bench\"; fotos: a dobra do joelho na almofada da ponta, a canela descendo pra fora do banco); Legend 3109 (\"Adjustable calf pad/rollers.\")"
+   },
+   {
+    "nome": "tornozelo sem passar do normal (pé solto, em repouso)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     56,
+     96
+    ],
+    "fonte": "Alazzawi S et al., World J Orthop 2017 (flexão plantar 0–50°, dorsiflexão 0–20°; no boneco ~76° em repouso)"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "escápulas pra trás e pra baixo, paradas no banco",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "ExRx — Bench Press Analyses (\"Keep the scapula back and down.\"); dica do Supino Declinado na Máquina (\"mantenha as escápulas deprimidas\")"
+   },
+   {
+    "nome": "cabeça apoiada, na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "NSCA (\"Head in neutral position on bench or back pad\"); deitado, o pescoço estende ~15° até a cabeça encostar no estofado da cabeça (dt.declinar)"
+   }
+  ]
+ }
+}
