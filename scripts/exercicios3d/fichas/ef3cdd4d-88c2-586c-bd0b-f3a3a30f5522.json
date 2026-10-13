@@ -1,0 +1,465 @@
+{
+ "uuid": "ef3cdd4d-88c2-586c-bd0b-f3a3a30f5522",
+ "nome": "Alongamento de Punho (extensores)",
+ "cena": "alongamento_de_punho_extensores",
+ "grupo": "Alongamento",
+ "subgrupo": "Extensores do antebraço",
+ "padrao_movimento": "along_punho",
+ "equipamento": "peso_corporal",
+ "variacao": "braço estendido, mão para baixo",
+ "alvos": [
+  "antebraco"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": -65,
+  "el": 10,
+  "dist": 3.0,
+  "alvo": [
+   0.0,
+   -0.2,
+   1.05
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.15,
+   1.0
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Alongamento parado pelo mesmo jeito da Prancha (Caminho A, decisão do Weslley de 11/10/2026 pras pranchas, \"1\": entrar na posição, segurar e sair; pra este exercício é decisão do Claude principal por coerência — fica pra validação final dele), com os MESMOS tempos do Alongamento de Punho (flexores) (os 2 de punho saem lado a lado no app). t = 0 → 1 é UM ciclo e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar). t = 0 é o alongamento SEGURADO (a foto parada do app): o punho direito dobrado ~74° pra baixo, os dedos juntos e esticados apontando pro chão, a mão esquerda nas costas da mão direita puxando pro corpo; segura 5 s — uma segurada representativa, a mesma das pranchas (as fontes mandam mais: AAOS \"Hold the stretch for 15 seconds.\"; Mayo \"Hold the stretch for 15 to 30 seconds.\"; Kaiser \"Hold the stretch for at least 15 to 30 seconds.\"; ACSM \"holding the position for a period (i.e., 10-30 s)\"; ACE \"Try holding the stretch for 10-30 seconds\"; Sevier 2015 \"one repetition of 30 s\"; Manias & Stasinopoulos 2006 \"held for 30–45 seconds\"); solta em 1,5 s até a posição de começo das fontes (ExRx: \"With palm facing downward\"; AAOS: \"Straighten your arm with your palm facing down\"; Mayo: \"palm facing down\" e \"Relax and return to the starting position\"): o braço esticado, a palma pra baixo, o punho reto e a mão esquerda ainda encostada nas costas da mão direita; fica 0,5 s nela (o meio do tempo no começo cai em t = 0,5: os prints de t = 0,5 mostram o começo) e dobra de novo em 2,0 s, devagar (ACSM: \"slowly stretching a muscle/tendon group\"; AAOS: \"Gently pull your hand toward your body\"; Mayo: \"be careful not to bounce\"; ACE: \"Avoid bouncing or jerking movements.\"). Nenhuma fonte dá os segundos da saída e da entrada: são escolha nossa, devagar e sem tranco (as mesmas do par). ida_s = 9,0 s = 1 ciclo (144 quadros a 16/s); a saída e a entrada começam e acabam paradas (seno).",
+ "ida_s": 9.0,
+ "movimento": "Em pé, com os pés na largura do quadril, os joelhos soltos e o corpo parado, o braço direito fica esticado à frente, na altura do ombro e apontando pro meio do peito, com o cotovelo reto mas sem travar e a palma virada pra baixo. A mão esquerda, encostada nas costas da mão direita — a palma no lado do polegar e os dedos passando por cima das costas da mão —, dobra o punho direito pra baixo e puxa a mão em direção ao corpo, até os dedos, juntos e esticados, apontarem pro chão, sentindo a tensão na parte de fora do antebraço e do cotovelo, sem dor. Segura a posição respirando normalmente, sem balançar; depois solta devagar até a mão voltar pra linha do antebraço, com a palma pra baixo e a mão esquerda ainda encostada nas costas dela, e dobra de novo. Depois faz o mesmo com o outro braço.",
+ "cinesiologia": {
+  "plano": "sagital do antebraço: flexão PASSIVA do punho direito, em cadeia aberta, unilateral — alongamento estático passivo (ACSM: \"In passive static stretching, a position is assumed while holding a limb or other part of the body\"): a mão esquerda segura a posição; o braço direito fica parado à frente, com o antebraço em pronação",
+  "articulacoes": "punho direito em flexão (~74°, puxado pela outra mão), sem desvio de lado, com os dedos retos e juntos; antebraço direito em pronação (a palma pra baixo); cotovelo direito esticado sem travar (~6°); ombro direito com ~92° de flexão (o braço na altura do ombro) e ~33° de adução horizontal, parado; a mão esquerda nas costas da mão direita (punho esquerdo quase reto, ~12° de extensão; cotovelo esquerdo ~80–90°); tronco, escápulas, pernas e cabeça parados",
+  "agonistas": "nenhum (alongamento passivo: quem segura é a outra mão). Músculos ALONGADOS: os extensores do punho e dos dedos, o \"Wrist Extensors\" do ExRx (\"Forearm (outer or back)\": extensor dos dedos, extensor radial longo e curto do carpo, extensor ulnar do carpo, extensor do indicador, extensor do dedo mínimo e extensores do polegar, com origem no epicôndilo lateral), principalmente o extensor radial curto do carpo (Manias & Stasinopoulos 2006: \"static stretching exercises of the ECRB tendon\") — AAOS: \"a stretch on the outside of your forearm\"; Mayo: \"You'll feel tension in the outside part of your elbow and forearm.\"; ExRx: \"Brachioradialis can also be stretched by positioining downward or back (ie: external rotation of shoulder)\" (o braquiorradial, aqui sem foco)",
+  "sinergistas": "da mão esquerda: os flexores dos dedos esquerdos fecham em volta das costas da mão direita e os flexores do cotovelo esquerdo puxam de leve (AAOS: \"Gently pull your hand toward your body\"; Mayo: \"gently pull it toward you using your other hand\")",
+  "estabilizadores": "deltoide anterior e manguito rotador direitos seguram o braço esticado à frente; o tronco fica parado e os ombros não sobem nem vão pra frente",
+  "fases": "entra no alongamento dobrando o punho devagar, segura respirando normalmente sem balançar (Mayo: \"Breathe freely as you hold each stretch and be careful not to bounce.\"), solta devagar até o punho reto com a palma pra baixo e repete; depois o outro braço"
+ },
+ "referencias": [
+  "ExRx.net — Single Arm Wrist Extensor Stretch (o site direto responde 403; lido pelas cópias do Internet Archive de 05/01/2024: https://web.archive.org/web/20240105203902/https://exrx.net/Stretches/WristExtensors/Single e de 28/05/2023, o mesmo texto; 13/10/2026): Preparation \"With palm facing downward, pull wrist and fingers downward toward forearm.\" / Execution \"Extend or straighten elbow. Hold stretch. Repeat with opposite arm.\" / Comments \"Elbow may be extended first, followed by pulling palm toward forearm. Brachioradialis can also be stretched by positioining downward or back (ie: external rotation of shoulder)\"; Muscles: Target \"Wrist Extensors\". Foto: em pé, o braço esticado à frente um pouco abaixo do ombro, a mão dobrada pra baixo e a outra mão em cima dela.",
+  "ExRx.net — Wrist Extensors (diretório de músculos; cópia do Internet Archive de 11/03/2026: https://web.archive.org/web/20260311054116/https://exrx.net/Muscles/WristExtensors, lida em 13/10/2026): Other Names \"Forearm (outer or back)\", \"Hand Extensors\"; Heads \"Extensor Digitorum\", \"Extensor Carpi Radialis Longus\", \"Extensor Carpi Radialis Brevis\", \"Extensor Carpi Ulnaris\", \"Extensor Indicis\", \"Extensor Digiti Minimi\", \"Entensor Pollicis Longus\" (assim no site), \"Extensor Pollicis Brevis\"; origem \"Lateral Epicondyle [1, 2, 3, 4, 6]\"; Comments: \"The triarticulate [1] and biarticulate [2, 3, 4, 5, 6, 7, 8 ] wrist extensor muscles may independently enter passive insufficiency through the completion of one of 4 eccentric joint movements (opposite movements of the wrist, fingers, thumb, elbow) when an adjacent joint eccentric movement is sustained.\"",
+  "ExRx.net — Kneeling Wrist Extensor Stretch (cópia do Internet Archive de 22/08/2025): \"Kneel on floor or mat. Flex wrists and place tops of hand on floor with fingers pointing toward knees.\" / \"Lean against floor with elbows straight. Hold stretch for 20 seconds.\" — outro jeito (de joelhos), os mesmos músculos, o cotovelo reto.",
+  "AAOS/OrthoInfo — Therapeutic Exercise Program for Radial Tunnel Syndrome (\"Last reviewed: April 2024\"), 2. Wrist Flexion Stretch (pela AAOS o nome é o do movimento do punho: é o NOSSO, que alonga os extensores), https://orthoinfo.aaos.org/globalassets/pdfs/2024-therapeutic-exercise-program-for-radial-tunnel-syndrome.pdf: \"Straighten your arm with your palm facing down and bend your wrist so that your fingers point down.\" / \"Gently pull your hand toward your body until you feel a stretch on the outside of your forearm.\" / \"Hold the stretch for 15 seconds.\" / \"Repeat 5 times, then perform this stretch on the other arm.\" / \"Tip Do not lock your elbow.\"; \"Do not ignore pain: You should not feel significant pain during an exercise.\" Desenho: em pé, de perfil, o braço de perto esticado na altura do ombro, o punho dobrado com os dedos pro chão e a outra mão vindo por baixo, a palma no lado do polegar e os dedos dando a volta por cima das costas da mão.",
+  "Mayo Clinic — Wrist and forearm stretches for the workplace (vídeo, \"Sept. 26, 2024\"; lido pela cópia do Internet Archive de 03/01/2026: https://www.mayoclinic.org/healthy-lifestyle/adult-health/multimedia/forearm-stretches/vid-20084698): \"For the first stretch, lift one of your arms and hold it comfortably in front of you — palm facing down. Bend your hand downward and gently pull it toward you using your other hand. You'll feel tension in the outside part of your elbow and forearm. [...] Hold the stretch for 15 to 30 seconds. Relax and return to the starting position and repeat the stretch with your other hand.\" / \"Breathe freely as you hold each stretch and be careful not to bounce.\" / \"If you feel pain, you've gone too far.\" Quadros do vídeo (17 a 35 s): sentado à mesa, o cotovelo reto, o punho dobrado com os dedos esticados pro chão e a outra mão fechada em volta das costas da mão.",
+  "Kaiser Permanente — Health Encyclopedia, Wrist extensor stretch (WebMD Ignite, revisado pelo Clinical Review Board; \"Current as of: May 1, 2026\"), https://healthy.kaiserpermanente.org/health-wellness/health-encyclopedia/he.zm6127 (lido em 13/10/2026): \"Extend the arm with the affected wrist in front of you and point your fingers toward the floor.\" / \"With your other hand, gently bend your wrist farther until you feel a mild to moderate stretch in your forearm.\" / \"Hold the stretch for at least 15 to 30 seconds.\" / \"Repeat 2 to 4 times.\" / \"It's a good idea to repeat these steps with your other wrist.\" Foto (© 2023 Healthwise): em pé, o braço esticado à frente e pro meio do corpo, a mão dobrada pra baixo e a outra mão nas costas dela.",
+  "Manias P, Stasinopoulos D. A controlled clinical pilot trial to study the effectiveness of ice as a supplement to the exercise programme for the management of lateral elbow tendinopathy. Br J Sports Med 2006;40(1):81–85 (PMC2491915): \"Static stretching exercises of the ECRB tendon were performed with the help of the therapist (PM). The therapist placed the elbow of the patient in full extension, the forearm in full pronation, and the wrist in flexion and ulnar deviation according to the patient's tolerance. This position was held for 30–45 seconds each time and then released.\"",
+  "Stasinopoulos D, Stasinopoulou K, Johnson MI. An exercise programme for the management of lateral elbow tendinopathy. Br J Sports Med 2005;39(12):944–947 (PMC1725102, resumo): \"Static stretching is defined as passively stretching a given muscle-tendon unit by slowly placing and maintaining it in a maximal position of stretch. We recommend the position should be held for 30–45 s\"",
+  "Sevier TL, Stegink-Jansen CW. Astym treatment vs. eccentric exercise for lateral elbow tendinopathy: a randomized controlled clinical trial. PeerJ 2015;3:e967 (Europe PMC PMC4451036): \"The stretching exercises consisted of a wrist flexor stretch with elbow extended, a wrist extensor stretch with elbow extended\" / \"one repetition of 30 s each to the point of pull, but not to the point of pain.\"",
+  "ACSM — Garber CE et al. Quantity and quality of exercise for developing and maintaining cardiorespiratory, musculoskeletal, and neuromotor fitness in apparently healthy adults. Med Sci Sports Exerc 2011;43(7):1334–1359 (PubMed 21694556; texto pela cópia do Internet Archive): \"Static stretching involves slowly stretching a muscle/tendon group and holding the position for a period (i.e., 10-30 s).\" / \"In passive static stretching, a position is assumed while holding a limb or other part of the body with or without the assistance of a partner or device\" / \"Holding a stretch for 10-30 s at the point of tightness or slight discomfort enhances joint range of motion\"",
+  "ACE — Flexibility Exercises for Beginners (Jennifer Turpin Stanfield, 20/07/2017), https://www.acefitness.org/resources/everyone/blog/6499/flexibility-exercises-for-beginners/: \"Stretch to the point of mild discomfort.\" / \"Avoid bouncing or jerking movements.\" / \"Try holding the stretch for 10-30 seconds\". A Exercise Library da ACE não tem o alongamento do punho (só as roscas de punho).",
+  "free-exercise-db (Yuhonas, domínio público): não tem alongamento dos extensores do punho (busca nos 876 por \"wrist\"/\"forearm\": só o Kneeling Forearm Stretch, dos flexores, o Wrist Circles e o Side Wrist Pull). NASM e NSCA: não achei o alongamento do punho no material aberto (busca em 13/10/2026; o manual \"Basics of Strength and Conditioning\" da NSCA não tem).",
+  "Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry (valores de referência da AAOS, os do limites.py): flexão do punho 0–80°, extensão 0–70°, desvio radial 20° e ulnar 30°."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "limites_juntas": {
+   "punhoD": [
+    0,
+    80
+   ]
+  },
+  "limites_juntas_fonte": "Punho direito, o que alonga: a mão não segura peso e é dobrada pela outra até \"a stretch on the outside of your forearm\" (AAOS) — vale a flexão normal da AAOS, 0–80° (Norkin & White, a mesma referência do limites.py), não o teto de 55° do limites.py, que é pra mão segurando peso sem dobrar o punho. Medido: punho_flexao +74° segurando (o \"punho\" da checagem, o osso da mão × o antebraço sem sinal, dá ~79°: ele já mede ~8° com o punho reto). O punho esquerdo (a mão que ajuda) fica no teto padrão de 55° (quase reto, ~12° de extensão).",
+  "zonas": [],
+  "contatos": [
+   {
+    "nome": "mão esquerda nas costas da mão direita (encosta sem entrar)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightForeArm"
+    ],
+    "t": "todos",
+    "mm": [
+     -2,
+     2
+    ],
+    "fonte": "AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores) (\"Gently pull your hand toward your body\"); Mayo Clinic, Wrist and forearm stretches for the workplace (\"gently pull it toward you using your other hand\"); pedido: a mão que ajuda encosta sem entrar"
+   },
+   {
+    "nome": "mão direita não entra na esquerda (encostando)",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "LeftForeArm"
+    ],
+    "t": "todos",
+    "mm": [
+     -2,
+     2
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o próprio corpo): mão × mão medida à parte"
+   },
+   {
+    "nome": "dedos da mão esquerda pelas costas da mão direita (encostando)",
+    "partes": [
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightForeArm"
+    ],
+    "t": "todos",
+    "mm": [
+     -2,
+     2
+    ],
+    "fonte": "desenho da AAOS (a outra mão com os dedos por cima das costas da mão alongada); quadros da Mayo Clinic, Wrist and forearm stretches for the workplace (a outra mão fechada em volta das costas da mão)"
+   },
+   {
+    "nome": "antebraço esquerdo não entra na mão direita",
+    "partes": [
+     "LeftForeArm"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightForeArm"
+    ],
+    "t": "todos",
+    "mm": [
+     -2,
+     1000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o próprio corpo)"
+   },
+   {
+    "nome": "mãos longe do tronco e do rosto",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head"
+    ],
+    "t": "todos",
+    "mm": [
+     30,
+     5000
+    ],
+    "fonte": "ExRx, Single Arm Wrist Extensor Stretch e AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores): o braço esticado à frente (\"Extend or straighten elbow\"; \"Straighten your arm\")"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "punho direito dobrado pra baixo, os dedos pro chão (segurando)",
+    "medida": "punho_flexao",
+    "lado": "D",
+    "t": [
+     0.0,
+     0.3056
+    ],
+    "graus": [
+     71,
+     77
+    ],
+    "fonte": "AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores) (\"bend your wrist so that your fingers point down\"; \"until you feel a stretch on the outside of your forearm\"); Kaiser Permanente, Health Encyclopedia, Wrist extensor stretch (\"point your fingers toward the floor\"; \"gently bend your wrist farther until you feel a mild to moderate stretch in your forearm\"); ExRx, Single Arm Wrist Extensor Stretch (\"pull wrist and fingers downward toward forearm\"); flexão normal até 80° (AAOS, Norkin & White)"
+   },
+   {
+    "nome": "punho direito dobrado pra baixo, os dedos pro chão (segurando de novo)",
+    "medida": "punho_flexao",
+    "lado": "D",
+    "t": [
+     0.75,
+     1.0
+    ],
+    "graus": [
+     71,
+     77
+    ],
+    "fonte": "AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores); Kaiser Permanente, Health Encyclopedia, Wrist extensor stretch; ExRx, Single Arm Wrist Extensor Stretch; flexão normal até 80° (AAOS, Norkin & White)"
+   },
+   {
+    "nome": "punho direito reto na posição de começo (a palma pra baixo)",
+    "medida": "punho_flexao",
+    "lado": "D",
+    "t": [
+     0.4722,
+     0.5278
+    ],
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ExRx, Single Arm Wrist Extensor Stretch (\"With palm facing downward\"); AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores) (\"Straighten your arm with your palm facing down\"); Mayo Clinic, Wrist and forearm stretches for the workplace (\"Relax and return to the starting position\")"
+   },
+   {
+    "nome": "punho direito só entre o reto e a flexão normal o ciclo todo",
+    "medida": "punho_flexao",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     -3,
+     80
+    ],
+    "fonte": "AAOS (Norkin & White): flexão 0–80°; AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores) (\"until you feel a stretch\"); Mayo Clinic, Wrist and forearm stretches for the workplace (\"If you feel pain, you've gone too far.\")"
+   },
+   {
+    "nome": "punho direito sem desviar de lado",
+    "medida": "punho_desvio",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     -8,
+     8
+    ],
+    "fonte": "ExRx, Single Arm Wrist Extensor Stretch, AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores) e Kaiser Permanente, Health Encyclopedia, Wrist extensor stretch: só dobrar o punho pra baixo (\"pull wrist and fingers downward\"; \"bend your wrist so that your fingers point down\"; \"point your fingers toward the floor\"); o desvio pro lado do dedo mínimo do Manias & Stasinopoulos 2006 (\"wrist in flexion and ulnar deviation\") é a posição montada pelo fisioterapeuta, não a que a pessoa faz sozinha"
+   },
+   {
+    "nome": "palma direita pra baixo na posição de começo",
+    "medida": "palma_cima",
+    "lado": "D",
+    "t": [
+     0.4722,
+     0.5278
+    ],
+    "graus": [
+     150,
+     180
+    ],
+    "fonte": "ExRx, Single Arm Wrist Extensor Stretch (\"With palm facing downward\"); Mayo Clinic, Wrist and forearm stretches for the workplace (\"palm facing down\"); Manias & Stasinopoulos 2006 (\"the forearm in full pronation\")"
+   },
+   {
+    "nome": "cotovelo direito esticado sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     3,
+     12
+    ],
+    "fonte": "ExRx, Single Arm Wrist Extensor Stretch (\"Extend or straighten elbow\"); AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores) (\"Straighten your arm\"; \"Tip Do not lock your elbow.\")"
+   },
+   {
+    "nome": "braço direito à frente, na altura do ombro",
+    "medida": "braco_elevacao",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     85,
+     97
+    ],
+    "fonte": "desenho da AAOS (o braço esticado na altura do ombro); foto do ExRx, Single Arm Wrist Extensor Stretch (um pouco abaixo, na linha do peito); Mayo Clinic, Wrist and forearm stretches for the workplace (\"hold it comfortably in front of you\"); o mesmo braço do Alongamento de Punho (flexores)"
+   },
+   {
+    "nome": "braço direito pro meio do corpo (as mãos na frente do peito)",
+    "medida": "braco_plano",
+    "lado": "D",
+    "t": "todos",
+    "graus": [
+     110,
+     135
+    ],
+    "fonte": "fotos do ExRx, Single Arm Wrist Extensor Stretch e da Kaiser: o braço que alonga vai pro meio do corpo e as mãos se encontram na frente do peito (90 = reto pra frente); o mesmo do Alongamento de Punho (flexores)"
+   },
+   {
+    "nome": "punho esquerdo (a mão que ajuda) quase reto",
+    "medida": "punho_flexao",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     -25,
+     10
+    ],
+    "fonte": "AAOS (Norkin & White): flexão 0–80°, extensão 0–70°; a mão esquerda só encosta e puxa de leve (AAOS/OrthoInfo, Wrist Flexion Stretch (o nosso: alonga os extensores): \"Gently pull your hand toward your body\")"
+   },
+   {
+    "nome": "punho esquerdo sem desviar além do normal",
+    "medida": "punho_desvio",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "AAOS (Norkin & White): desvio radial 20°, ulnar 30°"
+   },
+   {
+    "nome": "ombro direito parado (a escápula não vai pra frente)",
+    "medida": "escapula_frente",
+    "lado": "D",
+    "t": "todos",
+    "mm": [
+     -5,
+     12
+    ],
+    "fonte": "pedido: o ombro e a escápula do braço esticado não vão pra frente enquanto a mão puxa; nas imagens do ExRx, Single Arm Wrist Extensor Stretch, da AAOS e da Kaiser os ombros ficam baixos e o tronco parado"
+   },
+   {
+    "nome": "ombros nivelados (sem subir)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "pedido: o ombro do braço esticado não sobe; imagens do ExRx, Single Arm Wrist Extensor Stretch, da AAOS e da Kaiser"
+   },
+   {
+    "nome": "tronco sem girar",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "pedido: o tronco fica parado (só a mão e o punho mexem)"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     -5
+    ],
+    "fonte": "imagens do ExRx, Single Arm Wrist Extensor Stretch, da AAOS e da Kaiser (a cabeça reta, olhando pra frente); o boneco em pé mede ~−11°"
+   }
+  ]
+ }
+}
