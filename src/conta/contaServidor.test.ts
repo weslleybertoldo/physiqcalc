@@ -600,6 +600,10 @@ describe("hml-21a — a fonte da função conta: como a pessoa, a porta com o JW
       expect(fonte, rel).not.toMatch(/service_?role|SERVICE_ROLE|sb_secret|createClient|Deno\.env/);
       if (rel !== "conta/index.ts") expect(fonte, rel).not.toMatch(/from "[^"]*porta-pessoa/);
     }
-    expect(arquivos.sort()).toEqual(["_shared/conta-leituras.ts", "_shared/conta-regras.ts", "conta/app.ts", "conta/casca.ts", "conta/comum.ts", "conta/index.ts"]);
+    // hml-21b (decisão da sessão principal 13/10 03:25): + os módulos conta/agenda.ts e conta/alunos.ts (a mesma conferência cobre os 2)
+    expect(arquivos.sort()).toEqual([
+      "_shared/conta-leituras.ts", "_shared/conta-regras.ts", "conta/agenda.ts", "conta/alunos.ts", "conta/app.ts", "conta/casca.ts", "conta/comum.ts",
+      "conta/index.ts",
+    ]);
   });
 });

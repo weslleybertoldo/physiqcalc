@@ -43,6 +43,15 @@
 //   · ConsultaLeitura.donoSe: o dono só quando o param booleano vem true (o listarGrupos(uid) de hoje — sem o uid, o RLS decide);
 //   · FonteRpc: `filtrarLista` (o valor-lista filtrado pelo dono = quem chama e pela conta do param — os ★ da Ferramentas › Modelos,
 //     H-108; sem o param, o valor de hoje) e `linhasDosIds` (a série RPC → .in(ids) na MESMA ida — a página de receitas).
+// hml-21b (Agenda, Alunos e o Dashboard pela função conta, 13/10/2026): mais 4 capacidades OPCIONAIS — só quem as declara usa; as consultas
+// da 20a–20d e da 21a não declaram nenhuma, então o plano delas não muda (o src/conta/contaServidor21b.test.ts confere as 2 coisas):
+//   · o filtro `gt` (o "termina depois do início da janela" da Agenda: .gt("fim", de)) — no plano, como o .or() de 1 condição
+//     (`fim.gt.<de>`, a mesma condição): o FiltroLeitura não muda (os módulos da nutricao e da financeiro fecham o switch dele);
+//   · `recorte` "meu_ou_da_conta" (o minhaOuDaConta da Agenda, montado AQUI com o user do token): com a conta do param, `<coluna>.eq.<user>,
+//     conta_id.eq.<conta>` (o que é meu + o que é da conta ativa; a conta é uuid — o corpo não injeta filtro); sem ela, só `<coluna> = user`;
+//     `contaPrimeiro` = a mesma condição na ordem do .or() da lib dos alunos da Agenda;
+//   · `fixos` (o filtro de valor fixo que a lib escreve, como o .eq("ativo", true) — nunca vem do corpo);
+//   · `colunasSe` (a lista fechada TODA trocada quando o param booleano vem true: o seletor com o CPF, só para o Recibo).
 
 /** Itens por pedido (acima → 400 lote_grande). */
 export const LOTE_MAX = 16;
@@ -222,13 +231,17 @@ export interface EmbutidoLeitura {
   limite?: number;
 }
 /** hml-20c: os operadores novos dos filtros declarados (o período, a busca por palavras, o prefixo e o "só os nulos"). */
-export type OperadorDoFiltro = "eq" | "in" | "gte" | "lte" | "lt" | "ilike_cada" | "ilike_prefixo" | "nulo";
+export type OperadorDoFiltro = "eq" | "in" | "gte" | "lte" | "lt" | "ilike_cada" | "ilike_prefixo" | "nulo" | "gt";
 /**
  * hml-20c: o .or() de hoje, montado AQUI com o user do token. "conta" = `conta_id.eq.<conta do param>,and(conta_id.is.null,
  * nutricionista_id.eq.<user>)` (o recorte da conta ativa — no recurso `tabela`, quando é o do embutido); "taco_ou_meus" = só com o param
  * booleano true, `fonte.eq.taco,nutricionista_id.eq.<user>` (a lista "Meus alimentos" do painel).
  */
-export type RecorteLeitura = { modelo: "conta"; param: string; tabela?: string } | { modelo: "taco_ou_meus"; param: string };
+export type RecorteLeitura =
+  | { modelo: "conta"; param: string; tabela?: string }
+  | { modelo: "taco_ou_meus"; param: string }
+  /** hml-21b: o que é MEU (a coluna do dono = o user do token) + o que é da conta do param (o minhaOuDaConta da Agenda) */
+  | { modelo: "meu_ou_da_conta"; param: string; coluna: string; contaPrimeiro?: boolean };
 /** select numa tabela com as colunas em lista fechada (nunca "*"), os filtros declarados (param → coluna), o teto e a ordem. */
 export interface FonteTabela {
   tabela: string;
@@ -245,6 +258,10 @@ export interface FonteTabela {
   recorte?: RecorteLeitura;
   /** hml-20c: os recursos embutidos (com as colunas em lista fechada) */
   embutidos?: readonly EmbutidoLeitura[];
+  /** hml-21b: os filtros de valor FIXO da lib (coluna = valor, sempre; nunca do corpo) — o .eq("ativo", true) dos alunos da Agenda */
+  fixos?: readonly { coluna: string; valor: string | number | boolean }[];
+  /** hml-21b: com o param booleano `param` = true, a lista fechada de colunas é ESTA (inteira, na ordem da lib) — o CPF do seletor no Recibo */
+  colunasSe?: { param: string; colunas: readonly string[] };
   /** hml-20c: offset + limite (os 2 params inteiros) → .range(offset, offset + limite − 1) — a busca da tela com o tamanho dela */
   faixa?: { offset: string; limite: string };
   /** hml-20c: o HEAD — só o total (count exato, com os mesmos filtros), sem linhas */
@@ -314,6 +331,9 @@ export type FiltroLeitura =
   | { op: "ilike"; coluna: string; valor: string }
   | { op: "ou"; filtro: string; tabela?: string };
 
+/** hml-21b: o valor que pode ir dentro do .or() sem aspas (o instante ISO, a data, o número): sem vírgula, parêntese, aspas nem espaço. */
+const VALOR_NO_OU = /^[0-9A-Za-z:.+-]{1,40}$/;
+
 /** hml-20c: o texto do LIKE com o \ % _ escapados (o mesmo do nomesParaCopia da tela). */
 export const escaparLike = (v: string): string => v.replace(/[\\%_]/g, (c) => `\\${c}`);
 
@@ -361,6 +381,13 @@ export function planoDaTabela(
       case "lt":
         filtros.push({ op: x.op, coluna: x.coluna, valor: v });
         break;
+      // hml-21b: o gt vai como o .or() de 1 condição (`<coluna>.gt.<valor>` — a MESMA condição do .gt() da lib): o FiltroLeitura não
+      // ganha op nova (os módulos da nutricao e da financeiro têm o switch fechado dele e não mudam nesta W). O valor é o do param já
+      // conferido (instante/data/inteiro); fora de [0-9A-Za-z:.+-] não monta a condição e fecha a consulta (id nulo = 0 linha)
+      case "gt":
+        if ((typeof v === "number" && Number.isFinite(v)) || (typeof v === "string" && VALOR_NO_OU.test(v))) filtros.push({ op: "ou", filtro: `${x.coluna}.gt.${v}` });
+        else filtros.push({ op: "is_null", coluna: "id" });
+        break;
       case "ilike_cada":
         for (const p of Array.isArray(v) ? v : [v]) if (typeof p === "string" && p) filtros.push({ op: "ilike", coluna: x.coluna, valor: `%${p}%` });
         break;
@@ -374,6 +401,8 @@ export function planoDaTabela(
         filtros.push({ op: "eq", coluna: x.coluna, valor: v });
     }
   }
+  // hml-21b: os filtros de valor fixo da lib (só quem declara)
+  for (const x of f.fixos ?? []) filtros.push({ op: "eq", coluna: x.coluna, valor: x.valor });
   // hml-20c: com o donoSe, o dono só quando o param booleano vem true (sem o donoSe, como sempre)
   if (consulta.dono && (consulta.donoSe === undefined || params[consulta.donoSe] === true)) filtros.push({ op: "eq", coluna: consulta.dono, valor: userId });
   if (f.vivas) filtros.push({ op: "is_null", coluna: "deleted_at" });
@@ -385,8 +414,18 @@ export function planoDaTabela(
     filtros.push(r.tabela ? { ...ou, tabela: r.tabela } : ou);
   }
   if (r && r.modelo === "taco_ou_meus" && params[r.param] === true) filtros.push({ op: "ou", filtro: `fonte.eq.taco,nutricionista_id.eq.${userId}` });
+  // hml-21b: o meu (a coluna = o user do token) + o da conta do param (uuid); sem a conta, só o meu
+  if (r && r.modelo === "meu_ou_da_conta") {
+    const conta = params[r.param];
+    if (typeof conta === "string") {
+      const meu = `${r.coluna}.eq.${userId}`;
+      filtros.push({ op: "ou", filtro: r.contaPrimeiro ? `conta_id.eq.${conta},${meu}` : `${meu},conta_id.eq.${conta}` });
+    } else filtros.push({ op: "eq", coluna: r.coluna, valor: userId });
+  }
   for (const { caminho, e } of caminhosDosEmbutidos(f.embutidos)) if (e.vivas) filtros.push({ op: "is_null", coluna: `${caminho}.deleted_at` });
-  const colunas = [...f.colunas, ...(f.embutidos ?? []).map(selectDoEmbutido)].join(", ");
+  // hml-21b: com o colunasSe e o param dele true, a lista fechada é a dele (inteira); sem, a de sempre
+  const fechadas = f.colunasSe && params[f.colunasSe.param] === true ? f.colunasSe.colunas : f.colunas;
+  const colunas = [...fechadas, ...(f.embutidos ?? []).map(selectDoEmbutido)].join(", ");
   // a ordem: a de sempre; a com `se` (hml-20c) só com o param booleano true
   const ordem = (f.ordem ?? []).filter((o) => o.se === undefined || params[o.se] === true).map((o) => ({ coluna: o.coluna, asc: o.asc }));
   return { tabela: f.tabela, colunas, filtros, ordem, teto: Math.min(f.teto, TETO_MAX) };
