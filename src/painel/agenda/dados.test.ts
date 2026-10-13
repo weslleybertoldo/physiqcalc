@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // hml-14b (D18): a agenda lê uma JANELA de datas — o teto de 1000 do banco agora está escrito (antes, um .limit(2000) que virava 1000
 // calado), guarda os MAIS RECENTES e a tela avisa quando chega lá.
+// hml-21b: a leitura vai pela função conta (os módulos DE VERDADE do servidor sobre o MESMO banco falso — src/test/contaFalsa.ts): as
+// idas ao banco são as mesmas (agora o servidor faz, como a pessoa); o erro do banco chega com o código e a frase fixa (decisão 20).
 const h = vi.hoisted(() => ({ chamadas: [] as unknown[][], resposta: undefined as unknown }));
-vi.mock("@/integrations/principal/client", () => ({
-  PRINCIPAL_SCHEMA: "staging",
-  principal: {
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const banco = {
     from: (tabela: string) => {
       h.chamadas.push(["from", tabela]);
       const cadeia: unknown = new Proxy({}, {
@@ -19,9 +21,11 @@ vi.mock("@/integrations/principal/client", () => ({
       });
       return cadeia;
     },
-  },
-}));
+  };
+  return { PRINCIPAL_SCHEMA: "staging", principal: { functions: { invoke: invocarComConta(banco, { userId: "u1" }) } } };
+});
 
+import { ErroLeitura } from "@/conta/ler";
 import { AVISO_LIMITE_AGENDA, LIMITE_JANELA_AGENDA, janelaNoLimite, listarAgendamentos } from "./dados";
 
 beforeEach(() => {
@@ -39,9 +43,12 @@ describe("Agenda › janela com teto honesto (hml-14b, D18)", () => {
     expect(h.chamadas.some((c) => c[0] === "limit" && Number(c[1]) > 1000)).toBe(false);
   });
 
-  it("erro do banco lança (a tela mostra o erro, nunca a agenda vazia)", async () => {
-    h.resposta = { data: null, error: { message: "canceling statement due to statement timeout" } };
-    await expect(listarAgendamentos(new Date(), new Date(), "u1", null)).rejects.toThrow(/statement timeout/);
+  it("erro do banco lança (a tela mostra o erro, nunca a agenda vazia) — com o código e a frase fixa, nunca a mensagem do banco", async () => {
+    h.resposta = { data: null, error: { code: "57014", message: "canceling statement due to statement timeout" } };
+    const e = await listarAgendamentos(new Date(), new Date(), "u1", null).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(ErroLeitura);
+    expect((e as ErroLeitura).codigo).toBe("erro_interno");
+    expect((e as Error).message).not.toMatch(/statement timeout/);
   });
 
   it("o aviso quando a janela chega ao teto", () => {

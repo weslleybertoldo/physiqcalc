@@ -304,3 +304,39 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
   RPC do front (`src/integrations/repeticao.ts`).
 - Nenhuma migration: os grants e as policies **ficam** (decisão 12 da spec hml-21: a função usa a sessão da pessoa, que precisa deles; os
   APKs antigos e o AAB ainda chamam direto — desvio 2). Fechar o `rest` é a etapa 4 do jeito 2.
+
+## Principal: a Agenda, os Alunos e o Dashboard pela função `conta` (hml-21b, H-43 parte 2 · jeito 2, etapa 3)
+- **2 RPCs novas** (migration `20261013100000_hml21b_agenda_atomicas`; reversa em `supabase-principal/reversas/`): as 2 gravações da Agenda
+  que eram vários pedidos do navegador sem transação viram TUDO OU NADA. `SECURITY INVOKER` com `search_path = ''` (o RLS de hoje vale dentro
+  — o dono, o dono da conta, o master), o 2º jeito da tabela "Funções" (`revoke … from public, anon` + `grant execute … to authenticated,
+  service_role`), chamadas SÓ pela `conta` COMO A PESSOA (nenhuma chave secreta). O dono vem do `auth.uid()`, nunca do corpo; sem login →
+  `sem_login` (42501); corpo fora da forma → `dados_invalidos` (22023); o que não existe, está na Lixeira ou o RLS esconde → `nao_encontrado`
+  (P0002) e nada muda.
+  - `agenda_excluir_calendario(p_calendario uuid) → integer`: os agendamentos vivos do calendário e depois o calendário vão à Lixeira com o
+    MESMO `deleted_at`, numa transação (antes, 2 pedidos: falhou o 2º, sobravam os agendamentos na Lixeira com o calendário vivo); o gatilho
+    `trg_agendamentos_w20_avisar` avisa o aluno das consultas futuras, como hoje. Devolve quantos agendamentos foram.
+  - `agenda_garantir_inicio(p_conta uuid, p_papeis text[], p_modulos text[]) → jsonb { criados }`: o 1º acesso à Agenda (antes, 2 a 4
+    pedidos), idempotente — quem já tem um calendário vivo não ganha nada; senão as tags base pela `agenda_garantir_tags` de hoje (numa
+    subtransação: a recusa dela = os calendários sem tag padrão, como a tela) e os calendários iniciais com os nomes, as cores, o "padrão" e a
+    tag de hoje (`src/agenda/regras.ts`). A conta vem do corpo, como o insert de hoje; os papéis e os módulos só escolhem nome, cor e tag.
+    Trava por pessoa (`pg_advisory_xact_lock`): 2 abas não duplicam; o `created_at` do relógio (`clock_timestamp`), a ordem de hoje.
+- **Leituras (`acao: "ler"`, em lote):** o catálogo `_shared/conta-leituras.ts` ganha 19 consultas (13 da Agenda, 6 dos Alunos), as mesmas
+  linhas que as libs liam no navegador, como a pessoa: os calendários, as tags, os agendamentos (a janela; os 1000 mais recentes), os
+  bloqueios (a janela e os futuros), as travas, as regras, os alunos do seletor da Agenda (o recorte "meu ou da conta" — o `.or()` de hoje),
+  o aluno do `?aluno=` (pelo id, vivo — o RLS de hoje decide se é visível), o aluno já escolhido no seletor (só desta conta e vivo; o CPF só
+  quando o Recibo pede) e as RPCs de leitura de hoje pelo
+  EXECUTE do `authenticated`: `agenda_horarios`, `aluno_compromissos`, `minhas_regras_agenda`, `aluno_agenda_horarios`, `alunos_da_conta`
+  (a lista, a exportação, o seletor, a Busca e o número do menu), `aluno_convites`, `alunos_pendentes`, `alunos_novos_por_mes` e
+  `equipe_da_conta` (só a leitura). Colunas em lista fechada (as da Agenda = a linha inteira de hoje, escrita coluna por coluna).
+- **Gravações (21 ações, o MESMO efeito de hoje):** a Agenda do painel — `agenda_garantir` e `calendario_excluir` (as 2 RPCs novas),
+  `tags_garantir` (a `agenda_garantir_tags`), `calendario_criar`/`calendario_editar`, `tag_criar`/`tag_editar`/`tag_excluir`,
+  `agendamento_criar`/`agendamento_editar`/`agendamento_excluir` (o dono = o dono do calendário, lido como a pessoa),
+  `bloqueio_criar`/`bloqueio_excluir`, `trava_criar`/`trava_excluir` e `regras_salvar` (o `agenda_config` de quem chama); a Agenda do aluno
+  — `agenda_confirmar`/`agenda_desistir`/`agenda_reagendar`/`agenda_marcar` (as `aluno_agenda_*` de hoje); os Alunos — `pacote_definir` (a
+  `aluno_definir_pacote`). Corpo em lista fechada; editar ou excluir 0 linha (não existe ou o RLS esconde) → `nao_encontrado`.
+- **Ficam como estão:** o login e a sessão (`auth.*`); as outras gravações dos Alunos (a função `alunos`); os treinos (Treino — 21d); a
+  parte de saúde do Dashboard (a `nutricao`, hml-20c). O fetch repete o `ler` da `conta` 1 vez e as ações não repetem; as RPCs que a `conta`
+  chama saíram das listas de RPC do front (`src/integrations/repeticao.ts`); a `BASE` da `semBancoNoNavegador.test.ts` diminuiu.
+- Nenhum grant de tabela nem policy muda (decisão 12 da spec hml-21: a função usa a sessão da pessoa; os APKs antigos ainda chamam direto).
+  Ordem: a migration no staging ANTES de publicar a `conta` v2 e na produção ANTES do merge (o front antigo não chama as RPCs novas). Prova:
+  `python3 e2e/hml21/sql_agenda.py` (staging, como a pessoa, blocos desfeitos).

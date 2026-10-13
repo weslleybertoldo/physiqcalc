@@ -1,11 +1,17 @@
 /**
  * Painel › Alunos (W13): chamadas ao BANCO PRINCIPAL. Leituras por RPC (security definer, pelo auth.uid()); as ações pela
  * função `alunos` (limite da faixa, e-mail do convite pelo Resend, espelho no Treino). A regra toda é do banco.
+ * hml-21b (H-43 · jeito 2, etapa 3): as LEITURAS (a lista — e o número do menu, a Busca, o seletor e a exportação —, o aluno do seletor,
+ * os convites e os pendentes) vão pela função conta, COM A SESSÃO de quem está logado (as mesmas RPCs e o mesmo select, no servidor; o
+ * lote da volta junta o que a tela pede junto). As ações seguem pela função `alunos` (decisão C). O erro: o mesmo de hoje — sem internet
+ * antes de chamar; o { ok: false, erro } da RPC com o código dela; o resto (o banco, a função) = erro_interno, com o código no extra.
  */
 import { principal } from "@/integrations/principal/client";
+import { codigoDaLeitura, lerConta, type ConsultaDaConta } from "@/conta/ler";
+import type { OpcoesLeitura } from "@/integrations/leituraEmLote";
 import {
-  LIMITE_SELETOR, alunoDaTabela, alunoDoSeletor, filtrosParaServidor, normalizarLista, termoDoSeletor, type AlunoDoSeletor, type FiltrosAlunos,
-  type ListaAlunos, type ModuloAluno, type PacienteDoSeletor, type SituacaoSeletor,
+  LIMITE_SELETOR, PAGINA_EXPORTACAO, alunoDaTabela, alunoDoSeletor, filtrosParaServidor, normalizarLista, termoDoSeletor, type AlunoDoSeletor,
+  type FiltrosAlunos, type ListaAlunos, type ModuloAluno, type PacienteDoSeletor, type SituacaoSeletor,
 } from "./regras";
 
 export class ErroAlunos extends Error {
@@ -16,17 +22,31 @@ export class ErroAlunos extends Error {
 
 const online = () => (typeof navigator === "undefined" ? true : navigator.onLine !== false);
 
-async function rpc<T = unknown>(nome: string, args: Record<string, unknown>): Promise<T> {
+/** O erro de uma leitura pela conta: sem internet como hoje; o resto (o banco, a função) = erro_interno com o código no extra (a tela tem
+ * a frase do erro_interno — a de hoje para qualquer erro do banco). */
+function erroDaLeitura(e: unknown): ErroAlunos {
+  const codigo = codigoDaLeitura(e);
+  return codigo === "sem_internet" ? new ErroAlunos("sem_internet") : new ErroAlunos("erro_interno", { codigo });
+}
+
+/** A RPC de leitura pela conta (o valor como veio); o { ok: false, erro } dela → ErroAlunos com o código (como hoje). */
+async function ler<T = unknown>(q: ConsultaDaConta, params: Record<string, unknown>, opcoes?: OpcoesLeitura): Promise<T> {
   if (!online()) throw new ErroAlunos("sem_internet");
-  const { data, error } = await principal.rpc(nome as never, args as never);
-  if (error) throw new ErroAlunos("erro_interno", { detalhe: error.message });
-  const r = data as unknown;
+  let r: unknown;
+  try {
+    r = (await lerConta(q, params, opcoes)).valor;
+  } catch (e) {
+    throw erroDaLeitura(e);
+  }
   if (r && typeof r === "object" && !Array.isArray(r) && (r as Record<string, unknown>).ok === false) {
     const o = r as Record<string, unknown>;
     throw new ErroAlunos(String(o.erro ?? "erro_interno"), o);
   }
   return r as T;
 }
+
+/** As páginas pesadas (a exportação e o "selecionar todos", de 500) vão num lote só delas: não seguram a tela. */
+const pesada = (limite: number): OpcoesLeitura | undefined => (limite >= PAGINA_EXPORTACAO ? { sozinha: true } : undefined);
 
 async function corpoDoErro(erro: unknown): Promise<Record<string, unknown> | null> {
   const ctx = (erro as { context?: Response })?.context;
@@ -54,8 +74,21 @@ async function funcaoAlunos<T = Record<string, unknown>>(corpo: Record<string, u
 
 // ───────────────────────── leituras ─────────────────────────
 
+/**
+ * hml-21b (⚪6 da revisão): o termo da busca vai no teto do servidor — o FILTRO_ALUNOS_MAX do catálogo da conta (200; acima dele o servidor
+ * recusaria o lote inteiro com dados_invalidos). O campo da tela não tem limite: o termo vai cortado, sem deixar meio emoji no corte.
+ */
+export const TERMO_BUSCA_MAX = 200;
+export function cortarTermo(q: string): string {
+  if (q.length <= TERMO_BUSCA_MAX) return q;
+  const c = q.slice(0, TERMO_BUSCA_MAX);
+  const u = c.charCodeAt(c.length - 1);
+  return u >= 0xd800 && u <= 0xdbff ? c.slice(0, -1) : c;
+}
+const comTermoCortado = (f: Record<string, string>): Record<string, string> => (f.q && f.q.length > TERMO_BUSCA_MAX ? { ...f, q: cortarTermo(f.q) } : f);
+
 export async function listarAlunos(contaId: string, filtros: FiltrosAlunos, offset: number, limite: number): Promise<ListaAlunos> {
-  const r = await rpc("alunos_da_conta", { p_conta: contaId, p_filtros: filtrosParaServidor(filtros), p_offset: offset, p_limite: limite });
+  const r = await ler("alunos_da_conta", { conta: contaId, filtros: comTermoCortado(filtrosParaServidor(filtros)), offset, limite }, pesada(limite));
   const lista = normalizarLista(r);
   if (!lista) throw new ErroAlunos("erro_interno");
   return lista;
@@ -63,9 +96,7 @@ export async function listarAlunos(contaId: string, filtros: FiltrosAlunos, offs
 
 /** H4 (N-66): uma página da exportação — a mesma lista e os mesmos filtros, com as colunas do CSV (apelido, CPF, nascimento, gênero). */
 export async function paginaDaExportacao(contaId: string, filtros: FiltrosAlunos, offset: number, limite: number): Promise<ListaAlunos> {
-  const r = await rpc("alunos_da_conta", {
-    p_conta: contaId, p_filtros: { ...filtrosParaServidor(filtros), exportar: "true" }, p_offset: offset, p_limite: limite,
-  });
+  const r = await ler("alunos_da_conta", { conta: contaId, filtros: { ...comTermoCortado(filtrosParaServidor(filtros)), exportar: "true" }, offset, limite }, pesada(limite));
   const lista = normalizarLista(r);
   if (!lista) throw new ErroAlunos("erro_interno");
   return lista;
@@ -87,10 +118,8 @@ export async function buscarAlunosDoSeletor(
   limite = LIMITE_SELETOR,
   comCpf = false,
 ): Promise<{ itens: AlunoDoSeletor[]; total: number }> {
-  const q = termoDoSeletor(termo);
-  const r = await rpc("alunos_da_conta", {
-    p_conta: contaId, p_filtros: { situacao, ...(q ? { q } : {}), ...(comCpf ? { exportar: "true" } : {}) }, p_offset: 0, p_limite: limite,
-  });
+  const q = cortarTermo(termoDoSeletor(termo));
+  const r = await ler("alunos_da_conta", { conta: contaId, filtros: { situacao, ...(q ? { q } : {}), ...(comCpf ? { exportar: "true" } : {}) }, offset: 0, limite });
   const lista = normalizarLista(r);
   if (!lista) throw new ErroAlunos("erro_interno");
   return { itens: lista.itens.map(alunoDoSeletor), total: lista.total };
@@ -103,16 +132,14 @@ export async function buscarAlunosDoSeletor(
  */
 export async function alunoDoSeletorPorId(contaId: string, id: string, comCpf = false): Promise<AlunoDoSeletor | null> {
   if (!online()) throw new ErroAlunos("sem_internet");
-  // `as never`: o caminho no jsonb (config->>conta_excluida_em) estoura a inferência de tipos do supabase-js (TS2589)
-  const { data, error } = await principal
-    .from("pacientes" as never)
-    .select(`id, nome, apelido, email, telefone, ${comCpf ? "cpf, " : ""}foto_url, ativo, acesso_bloqueado_em, user_id, personal_id, nutricionista_id, conta_excluida_em:config->>conta_excluida_em`)
-    .eq("id", id)
-    .eq("conta_id", contaId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (error) throw new ErroAlunos("erro_interno", { detalhe: error.message });
-  return data ? alunoDaTabela(data as unknown as PacienteDoSeletor) : null;
+  let linhas: unknown[];
+  try {
+    linhas = (await lerConta("aluno_do_seletor", { conta: contaId, id, ...(comCpf ? { com_cpf: true } : {}) })).linhas ?? [];
+  } catch (e) {
+    throw erroDaLeitura(e);
+  }
+  const data = linhas[0];
+  return data ? alunoDaTabela(data as PacienteDoSeletor) : null;
 }
 
 export interface ConviteAluno {
@@ -126,7 +153,7 @@ export interface ConviteAluno {
 }
 
 export async function listarConvites(contaId: string): Promise<ConviteAluno[]> {
-  const r = await rpc<ConviteAluno[]>("aluno_convites", { p_conta: contaId });
+  const r = await ler<ConviteAluno[]>("aluno_convites", { conta: contaId });
   return Array.isArray(r) ? r : [];
 }
 
@@ -143,7 +170,7 @@ export interface CadastroPendente {
 }
 
 export async function listarPendentes(contaId: string): Promise<CadastroPendente[]> {
-  const r = await rpc<CadastroPendente[]>("alunos_pendentes", { p_conta: contaId });
+  const r = await ler<CadastroPendente[]>("alunos_pendentes", { conta: contaId });
   return Array.isArray(r) ? r : [];
 }
 

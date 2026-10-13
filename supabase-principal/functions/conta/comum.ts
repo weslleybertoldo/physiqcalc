@@ -1,4 +1,5 @@
-// Physiq hml-21a (H-43 · jeito 2, etapa 3) — o que os módulos de gravação da função conta (casca.ts, app.ts) dividem: o contexto, a resposta,
+// Physiq hml-21a (H-43 · jeito 2, etapa 3) — o que os módulos de gravação da função conta (casca.ts, app.ts; na 21b, agenda.ts e alunos.ts)
+// dividem: o contexto, a resposta,
 // a recusa, o 0 linha e a tradução do erro do banco/RPC e do Storage. ESTRUTURAL, como o functions/nutricao/leituras.ts e o preconsulta.ts:
 // não importa a porta (_shared/porta-pessoa.ts traz o supabase-js do esm.sh e o Deno) — o contexto é o pedaço do ContextoPessoa que os
 // módulos usam (o deno check confere no index.ts que o da porta encaixa). Assim o Vitest roda os módulos com um cliente falso
@@ -15,12 +16,20 @@ interface FiltroDaGravacao {
   in(coluna: string, valores: readonly unknown[]): FiltroDaGravacao;
   select(colunas: string): PromiseLike<Resultado>;
 }
+/** hml-21b: a linha nova (insert/upsert) com a volta em lista fechada, 1 linha (o .select(colunas).single() de hoje). */
+interface LinhaDaGravacao {
+  select(colunas: string): { single(): PromiseLike<Resultado> };
+}
 /** O pedaço do cliente "como a pessoa" que as gravações da conta usam (o SupabaseClient da porta encaixa). */
 export interface ClienteConta {
   rpc(nome: string, args?: Record<string, unknown>): PromiseLike<Resultado>;
   from(tabela: string): {
     select(colunas: string): { eq(coluna: string, valor: unknown): { maybeSingle(): PromiseLike<Resultado> } };
     update(valores: Record<string, unknown>): FiltroDaGravacao;
+    /** hml-21b: criar (calendário, tag, consulta, bloqueio, trava), o upsert das regras e o delete do bloqueio/da trava */
+    insert(valores: Record<string, unknown>): LinhaDaGravacao;
+    upsert(valores: Record<string, unknown>, opcoes: { onConflict: string }): LinhaDaGravacao;
+    delete(): FiltroDaGravacao;
   };
   storage: {
     from(bucket: string): {

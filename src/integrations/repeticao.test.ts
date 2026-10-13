@@ -18,7 +18,9 @@ describe("podeRepetir", () => {
     ["GET", `${P}/auth/v1/user`, true],
     ["GET", `${P}/storage/v1/object/public/avatars/a.png`, true],
     ["POST", `${P}/rest/v1/rpc/minha_dieta`, true],
-    ["POST", `${P}/rest/v1/rpc/alunos_da_conta`, true],
+    // hml-21b: a alunos_da_conta saiu da lista (vai pela função conta) — no lugar, outra de leitura que o front segue chamando
+    ["POST", `${P}/rest/v1/rpc/planos_favoritos`, true],
+    ["POST", `${P}/rest/v1/rpc/alunos_da_conta`, false],
     ["post", `${T}/rest/v1/rpc/aluno_treino`, true],
     ["POST", `${P}/rest/v1/rpc/diario_enviar`, false],
     ["POST", `${P}/rest/v1/rpc/aluno_acesso`, false],
@@ -50,13 +52,15 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 39 de leitura repetem; as 29 que gravam não; os 2 conjuntos não se cruzam", () => {
+  it("as 30 de leitura repetem; as 23 que gravam não; os 2 conjuntos não se cruzam", () => {
     // hml-21a: as 6 de leitura que a função conta chama saíram — eram 45
-    expect(RPC_SO_LEITURA.size).toBe(39);
+    // hml-21b: as 9 de leitura da Agenda e dos Alunos que a função conta chama saíram — eram 39
+    expect(RPC_SO_LEITURA.size).toBe(30);
     // hml-19b: a paciente_marcar_refeicao e a aluno_marcar_meta saíram do front (o app marca pela função nutricao) — eram 40
     // hml-19c: a aluno_avisar_avaliacao saiu do front (o aviso vai pela função nutricao) — eram 38
     // hml-21a: as 8 que gravam e a função conta chama saíram — eram 37
-    expect(RPC_QUE_GRAVAM.size).toBe(29);
+    // hml-21b: as 6 da Agenda que a função conta chama saíram — eram 29
+    expect(RPC_QUE_GRAVAM.size).toBe(23);
     expect(RPC_QUE_GRAVAM.has("aluno_avisar_avaliacao")).toBe(false);
     for (const nome of RPC_SO_LEITURA) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     for (const nome of RPC_QUE_GRAVAM) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
@@ -397,10 +401,12 @@ describe("guarda: toda rpc(\"…\") do front está decidida", () => {
 
   it("acha as chamadas (o padrão de busca ainda pega o código)", () => {
     // hml-21a: as 14 da casca e do app do aluno saíram do front (eram 63 achadas)
-    expect(chamadas.size).toBeGreaterThanOrEqual(45);
+    // hml-21b: as 15 da Agenda e dos Alunos saíram do front (eram 48 achadas; ficam 33)
+    expect(chamadas.size).toBeGreaterThanOrEqual(30);
     // hml-21a: a minha_situacao saiu do front (vai pela função conta) — o controle passa a ser a alunos_da_conta
-    expect(chamadas.has("alunos_da_conta") && chamadas.has("diario_enviar")).toBe(true);
-    expect(chamadas.has("minha_situacao")).toBe(false);
+    // hml-21b: a alunos_da_conta saiu do front (vai pela função conta) — o controle passa a ser a whatsapp_resumo (sai na 21c)
+    expect(chamadas.has("whatsapp_resumo") && chamadas.has("diario_enviar")).toBe(true);
+    expect(chamadas.has("minha_situacao") || chamadas.has("alunos_da_conta") || chamadas.has("agenda_horarios")).toBe(false);
   });
 
   it("cada RPC está em RPC_SO_LEITURA ou em RPC_QUE_GRAVAM (RPC nova obriga a decidir)", () => {
@@ -418,6 +424,10 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
       financeiro: { campo: "acao", acoes: ["ler"] },
       "admin-avaliacoes": { campo: "action", acoes: ["minha_evolucao"] },
       conta: { campo: "acao", acoes: ["ler"] },
+      // hml-21b (pedido da LINUX 3): o `ler` das 3 da W-A (conferido no código: só lê)
+      acessos: { campo: "acao", acoes: ["ler"] },
+      "aluno-dia": { campo: "acao", acoes: ["ler"] },
+      "treino-acessos": { campo: "acao", acoes: ["ler"] },
     });
   });
 
@@ -432,6 +442,14 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
     [`${P}/functions/v1/conta`, corpo({ acao: "avisos_marcar_lidos", ids: [] }), false],
     [`${P}/functions/v1/conta`, corpo({ acao: "perfil_foto_salvar" }), false],
     [`${P}/functions/v1/conta`, corpo({ action: "ler", acao: "perfil_nome" }), false],
+    // hml-21b (pedido da LINUX 3): o `ler` das 3 da W-A repete (o principal e o Treino); as gravações delas e o `ler` disfarçado não
+    [`${P}/functions/v1/acessos`, corpo({ acao: "ler", aluno: "x" }), true],
+    [`${P}/functions/v1/aluno-dia`, corpo({ acao: "ler", q: "rotinas" }), true],
+    [`${T}/functions/v1/treino-acessos`, corpo({ acao: "ler", aluno: "x" }), true],
+    [`${P}/functions/v1/acessos`, corpo({ acao: "salvar", aluno: "x", chave: "app", valor: "ver" }), false],
+    [`${P}/functions/v1/aluno-dia`, corpo({ acao: "rotina_marcar" }), false],
+    [`${T}/functions/v1/treino-acessos`, corpo({ acao: "salvar", valor: "mexer" }), false],
+    [`${P}/functions/v1/aluno-dia`, corpo({ action: "ler", acao: "dia_adicionar" }), false],
     // as gravações das mesmas funções vão 1 vez
     [`${P}/functions/v1/nutricao`, corpo({ acao: "anamnese_criar" }), false],
     [`${P}/functions/v1/nutricao`, corpo({ acao: "aluno_marcar_refeicao" }), false],

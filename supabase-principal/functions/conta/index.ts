@@ -10,6 +10,10 @@
 //   casca.ts   avisos_marcar_lidos, aviso_membro_ok, aviso_mudanca_marcar, senha_definida, push_registrar, push_esquecer, aceitar_textos,
 //              criar_minha_conta, entrar_sem_profissional
 //   app.ts     perfil_nome, perfil_foto_preparar, perfil_foto_salvar, perfil_foto_tirar, mudar_objetivo_app
+//   agenda.ts  (hml-21b) agenda_garantir, tags_garantir, calendario_criar|editar|excluir, tag_criar|editar|excluir,
+//              agendamento_criar|editar|excluir, bloqueio_criar|excluir, trava_criar|excluir, regras_salvar e a Agenda do aluno
+//              (agenda_confirmar|desistir|reagendar|marcar)
+//   alunos.ts  (hml-21b) pacote_definir — as outras ações dos Alunos seguem pela função alunos
 // O despacho (moduloDoPedido, em _shared/conta-regras.ts) é a lista fechada: ação de fora → 400 acao_invalida.
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { acao, ... }
@@ -19,10 +23,14 @@
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions conta true
 // Não precisa de migration: as tabelas (avisos, profiles), as RPCs, as policies, o bucket fotos-perfil(-staging) com as policies da pasta
 // própria (20260929120000_w05_equipe) e os grants de hoje — cada pessoa lê e grava o que já lia e gravava, agora pela função.
+// hml-21b: a v2 (= a v1 + a Agenda e os Alunos) PRECISA da migration 20261013100000_hml21b_agenda_atomicas (as RPCs
+// agenda_excluir_calendario e agenda_garantir_inicio) aplicada no schema ANTES de publicar (o calendario_excluir e o agenda_garantir as chamam).
 import { json, servirComoPessoa, type ContextoPessoa } from "../_shared/porta-pessoa.ts";
 import { CATALOGO_CONTA } from "../_shared/conta-leituras.ts";
 import { moduloDoPedido, statusDoErroConta, type PedidoConta } from "../_shared/conta-regras.ts";
 import { atenderLeitura } from "../_shared/leitura-servidor.ts";
+import { atenderAgenda } from "./agenda.ts";
+import { atenderAlunos } from "./alunos.ts";
 import { atenderApp } from "./app.ts";
 import { atenderCasca } from "./casca.ts";
 
@@ -35,6 +43,10 @@ function atender(c: ContextoPessoa, pedido: PedidoConta) {
       return atenderCasca(c, pedido.acao);
     case "app":
       return atenderApp(c, pedido.acao);
+    case "agenda":
+      return atenderAgenda(c, pedido.acao);
+    case "alunos":
+      return atenderAlunos(c, pedido.acao);
   }
 }
 

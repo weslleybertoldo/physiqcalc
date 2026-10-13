@@ -3,9 +3,10 @@
  * o "+N este mês" do KPI "Alunos ativos" do Dashboard: as matrículas criadas em cada mês, fora da lixeira, com a regra P1 da lista
  * (o dono conta a conta inteira; o membro, só os alunos dele) — função alunos_novos_por_mes do banco principal. Os 2 lugares usam a
  * MESMA consulta (mesma chave do react-query), então o número do Dashboard é o da barra do mês atual daqui.
+ * hml-21b (H-43 · jeito 2, etapa 3): a mesma função do banco, pela função conta COM A SESSÃO de quem está logado (no lote da tela).
  */
 import { useQuery } from "@tanstack/react-query";
-import { principal } from "@/integrations/principal/client";
+import { lerConta } from "@/conta/ler";
 
 export interface MesNovos {
   /** AAAA-MM */
@@ -38,8 +39,7 @@ export function normalizarNovos(bruto: unknown): NovosPorMes | null {
 }
 
 export async function buscarNovosPorMes(contaId: string, meses = 6): Promise<NovosPorMes> {
-  const { data, error } = await principal.rpc("alunos_novos_por_mes" as never, { p_conta: contaId, p_meses: meses } as never);
-  if (error) throw new Error(error.message);
+  const data = (await lerConta("alunos_novos_por_mes", { conta: contaId, meses })).valor;
   const r = normalizarNovos(data);
   if (!r) throw new Error(String((data as { erro?: string } | null)?.erro ?? "erro_interno"));
   return r;

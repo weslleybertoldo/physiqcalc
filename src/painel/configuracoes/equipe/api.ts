@@ -1,8 +1,12 @@
 /**
  * Configurações › Equipe e Convite (W5): chamadas ao BANCO PRINCIPAL. A regra toda é do banco (funções security definer
  * pelo auth.uid()); o e-mail do convite sai pela função `convites` (Resend, remetente de hoje).
+ * hml-21b (H-43 · jeito 2, etapa 3): SÓ a leitura (buscarEquipe — a Equipe, e os seletores do dono na Agenda, no Financeiro e na
+ * Pré-consulta) vai pela função conta, COM A SESSÃO de quem está logado (a mesma equipe_da_conta, no lote da tela); as gravações da Equipe
+ * (papéis, remover, o meu código) são da hml-21c e seguem como estão.
  */
 import { principal } from "@/integrations/principal/client";
+import { codigoDaLeitura, lerConta } from "@/conta/ler";
 import { normalizarEquipe, type Equipe, type PapelModulo } from "./regras";
 
 export class ErroEquipe extends Error {
@@ -23,7 +27,17 @@ async function rpc<T = Record<string, unknown>>(nome: string, args: Record<strin
 }
 
 export async function buscarEquipe(contaId: string): Promise<Equipe> {
-  const r = await rpc("equipe_da_conta", { p_conta: contaId });
+  if (!online()) throw new ErroEquipe("sem_internet");
+  let valor: unknown;
+  try {
+    valor = (await lerConta("equipe_da_conta", { conta: contaId })).valor;
+  } catch (e) {
+    // o mesmo de hoje: sem internet; o resto (o banco, a função) = erro_interno, com o código no extra (a frase do erro_interno)
+    const codigo = codigoDaLeitura(e);
+    throw codigo === "sem_internet" ? new ErroEquipe("sem_internet") : new ErroEquipe("erro_interno", { codigo });
+  }
+  const r = (valor ?? {}) as Record<string, unknown>;
+  if (r.ok === false) throw new ErroEquipe(String(r.erro ?? "erro_interno"), r);
   const e = normalizarEquipe(r);
   if (!e) throw new ErroEquipe("erro_interno");
   return e;

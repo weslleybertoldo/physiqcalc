@@ -16,7 +16,12 @@ vi.mock("@/ui/casca/topo", () => ({
 }));
 vi.mock("@/painel/alunos/api", async (orig) => ({ ...(await orig<typeof import("@/painel/alunos/api")>()), listarAlunos: h.listar, atribuirAlunos: h.atribuir }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { functions: { invoke: vi.fn() } } }));
-vi.mock("@/integrations/principal/client", () => ({ PRINCIPAL_SCHEMA: "staging", principal: { rpc: h.rpc, functions: { invoke: vi.fn() } } }));
+// hml-21b: o "novos por mês" vai pela função conta — o falso roda o módulo DE VERDADE do servidor sobre o MESMO h.rpc
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const banco = { rpc: (...a: unknown[]) => h.rpc(...a) };
+  return { PRINCIPAL_SCHEMA: "staging", principal: { rpc: h.rpc, functions: { invoke: invocarComConta(banco) } } };
+});
 
 import Alunos from "./Alunos";
 

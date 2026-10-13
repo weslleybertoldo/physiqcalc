@@ -5,7 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AlunoDoSeletor } from "./regras";
 
 const h = vi.hoisted(() => ({ buscar: vi.fn(), porId: vi.fn(), rpc: vi.fn(), from: vi.fn() }));
-vi.mock("@/integrations/principal/client", () => ({ PRINCIPAL_SCHEMA: "staging", principal: { rpc: h.rpc, from: h.from, functions: { invoke: vi.fn() } } }));
+// hml-21b: as leituras dos Alunos vão pela função conta — o falso roda os módulos DE VERDADE do servidor sobre este MESMO banco (h.rpc/h.from)
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const banco = { rpc: (...a: unknown[]) => h.rpc(...a), from: (...a: unknown[]) => h.from(...a) };
+  return { PRINCIPAL_SCHEMA: "staging", principal: { rpc: h.rpc, from: h.from, functions: { invoke: invocarComConta(banco, { userId: "u-lucas" }) } } };
+});
 vi.mock("./api", async (orig) => ({ ...(await orig<typeof import("./api")>()), buscarAlunosDoSeletor: h.buscar, alunoDoSeletorPorId: h.porId }));
 
 import { SeletorDeAluno } from "./SeletorDeAluno";
@@ -263,11 +268,14 @@ describe("hml-14b (B19) — o banco por trás do seletor", () => {
     const api = await vi.importActual<typeof import("./api")>("./api");
     const chamadas: unknown[][] = [];
     const resposta = { data: null as unknown, error: null as unknown };
-    const cadeia = {
+    // hml-21b: o servidor lê 1 linha com o .limit(1) (o maybeSingle de hoje): o falso devolve a lista com a linha (ou vazia)
+    const cadeia: Record<string, unknown> = {
       select: (c: string) => (chamadas.push(["select", c]), cadeia),
       eq: (k: string, v: string) => (chamadas.push(["eq", k, v]), cadeia),
       is: (k: string, v: null) => (chamadas.push(["is", k, v]), cadeia),
-      maybeSingle: async () => resposta,
+      limit: (n: number) => (chamadas.push(["limit", n]), cadeia),
+      then: (ok: (v: unknown) => unknown, falha?: (e: unknown) => unknown) =>
+        Promise.resolve({ data: resposta.error ? null : resposta.data ? [resposta.data] : [], error: resposta.error }).then(ok, falha),
     };
     h.from.mockImplementation((t: string) => (chamadas.push(["from", t]), cadeia));
     const linha = {
@@ -278,7 +286,7 @@ describe("hml-14b (B19) — o banco por trás do seletor", () => {
     const a = await api.alunoDoSeletorPorId("c1", "p9");
     expect(chamadas).toEqual([
       ["from", "pacientes"], ["select", expect.stringContaining("conta_excluida_em:config->>conta_excluida_em")],
-      ["eq", "id", "p9"], ["eq", "conta_id", "c1"], ["is", "deleted_at", null],
+      ["eq", "id", "p9"], ["eq", "conta_id", "c1"], ["is", "deleted_at", null], ["limit", 1],
     ]);
     expect(chamadas[1][1]).not.toMatch(/\bcpf\b/); // fora do Recibo, o CPF nem é pedido
     expect(a).toMatchObject({ id: "p9", foto_url: null, bloqueado: true, conta_excluida: false, tem_login: true, cpf: null, nutricionista_id: "u-camila" });

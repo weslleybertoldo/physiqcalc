@@ -26,7 +26,12 @@ vi.mock("@/ui/casca/topo", () => ({
   ),
 }));
 vi.mock("@/ui/casca/treinoDaPagina", () => ({ useTreinoDaPagina: () => ({ tipo: h.treino }), MENSAGEM_TREINO_PAINEL: { rede: "Sem rede." } }));
-vi.mock("@/integrations/principal/client", () => ({ PRINCIPAL_SCHEMA: "staging", principal: { rpc: h.rpc, from: vi.fn(), storage: { from: vi.fn() } } }));
+// hml-21b: o "novos por mês" vai pela função conta — o falso roda o módulo DE VERDADE do servidor sobre o MESMO h.rpc
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const banco = { rpc: (...a: unknown[]) => h.rpc(...a) };
+  return { PRINCIPAL_SCHEMA: "staging", principal: { rpc: h.rpc, from: vi.fn(), storage: { from: vi.fn() }, functions: { invoke: invocarComConta(banco, { userId: "u-lucas" }) } } };
+});
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "staging", supabase: { functions: { invoke: vi.fn() }, from: vi.fn() } }));
 vi.mock("@/painel/dashboard/dados", async (orig) => ({
   ...(await orig<typeof import("@/painel/dashboard/dados")>()),

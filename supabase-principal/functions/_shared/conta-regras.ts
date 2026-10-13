@@ -17,7 +17,7 @@
 //   · a tradução do erro do banco: a do motor (erroDaLeitura — a MESMA tabela do erroDoBanco da nutricao): 42501 → 403 sem_acesso, 23505 →
 //     409 conflito, dado ruim → 400 dados_invalidos, PGRST301-303 → 401 sem_login, o tempo → 504 tempo_esgotado, o resto → 500 erro_interno
 //     (a função avisa: log.excecao); a mensagem do banco nunca vai à tela.
-import { erroDaLeitura, lerParams, type ParamsLeitura } from "./leitura-lote.ts";
+import { erroDaLeitura, lerParams, valorDoParam, type ParamLeitura, type ParamsLeitura } from "./leitura-lote.ts";
 import { AVISOS_MAX, TEXTO_CURTO_MAX } from "./conta-leituras.ts";
 
 // ───────────────────────── os tetos (acima do que as telas aceitam: a função barra o abuso, a RPC/o banco decide o valor) ─────────────────────────
@@ -46,13 +46,171 @@ export const ACOES_DA_CASCA = [
 ] as const;
 /** O app do aluno: o nome e a foto do perfil e o objetivo do plano do app. */
 export const ACOES_DO_APP = ["perfil_nome", "perfil_foto_preparar", "perfil_foto_salvar", "perfil_foto_tirar", "mudar_objetivo_app"] as const;
+/**
+ * hml-21b — a Agenda: o 1º acesso (agenda_garantir: a RPC nova agenda_garantir_inicio) e as tags base de quem já tem calendário
+ * (tags_garantir: a agenda_garantir_tags de hoje — o carregarTagsDaAgenda pede quando faltam), calendário, tag, agendamento, bloqueio,
+ * trava e regras do painel; e a Agenda do aluno no app (confirmar, desistir, reagendar, marcar — as RPCs aluno_agenda_*).
+ */
+export const ACOES_DA_AGENDA = [
+  "agenda_garantir", "tags_garantir", "calendario_criar", "calendario_editar", "calendario_excluir", "tag_criar", "tag_editar", "tag_excluir",
+  "agendamento_criar", "agendamento_editar", "agendamento_excluir", "bloqueio_criar", "bloqueio_excluir", "trava_criar", "trava_excluir",
+  "regras_salvar", "agenda_confirmar", "agenda_desistir", "agenda_reagendar", "agenda_marcar",
+] as const;
+/** hml-21b — os Alunos: o pacote de consultas do aluno (a RPC aluno_definir_pacote). As outras ações dos Alunos seguem pela função alunos. */
+export const ACOES_DOS_ALUNOS = ["pacote_definir"] as const;
 export type AcaoDaCasca = (typeof ACOES_DA_CASCA)[number];
 export type AcaoDoApp = (typeof ACOES_DO_APP)[number];
-export type AcaoConta = AcaoDaCasca | AcaoDoApp;
-export const ACOES_DA_CONTA: readonly AcaoConta[] = [...ACOES_DA_CASCA, ...ACOES_DO_APP];
+export type AcaoDaAgenda = (typeof ACOES_DA_AGENDA)[number];
+export type AcaoDosAlunos = (typeof ACOES_DOS_ALUNOS)[number];
+export type AcaoConta = AcaoDaCasca | AcaoDoApp | AcaoDaAgenda | AcaoDosAlunos;
+export const ACOES_DA_CONTA: readonly AcaoConta[] = [...ACOES_DA_CASCA, ...ACOES_DO_APP, ...ACOES_DA_AGENDA, ...ACOES_DOS_ALUNOS];
 
 const texto = (max: number, obrigatorio = false) => ({ tipo: "texto", max, obrigatorio }) as const;
 const data = { tipo: "data" } as const;
+
+// ───────────────────────── hml-21b: o corpo das gravações da Agenda e dos Alunos ─────────────────────────
+/**
+ * O campo do corpo de uma gravação da 21b: um param do motor (o tipo e o teto — _shared/leitura-lote.ts) com `nulo` (o null VAI ao banco:
+ * limpar a coluna, como a tela manda hoje — o slot e a tag padrão do calendário, o aluno, a observação e a tag da consulta, o calendário
+ * do bloqueio/da trava, o motivo, a conta) e 3 tipos que só a Agenda usa: `hora` (HH:MM ou HH:MM:SS), `inteiros` (os dias da semana) e
+ * `palavras` (os papéis e os módulos da conta ativa: uma lista, vazia ou não). Sem `nulo`, o null → dados_invalidos (nada roda).
+ */
+export type CampoDaAcao =
+  | (ParamLeitura & { nulo?: boolean })
+  | { tipo: "hora"; obrigatorio?: boolean; nulo?: boolean }
+  | { tipo: "inteiros"; min: number; max: number; maxItens: number; obrigatorio?: boolean }
+  | { tipo: "palavras"; maxItens: number; maxItem: number; obrigatorio?: boolean };
+export type CamposDaAcao = Readonly<Record<string, CampoDaAcao>>;
+
+/** HH:MM (ou HH:MM:SS), de 00:00 a 23:59 — o horaValida da tela. */
+const HORA = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
+/** O título da consulta e o nome do calendário (a tela: 120 e 60; o banco não corta): a função barra o abuso. */
+export const TITULO_AGENDA_MAX = 500;
+/** A observação da consulta (a tela: 2000) e o motivo do bloqueio/da trava (a tela: 120; a trava tem check de 120 no banco). */
+export const OBSERVACAO_AGENDA_MAX = 5000;
+/** A cor (#rrggbb — o banco confere o formato da tag; o calendário aceita a da paleta). */
+export const COR_MAX = 20;
+/** O nome da tag (a tela e o banco: 1–40; aqui o teto do abuso, o banco decide). */
+export const NOME_TAG_ACAO_MAX = 100;
+/** Os papéis e os módulos da conta ativa (o 1º acesso): até 10, cada um de 1 a 40 (a RPC confere igual). */
+export const PAPEIS_MAX = 10;
+export const PAPEL_MAX = 40;
+
+const nulo = <T extends object>(c: T) => ({ ...c, nulo: true }) as T & { nulo: true };
+const uuid = { tipo: "uuid" } as const;
+const uuidObrig = { tipo: "uuid", obrigatorio: true } as const;
+const instanteObrig = { tipo: "instante", obrigatorio: true } as const;
+const booleano = { tipo: "booleano" } as const;
+const hora = { tipo: "hora" } as const;
+const horaObrig = { tipo: "hora", obrigatorio: true } as const;
+const diasDaSemana = (obrigatorio: boolean) => ({ tipo: "inteiros", min: 0, max: 6, maxItens: 7, obrigatorio }) as const;
+const palavras = { tipo: "palavras", maxItens: PAPEIS_MAX, maxItem: PAPEL_MAX } as const;
+const INT4 = { min: -2_147_483_648, max: 2_147_483_647 } as const;
+/** Os 7 status e as 3 confirmações da consulta e as 3 áreas (os checks do banco: agendamentos_status_check etc.). */
+export const STATUS_AGENDA = ["agendado", "encaixe", "confirmado", "paciente_confirmou", "desmarcado", "paciente_desmarcou", "nao_compareceu"] as const;
+export const CONFIRMACOES_AGENDA = ["a_confirmar", "confirmado", "desmarcado"] as const;
+export const AREAS_AGENDA = ["treino", "nutricao", "geral"] as const;
+export const JANELAS_REAGENDAMENTO = ["mes", "mes_seguinte", "livre"] as const;
+
+/** As colunas que a tela manda no calendário (CalendarioDialog: o "dados"; o 1º acesso é a RPC). */
+const CAMPOS_DO_CALENDARIO = {
+  nome: texto(TITULO_AGENDA_MAX), cor: texto(COR_MAX), padrao: booleano, faixa_inicio: hora, faixa_fim: hora,
+  slot_minutos: nulo({ tipo: "inteiro", min: 5, max: 240 } as const), tag_padrao_id: nulo(uuid),
+} as const;
+/** As colunas que a tela manda na consulta (AgendamentoDialog: o "registro" — o dono vem do calendário, lido no servidor). */
+const CAMPOS_DA_CONSULTA = {
+  calendario_id: uuid, paciente_id: nulo(uuid), titulo: texto(TITULO_AGENDA_MAX), inicio: { tipo: "instante" }, fim: { tipo: "instante" },
+  dia_inteiro: booleano, status: { tipo: "enum", valores: STATUS_AGENDA }, confirmacao: { tipo: "enum", valores: CONFIRMACOES_AGENDA },
+  observacao: nulo(texto(OBSERVACAO_AGENDA_MAX)), modulo: { tipo: "enum", valores: AREAS_AGENDA }, tag_id: nulo(uuid), conta_id: nulo(uuid),
+} as const;
+const obrig = <T extends object>(c: T) => ({ ...c, obrigatorio: true }) as T & { obrigatorio: true };
+
+/** hml-21b: o corpo de cada ação da Agenda e dos Alunos — as colunas que a tela manda hoje (o dono nunca: vem do user ou do calendário). */
+export const CORPOS_DA_21B = {
+  // o 1º acesso: a conta ativa e os papéis/módulos dela (só escolhem nome, cor e tag dos calendários iniciais)
+  agenda_garantir: { conta_id: nulo(uuid), papeis: palavras, modulos: palavras },
+  // as 3 tags base de quem chama (a RPC de hoje decide quem pode)
+  tags_garantir: {},
+  calendario_criar: { ...CAMPOS_DO_CALENDARIO, nome: texto(TITULO_AGENDA_MAX, true), conta_id: nulo(uuid) },
+  calendario_editar: { id: uuidObrig, ...CAMPOS_DO_CALENDARIO },
+  calendario_excluir: { id: uuidObrig },
+  tag_criar: { nome: texto(NOME_TAG_ACAO_MAX, true), cor: texto(COR_MAX, true), area: { tipo: "enum", valores: AREAS_AGENDA, obrigatorio: true } },
+  tag_editar: { id: uuidObrig, nome: texto(NOME_TAG_ACAO_MAX), cor: texto(COR_MAX), area: { tipo: "enum", valores: AREAS_AGENDA } },
+  tag_excluir: { id: uuidObrig },
+  agendamento_criar: {
+    ...CAMPOS_DA_CONSULTA, calendario_id: uuidObrig, titulo: texto(TITULO_AGENDA_MAX, true), inicio: instanteObrig, fim: instanteObrig,
+  },
+  agendamento_editar: { id: uuidObrig, ...CAMPOS_DA_CONSULTA },
+  agendamento_excluir: { id: uuidObrig },
+  bloqueio_criar: {
+    conta_id: nulo(uuid), calendario_id: nulo(uuid), inicio: instanteObrig, fim: instanteObrig, motivo: nulo(texto(OBSERVACAO_AGENDA_MAX)),
+  },
+  bloqueio_excluir: { id: uuidObrig },
+  trava_criar: {
+    conta_id: nulo(uuid), calendario_id: nulo(uuid), dias: diasDaSemana(true), hora_inicio: horaObrig, hora_fim: horaObrig,
+    motivo: nulo(texto(OBSERVACAO_AGENDA_MAX)),
+  },
+  trava_excluir: { id: uuidObrig },
+  // as regras de quem chama (o upsert do RegrasDialog: as 7, sempre)
+  regras_salvar: {
+    slot_minutos: obrig({ tipo: "inteiro", min: 5, max: 240 } as const), atende_inicio: horaObrig, atende_fim: horaObrig, dias: diasDaSemana(true),
+    reagendamentos_max: obrig({ tipo: "inteiro", min: 0, max: 10 } as const), janela_reagendamento: { tipo: "enum", valores: JANELAS_REAGENDAMENTO, obrigatorio: true },
+    desistencia: obrig(booleano),
+  },
+  // a Agenda do aluno (as RPCs aluno_agenda_* decidem tudo pelo auth.uid())
+  agenda_confirmar: { agendamento: uuidObrig },
+  agenda_desistir: { agendamento: uuidObrig },
+  agenda_reagendar: { agendamento: uuidObrig, inicio: instanteObrig },
+  agenda_marcar: { profissional: uuidObrig, inicio: instanteObrig },
+  // o pacote do aluno com um profissional (PacoteDialog): a RPC confere quem pode e o total
+  pacote_definir: { aluno: uuidObrig, profissional: uuidObrig, total: { tipo: "inteiro", ...INT4, obrigatorio: true }, mes_inicio: nulo(data) },
+} as const satisfies Record<AcaoDaAgenda | AcaoDosAlunos, CamposDaAcao>;
+
+/** hml-21b: o valor de um campo de gravação (sem o null — o null é do lerCamposDaAcao): os 3 tipos da Agenda aqui; o resto, o do motor. */
+function valorDoCampo(c: CampoDaAcao, v: unknown): { ok: true; valor: unknown } | { ok: false } {
+  const fora = { ok: false as const };
+  switch (c.tipo) {
+    case "hora":
+      return typeof v === "string" && HORA.test(v) ? { ok: true, valor: v } : fora;
+    case "inteiros":
+      return Array.isArray(v) && v.length <= c.maxItens && v.every((x) => Number.isInteger(x) && x >= c.min && x <= c.max) ? { ok: true, valor: [...v] } : fora;
+    case "palavras":
+      return Array.isArray(v) && v.length <= c.maxItens && v.every((x) => typeof x === "string" && x.length >= 1 && x.length <= c.maxItem)
+        ? { ok: true, valor: [...v] }
+        : fora;
+    default:
+      return valorDoParam(c, v);
+  }
+}
+
+/**
+ * hml-21b: as chaves que a gravação aceita (as de fora caem): ausente = não muda (não vai ao banco); null = vai como null SÓ onde o
+ * campo aceita (`nulo`), senão dados_invalidos; obrigatório ausente ou null → dados_invalidos. Nada roda com um campo fora da forma.
+ */
+export function lerCamposDaAcao(
+  corpo: Record<string, unknown>,
+  campos: CamposDaAcao,
+): { ok: true; valores: Record<string, unknown> } | { ok: false; campo: string } {
+  const valores: Record<string, unknown> = {};
+  for (const [nome, c] of Object.entries(campos)) {
+    const v = Object.prototype.hasOwnProperty.call(corpo, nome) ? corpo[nome] : undefined;
+    if (v === undefined) {
+      if (c.obrigatorio) return { ok: false, campo: nome };
+      continue;
+    }
+    if (v === null) {
+      if ("nulo" in c && c.nulo === true && !c.obrigatorio) {
+        valores[nome] = null;
+        continue;
+      }
+      return { ok: false, campo: nome };
+    }
+    const r = valorDoCampo(c, v);
+    if (r.ok === false) return { ok: false, campo: nome };
+    valores[nome] = r.valor;
+  }
+  return { ok: true, valores };
+}
 
 /**
  * O corpo de cada ação: as chaves que ela aceita, com o tipo e o teto (o formato dos params do motor). O que não está aqui cai. Os textos
@@ -93,14 +251,22 @@ export const CORPOS_DAS_ACOES = {
   perfil_foto_tirar: {},
   // Meu plano: o objetivo do plano do app
   mudar_objetivo_app: { objetivo: texto(TEXTO_CURTO_MAX, true) },
-} as const satisfies Record<AcaoConta, ParamsLeitura>;
+  // ───── hml-21b: a Agenda e os Alunos (CORPOS_DA_21B, acima: o formato com o `nulo`) ─────
+  ...CORPOS_DA_21B,
+} as const satisfies Record<AcaoConta, CamposDaAcao>;
 
-/** As chaves que a ação aceita, conferidas (as de fora caem); uma declarada fora da forma → dados_invalidos (o nome dela vai ao log). */
+/** A ação é da 21a (a casca e o app do aluno: o formato dos params do motor — o null = "não veio", como sempre)? */
+const ehDa21a = (acao: AcaoConta): boolean => (ACOES_DA_CASCA as readonly string[]).includes(acao) || (ACOES_DO_APP as readonly string[]).includes(acao);
+
+/**
+ * As chaves que a ação aceita, conferidas (as de fora caem); uma declarada fora da forma → dados_invalidos (o nome dela vai ao log). As da
+ * 21a pelo lerParams do motor (o de sempre); as da 21b pelo lerCamposDaAcao (o null vai ao banco onde o campo aceita).
+ */
 export function lerCorpoDaAcao(
   acao: AcaoConta,
   corpo: Record<string, unknown>,
 ): { ok: true; valores: Record<string, unknown> } | { ok: false; erro: "dados_invalidos"; campo: string } {
-  const r = lerParams(corpo, CORPOS_DAS_ACOES[acao] as ParamsLeitura);
+  const r = ehDa21a(acao) ? lerParams(corpo, CORPOS_DAS_ACOES[acao] as ParamsLeitura) : lerCamposDaAcao(corpo, CORPOS_DAS_ACOES[acao] as CamposDaAcao);
   return r.ok === true ? r : { ok: false, erro: "dados_invalidos", campo: r.campo };
 }
 
@@ -119,15 +285,22 @@ export function argsSemProfissional(v: Record<string, unknown>): Record<string, 
 }
 
 // ───────────────────────── o despacho ─────────────────────────
-export type PedidoConta = { modulo: "leitura"; acao: "ler" } | { modulo: "casca"; acao: AcaoDaCasca } | { modulo: "app"; acao: AcaoDoApp };
+export type PedidoConta =
+  | { modulo: "leitura"; acao: "ler" }
+  | { modulo: "casca"; acao: AcaoDaCasca }
+  | { modulo: "app"; acao: AcaoDoApp }
+  | { modulo: "agenda"; acao: AcaoDaAgenda }
+  | { modulo: "alunos"; acao: AcaoDosAlunos };
 
-/** O módulo e a ação do pedido (null = acao_invalida). O `ler` vai ao motor comum; as 2 listas não se cruzam (o teste confere). */
+/** O módulo e a ação do pedido (null = acao_invalida). O `ler` vai ao motor comum; as 4 listas não se cruzam (os testes conferem). */
 export function moduloDoPedido(corpo: Record<string, unknown>): PedidoConta | null {
   const v = corpo.acao;
   if (v === "ler") return { modulo: "leitura", acao: "ler" };
   if (typeof v !== "string") return null;
   if ((ACOES_DA_CASCA as readonly string[]).includes(v)) return { modulo: "casca", acao: v as AcaoDaCasca };
   if ((ACOES_DO_APP as readonly string[]).includes(v)) return { modulo: "app", acao: v as AcaoDoApp };
+  if ((ACOES_DA_AGENDA as readonly string[]).includes(v)) return { modulo: "agenda", acao: v as AcaoDaAgenda };
+  if ((ACOES_DOS_ALUNOS as readonly string[]).includes(v)) return { modulo: "alunos", acao: v as AcaoDosAlunos };
   return null;
 }
 
@@ -201,6 +374,12 @@ export function fotoDoPerfil(dados: unknown): string | null {
 // ───────────────────────── erros ─────────────────────────
 /** Os códigos que as RPCs da casca levantam de propósito (raise exception 'sem_login': minha_senha_definida, push_registrar, push_esquecer). */
 export const ERROS_DAS_RPCS_DA_CONTA = ["sem_login"] as const;
+/** hml-21b: os códigos que as 2 RPCs novas da Agenda levantam de propósito (o raise com o código na mensagem: 42501/22023/P0002). */
+export const ERROS_DAS_RPCS_DA_AGENDA = ["sem_login", "dados_invalidos", "nao_encontrado"] as const;
+/** hml-21b: os que as RPCs do aluno (aluno_agenda_*, pela w20_consulta_do_aluno) e a agenda_garantir_tags levantam de propósito. */
+export const ERROS_DA_AGENDA_DO_ALUNO = ["agendamento_inexistente", "sem_login"] as const;
+/** hml-21b: os que o gatilho da tag (agenda_tags_w2_antes) levanta de propósito — a tela tem a frase de cada um (mensagemErroTag). */
+export const ERROS_DAS_TAGS = ["tag_de_outro_profissional", "tag_base_fixa", "tag_base_area_fixa", "tag_base_nao_exclui"] as const;
 
 /** Status HTTP de cada erro (o corpo leva { ok: false, erro } e a tela escreve a frase — src/conta/gravar.ts e src/conta/ler.ts). */
 export const STATUS_DO_ERRO_CONTA: Record<string, number> = {
