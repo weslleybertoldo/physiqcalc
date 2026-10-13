@@ -5,8 +5,13 @@
  *   minhas_regras_agenda()         as regras e o pacote de cada profissional do aluno
  *   aluno_agenda_horarios(…)       os horários LIVRES para reagendar uma consulta (na janela) ou marcar a do pacote
  *   aluno_agenda_confirmar/desistir/reagendar/marcar
+ * hml-21b (H-43 · jeito 2, etapa 3): as MESMAS funções do banco, chamadas pela função conta COM A SESSÃO do aluno (o banco segue decidindo
+ * tudo pelo auth.uid()): as leituras pelo lerConta (minhas_regras_agenda, aluno_agenda_horarios), as 4 ações pelo acaoConta
+ * (agenda_confirmar|desistir|reagendar|marcar). O erro é o código (a rede que caiu = sem_internet — o PADRÃO da hml-20a/21a); a frase é a
+ * de hoje (mensagemErroAgenda; o código que ela não conhece = a de erro_interno, como hoje).
  */
-import { principal } from "@/integrations/principal/client";
+import { acaoConta, codigoDaGravacao, type AcaoConta } from "@/conta/gravar";
+import { codigoDaLeitura, lerConta, type ConsultaDaConta } from "@/conta/ler";
 import { normalizarRegras, type JanelaDatas, type PacoteSituacao, type RegrasAgenda } from "@/agenda/regras";
 import type { AgendamentoAluno, PapelProfissional } from "../pecas/regras";
 
@@ -45,23 +50,37 @@ export class ErroAgenda extends Error {
   }
 }
 
-const semInternet = () => typeof navigator !== "undefined" && navigator.onLine === false;
-
-async function rpc<T>(funcao: string, args: Record<string, unknown> = {}): Promise<T> {
-  if (semInternet()) throw new ErroAgenda("sem_internet");
-  const { data, error } = await principal.rpc(funcao as never, args as never);
-  if (error) {
-    const m = String(error.message ?? "");
-    const conhecido = ["agendamento_inexistente", "sem_login"].find((c) => m.includes(c));
-    throw new ErroAgenda(conhecido ?? "erro_interno");
-  }
-  const d = (data ?? {}) as { ok?: boolean; erro?: string };
+/** O { ok: false, erro } que a função do banco devolve vira o ErroAgenda com o código dela (como hoje); o resto volta como veio. */
+function conferir<T>(valor: unknown): T {
+  const d = (valor ?? {}) as { ok?: boolean; erro?: string };
   if (d && typeof d === "object" && !Array.isArray(d) && d.ok === false) throw new ErroAgenda(String(d.erro ?? "erro_interno"));
-  return data as T;
+  return valor as T;
+}
+
+/** Uma leitura da Agenda do aluno pela conta (no lote da volta); o erro → ErroAgenda com o código (sem internet antes de chamar). */
+async function ler<T>(q: ConsultaDaConta, params: Record<string, unknown> = {}): Promise<T> {
+  let valor: unknown;
+  try {
+    valor = (await lerConta(q, params)).valor;
+  } catch (e) {
+    throw new ErroAgenda(codigoDaLeitura(e));
+  }
+  return conferir<T>(valor);
+}
+
+/** Uma ação da Agenda do aluno pela conta (1 chamada, sem repetir); o erro → ErroAgenda com o código; o valor da função no `resultado`. */
+async function agir<T>(acao: AcaoConta, corpo: Record<string, unknown>): Promise<T> {
+  let r: { resultado?: unknown };
+  try {
+    r = await acaoConta<{ resultado?: unknown }>(acao, corpo);
+  } catch (e) {
+    throw new ErroAgenda(codigoDaGravacao(e));
+  }
+  return conferir<T>(r.resultado ?? null);
 }
 
 export async function minhasRegrasAgenda(): Promise<ProfissionalDaAgenda[]> {
-  const lista = await rpc<unknown[]>("minhas_regras_agenda");
+  const lista = await ler<unknown[]>("minhas_regras_agenda");
   return (Array.isArray(lista) ? lista : []).map((x) => {
     const r = (x ?? {}) as Record<string, unknown>;
     return {
@@ -82,18 +101,21 @@ function horarios(d: unknown): HorariosDoAluno {
   return { janela, horarios: Array.isArray(r.horarios) ? r.horarios : [] };
 }
 
+/** As datas da janela só quando a tela manda (sem elas, o nulo da função: a janela inteira — a 1ª abertura da folha). */
+const janela = (de?: string, ate?: string): Record<string, string> => ({ ...(de ? { de } : {}), ...(ate ? { ate } : {}) });
+
 export const horariosParaReagendar = async (agendamento: string, de?: string, ate?: string): Promise<HorariosDoAluno> =>
-  horarios(await rpc("aluno_agenda_horarios", { p_agendamento: agendamento, p_profissional: null, p_de: de ?? null, p_ate: ate ?? null }));
+  horarios(await ler("aluno_agenda_horarios", { agendamento, ...janela(de, ate) }));
 
 export const horariosParaMarcar = async (profissional: string, de?: string, ate?: string): Promise<HorariosDoAluno> =>
-  horarios(await rpc("aluno_agenda_horarios", { p_agendamento: null, p_profissional: profissional, p_de: de ?? null, p_ate: ate ?? null }));
+  horarios(await ler("aluno_agenda_horarios", { profissional, ...janela(de, ate) }));
 
-export const confirmarConsulta = (agendamento: string) => rpc<{ ok: true; ja_confirmada?: boolean }>("aluno_agenda_confirmar", { p_agendamento: agendamento });
-export const desistirConsulta = (agendamento: string) => rpc<{ ok: true; pacote: PacoteSituacao | null }>("aluno_agenda_desistir", { p_agendamento: agendamento });
+export const confirmarConsulta = (agendamento: string) => agir<{ ok: true; ja_confirmada?: boolean }>("agenda_confirmar", { agendamento });
+export const desistirConsulta = (agendamento: string) => agir<{ ok: true; pacote: PacoteSituacao | null }>("agenda_desistir", { agendamento });
 export const reagendarConsulta = (agendamento: string, inicio: string) =>
-  rpc<{ ok: true; inicio: string; fim: string; reagendamentos: number; reagendamentos_max: number }>("aluno_agenda_reagendar", { p_agendamento: agendamento, p_inicio: inicio });
+  agir<{ ok: true; inicio: string; fim: string; reagendamentos: number; reagendamentos_max: number }>("agenda_reagendar", { agendamento, inicio });
 export const marcarConsulta = (profissional: string, inicio: string) =>
-  rpc<{ ok: true; id: string; inicio: string; fim: string }>("aluno_agenda_marcar", { p_profissional: profissional, p_inicio: inicio });
+  agir<{ ok: true; id: string; inicio: string; fim: string }>("agenda_marcar", { profissional, inicio });
 
 /** Códigos das funções → frase para o aluno. */
 export const MENSAGEM_ERRO_AGENDA: Record<string, string> = {

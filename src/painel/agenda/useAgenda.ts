@@ -9,10 +9,10 @@ import { addDays, startOfDay } from "date-fns";
 import { useConta } from "@/nucleo/conta";
 import { useSessao } from "@/nucleo/sessao";
 import { buscarEquipe } from "@/painel/configuracoes/equipe/api";
-import { REGRAS_PADRAO, inicioDaSemana, hojeSP, somarDias, type RegrasAgenda, type TagAgenda } from "@/agenda/regras";
+import { REGRAS_PADRAO, inicioDaSemana, hojeSP, somarDias, type TagAgenda } from "@/agenda/regras";
 import {
   carregarTagsDaAgenda, garantirCalendarios, lerRegras, listarAgendamentos, listarAlunosDaAgenda, listarBloqueios, listarBloqueiosFuturos,
-  listarTravas, type AlunoAgenda, type Calendario,
+  listarTravas, type AlunoAgenda,
 } from "./dados";
 import { intervaloVisao, paraBloqueio, paraEvento, type EventoPainel, type Visao } from "./visao";
 
@@ -153,15 +153,5 @@ export function useDadosAgenda(ctx: ContextoAgenda, visao: Visao, ancora: Date, 
 }
 
 export type DadosAgenda = ReturnType<typeof useDadosAgenda>;
-
-/** O calendário sugerido no novo agendamento: o seu padrão, senão o seu primeiro, senão o primeiro visível. */
-export function calendarioSugerido(calendarios: readonly Calendario[], uid: string): Calendario | null {
-  const meus = calendarios.filter((c) => c.nutricionista_id === uid);
-  return meus.find((c) => c.padrao) ?? meus[0] ?? calendarios[0] ?? null;
-}
-
-export function regrasPara(regrasMinhas: RegrasAgenda | undefined): RegrasAgenda {
-  return regrasMinhas ?? REGRAS_PADRAO;
-}
 
 export type { AlunoAgenda };

@@ -38,14 +38,16 @@ export const TENTATIVAS_LEITURA = 1;
  * STABLE pela migração 20261008200000; + as 5 das listas da hml-14b, STABLE pelas migrações 20261009010000 e 20261009040000; + as
  * 6 da hml-14d, STABLE pelas migrações 20261009050000 (Treino), 20261009070000 e 20261009080000; + as 3 do plano alimentar da
  * hml-17, STABLE pela migração 20261010100000): podem repetir. hml-21a: saíram as 6 que a função conta chama (meu_perfil_aluno,
- * meu_plano_app, minha_agenda, minha_agenda_lista, minha_situacao, pratos_prontos_do_app) — eram 45.
+ * meu_plano_app, minha_agenda, minha_agenda_lista, minha_situacao, pratos_prontos_do_app) — eram 45. hml-21b: saíram as 9 da Agenda e dos
+ * Alunos que a função conta chama (agenda_horarios, aluno_agenda_horarios, aluno_compromissos, aluno_convites, alunos_da_conta,
+ * alunos_novos_por_mes, alunos_pendentes, equipe_da_conta, minhas_regras_agenda) — eram 39.
  */
 export const RPC_SO_LEITURA = new Set<string>([
-  "agenda_horarios", "aluno_agenda_horarios", "aluno_anotacoes", "aluno_compromissos", "aluno_convites", "aluno_evolucao",
-  "aluno_perfil", "aluno_responsavel", "aluno_treino", "alunos_da_conta", "alunos_novos_por_mes", "alunos_pendentes",
-  "equipe_da_conta", "financeiro_do_aluno", "grupos_alimentos", "lixeira_da_conta", "master_alunos_do_app", "mensagens_desligadas",
+  "aluno_anotacoes", "aluno_evolucao",
+  "aluno_perfil", "aluno_responsavel", "aluno_treino",
+  "financeiro_do_aluno", "grupos_alimentos", "lixeira_da_conta", "master_alunos_do_app", "mensagens_desligadas",
   "minha_dieta", "minha_evolucao",
-  "minhas_regras_agenda", "paciente_dado_livre", "painel_resumo", "w2l_prontuarios_para_baixar",
+  "paciente_dado_livre", "painel_resumo", "w2l_prontuarios_para_baixar",
   "whatsapp_fila", "whatsapp_resumo",
   // hml-14b (B21): as listas do painel por página, com o total e as somas do banco
   "financeiro_lancamentos", "financeiro_recibos", "financeiro_resumo_periodo", "receitas_da_nutricionista", "respostas_da_conta",
@@ -62,14 +64,14 @@ export const RPC_SO_LEITURA = new Set<string>([
  * diario_enviar fica (o link público /d/:codigo segue chamando direto — decisão 13). hml-19c: a aluno_avisar_avaliacao saiu do front
  * (o aviso "avaliação nova" vai pela função nutricao, ação avaliacao_avisar, que chama a RPC lá). hml-21a: saíram as 8 que a função conta
  * chama (aceitar_no_acesso, criar_minha_conta, entrar_sem_profissional, marcar_aviso_mudanca, minha_senha_definida, mudar_objetivo_app,
- * push_esquecer, push_registrar) — eram 37.
+ * push_esquecer, push_registrar) — eram 37. hml-21b: saíram as 6 da Agenda que a função conta chama (agenda_garantir_tags,
+ * aluno_agenda_confirmar, aluno_agenda_desistir, aluno_agenda_marcar, aluno_agenda_reagendar, aluno_definir_pacote) — eram 29.
  */
 export const RPC_QUE_GRAVAM = new Set<string>([
-  // sem escrita direta no corpo, mas mexem no limite_publico / garantir_* (5)
-  "agenda_garantir_tags", "aluno_acesso", "diario_link", "diario_listar", "preconsulta_formulario",
-  // gravam (24)
-  "alterar_papeis_membro", "aluno_agenda_confirmar", "aluno_agenda_desistir", "aluno_agenda_marcar",
-  "aluno_agenda_reagendar", "aluno_avisar_plano", "aluno_definir_pacote",
+  // sem escrita direta no corpo, mas mexem no limite_publico / garantir_* (4)
+  "aluno_acesso", "diario_link", "diario_listar", "preconsulta_formulario",
+  // gravam (19)
+  "alterar_papeis_membro", "aluno_avisar_plano",
   "aluno_novo_link", "aluno_responsavel_registrar", "aluno_salvar_ajustes", "aluno_salvar_dados",
   "diario_enviar", "garantir_meu_codigo", "lixeira_apagar", "lixeira_restaurar", "mensagens_aviso_fechar",
   "mensagens_ligar_para_todos", "paciente_criar_acesso",
