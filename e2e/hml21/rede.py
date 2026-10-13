@@ -23,9 +23,17 @@ A massa (--area casca, fora da produção): os avisos não lidos da aluna pelos 
 gravação tentada; o sino NÃO é clicado (abrir com não lidos grava o lido_em); sem massa.
 No fim, o logout (scope=local) da sessão do TREINO que a troca do app abriu neste navegador (decisão 23 da hml-20).
 Antes de CADA execução: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "rede.py …" (e o /health, aqui dentro).
-Uso: python3 e2e/hml21/rede.py --area casca|app --base local|staging|prod --canal msedge [--seco]
+Uso: python3 e2e/hml21/rede.py --area casca|app|agenda|alunos --base local|staging|prod --canal msedge [--seco]
   --seco  sem rede e sem navegador: os seletores e as rotas existem no código; a guarda acerta pedidos de exemplo (antes e depois, as duas
           áreas); a Guarda da produção deixa passar as leituras (o `ler` da conta e as 6 RPCs do front antigo) e barra o resto
+hml-21b (decisão N do contrato da 21b): na produção as telas do app entram com a aluno-calc (B.PROD_CONTA — a conta de teste da produção), não
+com a w5p-aluna do staging (o ## PAROU 02:04 da 21a), com a MESMA trava (a Guarda, o sino sem clique, sem a marca local de aviso visto, o
+LegalDesligado). --area agenda|alunos (e2e/hml21/painel21b.py): a nutri (a Agenda — semana, mês, Novo agendamento, Regras, Travas — ou os
+Alunos, o Dashboard e a Busca), o dono (a Agenda com a equipe / os Alunos) e a aluna (a Agenda dela), cada conta no seu contexto; em cada tela
+0 chamada direta da área (as 6 tabelas da Agenda, os alunos e as RPCs que saíram do front na 21b), o `ler` ≤ o teto (2 na Agenda e no
+Dashboard — a série aceita, decisão 04:23), 0 gravação e 0 ação ao abrir; a outra área e as de fora à parte; a planilha
+hml21/medicao/rede_hml21b.tsv (antes × depois). A Agenda do painel só abre com calendário próprio e as 3 tags base (senão o app gravaria ao
+abrir — PULADA com o motivo; SQL só leitura, só contagem); na produção a nutri-legado e a aluno-calc, só leitura, com a Guarda.
 """
 from __future__ import annotations
 
@@ -39,6 +47,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
+import painel21b as P21  # noqa: E402  (hml-21b: as contas e as telas da Agenda e dos Alunos)
 
 C = B.C
 PLANILHA = B.MEDICAO / "rede_hml21a.tsv"
@@ -210,10 +219,20 @@ def seco(o) -> None:
          "antes × depois vem do CÓDIGO medido (o 53f2583 não tem src/conta/ler.ts: antes; o HEAD tem: depois)")
 
 
+def conta_do_app(base: str) -> str:
+    """A conta das telas do app (decisão N da 21b — o ## PAROU 02:04 da 21a): na produção a aluno-calc (a conta de teste da PRODUÇÃO, a do
+    smoke do W7); no local/staging a w5p-aluna. Nunca a conta do staging na produção."""
+    return B.PROD_CONTA if base == "prod" else B.ALUNA
+
+
 def rodar(o, area: str, base: str, canal: str | None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
+    if area in B.AREAS_DA_21B:
+        rodar_21b(o, area, base, canal)
+        return
     s = B.usar_base(base)
+    aluna = conta_do_app(base)
     L = B.Sessoes(f"rede21 {area} {base}")  # na produção o motivo termina em "prod" (o registro: fora do teto do staging)
     commit = B.commit_medido(base)
     fase = B.fase_do_codigo(base, commit)
@@ -224,7 +243,7 @@ def rodar(o, area: str, base: str, canal: str | None) -> None:
         if massa:
             B.guardar_sino(o, s)  # os não lidos de ANTES da etapa 2 (abrir o sino marca todos): voltam no api.py --devolver-sino
             estado = B.abrir_rodada(o, s)
-            B.criar_massa_avisos(o, estado, L, s, L.uid(B.ALUNA), estado.d["rodada"])
+            B.criar_massa_avisos(o, estado, L, s, L.uid(aluna), estado.d["rodada"])
         guarda = B.guarda_da_w() if base == "prod" else None
         with sync_playwright() as pw:
             nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
@@ -234,11 +253,11 @@ def rodar(o, area: str, base: str, canal: str | None) -> None:
             B.LegalDesligado().instalar(t.ctx)
             pend = B.Pendentes(t.pg)
             try:
-                o.linha(f"[{base}] {commit}: o {fase} · área {area}")
+                o.linha(f"[{base}] {commit}: o {fase} · área {area}" + (f" · a conta das telas na produção: {aluna}" if base == "prod" else ""))
                 for i, (tela, rota, marca) in enumerate(telas_da_rodada(area, base)):
                     nl = 0
                     if i == 0:
-                        t.entrar(L, B.ALUNA, rota)  # a sessão antes do 1º documento; o aceite e o "mudou" saem pelo LegalDesligado
+                        t.entrar(L, aluna, rota)  # a sessão antes do 1º documento; o aceite e o "mudou" saem pelo LegalDesligado
                     elif rota is None:
                         o.ok(t.esperar(lambda: t.n("[data-sino]") > 0, 20), f"[{base}] o sino está no Início", parar=True)
                         if tela == "sino":
@@ -259,7 +278,7 @@ def rodar(o, area: str, base: str, canal: str | None) -> None:
                     o.ok(not guarda.bloqueadas, f"[prod] a Guarda não barrou nada (as telas só leram; o `ler` passa): {guarda.bloqueadas or '—'}")
             finally:
                 B.sair_do_treino(o, t.pg, f"[{base}] rede {area}", t)
-                L.do_navegador(B.ALUNA, t.pg)
+                L.do_navegador(aluna, t.pg)
                 t.fim()
                 nav.close()
     finally:
@@ -270,17 +289,154 @@ def rodar(o, area: str, base: str, canal: str | None) -> None:
             L.fechar(o)
 
 
+# ───────────────────────── hml-21b: a rede da Agenda e dos Alunos (--area agenda|alunos) ─────────────────────────
+def rodar_21b(o, area: str, base: str, canal: str | None) -> None:
+    """A rede de cada tela da 21b, conta por conta (um navegador; um contexto por conta, a sessão reaproveitada): a nutri (a Agenda — semana,
+    mês e os 3 diálogos — ou os Alunos, o Dashboard e a Busca), o dono (a Agenda com a equipe / os Alunos) e a aluna (a Agenda dela). Na
+    produção (decisão N): só a nutri-legado e a aluno-calc, com a Guarda (as RPCs de leitura do front antigo passam), sem a marca local de
+    aviso visto e o LegalDesligado; a Agenda só com calendário e as 3 tags base (senão PULADA). Nada de massa: a rede só abre as telas."""
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    s = B.usar_base(base)
+    B.usar_area(area)
+    L = B.Sessoes(f"rede21 {area} {base}")  # na produção o motivo termina em "prod" (o registro: fora do teto do staging)
+    commit = B.commit_medido(base)
+    fase = P21.fase_do_codigo_21b(base, commit)
+    try:
+        B.exigir_saude(o, f"o rede.py --area {area} da hml-21b")
+        o.linha(f"[{base}] {commit}: o {fase} · área {area} · contas {P21.contas_da_area(area, base)}")
+        with sync_playwright() as pw:
+            nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
+            try:
+                for conta in P21.contas_da_area(area, base):
+                    telas = P21.telas_que_abrem(o, s, base, area, conta)
+                    if not telas:
+                        continue
+                    guarda = B.guarda_da_w() if base == "prod" else None
+                    t, pend = P21.abrir_conta(nav, base, conta, f"rede_{area}_{conta}", guarda)
+                    try:
+                        P21.entrar(o, t, pend, L, base, conta)
+                        for tela in telas:
+                            nome, _como, marca, teto = tela
+                            pronta = P21.abrir_tela(t, pend, tela)
+                            o.ok(t.n(marca) > 0, f"[{base}] {conta} · {nome}: a tela abriu ({marca}; marca em {pronta['t_marca_s']} s)")
+                            cont = B.contar_area(pronta["pedidos"], area)
+                            P21.conferir_tela(o, base, fase, area, conta, nome, teto, cont, pronta)
+                            P21.anotar_rede(base, commit, fase, area, conta, nome, cont, pronta)
+                        P21.fechar_janelas(t)
+                        if guarda:
+                            o.ok(not guarda.bloqueadas, f"[prod] {conta}: a Guarda não barrou nada (as telas só leram): {guarda.bloqueadas or '—'}")
+                    finally:
+                        P21.sair_da_conta(o, t, L, base, conta, f"rede {area}")
+            finally:
+                nav.close()
+    finally:
+        L.fechar(o)
+
+
+def seco_21b(o, area: str) -> None:
+    """O --seco da 21b (sem rede, sem navegador): os seletores no código, a guarda das áreas da 21b em pedidos de exemplo (antes e
+    depois), a Guarda da produção com as 9 RPCs de leitura da 21b e as contas/telas de cada base (decisão N)."""
+    faltam = [f"{arq}: {sel}" for arq, sels in P21.SELETORES.items() for sel in sels if sel not in (B.REPO / arq).read_text(encoding="utf-8")]
+    o.ok(not faltam, f"os {sum(len(v) for v in P21.SELETORES.values())} seletores das telas da 21b existem no código" + (f" — faltam: {faltam}" if faltam else ""))
+    P = B.API_P
+    uid = "33333333-3333-4333-8333-333333333333"
+    rpc = lambda n: {"metodo": "POST", "tipo": "rpc", "nome": n, "url": f"{P}/rest/v1/rpc/{n}", "corpo": "{}"}  # noqa: E731
+    tab = lambda n, m="GET": {"metodo": m, "tipo": "tab", "nome": n, "url": f"{P}/rest/v1/{n}?select=*", "corpo": "" if m == "GET" else "{}"}  # noqa: E731
+    fn = lambda corpo: {"metodo": "POST", "tipo": "fn", "nome": "conta", "acao": corpo.get("acao"), "url": f"{P}/functions/v1/conta", "corpo": json.dumps(corpo)}  # noqa: E731
+    antes = [tab("calendarios"), tab("agendamentos"), tab("agenda_tags"), tab("bloqueios_agenda"), tab("agenda_travas"), tab("agenda_config"),
+             tab("pacientes"), rpc("agenda_horarios"), rpc("alunos_da_conta"), rpc("alunos_novos_por_mes"), rpc("equipe_da_conta"), rpc("minhas_regras_agenda"),
+             tab("calendarios", "POST"), rpc("agenda_garantir_tags"), rpc("whatsapp_resumo"), tab("physiq_treinos_prontos")]
+    c = B.contar_area(antes, "agenda")
+    o.ok(c["diretas"] == {"tab:calendarios:GET": 1, "tab:agendamentos:GET": 1, "tab:agenda_tags:GET": 1, "tab:bloqueios_agenda:GET": 1,
+                          "tab:agenda_travas:GET": 1, "tab:agenda_config:GET": 1, "tab:pacientes:GET": 1, "rpc:agenda_horarios": 1,
+                          "rpc:minhas_regras_agenda": 1, "tab:calendarios:POST": 1, "rpc:agenda_garantir_tags": 1}
+         and c["outra_area"] == {"tab:pacientes:GET": 1, "rpc:alunos_da_conta": 1, "rpc:alunos_novos_por_mes": 1, "rpc:equipe_da_conta": 1}
+         and c["fora"] == {"rpc:whatsapp_resumo": 1, "tab:physiq_treinos_prontos": 1} and any(k.startswith("rest_") for k in c["gravacoes"]),
+         f"a guarda do ANTES (agenda): as 6 tabelas, os alunos e as RPCs da Agenda diretos; os Alunos na outra área; o de fora à parte; o insert é gravação: {c}")
+    c = B.contar_area(antes, "alunos")
+    o.ok(c["diretas"] == {"tab:pacientes:GET": 1, "rpc:alunos_da_conta": 1, "rpc:alunos_novos_por_mes": 1, "rpc:equipe_da_conta": 1}
+         and "rpc:agenda_horarios" in c["outra_area"], f"a guarda do ANTES (alunos): a lista, o seletor, os novos por mês e a equipe diretos; a Agenda na outra área: {c}")
+    ler = {"acao": "ler", "itens": [{"q": "agenda_calendarios", "conta": uid}, {"q": "agenda_agendamentos", "de": "2026-10-11T03:00:00.000Z",
+                                                                                  "ate": "2026-10-18T03:00:00.000Z", "conta": uid}]}
+    depois = [fn(ler), fn({"acao": "ler", "itens": [{"q": "agenda_tags", "donos": [uid]}]}), fn({"id": uid, "acao": "agendamento_excluir"}),
+              {"metodo": "OPTIONS", "tipo": "fn", "nome": "conta", "acao": None, "url": f"{P}/functions/v1/conta", "corpo": ""},
+              {"metodo": "POST", "tipo": "fn", "nome": "nutricao", "acao": "ler", "url": f"{P}/functions/v1/nutricao", "corpo": json.dumps({"acao": "ler", "itens": []})},
+              rpc("whatsapp_resumo")]
+    for ar in ("agenda", "alunos"):
+        c = B.contar_area(depois, ar)
+        o.ok(not c["diretas"] and not c["outra_area"] and c["ler"] == 2 and c["acoes"] == {"agendamento_excluir": 1}
+             and c["consultas"] == {"agenda_calendarios": 1, "agenda_agendamentos": 1, "agenda_tags": 1}
+             and c["gravacoes"] == {"fn:conta(agendamento_excluir)": 1} and c["fora"] == {"rpc:whatsapp_resumo": 1},
+             f"a guarda do DEPOIS ({ar}): 0 direta, 2 `ler` (as consultas), 1 ação (gravação; o `ler` da nutricao não é da conta), o de fora à parte: {c}")
+    # a Guarda da produção (decisão N): o `ler` e as RPCs de leitura do front antigo (21a e 21b) passam; o resto é barrado
+    g = B.guarda_da_w()
+    Ped = type("Ped", (), {})
+
+    def pedido(metodo: str, url: str, corpo: dict | None = None):
+        x = Ped()
+        x.method, x.url, x.post_data = metodo, url, (json.dumps(corpo) if corpo is not None else None)
+        return x
+
+    passam = [pedido("POST", f"{P}/functions/v1/conta", ler)] + [pedido("POST", f"{P}/rest/v1/rpc/{n}", {}) for n in sorted(B.RPCS_DE_LEITURA_DA_21B)] \
+        + [pedido("GET", f"{P}/rest/v1/calendarios?select=*")]
+    barram = [pedido("POST", f"{P}/functions/v1/conta", {"acao": "agenda_garantir", "conta_id": uid, "papeis": [], "modulos": []}),
+              pedido("POST", f"{P}/functions/v1/conta", {"acao": "tags_garantir"}),
+              pedido("POST", f"{P}/functions/v1/conta", {"action": "ler", "acao": "calendario_criar"}),
+              pedido("POST", f"{P}/rest/v1/rpc/agenda_garantir_tags", {}), pedido("POST", f"{P}/rest/v1/rpc/agenda_garantir_inicio", {}),
+              pedido("POST", f"{P}/rest/v1/rpc/agenda_excluir_calendario", {}), pedido("POST", f"{P}/rest/v1/calendarios", {}),
+              pedido("PATCH", f"{P}/rest/v1/agendamentos?id=eq.{uid}", {}), pedido("POST", f"{P}/rest/v1/rpc/aluno_definir_pacote", {})]
+    o.ok(not any(g.escrita(x) for x in passam) and all(g.escrita(x) for x in barram),
+         f"a Guarda da produção: passam o `ler` da conta e as 9 RPCs de leitura do front antigo da 21b ({len(passam)}); barram as ações da conta "
+         f"(o agenda_garantir e o tags_garantir — a Agenda que grava ao abrir), o `ler` disfarçado, as RPCs que gravam (as 2 novas inclusive) e "
+         f"a escrita direta ({len(barram)})")
+    o.ok(not B.B17.Guarda().leitura & B.RPCS_DE_LEITURA_DA_21B,
+         "a lista da Guarda do repo (o RPC_SO_LEITURA do repeticao.ts) já não tem as 9 (saíram do front na 21b) — só a guarda_da_w() as soma")
+    # as contas e as telas de cada base (decisão N): a produção NUNCA com a conta do staging
+    staging = {P21.NUTRI, P21.PERSONAL, P21.ALUNA, P21.OUTRA}
+    o.ok(P21.contas_da_area("agenda", "prod") == ["nutri-legado", "aluno-calc"] and P21.contas_da_area("alunos", "prod") == ["nutri-legado"]
+         and not staging & set(P21.contas_da_area("agenda", "prod") + P21.contas_da_area("alunos", "prod"))
+         and P21.contas_da_area("agenda", "staging") == [P21.NUTRI, P21.PERSONAL, P21.ALUNA] and conta_do_app("prod") == "aluno-calc"
+         and conta_do_app("staging") == "w5p-aluna" and conta_do_app("local") == "w5p-aluna",
+         "decisão N: na produção a nutri-legado (painel) e a aluno-calc (app) — nunca a conta do staging; no local/staging as de teste da W "
+         "(e o rede.py --area casca|app na produção entra com a aluno-calc)")
+    fonte = Path(__file__).read_text(encoding="utf-8").split("def seco_21b", 1)[0]  # o código das rodadas (sem esta conferência)
+    o.ok("t.entrar(L, aluna, rota)" in fonte and "L.do_navegador(aluna, t.pg)" in fonte and "t.entrar(L, B.ALUNA" not in fonte
+         and "L.do_navegador(B.ALUNA" not in fonte,
+         "decisão N no código: o rede.py --area casca|app entra e devolve a sessão com a conta da base (nenhum B.ALUNA fixo no entrar/do_navegador)")
+    o.ok([x[0] for x in P21.telas_da_conta("agenda", P21.NUTRI)] == ["agenda_semana", "agenda_mes", "agenda_novo", "agenda_regras", "agenda_travas"]
+         and [x[0] for x in P21.telas_da_conta("agenda", P21.PERSONAL)] == ["agenda_semana"]
+         and [x[0] for x in P21.telas_da_conta("agenda", P21.ALUNA)] == ["agenda_aluno"]
+         and [x[0] for x in P21.telas_da_conta("agenda", "aluno-calc")] == ["agenda_aluno"]
+         and [x[0] for x in P21.telas_da_conta("alunos", P21.NUTRI)] == ["alunos", "dashboard", "busca"]
+         and all(t[3] in (1, 2) for t in P21.TELAS_DA_AGENDA + P21.TELAS_DOS_ALUNOS + (P21.AGENDA_ALUNO,)),
+         "as telas de cada conta (a nutri: a Agenda semana/mês e os 3 diálogos; o dono: a semana; a aluna: a Agenda dela; os Alunos, o Dashboard "
+         "e a Busca) e o teto de `ler` (2 só onde a série foi aceita)")
+    sql = P21.sql_agenda_sem_gravar("public", uid)
+    o.ok("public.calendarios" in sql and "c.deleted_at is null" in sql and "t.base" in sql and "count(distinct t.area)" in sql and "insert" not in sql.lower(),
+         "a pré-condição da Agenda (sem gravar ao abrir): calendário próprio vivo + as 3 tags base — SQL só leitura, só contagem, no schema da base")
+    o.ok(P21.ENTRADA_PAINEL.startswith("/painel/configuracoes") and not any(P21.ENTRADA_PAINEL.startswith(r) for r in ("/painel/agenda", "/painel/alunos"))
+         and P21.ENTRADA_APP == "/perfil", "a entrada é de fora da 21b (a carga fria não entra na medida da 1ª tela)")
+    o.ok(P21.fase_do_codigo_21b("local", "x") == "depois" and P21.fase_do_codigo_21b("staging", "d357719") == "antes"
+         and P21.fase_do_codigo_21b("staging", "HEAD") == "depois",
+         "antes × depois vem do CÓDIGO medido (o d357719 lê a Agenda direto: antes; o HEAD pela conta: depois)")
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-21a — a rede das telas (antes × depois): a casca e o app do aluno")
-    ap.add_argument("--area", required=True, choices=("casca", "app"))
+    ap = argparse.ArgumentParser(description="hml-21a/21b — a rede das telas (antes × depois): a casca e o app do aluno; a Agenda e os Alunos")
+    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos"))
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--seco", action="store_true")
     a = ap.parse_args()
     B.corte_vira_saida()
+    B.usar_area(a.area)
     if a.seco:
         o = C.Saida(f"rede21_{a.area}_seco")
-        seco(o)
+        if a.area in B.AREAS_DA_21B:
+            seco_21b(o, a.area)
+        else:
+            seco(o)
         return o.fim()
     o = C.Saida(f"rede21_{a.area}_{a.base}")
     try:

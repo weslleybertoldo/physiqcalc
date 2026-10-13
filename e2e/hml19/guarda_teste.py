@@ -208,6 +208,23 @@ def casos_hml17(b) -> list[tuple]:
         ("W-A: treino-acessos › {action: ler} (lê o acao, não o action)", g.escrita(Pedido("POST", f"{T}/functions/v1/treino-acessos", {"action": "ler"})), True),
         ("W-A: funcao_grava SEM o corpo: aluno-dia 'ler' segue gravação (só o corpo libera)", b.funcao_grava("aluno-dia", "ler"), True),
         ("W-A: acessos-x (outra função, desconhecida: grava)", fn("acessos-x", "ler"), True),
+        # hml-21b (decisão F): a Agenda, os Alunos e o Dashboard pela conta — o `ler` com as consultas novas passa; TODA ação nova é
+        # barrada (o 1º acesso e o excluir calendário pelas RPCs atômicas, a Agenda do aluno, o pacote); as RPCs que saíram do front são
+        # gravação para a Guarda (o front ANTIGO as lê: o E2E do antes soma à lista dele)
+        ("hml-21b: conta › ler (a Agenda: calendários, agendamentos, tags; os Alunos; a equipe)", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"acao": "ler", "itens": [
+            {"conta": "c", "q": "agenda_calendarios"}, {"de": "a", "ate": "b", "q": "agenda_agendamentos"}, {"donos": ["x"], "q": "agenda_tags"},
+            {"conta": "c", "offset": 0, "limite": 0, "q": "alunos_da_conta"}, {"conta": "c", "q": "equipe_da_conta"}]})), False),
+        ("hml-21b: conta › ler (a Agenda do aluno: as regras e os horários)", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"acao": "ler", "itens": [
+            {"q": "minhas_regras_agenda"}, {"agendamento": "x", "q": "aluno_agenda_horarios"}]})), False),
+        *[(f"hml-21b: conta › {a} (grava)", fn("conta", a), True) for a in (
+            "agenda_garantir", "tags_garantir", "calendario_criar", "calendario_editar", "calendario_excluir", "tag_criar", "tag_editar", "tag_excluir",
+            "agendamento_criar", "agendamento_editar", "agendamento_excluir", "bloqueio_criar", "bloqueio_excluir", "trava_criar", "trava_excluir",
+            "regras_salvar", "agenda_confirmar", "agenda_desistir", "agenda_reagendar", "agenda_marcar", "pacote_definir")],
+        ("hml-21b: conta › disfarçado {action: ler, acao: calendario_excluir}", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"action": "ler", "acao": "calendario_excluir"})), True),
+        *[(f"hml-21b: RPC {n} (saiu do front; o front ANTIGO lê: a Guarda barra — o E2E do antes soma à lista dele)",
+           g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/{n}", {})), True) for n in ("alunos_da_conta", "agenda_horarios", "equipe_da_conta", "minhas_regras_agenda")],
+        ("hml-21b: RPC agenda_excluir_calendario (nova; só a conta chama: direta = grava)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/agenda_excluir_calendario", {})), True),
+        ("hml-21b: RPC agenda_garantir_inicio (nova; só a conta chama: direta = grava)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/agenda_garantir_inicio", {})), True),
     ]
     # toda função das pastas do repo está decidida (conhecida ou "sempre grava"): função nova sem decisão falha aqui
     pastas = {d.name for raiz in ("supabase-principal/functions", "supabase/functions") for d in (REPO / raiz).iterdir()
@@ -283,6 +300,13 @@ def casos_w26(w) -> list[tuple]:
         ("w26 · W-A: POST treino-acessos (Treino) {acao: salvar}", e("POST", f"{T}/functions/v1/treino-acessos", json.dumps({"acao": "salvar"})), True),
         ("w26 · W-A: OPTIONS aluno-dia", e("OPTIONS", f"{P}/functions/v1/aluno-dia"), False),
         ("w26 · W-A: POST aluno-dia-x (outra função)", e("POST", f"{P}/functions/v1/aluno-dia-x"), False),
+        # hml-21b: as ações da Agenda e dos Alunos são escrita; o `ler` com as consultas novas passa pelo corpo
+        ("w26 · hml-21b: POST conta {acao: ler, itens: [agenda_calendarios, alunos_da_conta]}",
+         e("POST", f"{P}/functions/v1/conta", json.dumps({"acao": "ler", "itens": [{"q": "agenda_calendarios"}, {"q": "alunos_da_conta"}]})), False),
+        *[(f"w26 · hml-21b: POST conta {{acao: {a}}}", e("POST", f"{P}/functions/v1/conta", json.dumps({"acao": a})), True)
+          for a in ("agenda_garantir", "calendario_excluir", "agendamento_criar", "regras_salvar", "agenda_marcar", "pacote_definir")],
+        ("w26 · hml-21b: POST conta disfarçado {action: ler, acao: agendamento_excluir}",
+         e("POST", f"{P}/functions/v1/conta", json.dumps({"action": "ler", "acao": "agendamento_excluir"})), True),
     ]
 
 

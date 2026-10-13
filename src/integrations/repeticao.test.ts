@@ -424,6 +424,10 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
       financeiro: { campo: "acao", acoes: ["ler"] },
       "admin-avaliacoes": { campo: "action", acoes: ["minha_evolucao"] },
       conta: { campo: "acao", acoes: ["ler"] },
+      // hml-21b (pedido da LINUX 3): o `ler` das 3 da W-A (conferido no código: só lê)
+      acessos: { campo: "acao", acoes: ["ler"] },
+      "aluno-dia": { campo: "acao", acoes: ["ler"] },
+      "treino-acessos": { campo: "acao", acoes: ["ler"] },
     });
   });
 
@@ -438,6 +442,14 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
     [`${P}/functions/v1/conta`, corpo({ acao: "avisos_marcar_lidos", ids: [] }), false],
     [`${P}/functions/v1/conta`, corpo({ acao: "perfil_foto_salvar" }), false],
     [`${P}/functions/v1/conta`, corpo({ action: "ler", acao: "perfil_nome" }), false],
+    // hml-21b (pedido da LINUX 3): o `ler` das 3 da W-A repete (o principal e o Treino); as gravações delas e o `ler` disfarçado não
+    [`${P}/functions/v1/acessos`, corpo({ acao: "ler", aluno: "x" }), true],
+    [`${P}/functions/v1/aluno-dia`, corpo({ acao: "ler", q: "rotinas" }), true],
+    [`${T}/functions/v1/treino-acessos`, corpo({ acao: "ler", aluno: "x" }), true],
+    [`${P}/functions/v1/acessos`, corpo({ acao: "salvar", aluno: "x", chave: "app", valor: "ver" }), false],
+    [`${P}/functions/v1/aluno-dia`, corpo({ acao: "rotina_marcar" }), false],
+    [`${T}/functions/v1/treino-acessos`, corpo({ acao: "salvar", valor: "mexer" }), false],
+    [`${P}/functions/v1/aluno-dia`, corpo({ action: "ler", acao: "dia_adicionar" }), false],
     // as gravações das mesmas funções vão 1 vez
     [`${P}/functions/v1/nutricao`, corpo({ acao: "anamnese_criar" }), false],
     [`${P}/functions/v1/nutricao`, corpo({ acao: "aluno_marcar_refeicao" }), false],

@@ -83,12 +83,19 @@ export const RPC_QUE_GRAVAM = new Set<string>([
  * hml-20a (decisão 18): as ações de LEITURA das funções do jeito 2 — o POST com um destes corpos repete 1 vez, como o GET de hoje.
  * `campo` = o campo do corpo que a FUNÇÃO lê (a nutricao e a financeiro leem `acao`; a admin-avaliacoes, `action`): um corpo com
  * { action: "ler", acao: "<gravação>" } não engana (a nutricao faria a gravação → não repete). hml-21a: + o `ler` da conta.
+ * hml-21b (pedido da LINUX 3, decisão da sessão principal 13/10 03:07): + o `ler` das 3 da W-A — conferido no código que ele SÓ LÊ: a
+ * acessos (a RPC acessos_ler: a wa_rota e o wa_acessos_json, sem escrita), a aluno-dia (as RPCs minhas_rotinas, meu_dia, meus_alimentos e
+ * buscar_alimentos_do_aluno — STABLE — e rotinas_do_aluno e dia_do_aluno — só leem, com ajudantes stable/immutable) e a treino-acessos
+ * (a acessos_ler no principal + o select de physiq_identidades/physiq_profiles; a única escrita, o update, é do `salvar`).
  */
 export const ACOES_DE_LEITURA: Readonly<Record<string, { campo: "acao" | "action"; acoes: readonly string[] }>> = {
   nutricao: { campo: "acao", acoes: ["ler"] },
   financeiro: { campo: "acao", acoes: ["ler"] },
   "admin-avaliacoes": { campo: "action", acoes: ["minha_evolucao"] },
   conta: { campo: "acao", acoes: ["ler"] },
+  acessos: { campo: "acao", acoes: ["ler"] },
+  "aluno-dia": { campo: "acao", acoes: ["ler"] },
+  "treino-acessos": { campo: "acao", acoes: ["ler"] },
 };
 
 /** O corpo (o texto JSON que o supabase-js manda) é de uma ação de LEITURA da função? Corpo ilegível, sem a ação ou outra → não. */

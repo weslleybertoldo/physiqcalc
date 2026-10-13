@@ -26,14 +26,31 @@ push: registra e esquece um token de TESTE (antes da massa: um aviso novo com ap
       no perfil_nome; select/colunas no `ler`) → cai (só o nome muda; a resposta é a mesma)
   N6  x-schema inválido → 400 schema_invalido · N7 origem fora da lista → o CORS padrão (https://physiqcalc.com.br)
   N8  o caminho da foto fora da pasta de quem chama (outra pessoa, ../, subpasta, outro nome) → dados_invalidos (nada gravado)
-  N9  lote de 17 → 400 lote_grande · N11 a aluna pede uma consulta do PAINEL pela conta → consulta_invalida (a 21a não tem nenhuma)
+  N9  lote de 17 → 400 lote_grande · N11 a aluna pede uma consulta do PAINEL de OUTRA função pela conta → consulta_invalida (as da
+      Agenda e dos Alunos são da 21b: o N11 dela, pelo RLS)
 Produção (--base prod --so-leitura) e o smoke logo depois de publicar (--base staging --so-leitura): OPTIONS (o CORS), sem login → 401,
 x-schema inválido → 400 e a q desconhecida → consulta_invalida (o `ler` sem banco) — nada grava; 1 login (a conta de teste).
 Antes de CADA execução que toca o staging: ~/projetos/physiqcalc-scratch/hml/hml19/ferramentas/pausa.sh "<o que ia rodar>".
-Uso: python3 e2e/hml21/api.py --area casca|app [--base local|staging|prod] [--casos P,N1,…] [--seco | --limpar | --so-leitura | --sair]
+Uso: python3 e2e/hml21/api.py --area casca|app|agenda|alunos [--base local|staging|prod] [--casos P,N1,…] [--seco | --limpar | --so-leitura | --sair]
   --seco  sem rede: cada corpo desta rodada passa (ou é recusado como deve) pelo leitor REAL do servidor (o TS, pelo node); o SQL da lib
           de cada consulta existe com a origem; a Guarda dos E2E trata o `ler` da conta como leitura e as ações como gravação
 Da saída só saem status, códigos, contagens e tempos.
+hml-21b (13/10/2026 — contrato da 21b, decisões E, I e N), --area agenda|alunos (e2e/hml21/painel21b.py: as contas, a massa e a limpeza):
+  P   cada consulta da Agenda (13) e dos Alunos (6) = o SQL FIXO da lib do d357719 COMO A PESSOA (a nutri w5p-nutri com a conta ativa que o
+      app escolhe; a aluna nas da Agenda do aluno; as listas com empate na ordem como conjunto); cada ação faz o MESMO de hoje, na massa de
+      TESTE (a marca "hml21 e2e <rodada>"; os ids no Estado, chave hml21b): o 1º acesso idempotente (agenda_garantir/tags_garantir só com
+      calendário e as 3 tags base — senão PADRÃO: criaria; a criação é a prova do Postgres local), o calendário (criar/editar/excluir pela RPC
+      nova — a consulta viva e o calendário na Lixeira com o MESMO instante), a tag, a consulta sem aluno, o bloqueio, a trava, as regras (o
+      MESMO valor), a Agenda do aluno numa consulta de teste com a matrícula dela (os horários, confirmar/reagendar/desistir; o marcar só sem
+      pacote — sem_pacote; os avisos da agenda anotados e apagados; sem WhatsApp conectado) e o pacote (o MESMO pacote ativo ou o total 0;
+      o total_invalido)
+  N1  outra conta (w13-dono): não edita/exclui o calendário nem a tag da nutri (404 nao_encontrado; a RPC volta inteira), não confirma a
+      consulta da aluna, não define o pacote, e não lê a agenda nem os alunos da conta da nutri · N2 · N3 · N4/N5 (o dono e as colunas de
+      fora no corpo CAEM: o dono vem do token ou do calendário) · N6 · N7 · N9 · N11 a aluna pede o painel (as consultas da 21b com a conta
+      da nutri) → nada (o RLS e as RPCs)
+  --limpar  a massa da 21b (o Estado + o que tem a marca dos donos de teste, inclusive na Lixeira) e os avisos anotados
+  --so-leitura  a MESMA conta das áreas da 21a (a aluno-calc na produção; a w5p-aluna no staging — 1 login por base) + o `ler` novo
+                (minhas_regras_agenda → ok: a conta v2 publicada; a v1 responderia consulta_invalida)
 """
 from __future__ import annotations
 
@@ -48,6 +65,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
+import painel21b as P21  # noqa: E402  (hml-21b: as contas, a massa e a limpeza da Agenda e dos Alunos)
 
 C = B.C
 CASOS = ("P", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N11")
@@ -56,14 +74,28 @@ OUTRO = "44444444-4444-4444-8444-444444444444"
 CONSULTAS = {
     "casca": ("avisos", "aviso_membro_removido", "situacao"),
     "app": ("meu_perfil_aluno", "minha_agenda", "minha_agenda_lista", "meu_plano_app", "pratos_prontos_do_app", "perfil_foto"),
+    # hml-21b: a Agenda (do painel e do aluno) e os Alunos (a lista, o seletor, a Busca, o número do menu, os convites, os pendentes, os
+    # novos por mês e a equipe)
+    "agenda": ("agenda_calendarios", "agenda_tags", "agenda_agendamentos", "agenda_bloqueios", "agenda_bloqueios_futuros", "agenda_travas",
+               "agenda_regras", "agenda_horarios", "agenda_alunos", "agenda_aluno", "aluno_compromissos", "minhas_regras_agenda",
+               "aluno_agenda_horarios"),
+    "alunos": ("alunos_da_conta", "aluno_do_seletor", "aluno_convites", "alunos_pendentes", "alunos_novos_por_mes", "equipe_da_conta"),
 }
 ACOES = {
     "casca": ("avisos_marcar_lidos", "aviso_membro_ok", "aviso_mudanca_marcar", "senha_definida", "push_registrar", "push_esquecer",
               "aceitar_textos", "criar_minha_conta", "entrar_sem_profissional"),
     "app": ("perfil_nome", "perfil_foto_preparar", "perfil_foto_salvar", "perfil_foto_tirar", "mudar_objetivo_app"),
+    "agenda": ("agenda_garantir", "tags_garantir", "calendario_criar", "calendario_editar", "calendario_excluir", "tag_criar", "tag_editar",
+               "tag_excluir", "agendamento_criar", "agendamento_editar", "agendamento_excluir", "bloqueio_criar", "bloqueio_excluir", "trava_criar",
+               "trava_excluir", "regras_salvar", "agenda_confirmar", "agenda_desistir", "agenda_reagendar", "agenda_marcar"),
+    "alunos": ("pacote_definir",),
 }
-# as consultas do PAINEL (de outras sub-W, outras funções): pela conta da 21a, consulta_invalida (N11)
-DO_PAINEL = ("alunos_da_conta", "agenda_agendamentos", "fin_categorias", "aluno_dieta", "perfil_profissional")
+AREAS = ("casca", "app", "agenda", "alunos")
+# as consultas do PAINEL de OUTRAS funções (a nutricao, a financeiro): pela conta, consulta_invalida (N11 da 21a). hml-21b (PADRÃO, regra da
+# sessão principal 03:25 — o esperado da 21a não muda: consulta de fora do catálogo → consulta_invalida): saíram daqui as 2 que a 21b pôs
+# no catálogo da conta (alunos_da_conta, agenda_agendamentos — o N11 da 21b: a aluna as pede e o RLS não deixa nada) e entraram 2 de
+# outras funções (fin_lancamentos da financeiro, planos_do_aluno da nutricao)
+DO_PAINEL = ("fin_lancamentos", "planos_do_aluno", "fin_categorias", "aluno_dieta", "perfil_profissional")
 VERSAO_ERRADA = "hml21-versao-que-nao-existe"
 
 
@@ -454,9 +486,557 @@ def n_gerais(o, L, area: str, casos: set, estado=None) -> None:
              f"avisos da massa) ({st})")
 
 
-def so_leitura(o, base: str) -> None:
+# ───────────────────────── hml-21b: a Agenda e os Alunos (--area agenda|alunos) ─────────────────────────
+CONTA_X = "55555555-5555-4555-8555-555555555555"  # uma conta de exemplo (só o --seco)
+CAL_X = "66666666-6666-4666-8666-666666666666"    # um calendário de exemplo (só o --seco)
+# o N11 da 21b: as consultas do PAINEL que a 21b pôs na conta, com params VÁLIDOS (a conta e um calendário da nutri): a aluna não vê nada —
+# o RLS (as tabelas: 0 linha) e as RPCs (a conferência de quem chama: ok false ou vazio), como hoje
+DO_PAINEL_21B = ("agenda_calendarios", "agenda_agendamentos", "agenda_travas", "agenda_alunos", "alunos_da_conta", "aluno_convites",
+                 "alunos_pendentes", "equipe_da_conta")
+CHAVES_DE_DONO = ("nutricionista_id", "profissional_id", "user_id", "dono_id", "criado_por")
+
+
+def iso(d: dt.datetime) -> str:
+    return d.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def janela_larga() -> tuple[str, str]:
+    """Uma janela de leitura da Agenda (o P compara a função com o SQL da lib nos MESMOS params): de 30 dias atrás a 60 dias adiante."""
+    agora = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    return iso(agora - dt.timedelta(days=30)), iso(agora + dt.timedelta(days=60))
+
+
+def dia_sp(dias: int = 1) -> str:
+    """Uma data de São Paulo (YYYY-MM-DD) daqui a `dias` (os horários de um dia da Agenda)."""
+    return (dt.datetime.now(dt.timezone(dt.timedelta(hours=-3))) + dt.timedelta(days=dias)).date().isoformat()
+
+
+def pedidos_ler_21b(area: str) -> list[dict]:
+    """Os corpos `ler` da rodada da 21b (P e os N) — o --seco passa cada um pelo leitor do servidor (o catálogo inteiro da função)."""
+    de, ate = janela_larga()
+    uid = "33333333-3333-4333-8333-333333333333"
+    if area == "agenda":
+        ok = [B.item("agenda_calendarios", conta=CONTA_X), B.item("agenda_tags", donos=[uid, OUTRO]),
+              B.item("agenda_agendamentos", de=de, ate=ate, conta=CONTA_X), B.item("agenda_bloqueios", de=de, ate=ate, conta=CONTA_X),
+              B.item("agenda_bloqueios_futuros", agora=agora_iso(), conta=CONTA_X), B.item("agenda_travas", conta=CONTA_X),
+              B.item("agenda_regras", profissional=uid), B.item("agenda_horarios", calendario=CAL_X, dia=dia_sp(1)), B.item("agenda_alunos", conta=CONTA_X),
+              B.item("agenda_aluno", id=FALSO), B.item("aluno_compromissos", aluno=FALSO), B.item("minhas_regras_agenda"),
+              B.item("aluno_agenda_horarios", profissional=uid)]
+        n45 = [B.item("agenda_calendarios", conta=CONTA_X, nutricionista_id=OUTRO, user_id=OUTRO, select="*"),
+               B.item("agenda_agendamentos", de=de, ate=ate, conta=CONTA_X, deleted_at="2000-01-01", limit=5000, colunas="*"),
+               B.item("agenda_regras", profissional=uid, profissional_id=OUTRO), B.item("agenda_calendarios")]  # sem a conta: só o meu (o contaId || null)
+        ruins = [B.item("agenda_agendamentos", de="ontem", ate=ate), B.item("agenda_tags"), B.item("agenda_tags", donos=[FALSO] * 201),
+                 B.item("agenda_horarios", calendario=CAL_X, dia="20/10/2026"), B.item("agenda_regras"), B.item("aluno_compromissos")]
+    else:
+        ok = [B.item("alunos_da_conta", conta=CONTA_X, filtros={"situacao": "ativos"}, offset=0, limite=20),
+              B.item("aluno_do_seletor", conta=CONTA_X, id=FALSO), B.item("aluno_convites", conta=CONTA_X), B.item("alunos_pendentes", conta=CONTA_X),
+              B.item("alunos_novos_por_mes", conta=CONTA_X, meses=6), B.item("equipe_da_conta", conta=CONTA_X)]
+        n45 = [B.item("alunos_da_conta", conta=CONTA_X, filtros={"situacao": "ativos", "conta_id": OUTRO, "sql": "x"}, offset=0, limite=0, p_conta=OUTRO),
+               B.item("aluno_do_seletor", conta=CONTA_X, id=FALSO, colunas="cpf", select="*")]
+        ruins = [B.item("alunos_da_conta", conta=CONTA_X, limite=501), B.item("alunos_da_conta", conta=CONTA_X, offset=-1),
+                 B.item("alunos_novos_por_mes", conta=CONTA_X, meses=0), B.item("aluno_convites")]
+    return [
+        {"acao": "ler", "itens": ok},
+        {"acao": "ler", "itens": [ok[0], B.item("conta_inteira"), B.item("agenda_de_todo_mundo")]},  # N3
+        {"acao": "ler", "itens": n45},  # N4/N5
+        {"acao": "ler", "itens": ruins},  # o param fora da forma
+        {"acao": "ler", "itens": [ok[0]] * 17},  # N9
+        {"acao": "ler", "itens": [B.item(q) for q in DO_PAINEL]},  # as de OUTRAS funções: consulta_invalida (o mesmo da 21a)
+    ]
+
+
+def pedidos_acoes_21b(area: str, uid: str, rodada: str) -> list[tuple[str, dict, bool]]:
+    """As ações da rodada da 21b: (ação, corpo, o servidor aceita?) — o --seco confere cada uma no lerCorpoDaAcao do servidor."""
+    cal, tag, ag = CAL_X, "77777777-7777-4777-8777-777777777777", FALSO
+    consulta = P21.corpo_consulta(rodada, cal, tag, CONTA_X, None, 30, 13)
+    if area == "alunos":
+        return [
+            ("pacote_definir", {"aluno": FALSO, "profissional": uid, "total": 4, "mes_inicio": None, "conta_id": OUTRO, "criado_por": OUTRO}, True),  # N4/N5
+            ("pacote_definir", {"aluno": FALSO, "profissional": uid, "total": 4, "mes_inicio": "2026-10-01"}, True),
+            ("pacote_definir", {"aluno": FALSO, "profissional": uid, "total": 0}, True),
+            ("pacote_definir", {"aluno": FALSO, "profissional": uid}, False),  # sem o total
+            ("pacote_definir", {"aluno": FALSO, "profissional": uid, "total": 4, "mes_inicio": "10/2026"}, False),
+        ]
+    return [
+        ("agenda_garantir", {"conta_id": CONTA_X, "papeis": ["personal", "nutricionista"], "modulos": ["treino", "nutricao"], "nutricionista_id": OUTRO}, True),
+        ("agenda_garantir", {"conta_id": None, "papeis": [], "modulos": []}, True),
+        ("agenda_garantir", {"conta_id": CONTA_X, "papeis": ["x"] * 11, "modulos": []}, False),
+        ("agenda_garantir", {"conta_id": CONTA_X, "papeis": [""], "modulos": []}, False),
+        ("tags_garantir", {"profissional_id": OUTRO}, True),
+        ("calendario_criar", {**P21.corpo_calendario(rodada, CONTA_X), "nutricionista_id": OUTRO, "id": FALSO, "deleted_at": "2000-01-01"}, True),
+        ("calendario_criar", {"cor": "#a78bfa"}, False),  # sem o nome
+        ("calendario_editar", {"id": cal, "nome": P21.marca(rodada) + " editado", "nutricionista_id": OUTRO}, True),
+        ("calendario_editar", {"nome": "x"}, False),  # sem o id
+        ("calendario_excluir", {"id": cal}, True),
+        ("calendario_excluir", {"id": "nao-uuid"}, False),
+        ("tag_criar", {**P21.corpo_tag(rodada), "profissional_id": OUTRO, "base": True}, True),
+        ("tag_criar", {"nome": "x", "cor": "#123456", "area": "outra"}, False),
+        ("tag_editar", {"id": tag, "cor": "#654321", "base": True}, True),
+        ("tag_excluir", {"id": tag}, True),
+        ("agendamento_criar", {**consulta, "nutricionista_id": OUTRO, "reagendamentos": 9, "origem": "pacote"}, True),
+        ("agendamento_criar", {**consulta, "status": "qualquer"}, False),
+        ("agendamento_criar", {k: v for k, v in consulta.items() if k != "inicio"}, False),
+        ("agendamento_editar", {"id": ag, "observacao": P21.marca(rodada), "aviso_email_em": "2000-01-01"}, True),
+        ("agendamento_editar", {"id": ag, "observacao": None, "paciente_id": None, "tag_id": None}, True),  # o null vai (limpa a coluna)
+        ("agendamento_editar", {"id": ag, "titulo": None}, False),  # o título não aceita null
+        ("agendamento_excluir", {"id": ag}, True),
+        ("bloqueio_criar", {**P21.corpo_bloqueio(rodada, cal, CONTA_X), "nutricionista_id": OUTRO}, True),
+        ("bloqueio_criar", {"inicio": "amanhã", "fim": P21.instante(31, 11)}, False),
+        ("bloqueio_excluir", {"id": FALSO}, True),
+        ("trava_criar", {**P21.corpo_trava(rodada, cal, CONTA_X), "profissional_id": OUTRO}, True),
+        ("trava_criar", {**P21.corpo_trava(rodada, cal, CONTA_X), "dias": [7]}, False),
+        ("trava_criar", {**P21.corpo_trava(rodada, cal, CONTA_X), "hora_inicio": "25:00"}, False),
+        ("trava_excluir", {"id": FALSO}, True),
+        ("regras_salvar", {"slot_minutos": 30, "atende_inicio": "08:00", "atende_fim": "18:00", "dias": [1, 2, 3, 4, 5], "reagendamentos_max": 1,
+                           "janela_reagendamento": "mes", "desistencia": True, "profissional_id": OUTRO}, True),
+        ("regras_salvar", {"slot_minutos": 30}, False),  # as 7, sempre (o RegrasDialog manda todas)
+        ("agenda_confirmar", {"agendamento": ag}, True),
+        ("agenda_desistir", {"agendamento": ag}, True),
+        ("agenda_reagendar", {"agendamento": ag, "inicio": P21.instante(21, 13)}, True),
+        ("agenda_reagendar", {"agendamento": ag}, False),
+        ("agenda_marcar", {"profissional": uid, "inicio": P21.instante(22, 13)}, True),
+        ("agenda_marcar", {"profissional": uid}, False),
+    ]
+
+
+def seco_21b(o, area: str) -> None:
+    """O --seco da 21b (sem rede): os corpos pelo leitor REAL do servidor, o SQL da lib de cada consulta, as áreas da guarda, a trava da
+    escrita da massa e as telas/pré-condições do painel21b."""
+    uid = "33333333-3333-4333-8333-333333333333"
+    rodada = "seco"
+    lers = pedidos_ler_21b(area)
+    acoes = pedidos_acoes_21b(area, uid, rodada)
+    r = B.regras_conta(lers + [{**c, "acao": a} for a, c, _ok in acoes])
+    cons = r["consultas"]
+    o.ok(set(CONSULTAS[area]) <= set(r["consultas_21b"]) and not set(CONSULTAS[area]) & set(r["consultas_21a"]),
+         f"[seco] as {len(CONSULTAS[area])} consultas da área {area} estão no catálogo do servidor (as da 21b; nenhuma da 21a)")
+    o.ok(set(r["consultas_21b"]) == set(CONSULTAS["agenda"]) | set(CONSULTAS["alunos"]) and len(r["consultas_21a"]) == 9,
+         "[seco] o catálogo inteiro = as 9 da 21a + as 19 da 21b (agenda 13 + alunos 6)")
+    o.ok(tuple(r[area]) == ACOES[area], f"[seco] as {len(ACOES[area])} ações da área {area} = a lista do servidor, na ordem")
+    o.ok(all(q in B.SQL_DA_LIB and "(d357719" in B.SQL_DA_LIB[q][0] and B.SQL_DA_LIB[q][0].startswith("src/") for q in CONSULTAS[area]),
+         "[seco] cada consulta tem o SQL FIXO da lib do d357719 (com a origem arquivo:linha) para o P")
+    pl = r["pedidos"][: len(lers)]
+    o.ok(pl[0].get("ok") is True and all(i.get("ok") for i in pl[0]["itens"]), "[seco] P: o lote da tela passa no leitor do servidor (cada item ok)")
+    o.ok([i.get("erro") for i in pl[1]["itens"]] == [None, "consulta_invalida", "consulta_invalida"], "[seco] N3: a q desconhecida → consulta_invalida só nela")
+    n45 = pl[2]["itens"]
+    declarados = {q: set(cons[q]["params"]) for q in cons}
+    filtros_ok = all(set((i.get("params") or {}).get("filtros") or {}) <= set(r["filtros_alunos"]) for i in n45)
+    o.ok(all(i.get("ok") and set(i["params"]) <= declarados[i["q"]] for i in n45) and filtros_ok,
+         f"[seco] N4/N5: o dono/as colunas/os filtros de fora no corpo CAEM (só os params declarados chegam): {[sorted(i.get('params', {})) for i in n45]}")
+    o.ok(all(i.get("erro") == "dados_invalidos" for i in pl[3]["itens"]), f"[seco] o param fora da forma → dados_invalidos ({[i.get('erro') for i in pl[3]['itens']]})")
+    o.ok(pl[4] == {"modulo": "leitura", "ok": False, "erro": "lote_grande"}, "[seco] N9: 17 itens → lote_grande")
+    o.ok(all(i.get("erro") == "consulta_invalida" for i in pl[5]["itens"]), f"[seco] as consultas de OUTRAS funções pela conta → consulta_invalida ({', '.join(DO_PAINEL)})")
+    pa = r["pedidos"][len(lers):]
+    certos = [(a, esperado, x) for (a, _c, esperado), x in zip(acoes, pa)]
+    o.ok(all(x.get("modulo") == area and x.get("acao") == a for a, _e, x in certos), f"[seco] cada ação vai ao módulo {area} do servidor")
+    o.ok(all(bool(x.get("ok")) == esperado for _a, esperado, x in certos),
+         f"[seco] os corpos: os aceitos passam, os ruins → dados_invalidos ({[(a, x.get('campo')) for a, e, x in certos if not e]})")
+    o.ok(all(set((x.get("valores") or {})) <= set(r["corpos"][a]) for a, e, x in certos if e)
+         and not any(k in (x.get("valores") or {}) for _a, e, x in certos if e for k in CHAVES_DE_DONO),
+         "[seco] N4/N5: as chaves fora da lista da ação CAEM — nenhuma chave de dono (nutricionista_id, profissional_id, user_id, criado_por…) "
+         "chega ao banco: o dono vem do token (ou do calendário, lido no servidor)")
+    nulos = next((x.get("valores") for a, e, x in certos if a == "agendamento_editar" and e and "paciente_id" in (x.get("valores") or {})), None)
+    if area == "agenda":
+        o.ok(nulos == {"id": FALSO, "observacao": None, "paciente_id": None, "tag_id": None},
+             f"[seco] o null VAI ao banco onde a coluna aceita (limpar o aluno, a observação e a tag da consulta, como a tela): {nulos}")
+    # a Guarda dos E2E: o `ler` da conta é leitura; as ações são gravação (decisão F)
+    lido = json.dumps({"acao": "ler", "itens": [{"q": CONSULTAS[area][0]}]})
+    o.ok(B.B17.funcao_grava("conta", "ler", lido) is False and all(B.B17.funcao_grava("conta", a, json.dumps({"acao": a})) for a in ACOES[area]),
+         "[seco] a Guarda (hml17): o `ler` da conta passa; as ações da área são gravação")
+    # o SQL da lib: monta com o schema e os valores conferidos; recusa o que não é do formato
+    de, ate = janela_larga()
+    s1 = B.sql_da_lib("agenda_agendamentos", "staging", uid=uid, conta=CONTA_X, de=de, ate=ate)
+    s2 = B.sql_da_lib("alunos_da_conta", "staging", conta=CONTA_X, filtros={"situacao": "ativos"}, offset=0, limite=20)
+    s3 = B.sql_da_lib("agenda_tags", "staging", donos=[uid, OUTRO])
+    recusas = 0
+    for k, v in (("conta", "x"), ("de", "ontem"), ("dia", "20/10/2026"), ("limite", "20"), ("donos", ["x"]), ("filtros", {"q": 1}), ("outra", 1)):
+        try:
+            B.sql_da_lib("agenda_calendarios", "staging", **{k: v})
+        except (SystemExit, Exception):  # noqa: BLE001 — o uuid_ok levanta o Parou
+            recusas += 1
+    o.ok("staging.agendamentos" in s1 and "limit 1000" in s1 and "jsonb_agg" in s1 and "staging.alunos_da_conta(" in s2 and "::jsonb" in s2
+         and "array['33333333" in s3 and recusas == 7,
+         f"[seco] o SQL da lib monta com o schema e os valores conferidos (uuid, instante, data, inteiro, os donos, os filtros); {recusas}/7 fora do formato recusados")
+    o.ok(B.como_conjunto([{"b": 1}, {"a": 2}]) == B.como_conjunto([{"a": 2}, {"b": 1}]) and B.SEM_ORDEM_TOTAL <= set(B.LISTAS_DA_LIB),
+         "[seco] as listas com empate na ordem da lib comparam como conjunto (as tags, os bloqueios, as travas, os alunos da Agenda)")
+    # a trava da escrita da massa (nada sai: a recusa é antes do subprocesso)
+    recusas = 0
+    for sql in ("delete from staging.agendamentos where true;", "delete from public.calendarios where nutricionista_id = any(array['" + uid + "']::uuid[]) and nome like '%hml21 e2e%';",
+                "delete from staging.pacientes where nutricionista_id = any(array['" + uid + "']::uuid[]) and nome like '%hml21 e2e%';",
+                "update staging.calendarios set deleted_at = null where nome like '%hml21 e2e%';",
+                "delete from staging.calendarios where nutricionista_id = any(array['" + uid + "']::uuid[]) and nome like '%x%';",
+                "delete from staging.calendarios where nutricionista_id = any(array['" + uid + "']::uuid[]) and nome like '%hml21 e2e%'; delete from staging.calendarios;"):
+        try:
+            P21.sql_escrever_staging_21b(sql)
+        except SystemExit:
+            recusas += 1
+    try:
+        P21.sql_apagar_massa("public", "calendarios", [uid])
+    except SystemExit:
+        recusas += 1
+    try:
+        P21.sql_apagar_massa("staging", "pacientes", [uid])
+    except SystemExit:
+        recusas += 1
+    feitos = [P21.sql_apagar_massa("staging", t, [uid, "x"]) for t, _d, _m in P21.MASSA]
+    o.ok(recusas == 8 and all(P21._RE_DELETE_21B.fullmatch(x) for x in feitos) and all("'%hml21 e2e%'" in x for x in feitos),
+         f"[seco] a limpeza da massa: só o DELETE no staging, só os donos de teste, só a marca, 1 instrução, nas 5 tabelas da Agenda ({recusas}/8 recusadas)")
+    o.ok([t for t, _d, _m in P21.MASSA] == ["agendamentos", "bloqueios_agenda", "agenda_travas", "calendarios", "agenda_tags"],
+         "[seco] a ordem do DELETE segue as FKs (a consulta antes do calendário e da tag; o calendário antes da tag)")
+    est = B.Estado({"rodada": "x", "schema": "staging", "area": "hml21b", "linhas": [], "storage": [], "n8": None})
+    est.salvar = lambda: None  # o --seco não grava o Estado
+    P21.anotar_linha(est, "calendarios", FALSO, uid)
+    P21.anotar_linha(est, "pacientes", FALSO, uid)  # fora da massa: não anota
+    o.ok(B.tem_massa_21b(est) and est.d[B.CHAVE_21B]["linhas"] == [["calendarios", FALSO, uid]] and est.d[B.CHAVE_21B]["donos"] == [uid],
+         "[seco] o Estado: a massa da 21b na chave hml21b (só as 5 tabelas; o dono junto) — uma rodada da 21a não abre por cima")
+    o.ok(len(P21.marca("10130455-ab12")) <= 40 and P21.corpo_tag("10130455-ab12")["nome"].startswith(B.MARCA),
+         "[seco] a marca cabe no nome da tag (1–40 no banco)")
+    o.ok(cons["minhas_regras_agenda"]["params"] == {} and cons["minhas_regras_agenda"]["rpc"] == "minhas_regras_agenda",
+         "[seco] o `ler` novo do smoke só leitura (minhas_regras_agenda) não pede param: serve à conta de teste de qualquer base (1 login por base)")
+
+
+def um(sql: str) -> dict:
+    return (B.ler_principal(sql) or [{}])[0]
+
+
+def comparar_21b(o, q: str, s: str, resp: dict, valores: dict, uid: str, email: str, rotulo: str) -> bool:
+    """P: o item da função = o SQL FIXO da lib rodado COMO A PESSOA (as listas sem ordem total, como conjunto)."""
+    sql = B.sql_da_lib(q, s, **valores)
+    v = (B.B20.ler_como(B.PRINCIPAL_REF, uid, sql, email) or [{}])[-1].get("v")
+    obtido = resp.get("linhas") if q in B.LISTAS_DA_LIB else resp.get("valor")
+    conjunto = q in B.SEM_ORDEM_TOTAL
+    if conjunto:
+        obtido, v = B.como_conjunto(B.sem_relogio(obtido)), B.como_conjunto(B.sem_relogio(v))
+    n = len(v) if isinstance(v, list) else "—"
+    return igual_ao_sql(o, f"P {q} = o SQL da lib ({B.SQL_DA_LIB[q][0]}) como {rotulo} ({n} linha(s)" + (", como conjunto)" if conjunto else ")"), obtido, v)
+
+
+def contexto_21b(o, L, s: str) -> dict:
+    """As contas de teste da rodada: os uids, a conta ativa da nutri (como o app escolhe) e a matrícula da aluna (SQL só leitura)."""
+    uid_n, uid_a, uid_o = L.uid(P21.NUTRI), L.uid(P21.ALUNA), L.uid(P21.OUTRA)
+    conta = P21.conta_ativa(P21.situacao_como(s, uid_n, P21.NUTRI))
+    o.ok(conta is not None, f"a conta ativa da nutri de teste (a 1ª da minha_situacao, como o app; SQL só leitura como ela): papéis "
+         f"{(conta or {}).get('papeis')}, módulos {(conta or {}).get('modulos')}", parar=True)
+    conta_o = P21.conta_ativa(P21.situacao_como(s, uid_o, P21.OUTRA))
+    pac = P21.matricula_da_aluna(s, uid_a, uid_n)
+    o.ok(pac is not None, "a matrícula viva da aluna de teste com a nutri de teste (SQL só leitura; outra matrícula dela, de outra W, não entra)", parar=True)
+    return {"uid_n": uid_n, "uid_a": uid_a, "uid_o": uid_o, "conta": conta, "conta_o": conta_o, "pac": pac,
+            "email_n": B.B5.CONTAS[P21.NUTRI][0], "email_a": B.B5.CONTAS[P21.ALUNA][0], "email_o": B.B5.CONTAS[P21.OUTRA][0]}
+
+
+def p_leituras_21b(o, L, area: str, s: str, ctx: dict) -> None:
+    """P: cada consulta da área = o SQL FIXO da lib COMO A PESSOA (a nutri no painel; a aluna nas da Agenda do aluno)."""
+    uid, conta, pac = ctx["uid_n"], ctx["conta"]["id"], ctx["pac"]
+    if area == "agenda":
+        de, ate = janela_larga()
+        agora = agora_iso()
+        cals = (B.B20.ler_como(B.PRINCIPAL_REF, uid, B.sql_da_lib("agenda_calendarios", s, uid=uid, conta=conta), ctx["email_n"]) or [{}])[-1].get("v") or []
+        donos = sorted({uid} | {c.get("nutricionista_id") for c in cals if C.eh_uuid(c.get("nutricionista_id"))})
+        proprio = next((c.get("id") for c in cals if c.get("nutricionista_id") == uid and C.eh_uuid(c.get("id"))), None)
+        itens: list[tuple[str, dict, dict]] = [
+            ("agenda_calendarios", {"conta": conta}, {"uid": uid, "conta": conta}),
+            ("agenda_tags", {"donos": donos}, {"donos": donos}),
+            ("agenda_agendamentos", {"de": de, "ate": ate, "conta": conta}, {"uid": uid, "conta": conta, "de": de, "ate": ate}),
+            ("agenda_bloqueios", {"de": de, "ate": ate, "conta": conta}, {"uid": uid, "conta": conta, "de": de, "ate": ate}),
+            ("agenda_bloqueios_futuros", {"agora": agora, "conta": conta}, {"uid": uid, "conta": conta, "agora": agora}),
+            ("agenda_travas", {"conta": conta}, {"uid": uid, "conta": conta}),
+            ("agenda_regras", {"profissional": uid}, {"profissional": uid}),
+            ("agenda_alunos", {"conta": conta}, {"uid": uid, "conta": conta}),
+            ("agenda_aluno", {"id": pac}, {"id": pac}),
+            ("aluno_compromissos", {"aluno": pac}, {"aluno": pac}),
+        ]
+        if proprio:
+            dia = dia_sp(1)
+            itens.append(("agenda_horarios", {"calendario": proprio, "dia": dia}, {"calendario": proprio, "dia": dia, "duracao": None, "ignorar": None}))
+        else:
+            o.linha("   PADRÃO: a nutri sem calendário próprio vivo — o agenda_horarios fica no Vitest (o P precisa de um calendário dela)")
+        lote_do_aluno = [("minhas_regras_agenda", {}, {}),
+                         ("aluno_agenda_horarios", {"profissional": uid}, {"agendamento": None, "profissional": uid, "de_data": None, "ate_data": None})]
+    else:
+        filtros = {"situacao": "ativos"}
+        itens = [
+            ("alunos_da_conta", {"conta": conta, "filtros": filtros, "offset": 0, "limite": 20}, {"conta": conta, "filtros": filtros, "offset": 0, "limite": 20}),
+            ("alunos_da_conta", {"conta": conta, "filtros": {"situacao": "ativos"}, "offset": 0, "limite": 0},
+             {"conta": conta, "filtros": {"situacao": "ativos"}, "offset": 0, "limite": 0}),  # o número do menu (limite 0) e o KPI do Dashboard
+            ("aluno_do_seletor", {"conta": conta, "id": pac}, {"conta": conta, "id": pac}),
+            ("aluno_convites", {"conta": conta}, {"conta": conta}),
+            ("alunos_pendentes", {"conta": conta}, {"conta": conta}),
+            ("alunos_novos_por_mes", {"conta": conta, "meses": 6}, {"conta": conta, "meses": 6}),
+            ("equipe_da_conta", {"conta": conta}, {"conta": conta}),
+        ]
+        lote_do_aluno = []
+    for conta_lote, lote, uid_l, email_l, rotulo in ((P21.NUTRI, itens, uid, ctx["email_n"], "a nutri"),
+                                                      (P21.ALUNA, lote_do_aluno, ctx["uid_a"], ctx["email_a"], "a aluna")):
+        if not lote:
+            continue
+        st, r, _h, ms = B.ler(L.token(conta_lote), [B.item(q, **params) for q, params, _v in lote])
+        o.ok(st == 200 and len(B.itens_de(r)) == len(lote) and all(i.get("ok") for i in B.itens_de(r)),
+             f"P: o lote da área {area} pela conta como {rotulo} → 200, {len(lote)} itens ok ({ms} ms)")
+        for (q, _p, valores), resp in zip(lote, B.itens_de(r)):
+            comparar_21b(o, q, s, resp, valores, uid_l, email_l, rotulo)
+
+
+def contagens_agenda(s: str, uid: str) -> dict:
+    """Só contagem: os calendários e as tags (vivos) de quem chama — o 1º acesso idempotente não muda nada."""
+    u = C.txt(C.uuid_ok(uid))
+    return um(f"select (select count(*) from {s}.calendarios where nutricionista_id = {u})::int as calendarios, "
+              f"(select count(*) from {s}.agenda_tags where profissional_id = {u})::int as tags")
+
+
+def p_acoes_agenda(o, L, s: str, estado, rodada: str, ctx: dict, casos: set) -> None:  # noqa: PLR0915
+    """P/N1/N4/N5 das gravações da Agenda pela conta, na massa de TESTE (decisão I): o 1º acesso idempotente, o calendário, a tag, a consulta,
+    o bloqueio, a trava, as regras (o mesmo valor), a Agenda do aluno numa consulta de teste com a matrícula dela — e o excluir calendário
+    atômico (a RPC nova: a consulta e o calendário na Lixeira com o MESMO instante)."""
+    tok, uid, conta, pac = L.token(P21.NUTRI), ctx["uid_n"], ctx["conta"], ctx["pac"]
+    tok_o, uid_o = L.token(P21.OUTRA), ctx["uid_o"]
+    mk = P21.marca(rodada)
+    abre, motivo = P21.agenda_abre_sem_gravar(s, uid)
+    o.linha(f"   a Agenda da nutri de teste: {motivo}")
+    if abre:
+        antes = contagens_agenda(s, uid)
+        st, r, _h, _ms = B.conta(tok, "agenda_garantir", {"conta_id": conta["id"], "papeis": conta["papeis"], "modulos": conta["modulos"], "nutricionista_id": uid_o})
+        o.ok(st == 200 and r.get("criados") == [] and contagens_agenda(s, uid) == antes,
+             f"P agenda_garantir (quem já tem calendário: o caminho idempotente da RPC nova) → criados [], 0 linha nova ({st})")
+        st, r, _h, _ms = B.conta(tok, "tags_garantir", {"profissional_id": uid_o})
+        res = r.get("resultado") or {}
+        o.ok(st == 200 and res.get("ok") is True and contagens_agenda(s, uid) == antes, f"P tags_garantir (as 3 base já existem) → ok, 0 tag nova ({st})")
+    else:
+        o.linha("   PADRÃO (decisão I): a nutri de teste sem calendário próprio ou sem as 3 tags base — o agenda_garantir/tags_garantir CRIARIA; "
+                "a criação fica no Postgres local (pg_local_21b 40/40) e no Vitest")
+    # ── a massa: o dono anotado ANTES (a rodada que cai depois do insert limpa pela marca)
+    P21.anotar_dono(estado, uid)
+    st, r, _h, _ms = B.conta(tok, "calendario_criar", {**P21.corpo_calendario(rodada, conta["id"]), "nutricionista_id": uid_o})
+    cal = (r.get("linha") or {}).get("id")
+    P21.anotar_linha(estado, "calendarios", cal, uid)
+    lin = um(f"select nutricionista_id::text as dono, conta_id::text as conta, nome from {s}.calendarios where id = {C.txt(C.uuid_ok(cal))}") if C.eh_uuid(cal) else {}
+    o.ok(st == 200 and lin == {"dono": uid, "conta": conta["id"], "nome": mk}, f"P/N4 calendario_criar → o dono = quem chama (o nutricionista_id do corpo "
+         f"CAI), a conta da tela, a marca; a linha volta na forma da leitura ({st})", parar=True)
+    st, r, _h, _ms = B.conta(tok, "tag_criar", {**P21.corpo_tag(rodada), "profissional_id": uid_o, "base": True})
+    tag = (r.get("linha") or {}).get("id")
+    P21.anotar_linha(estado, "agenda_tags", tag, uid)
+    lin = um(f"select profissional_id::text as dono, base from {s}.agenda_tags where id = {C.txt(C.uuid_ok(tag))}") if C.eh_uuid(tag) else {}
+    o.ok(st == 200 and lin == {"dono": uid, "base": False}, f"P/N4/N5 tag_criar → a tag da nutri, base false (o profissional_id e o base do corpo CAEM) ({st})")
+    st, r, _h, _ms = B.conta(tok, "tag_editar", {"id": tag, "cor": "#654321", "base": True})
+    o.ok(st == 200 and um(f"select cor, base from {s}.agenda_tags where id = {C.txt(tag)}") == {"cor": "#654321", "base": False},
+         f"P tag_editar → só a cor (o base do corpo CAI) ({st})")
+    if "N1" in casos:
+        st, r, _h, _ms = B.conta(tok_o, "calendario_editar", {"id": cal, "nome": "N1"})
+        st2, r2, _h, _ms = B.conta(tok_o, "calendario_excluir", {"id": cal})
+        st3, r3, _h, _ms = B.conta(tok_o, "tag_excluir", {"id": tag})
+        o.ok(st == 404 and st2 == 404 and r2.get("erro") == "nao_encontrado" and st3 == 404
+             and um(f"select nome, deleted_at is null as vivo from {s}.calendarios where id = {C.txt(cal)}") == {"nome": mk, "vivo": True}
+             and um(f"select deleted_at is null as viva from {s}.agenda_tags where id = {C.txt(tag)}") == {"viva": True},
+             f"N1 OUTRA conta edita/exclui o calendário e a tag da nutri → 404 nao_encontrado (o RLS; a RPC nova volta inteira); nada mudou ({st}, {st2}, {st3})")
+    st, r, _h, _ms = B.conta(tok, "calendario_editar", {"id": cal, "nome": mk + " editado", "nutricionista_id": uid_o})
+    o.ok(st == 200 and um(f"select nome, nutricionista_id::text as dono from {s}.calendarios where id = {C.txt(cal)}") == {"nome": mk + " editado", "dono": uid},
+         f"P calendario_editar → o nome; o dono não muda (o nutricionista_id do corpo CAI) ({st})")
+    # ── a consulta de TESTE sem aluno (o gatilho W20 não avisa ninguém), o bloqueio e a trava
+    st, r, _h, _ms = B.conta(tok, "agendamento_criar", {**P21.corpo_consulta(rodada, cal, tag, conta["id"], None, 30, 13), "nutricionista_id": uid_o,
+                                                         "reagendamentos": 9, "origem": "pacote"})
+    ag = (r.get("linha") or {}).get("id")
+    P21.anotar_linha(estado, "agendamentos", ag, uid)
+    lin = um(f"select nutricionista_id::text as dono, reagendamentos, origem, tag_id::text as tag from {s}.agendamentos where id = {C.txt(C.uuid_ok(ag))}") if C.eh_uuid(ag) else {}
+    o.ok(st == 200 and lin.get("dono") == uid and lin.get("reagendamentos") == 0 and lin.get("origem") != "pacote" and lin.get("tag") == tag,
+         f"P/N4/N5 agendamento_criar → o dono = o dono do calendário (lido no servidor); reagendamentos/origem do corpo CAEM; a tag ({st})")
+    st, r, _h, _ms = B.conta(tok, "agendamento_editar", {"id": ag, "observacao": mk, "aviso_email_em": "2000-01-01"})
+    o.ok(st == 200 and um(f"select observacao, aviso_email_em is null as sem_email from {s}.agendamentos where id = {C.txt(ag)}") == {"observacao": mk, "sem_email": True},
+         f"P/N5 agendamento_editar → a observação (o aviso_email_em do corpo CAI) ({st})")
+    st, r, _h, _ms = B.conta(tok, "bloqueio_criar", {**P21.corpo_bloqueio(rodada, cal, conta["id"]), "nutricionista_id": uid_o})
+    blq = (r.get("linha") or {}).get("id")
+    P21.anotar_linha(estado, "bloqueios_agenda", blq, uid)
+    o.ok(st == 200 and C.eh_uuid(blq) and um(f"select nutricionista_id::text as dono from {s}.bloqueios_agenda where id = {C.txt(blq)}") == {"dono": uid},
+         f"P/N4 bloqueio_criar → o dono = quem chama ({st})")
+    st, r, _h, _ms = B.conta(tok, "bloqueio_excluir", {"id": blq})
+    o.ok(st == 200 and um(f"select count(*)::int as n from {s}.bloqueios_agenda where id = {C.txt(blq)}") == {"n": 0}, f"P bloqueio_excluir → apagado (como hoje: delete) ({st})")
+    st, r, _h, _ms = B.conta(tok, "trava_criar", {**P21.corpo_trava(rodada, cal, conta["id"]), "profissional_id": uid_o})
+    trv = (r.get("linha") or {}).get("id")
+    P21.anotar_linha(estado, "agenda_travas", trv, uid)
+    o.ok(st == 200 and C.eh_uuid(trv) and um(f"select profissional_id::text as dono, dias from {s}.agenda_travas where id = {C.txt(trv)}") == {"dono": uid, "dias": [0]},
+         f"P/N4 trava_criar → o dono = quem chama; os dias ({st})")
+    st, r, _h, _ms = B.conta(tok, "trava_excluir", {"id": trv})
+    o.ok(st == 200 and um(f"select count(*)::int as n from {s}.agenda_travas where id = {C.txt(trv)}") == {"n": 0}, f"P trava_excluir → apagada (delete) ({st})")
+    st, r, _h, _ms = B.conta(tok, "bloqueio_excluir", {"id": blq})
+    o.ok(st == 404 and r.get("erro") == "nao_encontrado", f"P excluir de novo o que já saiu → 404 nao_encontrado (antes \"dava certo\" com 0 linha) ({st})")
+    # ── a Agenda do aluno numa consulta de TESTE com a matrícula dela (o WhatsApp conferido antes: 0 instância conectada)
+    p_agenda_do_aluno(o, L, s, estado, rodada, ctx, cal, tag)
+    # ── as regras: o MESMO valor (o upsert não muda nada); sem a linha, PADRÃO (criaria)
+    regras = um(f"select slot_minutos, to_char(atende_inicio, 'HH24:MI') as ai, to_char(atende_fim, 'HH24:MI') as af, dias, reagendamentos_max, "
+                f"janela_reagendamento, desistencia, updated_at::text as em from {s}.agenda_config where profissional_id = {C.txt(uid)}")
+    if regras.get("ai"):
+        corpo = {"slot_minutos": regras["slot_minutos"], "atende_inicio": regras["ai"], "atende_fim": regras["af"], "dias": regras["dias"],
+                 "reagendamentos_max": regras["reagendamentos_max"], "janela_reagendamento": regras["janela_reagendamento"], "desistencia": regras["desistencia"],
+                 "profissional_id": uid_o}
+        st, r, _h, _ms = B.conta(tok, "regras_salvar", corpo)
+        depois = um(f"select slot_minutos, to_char(atende_inicio, 'HH24:MI') as ai, to_char(atende_fim, 'HH24:MI') as af, dias, reagendamentos_max, "
+                    f"janela_reagendamento, desistencia from {s}.agenda_config where profissional_id = {C.txt(uid)}")
+        o.ok(st == 200 and depois == {k: v for k, v in regras.items() if k != "em"} and (r.get("linha") or {}).get("profissional_id") == uid,
+             f"P/N4 regras_salvar (as MESMAS 7 regras) → o upsert da linha de quem chama (o profissional_id do corpo CAI); o valor igual ({st})")
+    else:
+        o.linha("   PADRÃO (decisão I): a nutri de teste sem a linha de regras — o regras_salvar CRIARIA; fica no Vitest")
+    # ── o excluir: a consulta à Lixeira; depois o calendário (com 1 consulta viva) pela RPC nova, atômica
+    st, r, _h, _ms = B.conta(tok, "agendamento_excluir", {"id": ag})
+    o.ok(st == 200 and um(f"select deleted_at is not null as lixeira from {s}.agendamentos where id = {C.txt(ag)}") == {"lixeira": True},
+         f"P agendamento_excluir → a Lixeira (deleted_at) ({st})")
+    st, r, _h, _ms = B.conta(tok, "agendamento_criar", P21.corpo_consulta(rodada, cal, tag, conta["id"], None, 32, 13))
+    ag2 = (r.get("linha") or {}).get("id")
+    P21.anotar_linha(estado, "agendamentos", ag2, uid)
+    st, r, _h, _ms = B.conta(tok, "calendario_excluir", {"id": cal})
+    lin = um(f"select (select deleted_at from {s}.calendarios where id = {C.txt(cal)})::text as cal, (select deleted_at from {s}.agendamentos "
+             f"where id = {C.txt(C.uuid_ok(ag2))})::text as ag2") if C.eh_uuid(ag2) else {}
+    o.ok(st == 200 and r.get("agendamentos") == 1 and lin.get("cal") and lin.get("cal") == lin.get("ag2"),
+         f"P calendario_excluir (a RPC nova agenda_excluir_calendario) → 1 consulta viva e o calendário na Lixeira com o MESMO instante ({st})")
+    st, r, _h, _ms = B.conta(tok, "calendario_excluir", {"id": cal})
+    o.ok(st == 404 and r.get("erro") == "nao_encontrado", f"P calendario_excluir de novo (já na Lixeira) → 404 nao_encontrado; nada muda ({st})")
+    st, r, _h, _ms = B.conta(tok, "tag_excluir", {"id": tag})
+    o.ok(st == 200 and um(f"select deleted_at is not null as lixeira from {s}.agenda_tags where id = {C.txt(tag)}") == {"lixeira": True},
+         f"P tag_excluir → a Lixeira (o gatilho W2 leva as consultas dela à base da área) ({st})")
+
+
+def p_agenda_do_aluno(o, L, s: str, estado, rodada: str, ctx: dict, cal: str, tag: str | None) -> None:
+    """A Agenda do aluno (as 4 ações + as 2 leituras) numa consulta DE TESTE com a matrícula da aluna, que a nutri marca no calendário de
+    teste. Os avisos que o banco põe (o gatilho W20 no sino da aluna; as RPCs aluno_agenda_* no da nutri) são anotados e apagados no fim.
+    Sem WhatsApp conectado (o gatilho da confirmação mandaria mensagem) — senão PULA com o motivo."""
+    tok, uid, uid_a, pac = L.token(P21.NUTRI), ctx["uid_n"], ctx["uid_a"], ctx["pac"]
+    wa = P21.whatsapp_conectado(s, uid)
+    if wa:
+        o.linha(f"   PADRÃO: a nutri de teste com {wa} instância(s) de WhatsApp conectada(s) — a consulta com a matrícula da aluna mandaria a "
+                "confirmação por WhatsApp: a Agenda do aluno PULADA (fica no Vitest)")
+        return
+    t0 = P21.agora_db()
+    st, r, _h, _ms = B.conta(L.token(P21.NUTRI), "agendamento_criar", P21.corpo_consulta(rodada, cal, tag, ctx["conta"]["id"], pac, 20, 13))
+    ag = (r.get("linha") or {}).get("id")
+    P21.anotar_linha(estado, "agendamentos", ag, uid)
+    n = P21.anotar_avisos(estado, s, [uid_a, uid], t0)
+    o.ok(st == 200 and C.eh_uuid(ag), f"P agendamento_criar com a matrícula da aluna (o caminho do painel) → a consulta de teste; {n} aviso(s) da agenda "
+         f"no sino (o gatilho W20 — anotados: saem no fim) ({st})", parar=True)
+    tok_a = L.token(P21.ALUNA)
+    st, r, _h, ms = B.ler(tok_a, [B.item("aluno_agenda_horarios", agendamento=ag), B.item("minhas_regras_agenda")])
+    itens = B.itens_de(r)
+    o.ok(st == 200 and len(itens) == 2 and all(i.get("ok") for i in itens), f"P a Agenda do aluno: os horários para reagendar e as regras pela conta ({ms} ms)")
+    if len(itens) == 2:
+        comparar_21b(o, "aluno_agenda_horarios", s, itens[0], {"agendamento": ag, "profissional": None, "de_data": None, "ate_data": None}, uid_a, ctx["email_a"], "a aluna")
+        comparar_21b(o, "minhas_regras_agenda", s, itens[1], {}, uid_a, ctx["email_a"], "a aluna")
+    horarios = ((itens[0].get("valor") or {}).get("horarios") if itens and isinstance(itens[0].get("valor"), dict) else None) or []
+    estado_ag = lambda: um(f"select status, confirmacao, inicio::text as inicio, reagendamentos from {s}.agendamentos where id = {C.txt(ag)}")  # noqa: E731
+    antes = estado_ag()
+    st, r, _h, _ms = B.conta(tok_a, "agenda_confirmar", {"agendamento": ag})
+    res, depois = r.get("resultado") or {}, estado_ag()
+    o.ok(st == 200 and ((res.get("ok") is True and depois.get("status") == "paciente_confirmou") or (res.get("ok") is False and depois == antes)),
+         f"P agenda_confirmar → {'confirmada' if res.get('ok') else res.get('erro')}; a consulta {depois.get('status')} (o MESMO de hoje) ({st})")
+    if horarios:
+        alvo = horarios[0].get("inicio")
+        antes = estado_ag()
+        st, r, _h, _ms = B.conta(tok_a, "agenda_reagendar", {"agendamento": ag, "inicio": alvo})
+        res, depois = r.get("resultado") or {}, estado_ag()
+        o.ok(st == 200 and ((res.get("ok") is True and depois.get("reagendamentos") == (antes.get("reagendamentos") or 0) + 1) or (res.get("ok") is False and depois == antes)),
+             f"P agenda_reagendar (o 1º horário livre) → {'reagendada' if res.get('ok') else res.get('erro')} (o MESMO de hoje) ({st})")
+    else:
+        o.linha("   (agenda_reagendar: nenhum horário livre na janela — a RPC decide; não rodou)")
+    antes = estado_ag()
+    st, r, _h, _ms = B.conta(tok_a, "agenda_desistir", {"agendamento": ag})
+    res, depois = r.get("resultado") or {}, estado_ag()
+    o.ok(st == 200 and ((res.get("ok") is True and depois.get("status") == "paciente_desmarcou") or (res.get("ok") is False and depois == antes)),
+         f"P agenda_desistir → {'desistiu' if res.get('ok') else res.get('erro')} (o MESMO de hoje) ({st})")
+    # o marcar: só no caminho que NÃO grava (sem pacote com a nutri: sem_pacote); com pacote, criaria uma consulta sem a marca — PADRÃO
+    regras = (itens[1].get("valor") if len(itens) == 2 else None) or []
+    com_pacote = any(isinstance(x, dict) and x.get("profissional_id") == uid and x.get("pacote") for x in regras)
+    if com_pacote:
+        o.linha("   PADRÃO: a aluna tem pacote com a nutri — o agenda_marcar criaria uma consulta (sem a marca): fica no Vitest")
+    else:
+        n_antes = um(f"select count(*)::int as n from {s}.agendamentos where paciente_id = {C.txt(pac)}")
+        st, r, _h, _ms = B.conta(tok_a, "agenda_marcar", {"profissional": uid, "inicio": P21.instante(22, 13)})
+        res = r.get("resultado") or {}
+        o.ok(st == 200 and res.get("ok") is False and um(f"select count(*)::int as n from {s}.agendamentos where paciente_id = {C.txt(pac)}") == n_antes,
+             f"P agenda_marcar (sem pacote com a nutri) → {res.get('erro')}; 0 consulta nova (o MESMO de hoje) ({st})")
+    if "N1" in ctx.get("casos", set()):
+        antes = estado_ag()
+        st, r, _h, _ms = B.conta(L.token(P21.OUTRA), "agenda_confirmar", {"agendamento": ag})
+        o.ok(st != 500 and (r.get("resultado") or {}).get("ok") is not True and estado_ag() == antes,
+             f"N1 OUTRA conta confirma a consulta da aluna → recusado ({st}: {(r.get('resultado') or {}).get('erro') or r.get('erro')}); a consulta igual")
+    P21.anotar_avisos(estado, s, [uid_a, uid], t0)
+
+
+def p_acoes_alunos(o, L, s: str, ctx: dict, casos: set) -> None:
+    """P/N1 do pacote: o caminho que NÃO muda nada (o MESMO total e mês do pacote ativo; sem pacote, o total 0 — encerra o que não existe),
+    o total_invalido e a outra conta (sem_acesso/nao_responsavel)."""
+    tok, uid, pac = L.token(P21.NUTRI), ctx["uid_n"], ctx["pac"]
+    sql_pacote = (f"select count(*)::int as n, max(total)::int as total, max(mes_inicio)::text as mes, max(encerrado_em)::text as fim "
+                  f"from {s}.agenda_pacotes where paciente_id = {C.txt(pac)} and profissional_id = {C.txt(uid)}")
+    vivo = um(f"select total, mes_inicio::text as mes from {s}.agenda_pacotes where paciente_id = {C.txt(pac)} and profissional_id = {C.txt(uid)} "
+              f"and encerrado_em is null")
+    antes = um(sql_pacote)
+    corpo = {"aluno": pac, "profissional": uid, "total": vivo["total"], "mes_inicio": vivo["mes"]} if vivo.get("total") else {"aluno": pac, "profissional": uid, "total": 0}
+    st, r, _h, _ms = B.conta(tok, "pacote_definir", {**corpo, "conta_id": ctx["uid_o"], "criado_por": ctx["uid_o"]})
+    res = r.get("resultado") or {}
+    o.ok(st == 200 and res.get("ok") is True and um(sql_pacote) == antes,
+         f"P/N5 pacote_definir ({'o MESMO pacote ativo' if vivo.get('total') else 'sem pacote: total 0'}) → ok; o pacote da aluna igual ao de antes ({st})")
+    st, r, _h, _ms = B.conta(tok, "pacote_definir", {"aluno": pac, "profissional": uid, "total": 61})
+    o.ok(st == 200 and (r.get("resultado") or {}).get("erro") == "total_invalido" and um(sql_pacote) == antes, f"P pacote_definir com 61 → total_invalido; nada mudou ({st})")
+    if "N1" in casos:
+        st, r, _h, _ms = B.conta(L.token(P21.OUTRA), "pacote_definir", {"aluno": pac, "profissional": uid, "total": 4})
+        res = r.get("resultado") or {}
+        o.ok(st != 500 and res.get("ok") is not True and um(sql_pacote) == antes,
+             f"N1 OUTRA conta define o pacote da aluna da nutri → {res.get('erro') or r.get('erro')}; nada mudou ({st})")
+
+
+def n_gerais_21b(o, L, area: str, casos: set, ctx: dict) -> None:
+    """N2, N3, N6, N7, N9, N11 e o N1 das leituras (a outra conta pede a agenda/os alunos da conta da nutri: nada dela)."""
+    tok = L.token(P21.NUTRI)
+    conta = ctx["conta"]["id"]
+    q0 = B.item("agenda_calendarios", conta=conta) if area == "agenda" else B.item("aluno_convites", conta=conta)
+    if "N2" in casos:
+        st, _r, _h, _ms = B.ler(None, [q0], sem_auth=True)
+        st2, _r2, _h, _ms = B.conta(None, ACOES[area][0], {}, sem_auth=True)
+        o.ok(st == 401 and st2 == 401, f"N2 sem login → 401 (o `ler` {st}, a ação {st2})")
+    if "N3" in casos:
+        st, r, _h, _ms = B.ler(tok, [q0, B.item("agenda_de_todo_mundo")])
+        st2, r2, _h, _ms = B.conta(tok, "agenda_apagar_tudo")
+        o.ok(st == 200 and [i.get("erro") for i in B.itens_de(r)] == [None, "consulta_invalida"] and st2 == 400 and r2.get("erro") == "acao_invalida",
+             f"N3 q desconhecida → o item consulta_invalida; ação desconhecida → 400 acao_invalida ({st}, {st2})")
+    if "N6" in casos:
+        st, r, _h, _ms = B.ler(tok, [q0], schema_="outro")
+        o.ok(st == 400 and r.get("erro") == "schema_invalido", f"N6 x-schema inválido → 400 schema_invalido ({st})")
+    if "N7" in casos:
+        st, h = B.preflight_conta(B.ORIGEM_FORA)
+        st2, h2 = B.preflight_conta(B.BASES["staging"])
+        o.ok(B.cors(h) == B.ORIGEM_PADRAO and B.cors(h2) == B.BASES["staging"], f"N7 origem fora → o CORS padrão ({st}); a do site volta ela mesma ({st2})")
+    if "N9" in casos:
+        st, r, _h, _ms = B.ler(tok, [q0] * 17)
+        o.ok(st == 400 and r.get("erro") == "lote_grande", f"N9 lote de 17 → 400 lote_grande ({st})")
+    de, ate = janela_larga()
+    painel = [B.item("agenda_calendarios", conta=conta), B.item("agenda_agendamentos", de=de, ate=ate, conta=conta), B.item("agenda_travas", conta=conta),
+              B.item("agenda_alunos", conta=conta), B.item("alunos_da_conta", conta=conta, filtros={"situacao": "ativos"}, offset=0, limite=20),
+              B.item("aluno_convites", conta=conta), B.item("alunos_pendentes", conta=conta), B.item("equipe_da_conta", conta=conta)]
+    ids_da_nutri = {ctx["uid_n"], conta}
+
+    def nada_da_nutri(r: dict) -> bool:
+        for i in B.itens_de(r):
+            if not i.get("ok"):
+                continue
+            if i.get("linhas"):
+                return False
+            v = i.get("valor")
+            if isinstance(v, list) and v:
+                return False
+            if isinstance(v, dict) and v.get("ok") is not False and (v.get("itens") or v.get("membros") or v.get("total")):
+                return False
+        texto = json.dumps(r)
+        return not any(x in texto for x in ids_da_nutri if x != conta)
+
+    if "N11" in casos:
+        st, r, _h, _ms = B.ler(L.token(P21.ALUNA), painel)
+        o.ok(st == 200 and nada_da_nutri(r), f"N11 a aluna pede o PAINEL pela conta (as consultas da 21b, com a conta da nutri) → nada (o RLS: 0 linha; as RPCs "
+             f"recusam) ({st}: {[i.get('erro') or ('linhas' if 'linhas' in i else (i.get('valor') or {}).get('erro') if isinstance(i.get('valor'), dict) else 'valor') for i in B.itens_de(r)]})")
+    if "N1" in casos:
+        st, r, _h, _ms = B.ler(L.token(P21.OUTRA), painel)
+        o.ok(st == 200 and nada_da_nutri(r), f"N1 OUTRA conta (w13-dono) pede a agenda e os alunos da conta da nutri → nada dela ({st})")
+
+
+def so_leitura(o, base: str, area: str = "casca") -> None:
     """O smoke só leitura (a produção, no F8, ou o staging logo depois de publicar): OPTIONS (o CORS), sem login → 401, x-schema inválido →
-    400 e a q desconhecida → consulta_invalida (o `ler` recusa antes do banco) — nada grava; 1 login (a conta de teste da base)."""
+    400 e a q desconhecida → consulta_invalida (o `ler` recusa antes do banco) — nada grava; 1 login (a conta de teste da base, a MESMA nas
+    4 áreas: a sessão reaproveitada). hml-21b (--area agenda|alunos, decisão G — "o `ler` novo"): + 1 consulta da 21b que serve a qualquer
+    conta (minhas_regras_agenda) → o item ok: a conta v2 publicada (a v1 responderia consulta_invalida); da resposta só sai o ok e o tempo."""
     B.usar_base(base)
     origem = B.BASES[base]
     st, h = B.preflight_conta(origem)
@@ -473,11 +1053,46 @@ def so_leitura(o, base: str) -> None:
         st, r, _h, ms = B.ler(tok, [B.item("q_que_nao_existe")], origem=origem)
         o.ok(st == 200 and [i.get("erro") for i in B.itens_de(r)] == ["consulta_invalida"],
              f"[{base}] a q desconhecida → consulta_invalida (o `ler` recusa antes do banco; {ms} ms)")
+        if area in B.AREAS_DA_21B:
+            st, r, _h, ms = B.ler(tok, [B.item("minhas_regras_agenda")], origem=origem)
+            itens = B.itens_de(r)
+            o.ok(st == 200 and len(itens) == 1 and itens[0].get("ok") is True,
+                 f"[{base}] o `ler` novo: minhas_regras_agenda (21b) → o item ok — a conta v2 publicada ({st}; {ms} ms)")
     finally:
         L.fechar(o)
 
 
+def rodar_21b(o, area: str, base: str, casos: set) -> None:
+    """A rodada da 21b (--area agenda|alunos): o P das leituras (a função = o SQL da lib como a pessoa), o P/N das gravações na massa de
+    TESTE (a Agenda) ou no caminho que não muda nada (o pacote), os N — e a limpeza no finally (a massa, os avisos; o Estado)."""
+    s = B.usar_base(base)
+    if base == "prod":
+        raise SystemExit("na produção só o --so-leitura (nada grava)")
+    B.exigir_saude(o, f"o api.py --area {area} da hml-21b")
+    L = B.Sessoes(f"api21 {area} {base}")
+    estado = P21.abrir_rodada_21b(o, s)
+    rodada = estado.d["rodada"]
+    try:
+        ctx = contexto_21b(o, L, s)
+        ctx["casos"] = casos
+        if "P" in casos:
+            p_leituras_21b(o, L, area, s, ctx)
+            if area == "agenda":
+                p_acoes_agenda(o, L, s, estado, rodada, ctx, casos)
+            else:
+                p_acoes_alunos(o, L, s, ctx, casos)
+        n_gerais_21b(o, L, area, casos, ctx)
+    finally:
+        try:
+            P21.fechar_rodada_21b(o, estado, s)
+        finally:
+            L.fechar(o)
+
+
 def rodar(o, area: str, base: str, casos: set) -> None:
+    if area in B.AREAS_DA_21B:
+        rodar_21b(o, area, base, casos)
+        return
     s = B.usar_base(base)
     if base == "prod":
         raise SystemExit("na produção só o --so-leitura (nada grava)")
@@ -498,6 +1113,26 @@ def rodar(o, area: str, base: str, casos: set) -> None:
             B.fechar_rodada(o, estado, s, L)
         finally:
             L.fechar(o)
+
+
+def limpar_21b(o, base: str) -> None:
+    """O --limpar da 21b (--area agenda|alunos): a massa da Agenda (os ids do Estado — a chave hml21b — e, por SQL, o que tem a marca dos
+    donos de teste, inclusive na Lixeira) e os avisos anotados — conferido por SQL só leitura, só contagem. Sem Estado: as linhas com a marca
+    da hml-21 das contas de teste (uma rodada que caiu antes de anotar)."""
+    s = B.usar_base(base)
+    estado = B.Estado.ler()
+    if estado.d.get("area") not in (None, "hml21b"):
+        o.ok(False, f"a rodada pendente é de outra área ({estado.d.get('area')}): rode o --limpar dela", parar=True)
+    if s == "staging":
+        sobra = B.ler_principal(P21.sql_contar_massa(s))[0]
+        if any(int(v or 0) for v in sobra.values()):
+            donos = [u for u in (B.uid_da_conta(c) for c in (P21.NUTRI, P21.PERSONAL, P21.OUTRA)) if C.eh_uuid(u)]
+            for d in donos:
+                P21.anotar_dono(estado, d)
+    P21.fechar_rodada_21b(o, estado, s)
+    if s == "staging":
+        sobra = B.ler_principal(P21.sql_contar_massa(s))[0]
+        o.ok(not any(int(v or 0) for v in sobra.values()), f"--limpar (21b) conferido (SQL só leitura): 0 linha com a marca da hml-21 ({sobra})")
 
 
 def limpar(o, base: str) -> None:
@@ -527,8 +1162,8 @@ def sair(o) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-21a — os casos de servidor da função conta (a casca e o app do aluno)")
-    ap.add_argument("--area", default="casca", choices=("casca", "app"))
+    ap = argparse.ArgumentParser(description="hml-21a/21b — os casos de servidor da função conta (a casca e o app do aluno; a Agenda e os Alunos)")
+    ap.add_argument("--area", default="casca", choices=AREAS)
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--casos", default=",".join(CASOS))
     g = ap.add_mutually_exclusive_group()
@@ -540,6 +1175,7 @@ def main() -> int:
     g.add_argument("--devolver-sino", action="store_true", help="no fim da etapa 2: os não lidos de antes voltam a não lidos")
     a = ap.parse_args()
     B.corte_vira_saida()
+    B.usar_area(a.area)  # hml-21b: a Agenda e os Alunos gravam na área hml21b (prints/hml21/b)
     casos = {c.strip() for c in a.casos.split(",") if c.strip()}
     fora = casos - set(CASOS)
     if fora:
@@ -549,13 +1185,19 @@ def main() -> int:
     o = C.Saida(nome)
     try:
         if a.seco:
-            seco(o, a.area)
+            if a.area in B.AREAS_DA_21B:
+                seco_21b(o, a.area)
+            else:
+                seco(o, a.area)
         elif a.limpar:
-            limpar(o, a.base)
+            if a.area in B.AREAS_DA_21B:
+                limpar_21b(o, a.base)
+            else:
+                limpar(o, a.base)
         elif a.sair:
             sair(o)
         elif a.so_leitura:
-            so_leitura(o, a.base)
+            so_leitura(o, a.base, a.area)
         elif a.guardar_sino:
             B.guardar_sino(o, B.usar_base(a.base))
         elif a.devolver_sino:

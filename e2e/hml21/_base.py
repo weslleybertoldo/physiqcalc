@@ -28,6 +28,11 @@ Antes de CADA execução que toca o staging: a PAUSA (~/projetos/physiqcalc-scra
 e2e/hml19/_base.py; teto 10 da W, no máximo 6 na etapa 2).
 Sem segredo nem dado pessoal na saída: chaves pela Management API, senhas em ~/.physiq-teste-<nome> (600); das respostas só saem status,
 códigos, contagens e tempos.
+hml-21b (13/10/2026 — a Agenda, os Alunos e o Dashboard pela conta), só por acréscimo: usar_area() (a 21b grava os prints em prints/hml21/b
+e a rodada na área "hml21b"); o regras_conta() com o catálogo INTEIRO da função (o CATALOGO_CONTA que o servidor usa) e as listas de ações da
+Agenda e dos Alunos; o SQL FIXO das libs da 21b no d357719 (o SQL_DA_LIB, as listas sem ordem total comparadas como conjunto); as áreas
+"agenda" e "alunos" do contar_area (a outra área e as de fora da 21b à parte); a Guarda da produção com as 9 RPCs de LEITURA que saíram do
+front na 21b; o Estado com a chave "hml21b" (a massa da 21b — e2e/hml21/painel21b.py — nunca abre por cima de outra rodada).
 """
 from __future__ import annotations
 
@@ -55,9 +60,23 @@ B19, B17, C, B5 = B20.B19, B20.B17, B20.C, B20.B5
 SCRATCH = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "hml21"
 C.SAIDA = SCRATCH / "agente"
 MEDICAO = SCRATCH / "medicao"
-PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "a"
+PRINTS_A = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "a"
+PRINTS_B = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "b"
+PRINTS = PRINTS_A
 MARCA = "hml21 e2e"
 AREA_ESTADO = "hml21a"  # a área no Estado (o --limpar desta W só desfaz a rodada dela)
+# hml-21b (decisão I do contrato da 21b): as áreas da Agenda e dos Alunos gravam os prints em prints/hml21/b e a rodada na área "hml21b"
+AREAS_DA_21B = ("agenda", "alunos")
+CHAVE_21B = "hml21b"  # a chave da massa da 21b no Estado (o vazio() da hml-19 não a conhece: o abrir/fechar_rodada daqui conferem)
+
+
+def usar_area(area: str) -> None:
+    """A pasta dos prints e a área no Estado de cada sub-W: a 21a (casca/app) em prints/hml21/a e "hml21a"; a 21b (agenda/alunos) em
+    prints/hml21/b e "hml21b" — o --limpar de cada uma só desfaz a rodada dela; sem chamar, a 21a (o --area casca|app não muda)."""
+    global PRINTS, AREA_ESTADO
+    da_21b = area in AREAS_DA_21B
+    PRINTS = PRINTS_B if da_21b else PRINTS_A
+    AREA_ESTADO = "hml21b" if da_21b else "hml21a"
 BASES, SCHEMA_DA_BASE = B19.BASES, B19.SCHEMA_DA_BASE
 ORIGEM_FORA, ORIGEM_PADRAO = B19.ORIGEM_FORA, B19.ORIGEM_PADRAO
 PRINCIPAL_REF, API_P, API_T = B19.PRINCIPAL_REF, B19.API_P, B19.API_T
@@ -229,22 +248,27 @@ const motor = await import(pathToFileURL(process.argv[1]).href);
 const cat = await import(pathToFileURL(process.argv[2]).href);
 const reg = await import(pathToFileURL(process.argv[3]).href);
 const e = JSON.parse(readFileSync(0, "utf8"));
-const consultas = Object.fromEntries(cat.CONSULTAS_DA_CONTA.map((q) => {
-  const c = cat.CONSULTAS_CONTA[q];
+// hml-21b: o catálogo INTEIRO da função (a 21a + a 21b — o CATALOGO_CONTA que o servidor usa), não só o da 21a
+const consultas = Object.fromEntries(cat.TODAS_AS_CONSULTAS.map((q) => {
+  const c = cat.consultaDaConta(q);
   const f = c.fonte;
   return [q, { params: c.params, rpc: f.rpc ?? null, args: f.args ?? null, tabela: f.tabela ?? null, colunas: f.colunas ?? null, teto: f.teto ?? null,
-    filtros: f.filtros ?? null, nulos: f.nulos ?? null, ordem: f.ordem ?? null, dono: c.dono ?? null }];
+    filtros: f.filtros ?? null, nulos: f.nulos ?? null, ordem: f.ordem ?? null, dono: c.dono ?? null, vivas: f.vivas ?? null,
+    recorte: f.recorte ?? null, fixos: f.fixos ?? null, colunasSe: f.colunasSe ?? null, erros: f.erros ?? null }];
 }));
 console.log(JSON.stringify({
-  consultas, lote_max: motor.LOTE_MAX, avisos_max: cat.AVISOS_MAX, tipo_membro: cat.TIPO_MEMBRO_REMOVIDO,
-  casca: [...reg.ACOES_DA_CASCA], app: [...reg.ACOES_DO_APP], corpos: reg.CORPOS_DAS_ACOES, status: reg.STATUS_DO_ERRO_CONTA,
+  consultas, consultas_21a: [...cat.CONSULTAS_DA_CONTA], consultas_21b: [...cat.CONSULTAS_DA_21B],
+  lote_max: motor.LOTE_MAX, avisos_max: cat.AVISOS_MAX, tipo_membro: cat.TIPO_MEMBRO_REMOVIDO,
+  casca: [...reg.ACOES_DA_CASCA], app: [...reg.ACOES_DO_APP], agenda: [...reg.ACOES_DA_AGENDA], alunos: [...reg.ACOES_DOS_ALUNOS],
+  corpos: reg.CORPOS_DAS_ACOES, status: reg.STATUS_DO_ERRO_CONTA,
+  colunas_agenda: cat.COLUNAS_DA_AGENDA, colunas_alunos: cat.COLUNAS_DOS_ALUNOS, filtros_alunos: [...cat.FILTROS_DOS_ALUNOS],
   foto: { max: reg.FOTO_MAX_BYTES, tipos: reg.TIPOS_DE_FOTO, url_propria: reg.URL_API_PROPRIA,
           buckets: { public: reg.bucketDasFotos("public"), staging: reg.bucketDasFotos("staging") } },
   pedidos: (e.pedidos ?? []).map((corpo) => {
     const p = reg.moduloDoPedido(corpo);
     if (!p) return { modulo: null };
     if (p.modulo === "leitura") {
-      const r = motor.lerPedidoDeLeitura(corpo, cat.CONSULTAS_CONTA);
+      const r = motor.lerPedidoDeLeitura(corpo, cat.CATALOGO_CONTA.consultas);
       return r.ok === false ? { modulo: "leitura", ok: false, erro: r.erro } : { modulo: "leitura", ok: true, itens: r.itens };
     }
     const r = reg.lerCorpoDaAcao(p.acao, corpo);
@@ -291,24 +315,113 @@ SQL_DA_LIB: dict[str, tuple[str, str]] = {
     "perfil_foto": ("src/app-aluno/perfil/Conta.tsx:23 dadosDoPerfil (a lib lia o dados_profissionais; a função, só a chave da foto)",
                     "select dados_profissionais->>'foto_url' as foto_url, 1 as ordem_da_lib from {s}.profiles where id = {uid}"),
 }
-LISTAS_DA_LIB = ("avisos", "aviso_membro_removido", "perfil_foto")
+# hml-21b: o SQL FIXO das libs da Agenda e dos Alunos no d357719 (o "antes" da 21b: a lib lia direto) — a MESMA forma da 21a (as listas
+# com a ordem da lib; as RPCs, o valor). O "meu ou da conta" da lib (o .or() de hoje) com o uid de quem a pessoa é e a conta ativa dela.
+SQL_DA_LIB.update({
+    "agenda_calendarios": ("src/painel/agenda/dados.ts:95 listarCalendarios (d357719: select * vivos, o minhaOuDaConta, por created_at)",
+                           "select c.*, row_number() over (order by c.created_at) as ordem_da_lib from {s}.calendarios c where c.deleted_at is null "
+                           "and (c.nutricionista_id = {uid} or c.conta_id = {conta}) order by c.created_at"),
+    "agenda_tags": ("src/painel/agenda/dados.ts:146 listarTags (d357719: select * vivas dos profissionais, por ordem e created_at)",
+                    "select t.*, row_number() over (order by t.ordem, t.created_at) as ordem_da_lib from {s}.agenda_tags t "
+                    "where t.profissional_id = any({donos}) and t.deleted_at is null order by t.ordem, t.created_at"),
+    "agenda_agendamentos": ("src/painel/agenda/dados.ts:215 listarAgendamentos (d357719: a janela, os 1000 mais recentes)",
+                            "select a.*, row_number() over (order by a.inicio desc, a.id desc) as ordem_da_lib from {s}.agendamentos a "
+                            "where a.deleted_at is null and (a.nutricionista_id = {uid} or a.conta_id = {conta}) and a.inicio < {ate}::timestamptz "
+                            "and a.fim > {de}::timestamptz order by a.inicio desc, a.id desc limit 1000"),
+    "agenda_bloqueios": ("src/painel/agenda/dados.ts:244 listarBloqueios (d357719: a janela, por início)",
+                         "select b.*, row_number() over (order by b.inicio) as ordem_da_lib from {s}.bloqueios_agenda b "
+                         "where (b.nutricionista_id = {uid} or b.conta_id = {conta}) and b.inicio < {ate}::timestamptz and b.fim > {de}::timestamptz "
+                         "order by b.inicio"),
+    "agenda_bloqueios_futuros": ("src/painel/agenda/dados.ts:252 listarBloqueiosFuturos (d357719: fim ≥ agora, os 50 primeiros)",
+                                 "select b.*, row_number() over (order by b.inicio) as ordem_da_lib from {s}.bloqueios_agenda b "
+                                 "where (b.nutricionista_id = {uid} or b.conta_id = {conta}) and b.fim >= {agora}::timestamptz order by b.inicio limit 50"),
+    "agenda_travas": ("src/painel/agenda/dados.ts:282 listarTravas (d357719: por hora de início)",
+                      "select t.*, row_number() over (order by t.hora_inicio) as ordem_da_lib from {s}.agenda_travas t "
+                      "where (t.profissional_id = {uid} or t.conta_id = {conta}) order by t.hora_inicio"),
+    "agenda_regras": ("src/painel/agenda/dados.ts:301 lerRegras (d357719: a linha do profissional, maybeSingle)",
+                      "select r.*, 1 as ordem_da_lib from {s}.agenda_config r where r.profissional_id = {profissional}"),
+    "agenda_horarios": ("src/painel/agenda/dados.ts:325 horariosDoDia (d357719)",
+                        "select to_jsonb({s}.agenda_horarios({calendario}::uuid, {dia}::date, {dia}::date, {duracao}::integer, {ignorar}::uuid)) as v"),
+    "agenda_alunos": ("src/painel/agenda/dados.ts:334 listarAlunosDaAgenda (d357719: os ativos da conta + os meus, por nome, até 1000)",
+                      "select p.id, p.nome, p.apelido, p.foto_url, p.personal_id, p.nutricionista_id, p.user_id, p.email, "
+                      "row_number() over (order by p.nome) as ordem_da_lib from {s}.pacientes p where p.deleted_at is null and p.ativo "
+                      "and (p.conta_id = {conta} or p.nutricionista_id = {uid}) order by p.nome limit 1000"),
+    "agenda_aluno": ("src/painel/agenda/dados.ts:342 buscarAluno (d357719: pelo id, vivo)",
+                     "select p.id, p.nome, p.apelido, p.foto_url, p.personal_id, p.nutricionista_id, p.user_id, p.email, 1 as ordem_da_lib "
+                     "from {s}.pacientes p where p.id = {id} and p.deleted_at is null"),
+    "aluno_compromissos": ("src/painel/agenda/dados.ts:386 compromissosDoAluno (d357719)", "select to_jsonb({s}.aluno_compromissos({aluno}::uuid)) as v"),
+    "minhas_regras_agenda": ("src/app-aluno/perfil/agenda/api.ts:64 minhasRegrasAgenda (d357719)", "select to_jsonb({s}.minhas_regras_agenda()) as v"),
+    "aluno_agenda_horarios": ("src/app-aluno/perfil/agenda/api.ts:85-89 horariosParaReagendar/horariosParaMarcar (d357719)",
+                              "select to_jsonb({s}.aluno_agenda_horarios({agendamento}::uuid, {profissional}::uuid, {de_data}::date, {ate_data}::date)) as v"),
+    "alunos_da_conta": ("src/painel/alunos/api.ts:58 listarAlunos (d357719; o seletor, a Busca e o número do menu: a MESMA RPC)",
+                        "select to_jsonb({s}.alunos_da_conta({conta}::uuid, {filtros}::jsonb, {offset}::integer, {limite}::integer)) as v"),
+    "aluno_do_seletor": ("src/painel/alunos/api.ts:107-112 alunoDoSeletorPorId (d357719; sem o CPF)",
+                         "select p.id, p.nome, p.apelido, p.email, p.telefone, p.foto_url, p.ativo, p.acesso_bloqueado_em, p.user_id, p.personal_id, "
+                         "p.nutricionista_id, p.config->>'conta_excluida_em' as conta_excluida_em, 1 as ordem_da_lib from {s}.pacientes p "
+                         "where p.id = {id} and p.conta_id = {conta} and p.deleted_at is null"),
+    "aluno_convites": ("src/painel/alunos/api.ts:129 listarConvites (d357719)", "select to_jsonb({s}.aluno_convites({conta}::uuid)) as v"),
+    "alunos_pendentes": ("src/painel/alunos/api.ts:146 listarPendentes (d357719)", "select to_jsonb({s}.alunos_pendentes({conta}::uuid)) as v"),
+    "alunos_novos_por_mes": ("src/painel/alunos/novosPorMes.ts:41 buscarNovosPorMes (d357719)",
+                             "select to_jsonb({s}.alunos_novos_por_mes({conta}::uuid, {meses}::integer)) as v"),
+    "equipe_da_conta": ("src/painel/configuracoes/equipe/api.ts:26 buscarEquipe (d357719)", "select to_jsonb({s}.equipe_da_conta({conta}::uuid)) as v"),
+})
+LISTAS_DA_LIB = ("avisos", "aviso_membro_removido", "perfil_foto", "agenda_calendarios", "agenda_tags", "agenda_agendamentos", "agenda_bloqueios",
+                 "agenda_bloqueios_futuros", "agenda_travas", "agenda_regras", "agenda_alunos", "agenda_aluno", "aluno_do_seletor")
+# as listas da lib SEM ordem total (empate na ordem: o banco pode devolver os empatados em outra ordem a cada vez) — o P compara como conjunto
+SEM_ORDEM_TOTAL = frozenset({"agenda_tags", "agenda_bloqueios", "agenda_bloqueios_futuros", "agenda_travas", "agenda_alunos"})
 # as chaves que a RPC devolve com o relógio do banco (comparar fora delas: o 20b PADRÃO do 'agora'; a minha_situacao devolve o gerado_em)
 CHAVES_DO_RELOGIO = {"agora", "agora_em", "servidor_agora", "hoje", "gerado_em"}
+# os valores que o SQL da lib aceita (cada um conferido: nada do corpo de ninguém entra no SQL sem passar por aqui)
+_V_UUID = frozenset({"uid", "conta", "id", "profissional", "aluno", "calendario", "agendamento", "ignorar"})
+_V_INSTANTE = frozenset({"desde", "de", "ate", "agora"})
+_V_DATA = frozenset({"dia", "de_data", "ate_data"})
+_V_INTEIRO = frozenset({"duracao", "meses", "offset", "limite"})
+_INSTANTE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z")
+
+
+def _valor_sql(k: str, x: object) -> str:
+    if k in _V_UUID:
+        return "null" if x is None else C.txt(C.uuid_ok(str(x)))
+    if k in _V_INSTANTE:
+        if not (isinstance(x, str) and _INSTANTE.fullmatch(x)):
+            raise SystemExit("instante fora do formato no SQL da lib")
+        return C.txt(x)
+    if k in _V_DATA:
+        if x is None:
+            return "null"
+        if not (isinstance(x, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", x)):
+            raise SystemExit("data fora do formato no SQL da lib")
+        return C.txt(x)
+    if k in _V_INTEIRO:
+        if x is None:
+            return "null"
+        if isinstance(x, bool) or not isinstance(x, int):
+            raise SystemExit("inteiro fora do formato no SQL da lib")
+        return str(int(x))
+    if k == "donos":
+        ids = [C.uuid_ok(str(i)) for i in (x or [])]
+        return f"array[{', '.join(C.txt(i) for i in ids)}]::uuid[]" if ids else "array[]::uuid[]"
+    if k == "filtros":
+        if not isinstance(x, dict) or not all(isinstance(a, str) and isinstance(b, str) and re.fullmatch(r"[a-z_]{1,20}", a) for a, b in x.items()):
+            raise SystemExit("filtros fora do formato no SQL da lib")
+        return C.txt(json.dumps(x, ensure_ascii=False))
+    raise SystemExit(f"valor desconhecido no SQL da lib: {k}")
 
 
 def sql_da_lib(q: str, s: str, **valores) -> str:
-    """O SQL FIXO da lib (o SQL_DA_LIB) com o schema e os valores conferidos (uuid e instante; nada do corpo de ninguém)."""
+    """O SQL FIXO da lib (o SQL_DA_LIB) com o schema e os valores conferidos (uuid, instante, data, inteiro, a lista de donos e os filtros
+    dos alunos; nada do corpo de ninguém)."""
     _origem, sql = SQL_DA_LIB[q]
     v: dict[str, str] = {"s": s}
     for k, x in valores.items():
-        if k == "uid":
-            v[k] = C.txt(C.uuid_ok(str(x)))
-        elif k == "desde":
-            if not (isinstance(x, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z", x)):
-                raise SystemExit("instante fora do formato no SQL da lib")
-            v[k] = C.txt(x)
+        v[k] = _valor_sql(k, x)
     texto = sql.format(**v)
     return _ag.format(texto) if q in LISTAS_DA_LIB else texto
+
+
+def como_conjunto(v: object) -> object:
+    """Uma lista sem ordem total vira o conjunto (a lista ordenada pela forma canônica) — o P das listas com empate na ordem da lib."""
+    return sorted((canonico(x) for x in v), key=str) if isinstance(v, list) else v
 
 
 def sem_relogio(v: object) -> object:
@@ -335,20 +448,43 @@ AREAS: dict[str, dict] = {
             "buckets": {"fotos-perfil", "fotos-perfil-staging"}},
 }
 AREAS["tudo"] = {k: AREAS["casca"][k] | AREAS["app"][k] for k in ("tabelas", "rpcs", "buckets")}
+# hml-21b — o que sai do navegador na 21b (as leituras e as gravações da Agenda e dos Alunos; as 2 RPCs novas nunca são chamadas pelo front):
+AREAS["agenda"] = {
+    # a Agenda do painel (as 6 tabelas dela + os alunos do seletor da Agenda e o do ?aluno=) e a do aluno (as RPCs aluno_agenda_*)
+    "tabelas": {"calendarios", "agendamentos", "agenda_tags", "bloqueios_agenda", "agenda_travas", "agenda_config", "pacientes"},
+    "rpcs": {"agenda_horarios", "agenda_garantir_tags", "aluno_compromissos", "minhas_regras_agenda", "aluno_agenda_horarios", "aluno_agenda_confirmar",
+             "aluno_agenda_desistir", "aluno_agenda_reagendar", "aluno_agenda_marcar", "agenda_excluir_calendario", "agenda_garantir_inicio"},
+    "buckets": set(),
+}
+AREAS["alunos"] = {
+    # os Alunos (a lista, o seletor, a Busca, o número do menu, os convites, os pendentes, os novos por mês, a equipe) e o pacote
+    "tabelas": {"pacientes"},
+    "rpcs": {"alunos_da_conta", "aluno_convites", "alunos_pendentes", "alunos_novos_por_mes", "equipe_da_conta", "aluno_definir_pacote"},
+    "buckets": set(),
+}
+OUTRA_AREA = {"casca": "app", "app": "casca", "agenda": "alunos", "alunos": "agenda"}
 # FORA DA ÁREA (de outra W ou de outra sub-W da hml-21: lido direto, listado à parte — não é falha): a Agenda do aluno (as regras e os
 # horários — 21b), os treinos prontos (Treino — 21d), o desvio 23 (o Treino da Evolução no Início), a casca do painel (21b/21c)
 FORA_RPCS = {"minhas_regras_agenda", "aluno_agenda_horarios", "alunos_da_conta", "whatsapp_resumo", "mensagens_desligadas", "equipe_da_conta"}
 FORA_TABELAS = {"physiq_treinos_prontos", "physiq_profiles", "physiq_avaliacoes", "physiq_registros_fotos", "pacientes", "agendamentos"}
+# hml-21b: as de fora da 21b nas telas do painel (o Treino — 21d; as mensagens e o WhatsApp — 21c; o desvio 23) — à parte, não é falha
+FORA_RPCS_21B = {"whatsapp_resumo", "mensagens_desligadas"}
+FORA_TABELAS_21B = {"physiq_treinos_prontos", "physiq_profiles", "physiq_avaliacoes", "physiq_registros_fotos", "physiq_treinos", "physiq_alunos"}
 # as 6 RPCs de LEITURA que saíram do front na 21a (src/integrations/repeticao.ts: saíram do RPC_SO_LEITURA — a conta as chama no servidor).
 # O front ANTIGO (o "antes", e a produção até a release da 21a) ainda as chama direto: a Guarda da produção as deixa passar (só leem).
 RPCS_DE_LEITURA_DA_21A = frozenset({"meu_perfil_aluno", "meu_plano_app", "minha_agenda", "minha_agenda_lista", "minha_situacao",
                                     "pratos_prontos_do_app"})
+# hml-21b: as 9 RPCs de LEITURA que saíram do front na 21b (o RPC_SO_LEITURA do repeticao.ts: 39 → 30) — o front ANTIGO (a produção até a
+# release da 21b) ainda as chama direto: a Guarda da produção as deixa passar (só leem; STABLE no catálogo — hml21/medicao/agenda21b_rpcs.txt)
+RPCS_DE_LEITURA_DA_21B = frozenset({"agenda_horarios", "aluno_agenda_horarios", "aluno_compromissos", "aluno_convites", "alunos_da_conta",
+                                    "alunos_novos_por_mes", "alunos_pendentes", "equipe_da_conta", "minhas_regras_agenda"})
 
 
 def guarda_da_w():
-    """A Guarda da produção (e2e/hml17: toda escrita barrada; a conta: só o `ler` passa) + as 6 RPCs de leitura da 21a (o front antigo)."""
+    """A Guarda da produção (e2e/hml17: toda escrita barrada; a conta: só o `ler` passa) + as RPCs de leitura que saíram do front na 21a e
+    na 21b (o front antigo ainda as chama: só leem)."""
     g = Guarda()
-    g.leitura = set(g.leitura) | set(RPCS_DE_LEITURA_DA_21A)
+    g.leitura = set(g.leitura) | set(RPCS_DE_LEITURA_DA_21A) | set(RPCS_DE_LEITURA_DA_21B)
     return g
 
 
@@ -378,11 +514,13 @@ def direta(p: dict, area: str = "tudo") -> str | None:
     return None
 
 
-def fora_da_area(p: dict) -> str | None:
+def fora_da_area(p: dict, area: str = "tudo") -> str | None:
+    """A leitura direta de FORA da sub-W (listada à parte): as da 21a (casca/app/tudo) ou as da 21b (agenda/alunos)."""
+    rpcs, tabelas = (FORA_RPCS_21B, FORA_TABELAS_21B) if area in AREAS_DA_21B else (FORA_RPCS, FORA_TABELAS)
     metodo, tipo, nome = p.get("metodo"), p.get("tipo"), p.get("nome")
-    if tipo == "rpc" and metodo == "POST" and nome in FORA_RPCS:
+    if tipo == "rpc" and metodo == "POST" and nome in rpcs:
         return f"rpc:{nome}"
-    if tipo == "tab" and metodo in ("GET", "HEAD") and nome in FORA_TABELAS:
+    if tipo == "tab" and metodo in ("GET", "HEAD") and nome in tabelas:
         return f"tab:{nome}"
     return None
 
@@ -408,11 +546,11 @@ def contar_area(pedidos: list[dict], area: str = "tudo") -> dict:
     diretas da OUTRA área da 21a (a casca × o app: contadas no --area dela), as de fora da 21a (à parte) e as gravações (a regra da Guarda
     dos E2E, com o corpo — a ação da conta é gravação; o `ler`, não)."""
     diretas = Counter(x for x in (direta(p, area) for p in pedidos) if x)
-    outra = {"casca": "app", "app": "casca"}.get(area)
+    outra = OUTRA_AREA.get(area)
     da_outra = Counter(x for x in (direta(p, outra) for p in pedidos) if x) if outra else Counter()
     chamadas = Counter(x for x in (chamada_da_conta(p) for p in pedidos) if x)
     consultas = Counter(q for p in pedidos if chamada_da_conta(p) == "ler" for q in B20.consultas_do_corpo(p.get("corpo")))
-    fora = Counter(x for x in (fora_da_area(p) for p in pedidos) if x)
+    fora = Counter(x for x in (fora_da_area(p, area) for p in pedidos) if x)
     gravacoes = Counter(x for x in (B20.gravacao(p) for p in pedidos) if x)
     return {"diretas": dict(diretas), "ler": chamadas.get("ler", 0), "acoes": {k: v for k, v in chamadas.items() if k != "ler"},
             "consultas": dict(consultas), "outra_area": dict(da_outra), "fora": dict(fora), "gravacoes": dict(gravacoes)}
@@ -582,10 +720,17 @@ def limpar_massa(o, estado, s: str) -> None:
 
 
 # ───────────────────────── a rodada: o Estado (hml19/agente/e2e_estado.json) — abrir e fechar ─────────────────────────
+def tem_massa_21b(estado) -> bool:
+    """hml-21b: o Estado ainda tem massa da Agenda/dos Alunos (a chave "hml21b": os ids criados pelas ações, os avisos gerados, o pacote
+    a devolver) — o vazio() da hml-19 não conhece a chave; uma rodada da 21a não abre por cima (nem a da 21b por cima da 21a)."""
+    m = estado.d.get(CHAVE_21B)
+    return isinstance(m, dict) and any(bool(v) for v in m.values())
+
+
 def abrir_rodada(o, s: str):
     """A rodada nova: recusa se há outra pendente (de qualquer W: o vazio() da hml-19 + a foto desta) e grava o Estado com a área desta W."""
     pendente = Estado.ler()
-    if not pendente.vazio() or pendente.d.get("hml21_foto") or pendente.d.get("hml21_destino"):
+    if not pendente.vazio() or pendente.d.get("hml21_foto") or pendente.d.get("hml21_destino") or tem_massa_21b(pendente):
         o.ok(False, f"há uma rodada que caiu no meio (área {pendente.d.get('area') or '?'}): rode o --limpar dela antes", parar=True)
     estado = Estado({"rodada": nova_rodada(), "schema": s, "area": AREA_ESTADO, "linhas": [], "storage": [], "n8": None})
     estado.salvar()
@@ -603,7 +748,7 @@ def fechar_rodada(o, estado, s: str, L) -> None:
             limpar_push(o, estado, s, L)
         finally:
             limpar_foto(o, estado, s, L)
-    if estado.vazio() and not estado.d.get("hml21_foto") and not estado.d.get("hml21_push"):
+    if estado.vazio() and not estado.d.get("hml21_foto") and not estado.d.get("hml21_push") and not tem_massa_21b(estado):
         estado.apagar()
     else:
         o.ok(False, "o Estado ficou com pendência (a massa, o push ou a foto): rode o api.py --limpar", parar=False)
@@ -826,7 +971,7 @@ def fase_do_codigo(base: str, commit: str) -> str:
 
 
 def print_reduzido(pg, prefixo: str, caso: str, o) -> Path:
-    """O print <prefixo>_<caso>.png em prints/hml21/a e a cópia de 900 px."""
+    """O print <prefixo>_<caso>.png em prints/hml21/a (a 21b: prints/hml21/b — o usar_area) e a cópia de 900 px."""
     return B20.print_reduzido(pg, prefixo, caso, o, pasta=PRINTS)
 
 

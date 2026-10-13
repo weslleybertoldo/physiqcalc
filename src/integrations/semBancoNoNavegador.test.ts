@@ -188,25 +188,24 @@ export const FICA: Readonly<Record<string, { motivo: string; achados: Readonly<R
  * BASE (hml-21a): os achados de hoje que ainda não saíram — DEPOIS da 21a (a casca e o app do aluno já fora). SÓ DIMINUI: cada sub-W
  * tira os da área dela (21b: a Agenda, os Alunos, o Dashboard; 21d: o Treino; 21c: o Resumo, as Configurações, a Mensagens, a Lixeira, os
  * Modelos); a 21e termina com BASE = {}. Gerada em 12/10/2026 do código da 21a: 22 arquivos, 136 achados.
+ * hml-21b (13/10/2026, GERAR_BASE=1 no código da 21b — só diminuiu): saíram a Agenda (src/painel/agenda/dados.ts, os 28), a Agenda do aluno
+ * (src/app-aluno/perfil/agenda/api.ts, 8), os Alunos (src/painel/alunos/api.ts, 7, e novosPorMes.ts, 1) e a leitura da Equipe (o
+ * equipe_da_conta; as 3 gravações e o invólucro da Equipe ficam para a 21c) → 18 arquivos, 91 achados.
  */
 export const BASE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  "src/app-aluno/perfil/agenda/api.ts": { "rpc:?": 1, "rpc:aluno_agenda_confirmar": 1, "rpc:aluno_agenda_desistir": 1, "rpc:aluno_agenda_horarios": 2, "rpc:aluno_agenda_marcar": 1, "rpc:aluno_agenda_reagendar": 1, "rpc:minhas_regras_agenda": 1 },
   "src/app-aluno/sozinho/api.ts": { "tabela:physiq_treinos_prontos.select": 1 },
   "src/ferramentas/lixeira/dados.ts": { "rpc:?": 1, "rpc:lixeira_apagar": 1, "rpc:lixeira_da_conta": 1, "rpc:lixeira_restaurar": 1 },
   "src/ferramentas/modelos/dados.ts": { "tabela:?": 1, "tabela:?.select": 1, "tabela:?.update": 1 },
   "src/master/app/treinosProntos.ts": { "tabela:physiq_treinos_prontos.insert": 1, "tabela:physiq_treinos_prontos.select": 1, "tabela:physiq_treinos_prontos.update": 2, "tabela:physiq_treinos_prontos_exercicios.insert": 1, "tabela:physiq_treinos_prontos_grupos.delete": 1, "tabela:physiq_treinos_prontos_grupos.insert": 1, "tabela:tb_exercicios.select": 1 },
   "src/nucleo/dadoLivre.ts": { "rpc:paciente_dado_livre": 1 },
   "src/pages/master/BibliotecaPage.tsx": { "rpc:exercicios_da_lista": 1, "tabela:?": 1, "tabela:grupos_musculares.delete": 1, "tabela:grupos_musculares.insert": 1, "tabela:grupos_musculares.select": 1, "tabela:tb_exercicios.delete": 1, "tabela:tb_exercicios.insert": 1, "tabela:tb_exercicios.select": 1, "tabela:tb_exercicios.update": 2 },
-  "src/painel/agenda/dados.ts": { "rpc:agenda_garantir_tags": 1, "rpc:agenda_horarios": 1, "rpc:aluno_compromissos": 1, "rpc:aluno_definir_pacote": 1, "tabela:agenda_config.select": 1, "tabela:agenda_config.upsert": 1, "tabela:agenda_tags.insert": 1, "tabela:agenda_tags.select": 1, "tabela:agenda_tags.update": 2, "tabela:agenda_travas.delete": 1, "tabela:agenda_travas.insert": 1, "tabela:agenda_travas.select": 1, "tabela:agendamentos.insert": 1, "tabela:agendamentos.select": 1, "tabela:agendamentos.update": 3, "tabela:bloqueios_agenda.delete": 1, "tabela:bloqueios_agenda.insert": 1, "tabela:bloqueios_agenda.select": 2, "tabela:calendarios.insert": 1, "tabela:calendarios.select": 1, "tabela:calendarios.update": 2, "tabela:pacientes.select": 2 },
   "src/painel/aluno/dados/api.ts": { "rpc:?": 1, "rpc:aluno_novo_link": 1, "rpc:aluno_salvar_ajustes": 1, "rpc:aluno_salvar_dados": 1, "rpc:mensagens_aviso_fechar": 1, "rpc:mensagens_desligadas": 1, "rpc:mensagens_ligar_para_todos": 1 },
   "src/painel/aluno/envio/api.ts": { "rpc:aluno_avisar_plano": 1 },
   "src/painel/aluno/resumo/acesso/api.ts": { "rpc:aluno_acesso": 1, "rpc:paciente_criar_acesso": 1, "rpc:paciente_redefinir_senha": 1 },
-  "src/painel/alunos/api.ts": { "rpc:?": 1, "rpc:aluno_convites": 1, "rpc:alunos_da_conta": 3, "rpc:alunos_pendentes": 1, "tabela:pacientes.select": 1 },
-  "src/painel/alunos/novosPorMes.ts": { "rpc:alunos_novos_por_mes": 1 },
   "src/painel/busca/Treinos.tsx": { "tabela:tb_grupos_treino.select": 1 },
   "src/painel/configuracoes/Conta.tsx": { "tabela:contas.update": 1 },
   "src/painel/configuracoes/Perfil.tsx": { "tabela:physiq_professores.update": 1, "tabela:profiles.select": 1, "tabela:profiles.update": 2 },
-  "src/painel/configuracoes/equipe/api.ts": { "rpc:?": 1, "rpc:alterar_papeis_membro": 1, "rpc:equipe_da_conta": 1, "rpc:garantir_meu_codigo": 1, "rpc:remover_membro": 1 },
+  "src/painel/configuracoes/equipe/api.ts": { "rpc:?": 1, "rpc:alterar_papeis_membro": 1, "rpc:garantir_meu_codigo": 1, "rpc:remover_membro": 1 },
   "src/painel/configuracoes/excluirConta/api.ts": { "rpc:w2l_prontuarios_para_baixar": 1 },
   "src/painel/mensagens/api.ts": { "rpc:?": 1, "rpc:whatsapp_fila": 1, "rpc:whatsapp_limpar_falhas": 1, "rpc:whatsapp_reenviar": 1, "rpc:whatsapp_resumo": 1, "rpc:whatsapp_salvar_config": 1, "tabela:profiles.select": 1 },
   "src/painel/treinos/api.ts": { "rpc:modelos_da_lista": 1, "storage:upload": 1, "tabela:?": 1, "tabela:grupos_musculares.delete": 1, "tabela:grupos_musculares.insert": 1, "tabela:grupos_musculares.select": 1, "tabela:tb_exercicios.delete": 1, "tabela:tb_exercicios.insert": 1, "tabela:tb_exercicios.select": 2, "tabela:tb_exercicios.update": 1, "tabela:tb_grupos_exercicios.delete": 1, "tabela:tb_grupos_exercicios.insert": 1, "tabela:tb_grupos_exercicios.select": 1, "tabela:tb_grupos_exercicios.update": 2, "tabela:tb_grupos_treino.delete": 1, "tabela:tb_grupos_treino.insert": 1, "tabela:tb_grupos_treino.select": 2, "tabela:tb_grupos_treino.update": 1, "tabela:tb_pastas_treino.delete": 1, "tabela:tb_pastas_treino.insert": 1, "tabela:tb_pastas_treino.select": 1, "tabela:tb_pastas_treino.update": 1, "tabela:tb_pastas_treino_grupos.delete": 1, "tabela:tb_pastas_treino_grupos.insert": 1, "tabela:tb_pastas_treino_grupos.select": 2 },
@@ -326,9 +325,10 @@ describe("hml-21a — o src/ inteiro ⊆ BASE ∪ FICA (nada novo em lugar nenhu
     expect(excessos(arquivo, menos, permitido)).toEqual([]);
   });
 
-  it("a BASE só diminui: hoje 22 arquivos e 136 achados (a próxima sub-W tira os dela; nunca sobe)", () => {
-    expect(Object.keys(BASE).length).toBeLessThanOrEqual(22);
-    expect(Object.values(BASE).reduce((n, c) => n + Object.values(c).reduce((m, x) => m + x, 0), 0)).toBeLessThanOrEqual(136);
+  it("a BASE só diminui: hoje 18 arquivos e 91 achados (a próxima sub-W tira os dela; nunca sobe)", () => {
+    // hml-21a: 22 arquivos e 136 achados; hml-21b: −4 arquivos e −45 achados (a Agenda, a Agenda do aluno, os Alunos e a leitura da Equipe)
+    expect(Object.keys(BASE).length).toBeLessThanOrEqual(18);
+    expect(Object.values(BASE).reduce((n, c) => n + Object.values(c).reduce((m, x) => m + x, 0), 0)).toBeLessThanOrEqual(91);
   });
 
   it("o FICA são só os 4 arquivos (a fila do PowerSync, o desvio 23 e os 2 links públicos), cada um com o motivo; nenhum deles na BASE", () => {
@@ -351,6 +351,17 @@ describe("hml-21a — o src/ inteiro ⊆ BASE ∪ FICA (nada novo em lugar nenhu
     }
     // o app do aluno sem profissional: só os treinos prontos do Treino (a 21d) seguem direto
     expect(agora.get("src/app-aluno/sozinho/api.ts")).toEqual({ "tabela:physiq_treinos_prontos.select": 1 });
+  });
+
+  it("hml-21b: a Agenda, os Alunos e o Dashboard não estão na BASE — 0 acesso direto nas libs que a 21b levou para a função conta", () => {
+    const da21b = ["src/painel/agenda/dados.ts", "src/painel/agenda/useAgenda.ts", "src/app-aluno/perfil/agenda/api.ts", "src/painel/alunos/api.ts",
+      "src/painel/alunos/novosPorMes.ts"];
+    for (const arquivo of da21b) {
+      expect(BASE[arquivo], arquivo).toBeUndefined();
+      expect(agora.get(arquivo), arquivo).toEqual({});
+    }
+    // a Equipe: só a leitura (buscarEquipe) saiu; as 3 gravações e o invólucro são da 21c
+    expect(agora.get("src/painel/configuracoes/equipe/api.ts")).toEqual({ "rpc:?": 1, "rpc:alterar_papeis_membro": 1, "rpc:garantir_meu_codigo": 1, "rpc:remover_membro": 1 });
   });
 
   it("o aviso (sem falhar): o achado da BASE que sumiu — quem tirou a chamada tira a linha da BASE", () => {
