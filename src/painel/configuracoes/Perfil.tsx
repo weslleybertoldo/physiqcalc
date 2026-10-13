@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { principal } from "@/integrations/principal/client";
 import { salvarMinhaSenha } from "@/nucleo/senha";
 import type { Json } from "@/integrations/principal/types";
-import { supabase } from "@/integrations/supabase/client";
+import { acaoTreinos } from "@/treino/servidor";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessao } from "@/nucleo/sessao";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
@@ -57,12 +57,12 @@ async function buscarPerfil(uid: string): Promise<LinhaPerfil | null> {
 /**
  * O nome e a foto que os alunos já veem nas telas antigas do Calc (Pagamentos, lista do professor) moram no Banco do Treino:
  * quando a sessão dele existe, o Perfil manda o mesmo nome/foto para lá também (como a Configurações antiga fazia). Sem ela,
- * vale o do banco principal — as telas novas leem de lá.
+ * vale o do banco principal — as telas novas leem de lá. hml-21d: pela função treinos (professor_perfil — a linha do sub do token, o
+ * usuário do Treino de quem está logado: o treinoUserId de sempre), como a pessoa.
  */
 async function espelharNoTreino(treinoUserId: string, campos: { nome?: string; foto_url?: string | null }): Promise<void> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- physiq_professores fica fora dos tipos gerados (padrão das telas antigas)
-    await (supabase.from as any)("physiq_professores").update(campos).eq("id", treinoUserId);
+    await acaoTreinos("professor_perfil", campos);
   } catch (e) {
     console.warn("[Perfil] espelho do nome no Treino:", e);
   }
