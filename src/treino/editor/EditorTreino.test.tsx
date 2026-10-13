@@ -114,14 +114,15 @@ beforeEach(() => {
 });
 
 describe("W15 — editor do treino (tela 8, lado esquerdo)", () => {
-  it("abas A/B/C, chips (exercícios, séries, duração, cadeado) e os 4 campos de cada exercício", async () => {
+  it("abas A/B/C, chips (exercícios, séries, duração — W-A P4: sem o cadeado, que foi para a aba Acessos) e os 4 campos de cada exercício", async () => {
     montar(<EditorTreino treinoUserId="t1" />);
     expect(await screen.findByText("A · Peito e tríceps")).toBeInTheDocument();
     expect(screen.getByText("B · Costas")).toBeInTheDocument();
     expect(screen.getByText("C · Pernas")).toBeInTheDocument();
     expect(screen.getByText("5 EXERCÍCIOS")).toBeInTheDocument();
     expect(screen.getByText("16 SÉRIES")).toBeInTheDocument();
-    expect(screen.getByText("ALUNO NÃO MUDA AS SÉRIES")).toBeInTheDocument();
+    expect(screen.queryByText("ALUNO NÃO MUDA AS SÉRIES")).toBeNull();
+    expect(document.querySelector("[data-chip-cadeado]")).toBeNull();
     expect(screen.getByText(/DESCANSO PADRÃO 60 S/)).toBeInTheDocument();
     expect(screen.getByText(/TREINO ALTERNADO: NÃO/)).toBeInTheDocument();
     expect(screen.getByText("Adicionar exercício da biblioteca (81 com GIF)")).toBeInTheDocument();
@@ -181,16 +182,16 @@ describe("W15 — editor do treino (tela 8, lado esquerdo)", () => {
     expect(campo.value).toBe("");
   });
 
-  it("cadeado e observação gravam na hora", async () => {
+  it("a observação grava na hora (W-A P4: o cadeado das séries saiu do editor — nenhum caminho daqui grava series_travadas)", async () => {
     montar(<EditorTreino treinoUserId="t1" />);
     await screen.findByText("A · Peito e tríceps");
-    fireEvent.click(screen.getByText("ALUNO NÃO MUDA AS SÉRIES"));
-    await waitFor(() => expect(h.salvarConfig).toHaveBeenCalledWith("t1", { series_travadas: false }));
+    expect(screen.queryByText(/AS SÉRIES$/)).toBeNull();
     const obs = document.querySelector("[data-treino-observacao-campo]") as HTMLTextAreaElement;
     fireEvent.focus(obs);
     fireEvent.change(obs, { target: { value: "Desça a barra em 3 segundos." } });
     fireEvent.blur(obs);
     await waitFor(() => expect(h.salvarObservacao).toHaveBeenCalledWith("t1", { grupo_id: "gA" }, "Desça a barra em 3 segundos."));
+    expect(h.salvarConfig).not.toHaveBeenCalled();
   });
 
   it("trocar de aba mostra o outro treino; treino compartilhado avisa que a lista vira cópia", async () => {
@@ -254,7 +255,9 @@ describe("W15 — card Treino do Resumo (tela 7) e a aba", () => {
     h.estado.mockReturnValue({ tipo: "sem-login", temLogin: false });
     montar(<AbaTreino alunoId="p1" />);
     expect(screen.getByText("O treino nasce no 1º acesso do aluno")).toBeInTheDocument();
-    expect(screen.getByText("Ir para o Resumo")).toBeInTheDocument();
+    // W-A P4: o login do aluno mora na aba Acessos
+    expect(screen.getByText(/Crie o acesso na aba Acessos \(Login do aluno\)/)).toBeInTheDocument();
+    expect(screen.getByText("Ir para Acessos").closest("a")?.getAttribute("href")).toBe("/painel/alunos/p1/acessos");
   });
 
   it("a aba monta o editor, a semana, as séries e a troca, o volume, o histórico e o relatório", async () => {

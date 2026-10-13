@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Bookmark, Dumbbell, GripVertical, Lock, LockOpen, Plus, Repeat, Timer, UserMinus } from "lucide-react";
+import { Bookmark, Dumbbell, GripVertical, Plus, Repeat, Timer, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatarDescanso } from "@/treino/prescricao";
 import { Botao } from "@/ui/premium/Botao";
@@ -67,7 +67,7 @@ function AbaTreino({ t, ativa, aoAbrir }: { t: TreinoEditor; ativa: boolean; aoA
 
 /**
  * Editor do treino do aluno (tela 8, lado esquerdo — spec 4.5 › Treino, C37/C41/C84 e NF1/NF2): treinos A/B/C, "+", Modelos;
- * chips de exercícios, séries, duração e o cadeado "Aluno não muda as séries"; por exercício o GIF, nome, grupo · subgrupo,
+ * chips de exercícios, séries e duração (W-A P4: o cadeado "Aluno não muda as séries" foi para a aba Acessos); por exercício o GIF, nome, grupo · subgrupo,
  * séries, repetições, descanso e carga (vazio = como hoje), editar, tirar e arrastar; "Adicionar exercício da biblioteca";
  * observação para o aluno; descanso padrão e treino alternado. Grava no Banco do Treino a cada mudança (o aluno vê pelo
  * PowerSync). A W16 monta a página "Editar treino e dieta" com este mesmo componente.
@@ -110,7 +110,6 @@ export function EditorTreino({ treinoUserId, somenteLeitura = false, nomeAluno, 
       treino={treino}
       aoAbrir={(t) => setAberta(t.chave)}
       descansoPadrao={descansoDoAluno(dados.data)}
-      travado={dados.data.config?.series_travadas === true}
       alternado={temAlternado(dados.data)}
       professorDoAluno={dados.data.professorDoAluno}
       treinoUserId={treinoUserId}
@@ -128,7 +127,6 @@ function CorpoEditor({
   treino,
   aoAbrir,
   descansoPadrao,
-  travado,
   alternado,
   professorDoAluno,
   treinoUserId,
@@ -142,7 +140,6 @@ function CorpoEditor({
   treino: TreinoEditor | null;
   aoAbrir: (t: TreinoEditor) => void;
   descansoPadrao: number;
-  travado: boolean;
   alternado: boolean;
   professorDoAluno: string | null;
   treinoUserId: string;
@@ -223,22 +220,11 @@ function CorpoEditor({
         />
       ) : treino ? (
         <>
-          {/* chips: exercícios · séries · duração · cadeado */}
+          {/* chips: exercícios · séries · duração (W-A P4: o cadeado das séries mora na aba Acessos) */}
           <div className="mb-1.5 flex flex-wrap items-center gap-1.5" data-treino-chips>
             <Chip tom="t" data-chip-exercicios>{treino.exercicios.length} {treino.exercicios.length === 1 ? "EXERCÍCIO" : "EXERCÍCIOS"}</Chip>
             <Chip tom="g" data-chip-series>{treino.totalSeries} {treino.totalSeries === 1 ? "SÉRIE" : "SÉRIES"}</Chip>
             {treino.minutos !== null && <Chip tom="g" data-chip-minutos>~{treino.minutos} MIN</Chip>}
-            <button
-              type="button"
-              disabled={somenteLeitura}
-              onClick={() => void acoes.configurar({ series_travadas: !travado }, travado ? "Séries liberadas: o aluno pode pôr e tirar séries." : "Séries travadas: o aluno não muda o nº de séries.")}
-              aria-pressed={travado}
-              className={cn("pq-chip pq-chip-g", !somenteLeitura && "cursor-pointer hover:text-texto")}
-              data-chip-cadeado={travado ? "travado" : "livre"}
-            >
-              {travado ? <Lock aria-hidden /> : <LockOpen aria-hidden />}
-              {travado ? "ALUNO NÃO MUDA AS SÉRIES" : "ALUNO PODE MUDAR AS SÉRIES"}
-            </button>
             {!treino.listaDireta && treino.tipo === "catalogo" && !somenteLeitura && (
               <span className="text-[11px] text-texto-3" data-treino-compartilhado title="Mudar a lista de exercícios cria uma cópia só deste aluno">
                 {treino.global ? "Modelo da biblioteca" : treino.alunos > 1 ? `Também de outros ${treino.alunos - 1} ${treino.alunos - 1 === 1 ? "aluno" : "alunos"}` : "Modelo"}
