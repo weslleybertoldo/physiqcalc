@@ -178,8 +178,11 @@ class CDP:
         """Runtime.evaluate (espera a promessa; devolve o valor)."""
         self.n += 1
         meu = self.n
-        self._enviar(json.dumps({"id": meu, "method": "Runtime.evaluate",
-                                 "params": {"expression": expressao, "awaitPromise": True, "returnByValue": True}}))
+        try:
+            self._enviar(json.dumps({"id": meu, "method": "Runtime.evaluate",
+                                     "params": {"expression": expressao, "awaitPromise": True, "returnByValue": True}}))
+        except OSError as ex:
+            raise ConexaoCaiu(f"CDP: o pedido não saiu ({type(ex).__name__})") from ex
         fim = time.time() + timeout
         while time.time() < fim:
             m = json.loads(self._receber())
@@ -198,7 +201,45 @@ class CDP:
             pass
 
 
-def webview(ap: Aparelho, espera: float = 60) -> CDP:
+class ConexaoCaiu(OSError):
+    """O websocket do DevTools já tinha caído quando o pedido ia sair: ele NÃO chegou à página (seguro mandar de novo)."""
+
+
+class WebViewDoApp:
+    """A conexão do DevTools que se refaz sozinha. Com o emulador carregado, o transporte do adb derruba o websocket com o app VIVO
+    (diag_a9b: caiu ~30 s depois do Sair com o app em primeiro plano; rodada 4: BrokenPipe entre o A3 e o A4 — sem crash do app nem da
+    WebView no dropbox). Caiu antes de o pedido sair → reconecta pelo processo do app e manda de novo; caiu esperando a resposta → reconecta
+    para a PRÓXIMA chamada e repassa o erro (o pedido pode ter chegado: um clique não se repete)."""
+
+    def __init__(self, ap: Aparelho, espera: float = 60) -> None:
+        self.ap = ap
+        self.w = conectar(ap, espera)
+
+    def _refazer(self) -> None:
+        self.w.fechar()
+        self.w = conectar(self.ap, 60)
+
+    def avaliar(self, expressao: str, timeout: float = 45) -> object:
+        try:
+            return self.w.avaliar(expressao, timeout)
+        except ConexaoCaiu:
+            self._refazer()
+            return self.w.avaliar(expressao, timeout)
+        except (OSError, RuntimeError) as ex:
+            if isinstance(ex, OSError) or "fechou" in str(ex):
+                self._refazer()
+            raise
+
+    def fechar(self) -> None:
+        self.w.fechar()
+
+
+def webview(ap: Aparelho, espera: float = 60) -> WebViewDoApp:
+    """A página do app pelo DevTools da WebView, com a reconexão sozinha (WebViewDoApp)."""
+    return WebViewDoApp(ap, espera)
+
+
+def conectar(ap: Aparelho, espera: float = 60) -> CDP:
     """A página do app pelo DevTools da WebView (o socket webview_devtools_remote_<pid> do processo do app)."""
     fim = time.time() + espera
     while time.time() < fim:
@@ -233,15 +274,15 @@ def esperar(cond, timeout: float, passo: float = 1.0) -> bool:
     return False
 
 
-def tem(w: CDP, seletor: str) -> bool:
+def tem(w: WebViewDoApp, seletor: str) -> bool:
     return bool(w.avaliar(f"!!document.querySelector({json.dumps(seletor)})", timeout=15))
 
 
-def clicar(w: CDP, seletor: str) -> bool:
+def clicar(w: WebViewDoApp, seletor: str) -> bool:
     return bool(w.avaliar(f"(() => {{ const e = document.querySelector({json.dumps(seletor)}); if (!e) return false; e.click(); return true; }})()", timeout=15))
 
 
-def ir(w: CDP, rota: str) -> None:
+def ir(w: WebViewDoApp, rota: str) -> None:
     w.avaliar(f"(location.assign('https://localhost{rota}'), true)", timeout=15)
 
 
@@ -249,7 +290,7 @@ PENDENTES_JS = ("(async () => { const r = await window.Capacitor.Plugins.LocalNo
                 " return r.notifications.map((n) => ({ id: n.id, dia: (n.extra || {}).dia, rotina: (n.extra || {}).rotina_id })); })()")
 
 
-def pendentes(w: CDP) -> list[dict]:
+def pendentes(w: WebViewDoApp) -> list[dict]:
     lista = w.avaliar(PENDENTES_JS) or []
     return sorted((x for x in lista if FAIXA[0] <= int(x["id"]) <= FAIXA[1]), key=lambda x: x["id"])
 
@@ -363,7 +404,7 @@ def abrir_app(ap: Aparelho) -> None:
     ap.sh(f"monkey -p {PACOTE} -c android.intent.category.LAUNCHER 1", check=False)
 
 
-def a3_entrar(o, ap: Aparelho, sessao: dict) -> CDP:
+def a3_entrar(o, ap: Aparelho, sessao: dict) -> WebViewDoApp:
     abrir_app(ap)
     w = webview(ap)
     w.avaliar(f"""(() => {{ localStorage.setItem('physiq-principal-auth', {json.dumps(json.dumps(sessao))});
@@ -376,7 +417,7 @@ def a3_entrar(o, ap: Aparelho, sessao: dict) -> CDP:
     return w
 
 
-def a4_criar_e_pendentes(o, ap: Aparelho, w: CDP, R: dict) -> dict:
+def a4_criar_e_pendentes(o, ap: Aparelho, w: WebViewDoApp, R: dict) -> dict:
     e = R["e"]
     horas = {"Agora": hora_sp(4), "Antes": hora_sp(5)}
     for nome, hora in horas.items():
@@ -401,7 +442,7 @@ def a4_criar_e_pendentes(o, ap: Aparelho, w: CDP, R: dict) -> dict:
     return {"hoje_agora": hoje_agora, "hoje_antes": hoje_antes}
 
 
-def a5_marcar_antes(o, w: CDP, R: dict, ids_hoje: dict) -> None:
+def a5_marcar_antes(o, w: WebViewDoApp, R: dict, ids_hoje: dict) -> None:
     antes = R["e"]["ids"]["Antes"]
     alvo = f'[data-rotina-marcar="{antes}"]'
     sem = lambda: ids_hoje["hoje_antes"] not in [x["id"] for x in pendentes(w)]  # noqa: E731
@@ -473,7 +514,7 @@ def a7_antes_nao_tocou(o, ap: Aparelho, R: dict, ids_hoje: dict) -> None:
     o.ok(ids_hoje["hoje_antes"] not in ap.ids_da_bandeja(), f"A7 a 'Antes' (marcada antes) NÃO tocou às {R['e']['horas']['Antes']}")
 
 
-def a8_reiniciar(o, ap: Aparelho, w: CDP, R: dict) -> None:
+def a8_reiniciar(o, ap: Aparelho, w: WebViewDoApp, R: dict) -> None:
     e = R["e"]
     hora = hora_sp(5)  # +5 (não +4): a espera da 3ª agendada + o reboot do emulador (~2 min) + 40 s ainda acabam antes da hora
     st, r = funcao(R["L"].token(CONTA), {"acao": "rotina_salvar", "dados": {"nome": f"{e['marca']} Depois de reiniciar", "tipo": "habito",
