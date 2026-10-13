@@ -328,8 +328,11 @@ def pes(co, nomes, dono, no_chao=True, chao_z=0.0, na_ponta=(), fora=()):
     return medidas, falhas
 
 
-def corpo_x_corpo(co, tri, nomes, dono):
-    """Parte do corpo entrando em outra (fora o vinco da junta): profundidade máxima em mm por par."""
+def corpo_x_corpo(co, tri, nomes, dono, limites=None):
+    """Parte do corpo entrando em outra (fora o vinco da junta): profundidade máxima em mm por par.
+    limites (prancha lateral, lote 13, 12/10/2026 — checagens.limites_corpo da ficha, com o motivo lá): {"coxaE×coxaD": mm} troca o
+    limite de PENETRA_MM de UM par — as pernas empilhadas de lado apertam a parte de dentro das coxas, que no corpo de verdade cede e no
+    boneco musculoso (que não amassa) passa uma pela outra. Sem a chave (None), nada muda."""
     regiao_v = np.full(len(co), "", dtype=object)
     for reg, ossos in REGIOES.items():
         m = np.array([n in ossos for n in nomes] + [False])[dono]
@@ -354,7 +357,7 @@ def corpo_x_corpo(co, tri, nomes, dono):
                     fundo = dist * 1000
                     onde = " a %.0f cm da junta" % ((v - Vector(_JUNTA_POS[junta])).length * 100) if junta else ""
         medidas[a + "×" + b] = fundo
-        if fundo > PENETRA_MM:
+        if fundo > (limites or {}).get(a + "×" + b, PENETRA_MM):
             falhas.append("%s entra em %s (%.1f mm%s)" % (a, b, fundo, onde))
     return medidas, falhas
 
@@ -679,7 +682,7 @@ def completa(bon, cena, checagens, t, rotulo, estado):
     for nome, (med, f) in (("juntas", juntas(rig, checagens.get("limites_juntas"))),
                            ("pes", pes(co, nomes, dono, checagens.get("pes_no_chao", True), na_ponta=na_ponta,
                                        fora=fora, chao_z=checagens.get("chao_mm", 0.0) / 1000)),
-                           ("corpo", corpo_x_corpo(co, tri, nomes, dono)),
+                           ("corpo", corpo_x_corpo(co, tri, nomes, dono, checagens.get("limites_corpo"))),
                            ("zonas", zonas(co, tri, nomes, dono, cena.equipamentos + cena.apoios,
                                            checagens.get("zonas", []), apoios=[a.name for a in cena.apoios], t=t)),
                            ("angulos", angulos_chave(rig, checagens.get("angulos", []) + tc.regras_padrao(checagens),

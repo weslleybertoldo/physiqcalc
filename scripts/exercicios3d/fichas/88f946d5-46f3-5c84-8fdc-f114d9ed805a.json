@@ -1,0 +1,824 @@
+{
+ "uuid": "88f946d5-46f3-5c84-8fdc-f114d9ed805a",
+ "nome": "Prancha Lateral",
+ "cena": "prancha_lateral",
+ "grupo": "Abdômen",
+ "subgrupo": "Oblíquos externo e interno · quadrado lombar · glúteo médio",
+ "padrao_movimento": "prancha",
+ "equipamento": "peso_corporal",
+ "variacao": "lateral",
+ "alvos": [
+  "obliquos",
+  "lombar",
+  "gluteo"
+ ],
+ "auxiliares": [
+  "abdomen",
+  "tensor",
+  "adutores",
+  "deltoide"
+ ],
+ "camera": {
+  "az": 12,
+  "el": 9,
+  "dist": 3.3,
+  "alvo": [
+   0.0,
+   0.0,
+   0.32
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   0.0,
+   0.32
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Prancha lateral pelo Caminho A (decisão do Weslley em 11/10/2026, \"1\", a mesma da Prancha: entrar na posição, segurar e sair). t = 0 → 1 é UM ciclo e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar). t = 0 é a prancha lateral montada (a foto parada do app); segura 5 s (a mesma segurada da Prancha, pra ficarem coerentes no app; as fontes da prancha lateral não dão um mínimo: NSCA \"Hold for 20 s\", ACE \"for the desired amount of time\", os testes \"as long as possible\"); o quadril desce em 1,5 s até a perna de baixo deitar no chão, fica 0,5 s embaixo (o meio do tempo embaixo cai em t = 0,5: os prints de t = 0,5 mostram a saída) e sobe em 1,5 s. A descida e a subida levam uma batida cada do metrônomo de 40 batidas/min do Youdas et al. 2014 (\"A metronome set at 40 beats per minute was used to standardize the rate of movement of the hips across subjects\"; 1,5 s por batida — o artigo não diz quantas batidas por fase: uma pra subir e uma pra descer é a leitura minha), e começam e acabam paradas (seno). ida_s = 8,5 s = 1 ciclo (136 quadros a 16/s).",
+ "ida_s": 8.5,
+ "movimento": "Deitado de lado no chão, sobre o lado direito, apoiado no antebraço direito e na borda de fora do pé direito: o cotovelo bem embaixo do ombro (o braço em pé), o antebraço deitado no chão apontando para a frente, perpendicular ao corpo, com a mão fechada de lado (o dedo mínimo no chão); as pernas esticadas e empilhadas, com o pé esquerdo em cima do direito; a mão esquerda no quadril. O corpo fica reto da cabeça aos pés — o quadril levantado, sem cair nem subir e sem ir para a frente nem para trás, o peito virado para a frente e a cabeça na linha da coluna — e segura a posição respirando normalmente. Para sair, desce devagar o quadril até a perna de baixo deitar no chão, ainda apoiado no antebraço; para entrar de novo, sobe o quadril até o corpo ficar reto outra vez e segura. O antebraço, a mão e o pé de baixo não saem do lugar.",
+ "cinesiologia": {
+  "plano": "isométrico na prancha lateral: nada se mexe — os músculos do lado de baixo do tronco e do quadril seguram o corpo reto contra a gravidade no plano da frente (de lado), em cadeia cinética fechada no antebraço e na borda do pé de baixo (ExRx, Side Plank: \"Muscles are exercised isometrically\"); na entrada e na saída o corpo se move no plano da frente — a coluna dobra de lado e os quadris abrem e fecham —, com o antebraço e o pé de baixo parados",
+  "articulacoes": "segurando: ombro de baixo com o braço em pé (o tronco inclinado ~18° do chão), cotovelo de baixo a ~89° com o antebraço deitado e neutro (de lado) e o punho fechado e reto; coluna neutra; quadris estendidos e fechados (as pernas empilhadas); joelhos estendidos; tornozelos neutros, o pé de baixo deitado na borda de fora; ombro de cima com o cotovelo dobrado (~92°) e a mão no quadril — tudo parado. Na saída o quadril desce: a coluna dobra de lado até ~22° (a concavidade pra cima), o quadril de baixo aduz e o de cima abduz ~9°, o tornozelo de baixo inverte ~9° (o pé fica parado no chão) e o braço de baixo inclina até ~9° em volta do cotovelo parado; na entrada, o caminho de volta",
+  "agonistas": "oblíquo externo e oblíquo interno do lado de baixo e quadrado lombar: na prancha lateral isométrica o quadrado lombar chega a 54 ± 28% da contração voluntária máxima, o oblíquo externo a 43 ± 13% e o interno a 36 ± 29% (McGill 1998, tabela 2: \"this exercise produces high levels of activity in the quadratus lumborum muscle\"); Lehman et al. 2005: oblíquo externo 46,1%, interno 42,5%; ExRx, Side Plank: alvo \"Obliques\"",
+  "sinergistas": "glúteo médio e mínimo e tensor da fáscia lata seguram o quadril (ExRx: estabilizadores; Ekstrom et al. 2007: \"The side-bridge exercise could be used for strengthening the gluteus medius and the external oblique abdominis muscles\"; Youdas et al. 2014: glúteo médio do lado de baixo 73,6 ± 30,6% na prancha lateral dinâmica); transverso do abdômen (McGill 1998: 39%) e reto do abdômen (22–24%: McGill 1998; Lehman 2005); adutores da perna de cima seguram as pernas juntas (ExRx: \"Adductors, Hip\", \"Pectineus\", \"Gracilis\")",
+  "estabilizadores": "deltoide, supraespinal, trapézio médio e inferior e serrátil anterior seguram o ombro de baixo em cima do cotovelo (free-exercise-db: \"secondaryMuscles\": [\"shoulders\"]; ExRx, Side Bridge: \"Deltoid, Lateral\", \"Supraspinatus\", \"Trapezius, Middle\", \"Trapezius, Lower\", \"Serratus Anterior, Inferior Digitations\"); grande dorsal, peitoral maior e menor e levantador da escápula (ExRx, Side Plank: estabilizadores); eretores da espinha (McGill 1998: 24 ± 15%; Lehman 2005: 25,7%)",
+  "fases": "entrada (1,5 s): deitado de lado, apoiado no antebraço com a perna de baixo no chão, o quadril sobe até o corpo ficar reto (ACE: \"Exhale, gently contract your abdominal / core muscles to stiffen your spine and lift your hips and knees off the mat, keeping contact with the side of your right foot\"); segurada (5 s no clipe; NSCA: \"Hold for 20 s\"; testes: \"as long as possible\"); saída (1,5 s, e 0,5 s embaixo): o quadril desce devagar até a perna deitar no chão (ACE: \"Lowering Phase: Inhale and gently return yourself to your starting position\"). Subida e descida numa batida cada do metrônomo de 40/min do Youdas 2014"
+ },
+ "referencias": [
+  "free-exercise-db (Yuhonas, domínio público) — Side Bridge, o fonte_en do catálogo. https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Bridge.json (lido em 11/10/2026): \"force\": \"static\"; \"primaryMuscles\": [\"abdominals\"]; \"secondaryMuscles\": [\"shoulders\"]; \"instructions\": [] (sem texto). As 2 fotos: deitado de lado no antebraço com o quadril no colchonete → o quadril levantado, o corpo reto; o punho de baixo fechado, de lado; a mão de cima no quadril; as pernas esticadas, um pé junto do outro.",
+  "ExRx.net — Side Plank (a versão isométrica). https://exrx.net/WeightExercises/Obliques/BWSidePlank (cópia do Internet Archive de 02/02/2025; o site direto responde 403): \"Lie on side on mat. Place forearm on mat under shoulder perpendicular to body. Place upper leg directly on top of lower leg and straighten knees and hips.\" / \"Raise body upward by straightening waist so body is ridged. Hold position. Repeat with opposite side.\" / \"Muscles are exercised isometrically. Movement can also be performed dynamically, moving hip up and down, see Side Bridge.\"; \"Exercise can be performed with bent knees.\"; músculos: alvo Obliques; estabilizadores Gluteus Medius, Gluteus Minimus, Tensor Fasciae Latae, Quadratus lumborum, Psoas major, Iliocastalis lumborum, Iliocastalis thoracis, Adductors (Hip), Pectineus, Gracilis, Gluteus Maximus (Lower Fibers), Latissimus dorsi, Pectoralis major, Pectoralis minor, Levator Scapulae.",
+  "ExRx.net — Side Bridge (a versão DINÂMICA, com o mesmo nome do fonte_en; cópia do Internet Archive de 20/04/2021): \"Raise hips upward by lateral flexion of spine. Lower to original position and repeat.\" / \"In addition to lateral flexion of spine, lower hip abducts and upper hip adducts. Exercise can also be performed isometrically, see Side Plank.\"; sinergistas (entre outros) Deltoid, Lateral; Supraspinatus; Trapezius, Middle; Trapezius, Lower; Serratus Anterior, Inferior Digitations. O catálogo chama de \"Prancha Lateral\" (padrão prancha) e trata como isométrica, como o free-exercise-db (\"static\") e os testes do McGill.",
+  "American Council on Exercise (ACE) — Side Plank with Straight Leg (Exercise Library #101). https://www.acefitness.org/resources/everyone/exercise-library/101/side-plank-with-straight-leg/ (lido em 11/10/2026): \"Lie on your right side on an exercise mat with extended legs, placing your left leg directly over your right leg and and stacking your feet one on top of the other. Place your right elbow directly under your shoulder, align your head with your spine and keep your hips and right knee in contact with the exercise mat.\" / \"Upward Phase: Exhale, gently contract your abdominal / core muscles to stiffen your spine and lift your hips and knees off the mat, keeping contact with the side of your right foot and keep head aligned with your spine. Keep your right elbow positioned directly under your shoulder.\" / \"Lowering Phase: Inhale and gently return yourself to your starting position. Alternate sides and repeat.\" / variação mais difícil: \"raising the upper leg off the lower leg\". ACE #99/#100 (Side Plank modified): \"your right elbow should bend to 90 degrees and be positioned directly under your shoulder\". ACE #303 (no BOSU): \"Stack the shoulders in a straight line over the elbow\"; \"keep the body in a straight line from head to heels\".",
+  "ACE — McGill's Torso Muscular Endurance Test Battery (PDF do curso CMES, © 2015), Trunk Lateral Endurance Test. https://www.acefitness.org/cmes-resources/pdfs/02-10-CMES-McGillsTorsoEnduracneTest.pdf (lido em 11/10/2026): \"The trunk lateral endurance test, also called the side-bridge test, assesses muscular endurance of the lateral core muscles (i.e., transverse abdominis, obliques, quadratus lumborum, and erector spinae).\"; \"aligning the feet on top of each other or in a tandem position (heel-to-toe)\"; \"keeping both legs extended and the sides of the feet on the floor. The elbow of the lower arm should be positioned directly under the shoulder with the forearm facing out (the forearm can be placed palm down for balance and support) and the upper arm should be resting along the side of the body or across the chest to the opposite shoulder.\"; \"The hips should be elevated off the mat and the body should be in straight alignment (i.e., head, neck, torso, hips, and legs). The torso should be supported only by the client’s foot/feet and the elbow/forearm of the lower arm\"; o teste acaba com \"A deviation from the neutral spine (i.e., the hips dropping downward)\" ou \"The hips shifting forward or backward in an effort to maintain balance and stability\". Figura 2: o punho de baixo fechado, de lado; a mão de cima no quadril; os pés empilhados.",
+  "McGill SM. Low back exercises: evidence for improving exercise regimens. Phys Ther. 1998;78(7):754-765 (texto inteiro pela cópia do Internet Archive): \"isometric horizontal side support, with the body supported by the knees and upper body supported by one elbow on the floor\" / \"The level of challenge with the isometric horizontal side support can be increased by supporting the body with the feet rather than the knees.\"; \"this exercise produces high levels of activity in the quadratus lumborum muscle\"; tabela 2 (% da contração voluntária máxima, isometric side support): quadrado lombar 54 ± 28, oblíquo externo 43 ± 13, oblíquo interno 36 ± 29, transverso 39 ± 24, reto do abdômen 22 ± 13, eretor 24 ± 15; \"there are no data to guide selection for these variables\" (repetições e tempo). Figura 3: o punho de baixo fechado.",
+  "McGill SM, Childs A, Liebenson C. Arch Phys Med Rehabil. 1999;80(8):941-944 (só o resumo): \"the \"side bridge\" exercise, which challenges the lateral flexors (stabilizers)\". Protocolo do teste citado por Nesser TW et al. 2008 (pela página da Trek Education, 01/10/2017): \"Legs are extended, and the top foot is placed in front of the lower foot for support. Clients support themselves on one elbow and on their feet while lifting their hips off the floor to create a straight line from head to toe.\"",
+  "NSCA — Basics of Strength and Conditioning Manual, 6b. Elbow Planks (front and sides), pp. 46-47 (cópia do Internet Archive de 12/02/2022): \"roll to one side, with the elbow directly under the shoulder, turning the arm to face forward\"; \"Hold for 20 s\"; \"Head remains in a neutral position to keep the body in line\".",
+  "Lehman GJ, Hoda W, Oliver S. Chiropr Osteopat. 2005;13:14 (PMC1187901): \"5. Side Bridge – Subjects assume a side plank position with elbow under shoulder and upper arm perpendicular to the ground.\"; tabela 1, Side Bridge (% da máxima): oblíquo interno 42,5, reto do abdômen 24,4, oblíquo externo 46,1, eretor 25,7. Ekstrom RA, Donatelli RA, Carp KC. J Orthop Sports Phys Ther. 2007;37(12):754-762 (resumo): \"The side-bridge exercise could be used for strengthening the gluteus medius and the external oblique abdominis muscles\".",
+  "Youdas JW et al. Sports Health. 2014;6(5):416-421 (PMC4137676; prancha lateral DINÂMICA): \"A metronome set at 40 beats per minute was used to standardize the rate of movement of the hips across subjects.\"; \"elevating the trunk in neutral spinal alignment\"; tabela 2, TESS, lado de baixo: glúteo médio 73,6 ± 30,6, oblíquo externo 37,2 ± 22,7.",
+  "Amplitudes normais: quadril — Wichman DM et al. 2021, tabela 1 (AAOS): \"Abduction 33.0 ± 4.8\", \"Adduction 13.8 ± 6.3\"; coluna — Apti A, Kuru Çolak T, Akçay B. J Turk Spinal Surg. 2023;34:113-117: \"The mean values of lumbar right and left lateral flexion ROM are stated as 35 degrees according to the AAOS and 40 degrees according to Kendall et al.\", medido \"right-left lateral flexion 36.3±6.4º-36.2±6.6º\"; tornozelo — Alazzawi S et al. World J Orthop 2017;8(1):21-29, tabela 5: \"Inversion 0-35 degrees\", \"Eversion 0-15 degrees\" (e flexão dorsal 0–20°, plantar 0–50°); mão fechada sem peça — Shimawaki S et al. Applied Bionics and Biomechanics 2019:2839648, tabela 2 (o cilindro de 10 mm, o menor medido; pegada3d.usar_cilindro)."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pe_fora_do_chao": [
+   "E"
+  ],
+  "pe_fora_do_chao_motivo": "O pé de cima (esquerdo) fica EM CIMA do de baixo, não no chão (ExRx: \"Place upper leg directly on top of lower leg\"; ACE: \"stacking your feet one on top of the other\"): continua medido, sem a regra do chão; o contato com o pé de baixo é a regra \"pé de cima apoiado no de baixo\" (contatos) e ele não pode escorregar entre os quadros.",
+  "limites_juntas": {
+   "punhoE": [
+    0,
+    70
+   ]
+  },
+  "limites_juntas_motivo": "A mão de cima não segura peso: fica apoiada no quadril com o punho ESTENDIDO (fotos do free-exercise-db, do ExRx, da ACE e da ACE/McGill), e embaixo, com a coluna dobrada de lado, o ombro de cima chega mais perto do quadril e o punho estende mais (até ~56°). Amplitude normal de extensão do punho: 70° (a referência do limites.py: Norkin & White, valores da AAOS); o teto de 55° é pra mão segurando peso. O desvio de lado fica medido à parte (regra do punho de cima).",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os 2 pés chapados no chão (largura dos pés, ponta do pé, os 2 pés virados igual, um pé à frente do outro, joelho na direção do pé, coluna até 20°) foram feitas pra quem está em pé: deitado de lado o pé de baixo apoia na BORDA DE FORA (ACE: \"keeping contact with the side of your right foot\"; ACE/McGill: \"the sides of the feet on the floor\") e o de cima em cima dele, e as medidas de pé no plano do chão (pela pelve) perdem o sentido com a pelve de lado. As que valem estão abaixo, no referencial do tronco: pés virados pra frente, empilhados e encostando, joelhos estendidos, coluna neutra segurando, corpo reto de frente e de lado, sem rolar.",
+  "limites_corpo": {
+   "coxaE×coxaD": 16
+  },
+  "limites_corpo_motivo": "Pernas empilhadas (ExRx, Side Plank: \"Place upper leg directly on top of lower leg\"; ACE #101: \"placing your left leg directly over your right leg and and stacking your feet one on top of the other\"): o peso da perna de cima aperta a parte de dentro das coxas, que no corpo de verdade cede. O boneco musculoso não amassa: com os pés encostando (tornozelos a 10 cm) a pele de uma coxa passa até ~15 mm pela da outra, na parte de dentro, de 10 a 29 cm abaixo do quadril (sonda de 12/10/2026). Pra não cruzar (≤ 2 mm) os tornozelos teriam de ficar a ~28 cm e o pé de cima ficaria ~18 cm no ar — outra variação (ACE #101: \"raising the upper leg off the lower leg\"). As canelas e os pés não se cruzam (perna × perna e pé × pé medidos).",
+  "zonas": [],
+  "alturas": [
+   {
+    "nome": "punho fechado de baixo no chão (o lado do dedo mínimo encostando), parado",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "fotos do free-exercise-db (Side Bridge, o fonte_en), da ACE (#101), da ACE/McGill (Figura 2) e do McGill 1998 (Figura 3): a mão de baixo FECHADA, de lado, o dedo mínimo no chão e o polegar pra cima (o antebraço neutro); a palma pra baixo é a outra opção da ACE/McGill (\"the forearm can be placed palm down for balance and support\")"
+   },
+   {
+    "nome": "antebraço de baixo apoiado no chão (a pele de baixo, perto do cotovelo, encostando), parado",
+    "partes": [
+     "RightForeArm"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"The torso should be supported only by the client’s foot/feet and the elbow/forearm of the lower arm\"); ExRx, Side Plank (\"Place forearm on mat\"); pedido: encosta sem entrar e não escorrega"
+   },
+   {
+    "nome": "braço de baixo (perto do cotovelo) não entra no chão",
+    "partes": [
+     "RightArm"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     5000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o chão)"
+   },
+   {
+    "nome": "borda de fora do pé de baixo no chão, parada",
+    "partes": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, Side Plank with Straight Leg (#101) (\"keeping contact with the side of your right foot\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"the sides of the feet on the floor\")"
+   },
+   {
+    "nome": "o pé de cima fica em cima do de baixo (longe do chão)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     40,
+     5000
+    ],
+    "fonte": "ExRx, Side Plank (\"Place upper leg directly on top of lower leg and straighten knees and hips\"); ACE, Side Plank with Straight Leg (#101) (\"placing your left leg directly over your right leg and and stacking your feet one on top of the other\")"
+   },
+   {
+    "nome": "corpo nunca entra no chão",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftArm",
+     "LeftForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "Head"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     -1.5,
+     5000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o chão; embaixo a perna encosta, não entra)"
+   },
+   {
+    "nome": "segurando: só o antebraço, o punho e o pé de baixo apoiam (o corpo longe do chão)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.0,
+     0.294
+    ],
+    "mm": [
+     15,
+     5000
+    ],
+    "fonte": "ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"The torso should be supported only by the client’s foot/feet and the elbow/forearm of the lower arm\"); a perna de baixo, inclinada do pé até o quadril, fica a ~2 cm do chão na panturrilha"
+   },
+   {
+    "nome": "segurando de novo: só o antebraço, o punho e o pé de baixo apoiam",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.706,
+     1.0
+    ],
+    "mm": [
+     15,
+     5000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "embaixo: a perna de baixo deita no chão (a panturrilha encostando)",
+    "partes": [
+     "RightLeg"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.471,
+     0.529
+    ],
+    "mm": [
+     -1.5,
+     1.5
+    ],
+    "fonte": "ACE, Side Plank with Straight Leg (#101) (posição de começo e de volta: \"keep your hips and right knee in contact with the exercise mat\"; \"Lowering Phase: Inhale and gently return yourself to your starting position\"); fotos do free-exercise-db e da ACE: a perna de baixo e o quadril no colchonete. No boneco a panturrilha (grande, não amassa) encosta primeiro e o quadril fica a ~3 cm do chão"
+   },
+   {
+    "nome": "embaixo: o quadril perto do chão",
+    "partes": [
+     "Hips",
+     "RightUpLeg"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.471,
+     0.529
+    ],
+    "mm": [
+     15,
+     60
+    ],
+    "fonte": "idem: o quadril desce até a perna deitar; não encosta porque a panturrilha do boneco encosta antes (o pé de baixo não sai do chão)"
+   },
+   {
+    "nome": "cabeça longe do chão",
+    "partes": [
+     "Head"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     100,
+     5000
+    ]
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mão de cima no quadril (encosta sem entrar)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "LeftUpLeg"
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "fotos do free-exercise-db (Side Bridge, o fonte_en: as 2), do ExRx (Side Plank), da ACE (#101) e da ACE/McGill (Figura 2): a mão de cima no quadril; pedido: \"no quadril: encosta sem entrar\""
+   },
+   {
+    "nome": "pé de cima apoiado no de baixo (encosta sem entrar)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "com": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "t": [
+     0.0,
+     0.294
+    ],
+    "mm": [
+     -2,
+     2
+    ],
+    "fonte": "ExRx, Side Plank (\"Place upper leg directly on top of lower leg and straighten knees and hips\"); ACE, Side Plank with Straight Leg (#101) (\"placing your left leg directly over your right leg and and stacking your feet one on top of the other\")"
+   },
+   {
+    "nome": "pé de cima apoiado no de baixo (encosta sem entrar; segurando de novo)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "com": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "t": [
+     0.706,
+     1.0
+    ],
+    "mm": [
+     -2,
+     2
+    ],
+    "fonte": "ExRx, Side Plank (\"Place upper leg directly on top of lower leg and straighten knees and hips\"); ACE, Side Plank with Straight Leg (#101) (\"placing your left leg directly over your right leg and and stacking your feet one on top of the other\")"
+   },
+   {
+    "nome": "pé de cima junto do de baixo na descida (sem entrar)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "com": [
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "t": "todos",
+    "mm": [
+     -2,
+     5
+    ],
+    "fonte": "ExRx, Side Plank (\"Place upper leg directly on top of lower leg and straighten knees and hips\"); ACE, Side Plank with Straight Leg (#101) (\"placing your left leg directly over your right leg and and stacking your feet one on top of the other\"). Embaixo, com o quadril de baixo aduzido e o de cima abduzido, a perna de cima encosta pela canela na de baixo e os pés ficam a ~3 mm (a perna de cima não entra na de baixo: perna × perna da checagem)"
+   },
+   {
+    "nome": "braço de cima sem entrar no tronco",
+    "partes": [
+     "LeftForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "punho e antebraço de baixo longe da cabeça (sem encostar no rosto nem no cabelo)",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightForeArm"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "ACE, Side Plank with Straight Leg (#101) (\"align your head with your spine\"): a cabeça fica na linha do corpo, longe do antebraço"
+   },
+   {
+    "nome": "punho e antebraço de baixo sem entrar no tronco",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "braço de baixo em pé: o cotovelo bem embaixo do ombro (segurando)",
+    "medida": "inclinacao",
+    "t": [
+     0.0,
+     0.294
+    ],
+    "graus": [
+     86,
+     90
+    ],
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "fonte": "ExRx, Side Plank (\"Place forearm on mat under shoulder perpendicular to body\"); ACE, Side Plank with Straight Leg (#101) (\"Place your right elbow directly under your shoulder\"; \"Keep your right elbow positioned directly under your shoulder\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"The elbow of the lower arm should be positioned directly under the shoulder\"); Lehman et al. 2005 (\"elbow under shoulder and upper arm perpendicular to the ground\"). 90 = o braço em pé",
+    "lado": "D"
+   },
+   {
+    "nome": "braço de baixo em pé: o cotovelo bem embaixo do ombro (segurando de novo)",
+    "medida": "inclinacao",
+    "t": [
+     0.706,
+     1.0
+    ],
+    "graus": [
+     86,
+     90
+    ],
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "fonte": "ExRx, Side Plank (\"Place forearm on mat under shoulder perpendicular to body\"); ACE, Side Plank with Straight Leg (#101) (\"Place your right elbow directly under your shoulder\"; \"Keep your right elbow positioned directly under your shoulder\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"The elbow of the lower arm should be positioned directly under the shoulder\"); Lehman et al. 2005 (\"elbow under shoulder and upper arm perpendicular to the ground\"). 90 = o braço em pé",
+    "lado": "D"
+   },
+   {
+    "nome": "braço de baixo perto da vertical na descida e embaixo",
+    "medida": "inclinacao",
+    "t": "todos",
+    "graus": [
+     78,
+     90
+    ],
+    "segmento": [
+     "Arm",
+     "ForeArm"
+    ],
+    "fonte": "ExRx, Side Plank (\"Place forearm on mat under shoulder perpendicular to body\"); ACE, Side Plank with Straight Leg (#101) (\"Place your right elbow directly under your shoulder\"; \"Keep your right elbow positioned directly under your shoulder\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"The elbow of the lower arm should be positioned directly under the shoulder\"); Lehman et al. 2005 (\"elbow under shoulder and upper arm perpendicular to the ground\"). 90 = o braço em pé. Na descida o cotovelo fica parado e o braço inclina até ~9° (o ombro pra cabeça) — com o pé de baixo parado, o quadril de baixo na adução normal e a coluna dobrando, o ombro não fecha a conta em cima do cotovelo (fotos da ACE: embaixo o braço fica quase em pé)",
+    "lado": "D"
+   },
+   {
+    "nome": "cotovelo de baixo dobrado ~90°",
+    "medida": "flexao",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "junta": "ForeArm",
+    "fonte": "ACE, Side Plank (Modified) (#99/#100): \"your right elbow should bend to 90 degrees and be positioned directly under your shoulder\"",
+    "lado": "D"
+   },
+   {
+    "nome": "antebraço de baixo deitado no chão",
+    "medida": "antebraco_vertical",
+    "t": "todos",
+    "graus": [
+     80,
+     90
+    ],
+    "fonte": "ExRx, Side Plank (\"Place forearm on mat\"); 90 = antebraço na horizontal",
+    "lado": "D"
+   },
+   {
+    "nome": "antebraço de baixo pra frente, perpendicular ao corpo",
+    "medida": "antebraco_frente",
+    "t": "todos",
+    "graus": [
+     0,
+     12
+    ],
+    "fonte": "ExRx, Side Plank (\"Place forearm on mat under shoulder perpendicular to body\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"with the forearm facing out\"); NSCA (\"with the elbow directly under the shoulder, turning the arm to face forward\"); fotos do free-exercise-db, do ExRx, da ACE e da ACE/McGill: o antebraço de baixo aponta pra frente (pra câmera)",
+    "lado": "D"
+   },
+   {
+    "nome": "punho de baixo fechado de lado (a palma pros pés, o polegar pra cima)",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     75,
+     105
+    ],
+    "fonte": "fotos do free-exercise-db (Side Bridge, o fonte_en), da ACE (#101), da ACE/McGill (Figura 2) e do McGill 1998 (Figura 3): a mão de baixo FECHADA, de lado, o dedo mínimo no chão e o polegar pra cima (o antebraço neutro); a palma pra baixo é a outra opção da ACE/McGill (\"the forearm can be placed palm down for balance and support\"); 90 = a palma de lado",
+    "lado": "D"
+   },
+   {
+    "nome": "punho de baixo reto (sem dobrar)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -20,
+     20
+    ],
+    "fonte": "a mão na linha do antebraço apoiado (fotos); amplitude normal do punho na referência do limites.py (Norkin & White, AAOS)",
+    "lado": "D"
+   },
+   {
+    "nome": "punho de baixo sem desviar de lado",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "a mão na linha do antebraço (fotos); desvio radial 20° e ulnar 30° (Norkin & White, AAOS)",
+    "lado": "D"
+   },
+   {
+    "nome": "punho de cima estendido, sem passar da amplitude normal",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -70,
+     5
+    ],
+    "fonte": "Norkin & White (AAOS, a referência do limites.py): extensão do punho 70°; − = estende (a mão apoiada no quadril)",
+    "lado": "E"
+   },
+   {
+    "nome": "punho de cima sem desviar de lado (a mão segue a linha do antebraço)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -15,
+     15
+    ],
+    "fonte": "desvio radial 20° e ulnar 30° (Norkin & White, AAOS); os dedos de cima apontam pra linha do antebraço deitada na pele do quadril",
+    "lado": "E"
+   },
+   {
+    "nome": "corpo reto: quadril na reta ombro → tornozelo vista de frente, sem cair nem subir",
+    "medida": "quadril_linha_lateral",
+    "t": [
+     0.0,
+     0.294
+    ],
+    "mm": [
+     -25,
+     25
+    ],
+    "fonte": "ExRx, Side Plank (\"Raise body upward by straightening waist so body is ridged. Hold position.\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"The hips should be elevated off the mat and the body should be in straight alignment (i.e., head, neck, torso, hips, and legs)\"; o teste acaba com \"the hips dropping downward\"); Nesser et al. 2008 (\"lifting their hips off the floor to create a straight line from head to toe\"). Nenhuma fonte dá o número: a faixa é a da Flexão de Braço e da Prancha; + = o quadril subiu pro teto, − = caiu pro chão"
+   },
+   {
+    "nome": "corpo reto: quadril na reta ombro → tornozelo vista de frente, sem cair nem subir (segurando de novo)",
+    "medida": "quadril_linha_lateral",
+    "t": [
+     0.706,
+     1.0
+    ],
+    "mm": [
+     -25,
+     25
+    ],
+    "fonte": "ExRx, Side Plank (\"Raise body upward by straightening waist so body is ridged. Hold position.\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"The hips should be elevated off the mat and the body should be in straight alignment (i.e., head, neck, torso, hips, and legs)\"; o teste acaba com \"the hips dropping downward\"); Nesser et al. 2008 (\"lifting their hips off the floor to create a straight line from head to toe\"). Nenhuma fonte dá o número: a faixa é a da Flexão de Braço e da Prancha; + = o quadril subiu pro teto, − = caiu pro chão"
+   },
+   {
+    "nome": "embaixo: o quadril desceu pro chão",
+    "medida": "quadril_linha_lateral",
+    "t": [
+     0.471,
+     0.529
+    ],
+    "mm": [
+     -150,
+     -60
+    ],
+    "fonte": "ACE, Side Plank with Straight Leg (#101) (\"Lowering Phase: Inhale and gently return yourself to your starting position\" — deitado de lado, apoiado no antebraço); fotos do free-exercise-db e da ACE: embaixo o quadril no colchonete"
+   },
+   {
+    "nome": "quadril sem ir pra frente nem pra trás",
+    "medida": "quadril_linha_ombro_tornozelo",
+    "t": "todos",
+    "mm": [
+     -25,
+     25
+    ],
+    "fonte": "ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (o teste acaba com \"The hips shifting forward or backward in an effort to maintain balance and stability\"); a faixa da Prancha"
+   },
+   {
+    "nome": "quadril estendido, sem dobrar pra frente",
+    "medida": "quadril_sinal",
+    "t": "todos",
+    "graus": [
+     -6,
+     6
+    ],
+    "fonte": "ExRx, Side Plank (\"straighten knees and hips\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"straight alignment (i.e., head, neck, torso, hips, and legs)\")"
+   },
+   {
+    "nome": "joelho, quadril e cabeça em linha (vistos de lado)",
+    "medida": "linha_joelho_quadril_cabeca",
+    "t": [
+     0.0,
+     0.294
+    ],
+    "graus": [
+     -5,
+     5
+    ],
+    "fonte": "ACE, Side Plank no BOSU (#303): \"keep the body in a straight line from head to heels\"; ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test)"
+   },
+   {
+    "nome": "joelho, quadril e cabeça em linha (vistos de lado; segurando de novo)",
+    "medida": "linha_joelho_quadril_cabeca",
+    "t": [
+     0.706,
+     1.0
+    ],
+    "graus": [
+     -5,
+     5
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "joelhos estendidos",
+    "medida": "flexao",
+    "t": "todos",
+    "graus": [
+     0,
+     6
+    ],
+    "junta": "Leg",
+    "fonte": "ExRx, Side Plank (\"straighten knees and hips\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"keeping both legs extended\"); Nesser et al. 2008 (\"Legs are extended\")"
+   },
+   {
+    "nome": "pernas fechadas na amplitude normal do quadril",
+    "medida": "coxa_abducao",
+    "t": "todos",
+    "graus": [
+     -20,
+     33
+    ],
+    "fonte": "Wichman et al. 2021, tabela 1 (AAOS): \"Abduction 33.0 ± 4.8\", \"Adduction 13.8 ± 6.3\". Em cima as 2 coxas fecham ~4° pros pés empilharem; embaixo o quadril de baixo aduz e o de cima abduz ~9° (ExRx, Side Bridge: \"In addition to lateral flexion of spine, lower hip abducts and upper hip adducts\", na subida)"
+   },
+   {
+    "nome": "tornozelos na amplitude normal",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     60,
+     92
+    ],
+    "fonte": "Alazzawi et al. 2017, tabela 5 (flexão dorsal 0–20°, flexão plantar 0–50°; no boneco em pé ~76°)"
+   },
+   {
+    "nome": "pés virados pra frente (empilhados, não pra cabeça nem pros pés)",
+    "medida": "pe_frente",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "ExRx, Side Plank (\"Place upper leg directly on top of lower leg and straighten knees and hips\"); ACE, Side Plank with Straight Leg (#101) (\"placing your left leg directly over your right leg and and stacking your feet one on top of the other\"); fotos: os dedos dos pés pra frente (pra câmera). O boneco em pé mede ~16 (a base dos dedos mais baixa que o tornozelo)"
+   },
+   {
+    "nome": "coluna neutra (segurando)",
+    "medida": "coluna",
+    "t": [
+     0.0,
+     0.294
+    ],
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "ACE, Side Plank with Straight Leg (#101) (\"stiffen your spine\"; \"keep head aligned with your spine\"); Youdas et al. 2014 (\"elevating the trunk in neutral spinal alignment\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (o teste acaba com \"A deviation from the neutral spine\")"
+   },
+   {
+    "nome": "coluna neutra (segurando de novo)",
+    "medida": "coluna",
+    "t": [
+     0.706,
+     1.0
+    ],
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "a coluna dobra de lado só na descida, dentro da amplitude normal",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     20
+    ],
+    "fonte": "ExRx, Side Bridge (\"Raise hips upward by lateral flexion of spine. Lower to original position and repeat.\"); amplitude: Apti et al. 2023 (\"The mean values of lumbar right and left lateral flexion ROM are stated as 35 degrees according to the AAOS and 40 degrees according to Kendall et al.\"; medido em 300 jovens: \"right-left lateral flexion 36.3±6.4º-36.2±6.6º\"). A medida (lombar × torácica) pega ~2/3 da dobra de ~22° que a cena faz embaixo"
+   },
+   {
+    "nome": "tórax e pelve de lado, sem rolar pra frente nem pra trás",
+    "medida": "corpo_rolagem",
+    "t": "todos",
+    "graus": [
+     -5,
+     5
+    ],
+    "fonte": "ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"The hips shifting forward or backward in an effort to maintain balance and stability\"); ACE, Side Plank no BOSU (#303): \"Stack the shoulders in a straight line over the elbow\"; pedido: \"sem girar pra frente ou pra trás\""
+   },
+   {
+    "nome": "tórax sem girar em relação à pelve",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "cabeça alinhada com a coluna (vista de lado)",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -18,
+     -4
+    ],
+    "fonte": "ACE, Side Plank with Straight Leg (#101) (\"align your head with your spine\"; \"keep head aligned with your spine\"); NSCA (\"Head remains in a neutral position to keep the body in line\"); o boneco em pé, no repouso, mede ~−11°"
+   },
+   {
+    "nome": "cabeça na linha do tronco vista de frente (sem cair pro chão)",
+    "medida": "cabeca_lado",
+    "t": "todos",
+    "graus": [
+     -6,
+     12
+    ],
+    "fonte": "ACE, Side Plank with Straight Leg (#101) (\"align your head with your spine\"); ACE, McGill's Torso Muscular Endurance Test Battery (Trunk Lateral Endurance Test) (\"straight alignment (i.e., head, neck, torso, hips, and legs)\"). A cabeça acompanha o tórax (o pescoço não mexe): embaixo, com a coluna dobrada, ela inclina junto em relação à reta quadril → pescoço"
+   }
+  ]
+ }
+}

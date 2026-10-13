@@ -851,3 +851,49 @@ def test_braco_lado_perpendicular_ao_chao_no_banco_declinado():
     assert tc.braco_lado(pes)[1] == pytest.approx(10, abs=1e-6)
     assert tc.braco_lado(girar(pes, 40, (0, 0, 1)))[1] == pytest.approx(10, abs=1e-6)   # girar o banco no chão não muda
     assert "braco_lado" in tc.MEDIDAS
+
+
+def test_prancha_lateral_corpo_reto_de_lado_sem_rolar_e_cabeca_na_linha():
+    """Prancha lateral (lote 13): deitado sobre o lado direito com a cabeça 18° acima dos pés, o corpo reto mede 0 no eixo de LADO do
+    tronco, sem rolar e com a cabeça na linha; o quadril caindo 5 cm pro chão dá −; o corpo rolando com o peito pro chão dá − no tórax e
+    na pelve; a cabeça inclinada pro lado de cima dá +."""
+    j = em_pe()
+    for L, s in (("Left", 1), ("Right", -1)):
+        j[L + "Shoulder"] = np.array([s * 0.06, 0, 1.44])
+    j["Head"] = np.array([0, 0, 1.70])
+    lado = girar(j, -72, (0, 1, 0))                  # o lado esquerdo pra cima, a cabeça pra −X e 18° acima dos pés
+    assert lado["LeftArm"][2] > lado["RightArm"][2]
+    assert tc.quadril_linha_lateral(lado) == pytest.approx([0], abs=1e-6)
+    assert tc.corpo_rolagem(lado) == pytest.approx([0, 0], abs=1e-6)
+    assert tc.cabeca_lado(lado) == pytest.approx([0], abs=1e-6)
+    caiu = dict(lado, LeftUpLeg=lado["LeftUpLeg"] + np.array([0, 0, -0.05]), RightUpLeg=lado["RightUpLeg"] + np.array([0, 0, -0.05]))
+    assert tc.quadril_linha_lateral(caiu)[0] == pytest.approx(-50 * math.cos(math.radians(18)), abs=1e-6)
+    subiu = dict(lado, LeftUpLeg=lado["LeftUpLeg"] + np.array([0, 0, 0.03]), RightUpLeg=lado["RightUpLeg"] + np.array([0, 0, 0.03]))
+    assert tc.quadril_linha_lateral(subiu)[0] == pytest.approx(30 * math.cos(math.radians(18)), abs=1e-6)
+    eixo = lado["Neck"] - lado["Hips"]
+    rolou = girar(lado, -10, eixo, (lado["LeftUpLeg"] + lado["RightUpLeg"]) / 2)     # o peito vira pro chão
+    esperado = math.degrees(math.asin(math.cos(math.radians(18)) * math.sin(math.radians(-10))))
+    assert tc.corpo_rolagem(rolou) == pytest.approx([esperado, esperado], abs=1e-6)
+    assert tc.quadril_linha_lateral(rolou) == pytest.approx([0], abs=1e-6)
+    cima = (lado["Neck"] - lado["Hips"]) / np.linalg.norm(lado["Neck"] - lado["Hips"])
+    up = lado["LeftArm"] - lado["RightArm"]
+    up = up - cima * (up @ cima)
+    up = up / np.linalg.norm(up)
+    cabeca = dict(lado, Head=lado["Neck"] + 0.2 * (math.cos(math.radians(15)) * cima + math.sin(math.radians(15)) * up))
+    assert tc.cabeca_lado(cabeca) == pytest.approx([15], abs=1e-6)
+    assert tc.corpo_rolagem(em_pe()) == [] and tc.cabeca_lado(em_pe()) == []
+    assert {"quadril_linha_lateral", "corpo_rolagem", "cabeca_lado", "antebraco_frente", "pe_frente"} <= set(tc.MEDIDAS)
+
+
+def test_antebraco_e_pe_pra_frente_do_tronco():
+    """Prancha lateral (lote 13): o antebraço de baixo aponta reto pra frente do peito ("perpendicular to body", ExRx) = 0; de lado = 90;
+    os dedos dos pés pra frente medem o próprio caimento do pé (base dos dedos 6 cm abaixo do tornozelo, 14 cm à frente); deitado de lado,
+    o mesmo."""
+    j = em_pe()
+    j["RightHand"] = j["RightForeArm"] + np.array([0, -0.25, 0])
+    j["LeftHand"] = j["LeftForeArm"] + np.array([0.25, 0, 0])
+    assert tc.antebraco_frente(j) == pytest.approx([90, 0], abs=1e-6)
+    assert tc.pe_frente(j) == pytest.approx([math.degrees(math.atan2(0.06, 0.14))] * 2, abs=1e-6)
+    lado = girar(j, -72, (0, 1, 0))
+    assert tc.antebraco_frente(lado) == pytest.approx([90, 0], abs=1e-6)
+    assert tc.pe_frente(lado) == pytest.approx(tc.pe_frente(j), abs=1e-6)

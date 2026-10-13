@@ -885,3 +885,83 @@ def braco_lado(j):
 
 
 MEDIDAS.update({"braco_lado": braco_lado})
+
+
+# ── prancha lateral (lote 13, 12/10/2026): deitado de lado num antebraço, o corpo fica reto da cabeça ao tornozelo visto de FRENTE (no
+# plano da frente do corpo) — o quadril não cai pro chão nem sobe pro teto (ACE, McGill's Torso Muscular Endurance Test Battery, Trunk
+# Lateral Endurance Test: "The hips should be elevated off the mat and the body should be in straight alignment (i.e., head, neck,
+# torso, hips, and legs)"; o teste acaba com "the hips dropping downward") — e o corpo não rola pra frente nem pra trás ("The hips
+# shifting forward or backward in an effort to maintain balance and stability"). O quadril_linha_ombro_tornozelo mede no eixo da FRENTE
+# do tronco (de bruços); aqui é o eixo de LADO a lado. O tronco_giro compara o tórax com a pelve (o corpo inteiro rolando junto não
+# aparece), o ombros_nivel/pelve_nivel perdem o sentido com o corpo de lado e a cabeca_tronco só vê a cabeça no plano de lado.
+def _lado_de_cima(lado):
+    """O eixo de lado a lado do tronco (do ombro esquerdo pro direito) virado pro ombro que está mais ALTO (com os 2 na mesma altura,
+    fica como está: pro direito)."""
+    return -lado if lado[2] < 0 else lado
+
+
+def quadril_linha_lateral(j):
+    """Centro das articulações do quadril fora da reta ombro → tornozelo (do meio das cabeças do úmero ao meio dos tornozelos) no eixo de
+    LADO a lado do tronco, mm: + = pro lado do ombro mais alto (na prancha lateral, o quadril subiu pro teto), − = pro lado do ombro mais
+    baixo (o quadril caiu pro chão); 0 = o corpo reto visto de frente. No referencial do tronco: vale deitado de lado, inclinado ou em pé
+    (em pé, com os 2 ombros na mesma altura, o + fica pro lado do ombro direito)."""
+    _, lado, _ = eixos_tronco(j)
+    lado = _lado_de_cima(lado)
+    ombro = (j["LeftArm"] + j["RightArm"]) / 2
+    pe = (j["LeftFoot"] + j["RightFoot"]) / 2
+    quadril = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    u = _u(ombro - pe)
+    d = (quadril - pe) - u * float((quadril - pe) @ u)
+    return [float(d @ lado) * 1000]
+
+
+def corpo_rolagem(j):
+    """Quanto o tórax e a pelve estão rolados em volta do eixo do corpo em relação ao CHÃO, graus [tórax, pelve]: a frente de cada um
+    (cima × lado, o lado do tórax pelas bases das clavículas e o da pelve pelas articulações do quadril, os 2 ⟂ ao eixo quadril → pescoço)
+    × o plano do chão: 0 = o peito (ou a frente da pelve) virado na horizontal — deitado de lado sem rolar, ou em pé —, + = virado pro teto
+    (rolou pra trás), − = virado pro chão (rolou pra frente); de bruços dá −90. Sem as clavículas nas juntas (dicionários antigos dos
+    testes), devolve []."""
+    if "LeftShoulder" not in j or "RightShoulder" not in j:
+        return []
+    cima = _u(j["Neck"] - j["Hips"])
+    out = []
+    for a, b in (("LeftShoulder", "RightShoulder"), ("LeftUpLeg", "RightUpLeg")):
+        lado = j[b] - j[a]
+        lado = _u(lado - cima * (lado @ cima))
+        out.append(math.degrees(math.asin(max(-1.0, min(1.0, float(np.cross(cima, lado)[2]))))))
+    return out
+
+
+def cabeca_lado(j):
+    """Cabeça (base do pescoço → base da cabeça) × eixo do tronco (quadril → pescoço) no plano da FRENTE do tronco (de lado a lado), graus:
+    0 = a cabeça na linha do tronco vista de frente, + = inclinada pro lado do ombro mais alto (na prancha lateral, levantou pro teto),
+    − = pro do ombro mais baixo (caiu pro chão). É a parte que a cabeca_tronco (plano de lado) não vê; o boneco em pé, no repouso, mede
+    ~−3 (o + pro ombro direito). Sem a cabeça nas juntas, devolve []."""
+    if "Head" not in j:
+        return []
+    cima, lado, frente = eixos_tronco(j)
+    lado = _lado_de_cima(lado)
+    c = j["Head"] - j["Neck"]
+    c = c - frente * (c @ frente)
+    return [math.degrees(math.atan2(float(c @ lado), float(c @ cima)))]
+
+
+def antebraco_frente(j):
+    """Antebraço (cotovelo → punho) × a FRENTE do tronco, graus [E, D]: 0 = apontando reto pra frente do peito — perpendicular ao corpo,
+    o "Place forearm on mat under shoulder perpendicular to body" (ExRx, Side Plank) —, 90 = pro lado, pra cabeça ou pros pés. No
+    referencial do tronco: vale em pé, deitado de lado ou de bruços."""
+    _, _, frente = eixos_tronco(j)
+    return [_ang(j[L + "Hand"] - j[L + "ForeArm"], frente) for L, _ in LADOS]
+
+
+def pe_frente(j):
+    """Pé (tornozelo → base dos dedos) × a FRENTE do tronco, graus [E, D]: os dedos virados pra frente do peito; o boneco em pé, no
+    repouso, mede ~16 (a base dos dedos fica mais baixa que o tornozelo). Com o corpo de lado o ponta_pe/ponta_dedos (no plano do chão,
+    pela pelve) perdem o sentido; este fica no referencial do tronco."""
+    _, _, frente = eixos_tronco(j)
+    return [_ang(j[L + "ToeBase"] - j[L + "Foot"], frente) for L, _ in LADOS]
+
+
+MEDIDAS.update({"quadril_linha_lateral": quadril_linha_lateral, "corpo_rolagem": corpo_rolagem, "cabeca_lado": cabeca_lado,
+                "antebraco_frente": antebraco_frente, "pe_frente": pe_frente})
+UNIDADE.update({"quadril_linha_lateral": "mm"})
