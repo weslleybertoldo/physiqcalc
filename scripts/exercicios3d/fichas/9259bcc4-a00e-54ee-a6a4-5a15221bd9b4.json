@@ -1,0 +1,339 @@
+{
+ "uuid": "9259bcc4-a00e-54ee-a6a4-5a15221bd9b4",
+ "nome": "Supino Inclinado na Máquina",
+ "cena": "supino_inclinado_na_maquina",
+ "grupo": "Peitoral",
+ "subgrupo": "Peitoral superior (porção clavicular) · deltoide anterior · tríceps",
+ "padrao_movimento": "supino_inclinado",
+ "equipamento": "maquina",
+ "variacao": "articulada, sentado",
+ "alvos": [
+  "peitoral"
+ ],
+ "auxiliares": [
+  "deltoide",
+  "triceps"
+ ],
+ "camera": {
+  "az": 36,
+  "el": 14,
+  "dist": 4.9,
+  "alvo": [
+   0.0,
+   -0.05,
+   0.84
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.4,
+  "alvo": [
+   0.0,
+   0.0,
+   0.95
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na máquina articulada de supino inclinado (do tipo da Hammer Strength Iso-Lateral Incline Press, de anilhas), com o glúteo e a parte de cima das costas (as escápulas) encostados no encosto reclinado, a cabeça alinhada com o tronco e os pés chapados no chão, um pouco mais abertos que o quadril; o assento regulado para os pegadores ficarem perto da parte de cima do peito. Os 2 braços da máquina ficam pendurados de um eixo no alto, atrás e acima da cabeça, e descem para a frente até os pegadores. Segura os pegadores inclinados com a pegada entre a pronada e a neutra (o polegar para dentro e para cima), um pouco mais larga que os ombros, e o punho quase reto. Começa com as mãos perto da parte de cima do peito, os cotovelos dobrados, abertos para o lado e abaixo das mãos, e empurra os pegadores para cima e para a frente até os cotovelos ficarem quase esticados, sem travar, com as mãos na altura da testa e mais perto uma da outra; volta devagar até as mãos ficarem de novo perto da parte de cima do peito, sem descansar o peso no batente. Cada braço da máquina gira em volta do seu eixo, lá em cima: o pegador faz um arco para cima e para a frente e os 2 pegadores se aproximam no fim. O tronco, o quadril e os pés ficam parados, com as escápulas puxadas para trás e para baixo, encostadas no encosto.",
+ "cinesiologia": {
+  "plano": "sagital e transverso, inclinado para cima em relação ao tronco: flexão do ombro com adução horizontal e extensão do cotovelo (o braço vai do lado do tronco para a frente e para cima, ~28° acima da perpendicular ao tronco no fim — entre o supino reto e o desenvolvimento); cadeia cinética aberta",
+  "articulacoes": "ombro (flexão e adução horizontal na ida, extensão e abdução horizontal na volta; o braço termina ~28° acima da perpendicular ao tronco reclinado ~13°, com as mãos na altura da testa e ~7 cm mais perto do meio do corpo cada uma), cotovelo (extensão na ida, de ~141° de flexão até ~12°, sem travar; flexão na volta); punho quase neutro, com a pegada entre a pronada e a neutra; escápulas retraídas e deprimidas (para trás e para baixo), paradas no encosto; quadril (~103° entre o tronco e a coxa), joelhos e tornozelos parados, com os pés no chão",
+  "agonistas": "peitoral maior, porção clavicular (a parte de cima do peitoral; ExRx: Target \"Pectoralis Major, Clavicular\"; Life Fitness, IL-IP: \"emphasizes the clavicular portion of the pectorals\"), em contração concêntrica na ida e excêntrica na volta",
+  "sinergistas": "deltoide anterior e tríceps braquial (ExRx, Lever Incline Chest Press (plate loaded): Synergists \"Deltoid, Anterior\", \"Triceps Brachii\"); a versão de pilha do ExRx põe também a porção esternal do peitoral maior (\"Pectoralis Major, Sternal\"); free-exercise-db: \"primaryMuscles\": [\"chest\"], \"secondaryMuscles\": [\"shoulders\", \"triceps\"]; Life Fitness: \"This machine targets the upper chest, shoulders, and triceps\"",
+  "estabilizadores": "bíceps braquial, cabeça curta (ExRx: Dynamic Stabilizers \"Biceps Brachii, Short Head\")",
+  "fases": "concêntrica (empurra os pegadores para cima e para a frente até os cotovelos quase esticarem — ExRx: \"Press lever until arms are extended\"; ACE: \"extending your arms forward to a level with your forehead or top of your head\") e excêntrica (volta devagar até as mãos ficarem perto da parte de cima do peito — ExRx: \"Return weight until shoulders or chest feels slightly stretched\"; ACE: \"stopping when they lightly touch, or are close to, your upper chest\"; free-exercise-db: \"return the weight just above the start position, keeping tension on the muscles by not returning the weight to the stops until the set is complete\")"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público) — Leverage Incline Chest Press (https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_Incline_Chest_Press.json, o da conferência da migration do catálogo; lido em 12/10/2026, conferido em 13/10/2026): \"Load an appropriate weight onto the pins and adjust the seat for your height. The handles should be near the top of the pectorals at the beginning of the motion. Your chest and head should be up and your shoulder blades retracted. This will be your starting position.\" / \"Press the handles forward by extending through the elbow.\" / \"After a brief pause at the top, return the weight just above the start position, keeping tension on the muscles by not returning the weight to the stops until the set is complete.\"; \"primaryMuscles\": [\"chest\"], \"secondaryMuscles\": [\"shoulders\", \"triceps\"]; as 2 fotos (máquina de anilhas com a placa \"INCLINE PRESS\"): no começo as mãos na altura do alto do peito, os cotovelos pros lados e abaixo delas; no fim os braços esticados pra cima e pra frente, as mãos acima da cabeça e mais perto uma da outra",
+  "ExRx.net — Lever Incline Chest Press (https://exrx.net/WeightExercises/PectoralClavicular/LVInclineChestPress, lido na cópia do Internet Archive de 27/12/2023; o site responde 403 direto): \"Utility: Basic or Auxiliary\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"Sit on seat with upper chest just above grips on lever. If available, push foot lever until handles are within grasping range. Grasp handles with wide oblique overhand grip and position elbows out to sides. Release foot lever.\"; Execution: \"Press lever until arms are extended. Return weight until shoulders or chest feels slightly stretched. Repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide.\"; músculos: Target \"Pectoralis Major, Clavicular\", Synergists \"Pectoralis Major, Sternal\", \"Deltoid, Anterior\", \"Triceps Brachii\", Dynamic Stabilizers \"Biceps Brachii, Short Head\"",
+  "ExRx.net — Lever Incline Chest Press (plate loaded) (https://exrx.net/WeightExercises/PectoralClavicular/LVInclineChestPressH, cópia do Internet Archive de 07/03/2021): Preparation: \"Sit on seat with upper chest just above grips on lever. Grasp grips with wide overhand grip and position elbows out to sides.\"; Execution: \"Press lever until arms are extended. Return weight until chest muscles are slightly stretched. Repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide.\"; músculos: Target \"Pectoralis Major, Clavicular\", Synergists \"Deltoid, Anterior\", \"Triceps Brachii\", Dynamic Stabilizers \"Biceps Brachii, Short Head\"",
+  "ExRx.net — Kinesiology/Errors (https://exrx.net/Kinesiology/Errors, cópia do Internet Archive de 04/08/2025): \"However, with machines, we can alter the direction of force. Gravity still acts on the weight but the machine alters direction of force via use of lever(s) or cable pulley(s).\" (na máquina o \"inclinado\" vem do arco do braço da máquina em relação ao tronco, não do banco)",
+  "ACE — Seated Incline Cable Press (https://www.acefitness.org/resources/everyone/exercise-library/167/seated-incline-cable-press/, lido em 12/10/2026; \"Equipment: Resistance Bands/Cables, Weight Machines / Selectorized\"): \"Sit with your back firmly supported against the backrest.\"; \"Grasp the handles and position your hands level with your upper chest or shoulders, maintaining a neutral wrist position (i.e., wrists in line with your forearms).\"; \"Position your feet firmly on the floor to stabilize your body.\"; \"do not press your low back into the backrest. Maintain the natural arch in your low back\"; \"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"; \"Gently exhale and perform a pressing movement, extending your arms forward to a level with your forehead or top of your head.\"; \"contact with your back and shoulder blades against the backrest\"; \"maintain stability of your head during the movement\"; \"Continue pressing until your elbows are fully extended, but not locked. Pause momentarily then slowly return to your starting position, allowing your elbows to flex (bend) in a slow, controlled manner, moving the handles back towards your upper chest, stopping when they lightly touch, or are close to, your upper chest.\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-exercise-list-part-2): Incline dumbbell bench press (and barbell variation) — \"Major muscles involved: Pectoralis major, anterior deltoids, triceps brachii\"; \"Press the dumbbells to an extended-arm position over your chest and face.\"; \"Lower the dumbbells down and slightly out to the upper chest (between the clavicle and nipples).\"; \"Push the dumbbells upward and slightly inward until your elbows are fully extended.\" (só a técnica: a NSCA não tem o supino inclinado na máquina)",
+  "Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM. Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise. Int J Environ Res Public Health 2020;17(19):7339: \"The results showed that the maximal EMG activity for PMUP occurred at a bench inclination of 30°.\"; \"An inclination of 30° produces greater activation of the upper portion of the pectoralis major.\"",
+  "Trebs AA, Brandenburg JP, Pitney WA. An electromyography analysis of 3 muscles surrounding the shoulder joint during the performance of a chest press exercise at several angles. J Strength Cond Res 2010;24(7):1925–1930 (no Smith): \"Activation of the clavicular head of the pectoralis major was significantly greater at 44° compared to 0° (p = 0.010), at 56° compared to 0° (p = 0.013), and at 44° compared to 28° (p = 0.003).\"",
+  "Life Fitness — Hammer Strength Plate-Loaded Iso-Lateral Incline Press, IL-IP (https://lifefitness.com/en-us/catalog/strength-training/plate-loaded/plate-loaded-iso-lateral-incline-press e https://www.lifefitness.com.au/commercial/iso-lateral-incline-press-ilip, lidos em 12/10/2026): \"Designed with an optimized path of motion, our machine mirrors the natural mechanics of an incline press while maintaining independent arm movement for balanced strength development.\"; \"Dimensions (L x W x H): 46 x 55 x 75 in (117 x 140 x 191 cm)\"; \"Max Load Capacity (per arm) 5 x 45 lb plates (5 x 20 kg plates)\"; \"The ergonomic handles of our Hammer Strength Iso-Lateral Incline Press are thoughtfully designed to sit perfectly between a neutral and overhand grip.\"; \"the vertical handle option was removed because the grip angle was not ergonomically optimal\"; \"Our Iso-Lateral Incline Press has 6 integrated weight plate storage horns\"; \"Our Iso-Lateral Incline Chest Press has a more traditional incline angle, emphasizing upper chest and shoulder development.\"; fotos do fabricante (de lado, com e sem pessoa): o eixo de cada braço em cima da coluna de trás, o braço reto descendo pra frente com o pino de anilha perto da ponta e o pegador curvo na ponta, o assento numa coluna com pino, o encosto comprido e fixo, os pés no chão. Medido na foto de lado com a pessoa (escala pela base de 117 cm; estimativa, com perspectiva): o tronco ~14° da vertical, o eixo ~37 cm atrás e ~57 cm acima da articulação do ombro, o braço da máquina com ~0,9 m, ~52° abaixo da horizontal em repouso e ~15° no fim, o braço da pessoa esticado ~37° acima da horizontal (~23° acima da perpendicular ao tronco)",
+  "Life Fitness — Hammer Strength MTS Iso-Lateral Incline Press (https://www.lifefitness.com.au/commercial/iso-lateral-incline-press-mtip) e o manual de peças MTSIP (https://s3-us-west-2.amazonaws.com/files-hydra/Life%20Fitness/Diagrams/Manuals/MTSIP.PDF), lidos em 12/10/2026: \"independently diverging and converging pressing motions\"; \"The overhead pivot provides a natural arc of shoulder motion, and the seat back is angled for easy entry and exit.\"; \"PAD, BACK 32-1/2 X 11-1/4 BLACK\" (encosto de 83 × 29 cm); \"Grip 1.5\" OD\" (pegador de 38 mm). Life Fitness Signature Series Plate Loaded Incline Press (https://www.lifefitness.com.au/commercial/incline-press-splip): \"converging movements for a natural forward pressing motion\"",
+  "Anilha de 10 kg: Ø 350 mm (Eleiko Grip Plate Rubber 10 kg, ficha oficial: \"Diameter 350 mm\" — a mesma da anilha solta da fábrica); 40 mm de espessura (escolha da fábrica)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: no supino a alavanca não fica alinhada com uma junta só (o empurrão é do ombro e do cotovelo juntos); a regulagem certa é a altura do assento, que põe os pegadores perto da parte de cima do peito no começo (free-exercise-db: \"The handles should be near the top of the pectorals at the beginning of the motion\"; ExRx: \"Sit on seat with upper chest just above grips on lever\"). O eixo de cada braço da máquina fica no ALTO e ATRÁS da pessoa, em cima da coluna de trás (como na IL-IP), com o braço descendo pra frente até o pegador: o pegador anda num arco em volta dele, pra cima e pra frente (\"The overhead pivot provides a natural arc of shoulder motion\", Life Fitness, MTS Iso-Lateral Incline Press), e cada eixo vira no plano do chão, então os pegadores convergem no fim (\"independently diverging and converging pressing motions\"). O inclinado vem do arco: o braço termina ~28° acima da perpendicular ao tronco, com as mãos na altura da testa (\"extending your arms forward to a level with your forehead or top of your head\", ACE)",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "inclinado_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Incline Chest Press (\"Sit on seat\"); NSCA (Achievable CSCS) — posição de 5 pontos (\"Buttocks on the bench or seat\")"
+   },
+   {
+    "nome": "escápulas (parte de cima das costas) no encosto",
+    "equipamento": "inclinado_encosto",
+    "partes": [
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"contact with your back and shoulder blades against the backrest\")"
+   },
+   {
+    "nome": "glúteo encostado no encosto",
+    "equipamento": "inclinado_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"Sit with your back firmly supported against the backrest\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelo bem dobrado no começo (mãos perto da parte de cima do peito)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     115,
+     145
+    ],
+    "fonte": "ExRx — Lever Incline Chest Press (\"Return weight until shoulders or chest feels slightly stretched\"); ACE — Seated Incline Cable Press (\"stopping when they lightly touch, or are close to, your upper chest\"): o pegador começa 5 cm à frente do peito, na parte de cima dele, mais perto do ombro que no supino reto (o cotovelo dobra mais)"
+   },
+   {
+    "nome": "braços quase esticados no fim, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"Continue pressing until your elbows are fully extended, but not locked\"); ExRx — Lever Incline Chest Press (\"Press lever until arms are extended\")"
+   },
+   {
+    "nome": "cotovelos abertos pro lado no começo, abaixo das mãos",
+    "medida": "braco_abertura",
+    "t": 0.0,
+    "graus": [
+     45,
+     70
+    ],
+    "fonte": "ExRx — Lever Incline Chest Press (\"position elbows out to sides\"); ExRx — Bench Press Analyses (\"a 45º to 70º angle between the shoulder and torso\")"
+   },
+   {
+    "nome": "braços pra frente e pra cima do tronco no fim (inclinado: 15–40° acima da perpendicular ao tronco)",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     105,
+     130
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"extending your arms forward to a level with your forehead or top of your head\"); Rodríguez-Ridao et al. 2020 (\"An inclination of 30° produces greater activation of the upper portion of the pectoralis major\"); Life Fitness, IL-IP (\"a more traditional incline angle\")"
+   },
+   {
+    "nome": "pegada um pouco mais larga que os ombros no começo, mais perto do meio no fim (os pegadores convergem)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.0,
+     1.6
+    ],
+    "fonte": "ExRx — Lever Incline Chest Press (\"Grasp handles with wide oblique overhand grip\"; \"Range of motion will be compromised if grip is too wide\"); Life Fitness, MTS Iso-Lateral Incline Press (\"independently diverging and converging pressing motions\"); NSCA — Incline dumbbell bench press (\"Push the dumbbells upward and slightly inward\")"
+   },
+   {
+    "nome": "pegada entre a pronada e a neutra (palma meio virada pro meio do corpo)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     25,
+     65
+    ],
+    "fonte": "Life Fitness, IL-IP (\"The ergonomic handles ... are thoughtfully designed to sit perfectly between a neutral and overhand grip.\"); ExRx — Lever Incline Chest Press (\"wide oblique overhand grip\")"
+   },
+   {
+    "nome": "punho quase reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"maintaining a neutral wrist position (i.e., wrists in line with your forearms)\"): o pegador é fixo no braço da máquina e gira com ele, então o punho dobra um pouco de lado no meio e no fim do arco"
+   },
+   {
+    "nome": "punho dobrando de lado dentro da amplitude normal (radial até 20°, ulnar até 30°)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "limites.py (Norkin & White, valores da AAOS): desvio radial 20°, ulnar 30°"
+   },
+   {
+    "nome": "antebraço subindo do cotovelo até o pegador no começo (cotovelo abaixo da mão)",
+    "medida": "inclinacao",
+    "segmento": [
+     "ForeArm",
+     "Hand"
+    ],
+    "t": 0.0,
+    "graus": [
+     -40,
+     -15
+    ],
+    "fonte": "ExRx — Lever Incline Chest Press (\"position elbows out to sides\"); free-exercise-db (foto do começo: os cotovelos pros lados e abaixo das mãos)"
+   },
+   {
+    "nome": "tronco parado, encostado e reclinado como o encosto",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     9,
+     18
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"Sit with your back firmly supported against the backrest\"); encosto 15° atrás da vertical (IL-IP: tronco ~14° na foto de lado do fabricante)"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"Maintain the natural arch in your low back and avoid arching your back throughout the exercise\")"
+   },
+   {
+    "nome": "quadril parado (sentado, ~103° entre o tronco e a coxa)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     70,
+     84
+    ],
+    "fonte": "a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 − inclinação do tronco pra trás)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"Position your feet firmly on the floor to stabilize your body\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "escápulas pra trás e paradas no encosto (o ombro não vai pra frente no fim)",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "free-exercise-db (\"your shoulder blades retracted\"); ACE — Seated Incline Cable Press (\"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Seated Incline Cable Press (\"maintain stability of your head during the movement\"); free-exercise-db (\"Your chest and head should be up\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}
