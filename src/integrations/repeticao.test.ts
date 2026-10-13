@@ -94,7 +94,8 @@ describe("podeRepetir", () => {
     }
   });
 
-  it("hml-14d: as 6 RPCs novas das listas (STABLE) repetem — as 2 do Treino pelo cliente do Treino, as 4 pelo do principal", () => {
+  it("hml-14d: as RPCs das listas (STABLE) que seguem no navegador repetem — as 2 do Treino pelo cliente do Treino e as 3 do principal (a minha_agenda_lista saiu na 21a)", () => {
+    // hml-21d: as 2 do Treino ficam no navegador — o gate de latência do F7 reprovou as leituras pela função treinos (o frio da função)
     for (const nome of ["modelos_da_lista", "exercicios_da_lista"]) {
       expect(podeRepetir(`${T}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     }

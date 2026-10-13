@@ -8,10 +8,16 @@
  *   master) e levam a prescrição do modelo para quem passa a receber.
  * - Histórico e relatório: admin-relatorio (as mesmas leituras do Histórico e do Relatório antigos).
  * Tudo online: o painel não tem PowerSync.
+ * hml-21d (H-43 · jeito 2, etapa 3): as GRAVAÇÕES do cadastro (modelos, exercícios do modelo, a ordem, pastas, a biblioteca, os grupos
+ * musculares e a foto do exercício) vão pela função treinos (src/treino/servidor.ts: acaoTreinos — o servidor grava como a pessoa, com o
+ * dono do token; o RLS decide de novo): a mesma assinatura, o mesmo erro da tela (o ErroTreinoPainel com os códigos de hoje — repetido,
+ * em_uso, sem_permissao, sem_internet —; a mensagem crua do banco não chega mais à tela). A ordem do modelo vira 1 ação (a RPC atômica
+ * modelo_ordenar); a foto sobe pelo link que o servidor assina (o caminho <id>.<ext> de hoje).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- os tipos gerados do supabase não conhecem professor_id/colunas novas (como no admin antigo) */
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 import { POR_PAGINA, deslocamento } from "@/lib/paginacao";
+import { acaoTreinos, codigoDoTreino, type AcaoTreinos } from "@/treino/servidor";
 import { listarAlunos } from "@/lib/saasApi";
 import { ErroTreinoPainel, exerciciosDaLista, invocar, tirarTreino, type ItemHistorico } from "@/treino/editor/api";
 import type { CamposEquivalencia } from "@/treino/equivalencia";
@@ -35,6 +41,34 @@ function falhou(error: { message?: string; code?: string } | null | undefined): 
 
 function exigirInternet(): void {
   if (!online()) throw new ErroTreinoPainel("sem_internet");
+}
+
+/**
+ * hml-21d: o código de um erro da função treinos no código que a tela do painel já entende (o falhou() de hoje): conflito → repetido,
+ * em_uso → em_uso, sem_acesso → sem_permissao, muitas_acoes → rate_limited, a rede → sem_internet; o resto, o código (nao_encontrado,
+ * dados_invalidos, erro_interno… → a frase fixa do mensagemDoErro — nunca a mensagem crua do banco).
+ */
+export function codigoDoPainel(codigo: string): string {
+  switch (codigo) {
+    case "conflito":
+      return "repetido";
+    case "sem_acesso":
+      return "sem_permissao";
+    case "muitas_acoes":
+      return "rate_limited";
+    default:
+      return codigo;
+  }
+}
+
+/** hml-21d: uma gravação pela função treinos (1 chamada, sem repetir); o erro vira o ErroTreinoPainel com o código da tela. */
+async function gravar<T = Record<string, unknown>>(acao: AcaoTreinos, corpo: Record<string, unknown>): Promise<T> {
+  exigirInternet();
+  try {
+    return await acaoTreinos<T>(acao, corpo);
+  } catch (e) {
+    throw new ErroTreinoPainel(codigoDoPainel(codigoDoTreino(e)));
+  }
 }
 
 async function emLotes<T>(ids: string[], ler: (lote: string[]) => Promise<T[]>, tamanho = 150): Promise<T[]> {
@@ -197,44 +231,31 @@ export async function buscarAlunosDoTreino(q: QuemMexe, termo: string): Promise<
 
 // ───────────────────────── modelos ─────────────────────────
 
+/** O modelo novo — o dono é o do token no servidor (o master cria no global; o personal, para ele — o donoAoCriar da tela). */
 export async function criarModelo(nome: string, dono: string | null): Promise<string> {
-  exigirInternet();
-  const { data, error } = await tabela("tb_grupos_treino").insert({ nome, professor_id: dono }).select("id").single();
-  if (error) falhou(error);
-  return String((data as { id: string }).id);
+  const r = await gravar<{ id: string }>("modelo_criar", { nome });
+  return String(r.id);
 }
 
 export async function renomearModelo(id: string, nome: string): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_grupos_treino").update({ nome }).eq("id", id);
-  if (error) falhou(error);
+  await gravar("modelo_editar", { id, nome });
 }
 
 export async function excluirModelo(id: string): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_grupos_treino").delete().eq("id", id);
-  if (error) falhou(error);
+  await gravar("modelo_excluir", { id });
 }
 
 export async function adicionarAoModelo(grupoId: string, exercicioId: string, ordem: number): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_grupos_exercicios").insert({ grupo_id: grupoId, exercicio_id: exercicioId, ordem });
-  if (error) falhou(error);
+  await gravar("modelo_exercicio_incluir", { grupo: grupoId, exercicio: exercicioId, ordem });
 }
 
 export async function tirarDoModelo(grupoId: string, exercicioId: string): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_grupos_exercicios").delete().eq("grupo_id", grupoId).eq("exercicio_id", exercicioId);
-  if (error) falhou(error);
+  await gravar("modelo_exercicio_tirar", { grupo: grupoId, exercicio: exercicioId });
 }
 
-/** A ordem nova do modelo (todos os exercícios dele, na ordem da tela). */
+/** A ordem nova do modelo (todos os exercícios dele, na ordem da tela) — hml-21d: de uma vez, numa transação (a RPC modelo_ordenar). */
 export async function ordenarModelo(grupoId: string, ordem: string[]): Promise<void> {
-  exigirInternet();
-  for (let i = 0; i < ordem.length; i++) {
-    const { error } = await tabela("tb_grupos_exercicios").update({ ordem: i }).eq("grupo_id", grupoId).eq("exercicio_id", ordem[i]);
-    if (error) falhou(error);
-  }
+  await gravar("modelo_ordenar", { grupo: grupoId, ids: ordem });
 }
 
 /** Séries, repetições, descanso e carga do exercício NO MODELO (W23) — a de cada aluno continua no perfil dele (W15). */
@@ -243,39 +264,34 @@ export async function prescreverModelo(
   exercicioId: string,
   p: Partial<Pick<LinhaModelo, "num_series" | "reps_alvo" | "descanso_segundos" | "carga_sugerida_kg">>,
 ): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_grupos_exercicios").update(p).eq("grupo_id", grupoId).eq("exercicio_id", exercicioId);
-  if (error) falhou(error);
+  await gravar("modelo_exercicio_prescrever", { ...p, grupo: grupoId, exercicio: exercicioId });
 }
 
 // ───────────────────────── pastas ─────────────────────────
 
+/** A pasta nova — o dono é o do token no servidor (o master cria no global; o personal, para ele). */
 export async function criarPasta(nome: string, dono: string | null): Promise<string> {
-  exigirInternet();
-  const { data, error } = await tabela("tb_pastas_treino").insert({ nome, professor_id: dono }).select("id").single();
-  if (error) falhou(error);
-  return String((data as { id: string }).id);
+  const r = await gravar<{ id: string }>("pasta_criar", { nome });
+  return String(r.id);
 }
 
 export async function renomearPasta(id: string, nome: string): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_pastas_treino").update({ nome }).eq("id", id);
-  if (error) falhou(error);
+  await gravar("pasta_editar", { id, nome });
 }
 
 /** A pasta sai; os treinos dela ficam (voltam para a lista sem pasta) — como no admin antigo. */
 export async function excluirPasta(id: string): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_pastas_treino").delete().eq("id", id);
-  if (error) falhou(error);
+  await gravar("pasta_excluir", { id });
 }
 
+/** Põe/tira o treino da pasta: o que já está ao pôr (o servidor responde ok) e o que já não está ao tirar = o fim de hoje (sem erro). */
 export async function colocarNaPasta(pastaId: string, grupoId: string, colocar: boolean): Promise<void> {
-  exigirInternet();
-  const { error } = colocar
-    ? await tabela("tb_pastas_treino_grupos").insert({ pasta_id: pastaId, grupo_id: grupoId })
-    : await tabela("tb_pastas_treino_grupos").delete().eq("pasta_id", pastaId).eq("grupo_id", grupoId);
-  if (error && !(colocar && error.code === "23505")) falhou(error);
+  try {
+    await gravar(colocar ? "pasta_vincular" : "pasta_desvincular", { pasta: pastaId, grupo: grupoId });
+  } catch (e) {
+    if (!colocar && e instanceof ErroTreinoPainel && e.codigo === "nao_encontrado") return;
+    throw e;
+  }
 }
 
 // ───────────────────────── quem recebe ─────────────────────────
@@ -301,52 +317,51 @@ export interface DadosExercicio extends CamposEquivalencia {
   dica: string | null;
 }
 
-/** GIF/imagem do exercício no bucket público (escrita só da staff pela política): a URL leva ?v= para o app buscar a nova na hora. */
+/**
+ * GIF/imagem do exercício no bucket público (escrita só da staff pela política): a URL leva ?v= para o app buscar a nova na hora.
+ * hml-21d (§2.5): o servidor assina o link de upload (exercicio_foto_preparar — o caminho <id>.<ext> nasce lá, a policy do bucket confere
+ * que o exercício é de quem grava) e o navegador só faz o PUT do arquivo nele (uploadToSignedUrl) e monta a URL pública (getPublicUrl).
+ */
 export async function subirImagem(arquivo: File, exercicioId: string): Promise<string> {
   exigirInternet();
   if (!arquivo.type.startsWith("image/")) throw new ErroTreinoPainel("imagem_invalida");
   if (arquivo.size > 5 * 1024 * 1024) throw new ErroTreinoPainel("imagem_grande");
-  const ext = (arquivo.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
-  const caminho = `${exercicioId}.${ext}`;
-  const { error } = await supabase.storage.from(BUCKET_EXERCICIOS).upload(caminho, arquivo, { upsert: true, contentType: arquivo.type, cacheControl: "31536000" });
-  if (error) throw new ErroTreinoPainel(error.message || "upload_falhou");
-  const { data } = supabase.storage.from(BUCKET_EXERCICIOS).getPublicUrl(caminho);
+  let alvo: { bucket: string; caminho: string; token: string };
+  try {
+    alvo = await acaoTreinos("exercicio_foto_preparar", { exercicio: exercicioId, tipo: arquivo.type, tamanho: arquivo.size });
+  } catch (e) {
+    const c = codigoDoTreino(e);
+    // o tipo que o bucket não aceita (SVG, HEIC…) → a frase da imagem; o Storage fora → a do upload; o resto, como as outras gravações
+    throw new ErroTreinoPainel(c === "dados_invalidos" ? "imagem_invalida" : c === "storage_falhou" ? "upload_falhou" : codigoDoPainel(c));
+  }
+  const { error } = await supabase.storage.from(alvo.bucket).uploadToSignedUrl(alvo.caminho, alvo.token, arquivo, { upsert: true, contentType: arquivo.type, cacheControl: "31536000" });
+  if (error) throw new ErroTreinoPainel("upload_falhou");
+  const { data } = supabase.storage.from(alvo.bucket).getPublicUrl(alvo.caminho);
   return `${data.publicUrl}?v=${Date.now()}`;
 }
 
+/** O exercício novo — o dono é o do token no servidor (o master cria no global; o personal, para ele); o emoji de hoje nasce lá. */
 export async function criarExercicio(d: DadosExercicio, dono: string | null): Promise<string> {
-  exigirInternet();
-  const { data, error } = await tabela("tb_exercicios")
-    .insert({ ...d, emoji: "🏋️", professor_id: dono })
-    .select("id")
-    .single();
-  if (error) falhou(error);
-  return String((data as { id: string }).id);
+  const r = await gravar<{ id: string }>("exercicio_criar", { ...d });
+  return String(r.id);
 }
 
+/** As colunas que vieram; a imagem_url só a da foto que subiu (o servidor confere), a que já estava ou nenhuma (tirar). */
 export async function salvarExercicio(id: string, d: Partial<DadosExercicio> & { imagem_url?: string | null }): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_exercicios").update(d).eq("id", id);
-  if (error) falhou(error);
+  await gravar("exercicio_editar", { ...d, id });
 }
 
 export async function excluirExercicio(id: string): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("tb_exercicios").delete().eq("id", id);
-  if (error) falhou(error);
+  await gravar("exercicio_excluir", { id });
 }
 
 export async function criarMusculo(nome: string, dono: string | null): Promise<GrupoMuscularRow> {
-  exigirInternet();
-  const { data, error } = await tabela("grupos_musculares").insert({ nome, professor_id: dono }).select("id, nome, professor_id").single();
-  if (error) falhou(error);
-  return data as GrupoMuscularRow;
+  const r = await gravar<{ linha: GrupoMuscularRow }>("grupo_muscular_criar", { nome });
+  return r.linha;
 }
 
 export async function excluirMusculo(id: string): Promise<void> {
-  exigirInternet();
-  const { error } = await tabela("grupos_musculares").delete().eq("id", id);
-  if (error) falhou(error);
+  await gravar("grupo_muscular_excluir", { id });
 }
 
 // ───────────────────────── histórico ─────────────────────────

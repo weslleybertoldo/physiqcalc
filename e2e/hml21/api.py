@@ -51,6 +51,24 @@ hml-21b (13/10/2026 — contrato da 21b, decisões E, I e N), --area agenda|alun
   --limpar  a massa da 21b (o Estado + o que tem a marca dos donos de teste, inclusive na Lixeira) e os avisos anotados
   --so-leitura  a MESMA conta das áreas da 21a (a aluno-calc na produção; a w5p-aluna no staging — 1 login por base) + o `ler` novo
                 (minhas_regras_agenda → ok: a conta v2 publicada; a v1 responderia consulta_invalida)
+hml-21d (13/10/2026 — contrato da 21d, decisões A, B, F, I e N), --area treinos (e2e/hml21/treinos21d.py: as contas, a função treinos, o SQL
+da lib como a pessoa no Treino, a massa e a limpeza):
+  P   cada consulta da treinos (Meus treinos — a página, os detalhes e o treino pelo id —, as pastas, os grupos musculares, o catálogo dos
+      Modelos, a Busca, os treinos prontos e a biblioteca) = o SQL FIXO da lib do 7c1a637 COMO A PESSOA (o personal no Treino, com o papel
+      do token dele); a conta › aluno_treino (o editor) = a RPC do principal como ele; cada ação faz o MESMO de hoje na massa de TESTE (a
+      marca "hml21 e2e <rodada>"; os ids no Estado, chave hml21d): a pasta, o modelo (3 exercícios, a prescrição, a ordem pela RPC nova, o
+      vínculo), o grupo muscular, o exercício com a foto pelo link que o servidor assina (o caminho <id>.png) e o espelho do perfil (o MESMO
+      valor) — cada efeito conferido por SQL só leitura
+  N1  a OUTRA conta (w13-dono) não lê nada do personal e não muda/apaga/ordena/vincula a massa dele nem pede o link da foto dele (404/403; a
+      massa igual por SQL); nem o aluno_treino da aluna dele pela conta · N2 · N3 · N4/N5 (o dono, o emoji, a imagem e as chaves de fora no
+      corpo CAEM) · N6 · N7 · N8 (a imagem_url fora do caminho do servidor → dados_invalidos; sem o arquivo → nao_encontrado) · N9 · N10 (o
+      personal não é master: as 8 ações e as 4 leituras do Master → 403 antes do banco; nada global novo) · N12 (a OUTRA com o id do personal
+      no corpo não muda o physiq_professores dele)
+  --limpar  a massa do Treino (o arquivo de teste do Storage, as linhas pelas ações e o que tem a marca dos donos de teste, por SQL só no
+            staging do Treino) — conferido por SQL só leitura, só contagem
+  --so-leitura  a treinos (OPTIONS, 401, 400 de schema, a q desconhecida e 1 `ler` P — treinos_prontos) e a conta v4 (o `ler` novo:
+                aluno_treino) com a MESMA conta das áreas da 21a (a aluno-calc na produção; a w5p-aluna no staging) — 1 login por base
+                (o principal reaproveitado + a troca do Treino)
 """
 from __future__ import annotations
 
@@ -66,6 +84,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 import painel21b as P21  # noqa: E402  (hml-21b: as contas, a massa e a limpeza da Agenda e dos Alunos)
+import treinos21d as T21  # noqa: E402  (hml-21d: a função treinos, o SQL da lib no Treino, a massa e a limpeza)
 
 C = B.C
 CASOS = ("P", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N11")
@@ -90,7 +109,7 @@ ACOES = {
                "trava_excluir", "regras_salvar", "agenda_confirmar", "agenda_desistir", "agenda_reagendar", "agenda_marcar"),
     "alunos": ("pacote_definir",),
 }
-AREAS = ("casca", "app", "agenda", "alunos")
+AREAS = ("casca", "app", "agenda", "alunos", "treinos")  # hml-21d: + o Treino
 # as consultas do PAINEL de OUTRAS funções (a nutricao, a financeiro): pela conta, consulta_invalida (N11 da 21a). hml-21b (PADRÃO, regra da
 # sessão principal 03:25 — o esperado da 21a não muda: consulta de fora do catálogo → consulta_invalida): saíram daqui as 2 que a 21b pôs
 # no catálogo da conta (alunos_da_conta, agenda_agendamentos — o N11 da 21b: a aluna as pede e o RLS não deixa nada) e entraram 2 de
@@ -1182,6 +1201,9 @@ def rodar_21b(o, area: str, base: str, casos: set) -> None:
 
 
 def rodar(o, area: str, base: str, casos: set) -> None:
+    if area in B.AREAS_DA_21D:  # hml-21d
+        rodar_21d(o, base, casos)
+        return
     if area in B.AREAS_DA_21B:
         rodar_21b(o, area, base, casos)
         return
@@ -1254,11 +1276,743 @@ def sair(o) -> None:
     B.Sessoes("api21 sair").sair(o)
 
 
+# ───────────────────────── hml-21d: o Treino pela treinos (--area treinos) ─────────────────────────
+CASOS_21D = ("P", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N10", "N12")  # o N11 não é da 21d (contrato da 21d, F4)
+CONSULTAS_21D = ("modelos", "modelos_detalhes", "modelo", "pastas", "grupos_musculares", "catalogo_modelos", "catalogo_pastas", "busca_treinos",
+                 "treinos_prontos")
+CONSULTAS_MASTER_21D = ("treinos_prontos_todos", "exercicios_globais", "grupos_globais", "globais_do_grupo")
+ACOES_21D = ("modelo_criar", "modelo_editar", "modelo_excluir", "modelo_exercicio_incluir", "modelo_exercicio_tirar", "modelo_exercicio_prescrever",
+             "modelo_ordenar", "pasta_criar", "pasta_editar", "pasta_excluir", "pasta_vincular", "pasta_desvincular", "exercicio_criar",
+             "exercicio_editar", "exercicio_excluir", "exercicio_foto_preparar", "grupo_muscular_criar", "grupo_muscular_excluir", "professor_perfil")
+ACOES_MASTER_21D = ("treino_pronto_salvar", "treino_pronto_ativo", "exercicio_global_criar", "exercicio_global_editar", "exercicio_global_excluir",
+                    "exercicio_global_promover", "grupo_global_criar", "grupo_global_excluir")
+CHAVES_DE_DONO_21D = ("professor_id", "user_id", "dono_id", "criado_por", "treino_user_id")
+EX_X = "77777777-7777-4777-8777-777777777777"  # um exercício de exemplo (só o --seco)
+
+
+def treino_pronto_de_exemplo(rodada: str) -> dict:
+    """Um treino pronto como a tela do Master manda (o salvarTreinoPronto: a linha + as divisões) — o N10 (recusado antes do banco)."""
+    return {"treino": {"codigo": f"hml21-e2e-{rodada}", "nome": T21.marca(rodada), "objetivo": "ganhar_massa", "nivel": "iniciante", "dias_por_semana": 3,
+                       "divisao": "AB", "descricao": None, "ordem": 999, "ativo": False},
+            "divisoes": [{"letra": "A", "nome": "Treino A", "dias": ["SEG"], "exercicios": [{"exercicio_id": EX_X, "series": 3, "reps": "10",
+                                                                                            "descanso_segundos": 60, "observacao": None}]}]}
+
+
+def pedidos_ler_21d() -> list[dict]:
+    """Os corpos `ler` da rodada da 21d (P e os N) — o --seco passa cada um pelo leitor do servidor (o catálogo e a especial)."""
+    ok = [B.item("modelos", filtros={}, offset=0, limite=20), B.item("modelos_detalhes", ids=[FALSO, OUTRO]), B.item("modelo", id=FALSO),
+          B.item("pastas"), B.item("grupos_musculares"), B.item("catalogo_modelos"), B.item("catalogo_pastas"),
+          B.item("busca_treinos", termo=T21.TERMO_BUSCA), B.item("treinos_prontos"),
+          B.item("exercicios_lista", filtros={"escopo": "visiveis"}, offset=0, limite=20)]
+    n45 = [B.item("pastas", professor_id=OUTRO, select="*", colunas="*"), B.item("modelos", filtros={"q": "a", "professor": OUTRO, "sql": "x"}, offset=0,
+                                                                                limite=20, p_uid=OUTRO),
+           B.item("exercicios_lista", filtros={"escopo": "minha", "professor_id": OUTRO, "eu": OUTRO}, offset=0, limite=20, user_id=OUTRO),
+           B.item("modelo", id=FALSO, professor_id=OUTRO)]
+    ruins = [B.item("modelos", filtros={}, offset=-1, limite=20), B.item("modelos", filtros={}, offset=0, limite=101), B.item("modelo", id="nao-uuid"),
+             B.item("modelos_detalhes", ids=[FALSO] * 151), B.item("busca_treinos"), B.item("exercicios_lista", filtros={"escopo": "todo_mundo"}, offset=0, limite=20),
+             B.item("exercicios_lista", filtros={"codigos": ["DROP TABLE"]}, offset=0, limite=20), B.item("exercicios_lista", filtros={"escopo": "visiveis"})]
+    return [
+        {"acao": "ler", "itens": ok},
+        {"acao": "ler", "itens": [ok[3], B.item("treinos_de_todo_mundo"), B.item("tb_grupos_treino")]},  # N3
+        {"acao": "ler", "itens": n45},  # N4/N5
+        {"acao": "ler", "itens": ruins},  # o param fora da forma
+        {"acao": "ler", "itens": [ok[3]] * 17},  # N9
+        {"acao": "ler", "itens": [B.item("treinos_prontos_todos"), B.item("exercicios_globais", pagina=1), B.item("grupos_globais"),
+                                  B.item("globais_do_grupo", nome="Peito")]},  # N10: as do Master (recusadas antes do banco a quem não é)
+        {"acao": "ler", "itens": [ok[3], B.item("exercicios_globais", pagina=1)]},  # N10: 1 do Master no meio = o pedido inteiro recusado
+    ]
+
+
+def pedidos_acoes_21d(rodada: str) -> list[tuple[str, dict, bool]]:
+    """As ações da rodada da 21d: (ação, corpo, o servidor aceita a forma?) — o --seco confere cada uma no lerCorpoDaAcao do servidor (e o
+    treino_pronto_salvar no lerTreinoPronto)."""
+    mk = T21.marca(rodada)
+    ex = T21.corpo_exercicio(rodada, mk)
+    url = T21.url_publica("exercicios-staging", f"{EX_X}.png", 1760000000000)
+    return [
+        ("pasta_criar", {"nome": mk, "professor_id": OUTRO, "id": FALSO}, True),  # N4/N5
+        ("pasta_criar", {}, False),
+        ("modelo_criar", {"nome": mk, "professor_id": OUTRO}, True),
+        ("modelo_criar", {"nome": "x" * 201}, False),
+        ("pasta_editar", {"id": FALSO, "nome": mk + " editada", "professor_id": OUTRO}, True),
+        ("modelo_editar", {"id": FALSO, "nome": mk + " editado"}, True),
+        ("modelo_editar", {"nome": "x"}, False),  # sem o id
+        ("pasta_vincular", {"pasta": FALSO, "grupo": OUTRO}, True),
+        ("pasta_desvincular", {"pasta": FALSO, "grupo": OUTRO}, True),
+        ("pasta_vincular", {"pasta": "nao-uuid", "grupo": OUTRO}, False),
+        ("grupo_muscular_criar", {"nome": mk, "professor_id": OUTRO}, True),
+        ("grupo_muscular_excluir", {"id": FALSO}, True),
+        ("exercicio_criar", {**ex, "emoji": "x", "professor_id": OUTRO, "imagem_url": "https://exemplo.example/x.png", "id": FALSO}, True),  # N5
+        ("exercicio_criar", {**ex, "tipo": "natacao"}, False),
+        ("exercicio_criar", {k: v for k, v in ex.items() if k != "grupo_muscular"}, False),
+        ("exercicio_editar", {"id": EX_X, "imagem_url": url}, True),
+        ("exercicio_editar", {"id": EX_X, "imagem_url": None, "professor_id": OUTRO}, True),  # tirar a foto (o null vai)
+        ("exercicio_editar", {"id": EX_X, "nome": None}, False),  # o nome não aceita null
+        ("exercicio_foto_preparar", {"exercicio": EX_X, "tipo": "image/png", "tamanho": 1234}, True),
+        ("exercicio_foto_preparar", {"exercicio": EX_X, "tipo": "image/svg+xml", "tamanho": 1234}, False),
+        ("exercicio_foto_preparar", {"exercicio": EX_X, "tipo": "image/png", "tamanho": 5 * 1024 * 1024 + 1}, False),
+        ("exercicio_excluir", {"id": EX_X}, True),
+        ("modelo_exercicio_incluir", {"grupo": FALSO, "exercicio": EX_X, "ordem": 0, "professor_id": OUTRO}, True),
+        ("modelo_exercicio_incluir", {"grupo": FALSO, "exercicio": EX_X}, False),  # sem a ordem
+        ("modelo_exercicio_prescrever", {"grupo": FALSO, "exercicio": EX_X, "num_series": 4, "reps_alvo": "8-10", "descanso_segundos": 90,
+                                         "carga_sugerida_kg": 22.5}, True),
+        ("modelo_exercicio_prescrever", {"grupo": FALSO, "exercicio": EX_X, "carga_sugerida_kg": -1}, False),
+        ("modelo_ordenar", {"grupo": FALSO, "ids": [EX_X, OUTRO, FALSO]}, True),
+        ("modelo_ordenar", {"grupo": FALSO, "ids": []}, False),
+        ("modelo_ordenar", {"grupo": FALSO, "ids": ["nao-uuid"]}, False),
+        ("modelo_exercicio_tirar", {"grupo": FALSO, "exercicio": EX_X}, True),
+        ("modelo_excluir", {"id": FALSO}, True),
+        ("pasta_excluir", {"id": FALSO}, True),
+        ("professor_perfil", {"nome": "Personal", "foto_url": None, "id": OUTRO, "user_id": OUTRO}, True),  # N12: o id do corpo cai
+        ("professor_perfil", {"nome": None}, False),
+        # o Master (a forma passa; o papel é conferido ANTES do banco — o N10)
+        ("treino_pronto_salvar", treino_pronto_de_exemplo(rodada), True),
+        ("treino_pronto_salvar", {**treino_pronto_de_exemplo(rodada), "divisoes": []}, False),
+        ("treino_pronto_ativo", {"id": FALSO, "ativo": True}, True),
+        ("exercicio_global_criar", {"nome": mk, "grupo_muscular": "Peito", "emoji": "x", "professor_id": OUTRO}, True),
+        ("exercicio_global_editar", {"id": FALSO, "nome": mk}, True),
+        ("exercicio_global_excluir", {"id": FALSO}, True),
+        ("exercicio_global_promover", {"id": EX_X}, True),
+        ("grupo_global_criar", {"nome": mk}, True),
+        ("grupo_global_excluir", {"id": FALSO}, True),
+    ]
+
+
+def seco_21d(o) -> None:  # noqa: PLR0915
+    """O --seco da 21d (sem rede): os corpos pelo leitor REAL do servidor, o SQL da lib de cada consulta, a Guarda, as regras da foto, o SQL
+    como a pessoa no Treino, a trava da escrita da massa e o Estado."""
+    B.usar_area("treinos")
+    rodada = "seco"
+    lers = pedidos_ler_21d()
+    acoes = pedidos_acoes_21d(rodada)
+    png = B.png_sintetico()
+    url_ok = T21.url_publica("exercicios-staging", f"{EX_X}.png", 1760000000000)
+    hosts = [B.API_T, "https://uxwpwdbbnlticxgtzcsb.supabase.co"]
+    r = T21.regras_treinos(lers + [{**c, "acao": a} for a, c, _ok in acoes], caminhos=[[EX_X, "image/png"], [EX_X.upper(), "image/gif"]],
+                           urls=[[url_ok, "exercicios-staging", EX_X, hosts], [url_ok, "exercicios-staging", FALSO, hosts],
+                                 [url_ok.replace("exercicios-staging", "exercicios"), "exercicios-staging", EX_X, hosts],
+                                 ["https://exemplo.example/storage/v1/object/public/exercicios-staging/" + EX_X + ".png", "exercicios-staging", EX_X, hosts],
+                                 [url_ok.replace(".png", ".svg"), "exercicios-staging", EX_X, hosts]],
+                           papeis=["professor", "aluno", None, "admin", "master"])
+    cons = r["consultas"]
+    o.ok(set(CONSULTAS_21D) | set(CONSULTAS_MASTER_21D) == set(cons) and r["especiais"] == ["exercicios_lista"] and r["master"] == list(CONSULTAS_MASTER_21D),
+         f"[seco] o catálogo da treinos = as {len(CONSULTAS_21D)} da área + as {len(CONSULTAS_MASTER_21D)} do Master + a especial exercicios_lista")
+    o.ok(tuple(r["modelos"] + r["biblioteca"]) == ACOES_21D and tuple(r["acoes_master"]) == ACOES_MASTER_21D,
+         f"[seco] as {len(ACOES_21D)} ações da área e as {len(ACOES_MASTER_21D)} do Master = as listas do servidor, na ordem")
+    o.ok(all(q in T21.SQL_DA_LIB_21D and "(7c1a637" in T21.SQL_DA_LIB_21D[q][0] and T21.SQL_DA_LIB_21D[q][0].startswith("src/")
+             for q in ("modelos", "linhas", "vinculos_dos_modelos", "vinculos_das_pastas", "exercicios_citados", "modelo", "pastas", "grupos_musculares",
+                       "catalogo_modelos", "busca_treinos", "treinos_prontos", "exercicios_lista", "aluno_treino")),
+         "[seco] cada consulta (e os detalhes que ela junta) tem o SQL FIXO da lib do 7c1a637 (com a origem arquivo:linha) para o P")
+    pl = r["pedidos"][: len(lers)]
+    o.ok(pl[0].get("ok") is True and all(i.get("ok") for i in pl[0]["itens"]) and pl[0].get("master") is False,
+         f"[seco] P: o lote da tela passa no leitor do servidor (os {len(pl[0]['itens'])} itens ok — a especial exercicios_lista pelo leitor dela)")
+    o.ok([i.get("erro") for i in pl[1]["itens"]] == [None, "consulta_invalida", "consulta_invalida"], "[seco] N3: a q desconhecida → consulta_invalida só nela")
+    declarados = {q: set(cons[q]["params"]) for q in cons} | {"exercicios_lista": {"filtros", "offset", "limite"}}
+    n45 = pl[2]["itens"]
+    filtros_ok = set((n45[1].get("params") or {}).get("filtros") or {}) <= {"q", "pasta"} and \
+        set((n45[2].get("params") or {}).get("filtros") or {}) <= {"escopo", "professor", "q", "codigos", "musculos", "fora"}
+    o.ok(all(i.get("ok") and set(i["params"]) <= declarados[i["q"]] for i in n45) and filtros_ok,
+         f"[seco] N4/N5: o dono/as colunas/os filtros de fora no corpo CAEM (só os params declarados chegam): {[sorted(i.get('params', {})) for i in n45]}")
+    o.ok(all(i.get("ok") is False and i.get("erro") == "dados_invalidos" for i in pl[3]["itens"]),
+         f"[seco] o param fora da forma → dados_invalidos ({[i.get('erro') for i in pl[3]['itens']]})")
+    o.ok(pl[4] == {"modulo": "leitura", "ok": False, "erro": "lote_grande"}, "[seco] N9: 17 itens → lote_grande")
+    o.ok(pl[5].get("master") is True and pl[6].get("master") is True,
+         "[seco] N10: o `ler` com uma consulta do Master (sozinha ou no meio do lote) é do Master — a função recusa (403) ANTES do banco a quem não é")
+    pa = r["pedidos"][len(lers):]
+    certos = [(a, esperado, x) for (a, _c, esperado), x in zip(acoes, pa)]
+    modulo = {a: ("modelos" if a in r["modelos"] else "biblioteca" if a in r["biblioteca"] else "master") for a, _e, _x in certos}
+    o.ok(all(x.get("modulo") == modulo[a] and x.get("acao") == a for a, _e, x in certos), "[seco] cada ação vai ao módulo dela no servidor")
+    o.ok(all(bool(x.get("ok")) == esperado for _a, esperado, x in certos),
+         f"[seco] os corpos: os aceitos passam, os ruins → dados_invalidos ({[(a, x.get('campo')) for a, e, x in certos if not e]})")
+    valores = [(a, x.get("valores") or x.get("treino") or {}) for a, e, x in certos if e]
+    o.ok(all(set(v) <= set(r["corpos"][a]) for a, v in valores if a != "treino_pronto_salvar")
+         and not any(k in v for _a, v in valores for k in CHAVES_DE_DONO_21D),
+         "[seco] N4/N5: as chaves fora da lista da ação CAEM — nenhuma chave de dono (professor_id, user_id, dono_id…) chega ao banco: o dono vem "
+         "do token (o donoAoCriar — o master cria no global) e o professor_perfil só muda a linha de quem chama (N12)")
+    ex_criar = next(x.get("valores") for a, e, x in certos if a == "exercicio_criar" and e)
+    o.ok("emoji" not in ex_criar and "imagem_url" not in ex_criar and "id" not in ex_criar,
+         f"[seco] N5: o exercício novo não leva o emoji, a imagem nem o id do corpo (o emoji 🏋️ nasce no servidor): {sorted(ex_criar)}")
+    pronto = next(x for a, e, x in certos if a == "treino_pronto_salvar" and e)
+    o.ok(set(pronto.get("treino") or {}) == {"codigo", "nome", "objetivo", "nivel", "dias_por_semana", "divisao", "descricao", "ordem", "ativo"}
+         and len(pronto.get("divisoes") or []) == 1, "[seco] o treino pronto: as 9 colunas da linha e as divisões, limpas (o lerTreinoPronto)")
+    o.ok(r["caminhos"] == [f"{EX_X}.png", f"{EX_X}.gif"] and r["urls"] == [f"{EX_X}.png", None, None, None, None],
+         "[seco] a foto do exercício: o caminho <id>.<ext> nasce no servidor; a URL gravada só a pública DESTE exercício neste bucket (outro "
+         "exercício, outro bucket, outro host ou outra extensão → recusada — o N8)")
+    o.ok(r["papeis"] == [False, False, False, True, True], "[seco] N10: master = o app_metadata.role admin/master do token (o physiq_papel())")
+    o.ok(r["buckets"] == {"public": "exercicios", "staging": "exercicios-staging"} and r["url_api"] == B.API_T and r["imagem_max"] == 5 * 1024 * 1024
+         and len(png) < r["imagem_max"], "[seco] o bucket de cada ambiente, o host da API do Treino e o teto da imagem (a de teste: um PNG pequeno)")
+    o.ok(all(r["status"].get(k) == v for k, v in (("sem_acesso", 403), ("nao_encontrado", 404), ("em_uso", 409), ("sem_login", 401))),
+         "[seco] os status do servidor: sem_acesso 403 (N10), nao_encontrado 404 (N1), em_uso 409, sem_login 401 (N2)")
+    # a Guarda dos E2E: o `ler` da treinos é leitura; as ações (as do Master inclusive) são gravação (decisão F)
+    lido = json.dumps({"acao": "ler", "itens": [{"q": "pastas"}]})
+    o.ok(B.B17.funcao_grava("treinos", "ler", lido) is False and all(B.B17.funcao_grava("treinos", a, json.dumps({"acao": a})) for a in ACOES_21D + ACOES_MASTER_21D)
+         and B.B17.funcao_grava("treinos", "ler", json.dumps({"action": "ler", "acao": "modelo_excluir"})),
+         "[seco] a Guarda (hml17): o `ler` da treinos passa; as 27 ações são gravação; o disfarçado também")
+    # o SQL da lib: monta com o schema e os valores conferidos; recusa o que não é do formato
+    s1 = T21.sql_da_lib_21d("modelos", "staging", filtros={}, offset=0, limite=20)
+    s2 = T21.sql_da_lib_21d("linhas", "staging", ids=[FALSO, OUTRO])
+    s3 = T21.sql_da_lib_21d("busca_treinos", "staging", uid=FALSO, padrao=T21.padrao_da_busca("treino"))
+    s4 = T21.sql_da_lib_21d("treinos_prontos", "staging")
+    recusas = 0
+    for q, kv in (("modelo", {"id": "x", "uid": FALSO}), ("modelos", {"filtros": {"q": 1}, "offset": 0, "limite": 20}), ("modelos", {"filtros": {}, "offset": "0", "limite": 20}),
+                  ("linhas", {"ids": ["x"]}), ("busca_treinos", {"uid": FALSO, "padrao": "x" * 300}), ("pastas", {"outra": 1}), ("pastas", {"uid": FALSO, "s": "x"})):
+        try:
+            T21.sql_da_lib_21d(q, "staging", **kv)
+        except (SystemExit, Exception):  # noqa: BLE001 — o uuid_ok levanta o Parou
+            recusas += 1
+    try:
+        T21.sql_da_lib_21d("pastas", "outro", uid=FALSO)
+    except SystemExit:
+        recusas += 1
+    o.ok("staging.modelos_da_lista('{}'::jsonb, 0::integer, 20::integer)" in s1 and "jsonb_agg" in s2 and "order by ordem, id" in s2
+         and "nome ilike '%treino%'" in s3 and "limit 6" in s3 and "where t.ativo" in s4 and "order by t.ordem" in s4 and recusas == 8,
+         f"[seco] o SQL da lib monta com o schema e os valores conferidos (uuid, lista, inteiro, os filtros, o padrão do ilike); {recusas}/8 fora do formato recusados")
+    # o SQL como a pessoa no Treino: as claims do PRÓPRIO token (o sub e o papel) — um token de exemplo, sem assinatura (nada vai à rede)
+    import base64  # noqa: PLC0415
+    carga = base64.urlsafe_b64encode(json.dumps({"sub": FALSO, "role": "authenticated", "app_metadata": {"role": "professor"}}).encode()).decode().rstrip("=")
+    tok_falso = f"e30.{carga}.x"
+    sql = T21.sql_como_treino(tok_falso, "select 1")
+    escrita_recusada = False
+    try:
+        T21.ler_como_treino(tok_falso, "delete from staging.tb_grupos_treino")
+    except SystemExit:
+        escrita_recusada = True
+    o.ok("set transaction read only" in sql and '"app_metadata": {"role": "professor"}' in sql and f"'{FALSO}'" in sql and escrita_recusada
+         and T21.papel_do_token(tok_falso) == "professor",
+         "[seco] o SQL como a pessoa no Treino: só leitura, com o sub e o app_metadata.role do token dela (o RLS do Treino lê o papel); "
+         "palavra de escrita → recusada antes de sair")
+    # a forma da lib: a resposta da função (as linhas com o exercício embutido e os vínculos) → a lib de hoje
+    resp = [{"id": FALSO, "linhas": [{"id": "l2", "grupo_id": FALSO, "exercicio_id": EX_X, "ordem": 1, "num_series": 3, "reps_alvo": "10", "descanso_segundos": 60,
+                                      "carga_sugerida_kg": None, "exercicio": {"id": EX_X, "nome": "x", "professor_id": None}},
+                                     {"id": "l1", "grupo_id": FALSO, "exercicio_id": OUTRO, "ordem": 0, "num_series": None, "reps_alvo": None,
+                                      "descanso_segundos": None, "carga_sugerida_kg": None, "exercicio": None}],
+             "vinculos": [{"id": "v2", "pasta_id": OUTRO, "grupo_id": FALSO}]}]
+    d = T21.detalhes_da_funcao(resp)
+    o.ok([x["exercicio_id"] for x in d["linhas"]] == [OUTRO, EX_X] and "id" not in d["linhas"][0] and [x["id"] for x in d["exercicios"]] == [EX_X]
+         and d["vinculos"] == [{"pasta_id": OUTRO, "grupo_id": FALSO}],
+         "[seco] a resposta da função na forma da lib: as linhas na ordem ordem + id (sem o id), os exercícios citados visíveis (o de fora do recorte "
+         "não entra) e os vínculos")
+    o.ok(T21.prontos_canonicos([{"id": 1, "grupos": [{"id": 2, "exercicios": [{"o": 2}, {"o": 1}]}, {"id": 1, "exercicios": []}]}])
+         == T21.prontos_canonicos([{"id": 1, "grupos": [{"id": 1, "exercicios": []}, {"id": 2, "exercicios": [{"o": 1}, {"o": 2}]}]}]),
+         "[seco] os treinos prontos comparam com os embutidos como conjunto (o PostgREST não os ordena — nem a lib de hoje)")
+    # a trava da escrita da massa (nada sai: a recusa é antes do subprocesso)
+    uid = FALSO
+    recusas = 0
+    for sql in ("delete from staging.tb_grupos_treino where true;",
+                "delete from public.tb_grupos_treino where professor_id = any(array['" + uid + "']::uuid[]) and nome like '%hml21 e2e%';",
+                "delete from staging.physiq_professores where professor_id = any(array['" + uid + "']::uuid[]) and nome like '%hml21 e2e%';",
+                "update staging.tb_exercicios set nome = 'x' where nome like '%hml21 e2e%';",
+                "delete from staging.tb_exercicios where professor_id = any(array['" + uid + "']::uuid[]) and nome like '%x%';",
+                "delete from staging.tb_exercicios where professor_id = any(array['" + uid + "']::uuid[]) and nome like '%hml21 e2e%'; delete from staging.tb_exercicios;"):
+        try:
+            T21.sql_escrever_treino_staging(sql)
+        except SystemExit:
+            recusas += 1
+    for args in (("public", "tb_exercicios", [uid]), ("staging", "physiq_professores", [uid]), ("staging", "tb_exercicios", ["x"])):
+        try:
+            T21.sql_apagar_massa_21d(*args)
+        except SystemExit:
+            recusas += 1
+    feitos = [T21.sql_apagar_massa_21d("staging", t, [uid, "x"]) for t, _m in T21.MASSA]
+    o.ok(recusas == 9 and all(T21._RE_DELETE_21D.fullmatch(x) for x in feitos) and all("'%hml21 e2e%'" in x for x in feitos)
+         and [t for t, _m in T21.MASSA] == ["tb_grupos_treino", "tb_pastas_treino", "tb_exercicios", "grupos_musculares"],
+         f"[seco] a limpeza da massa: só o DELETE no staging do Treino, só os donos de teste, só a marca, 1 instrução, nas 4 tabelas, na ordem das FKs "
+         f"(o modelo leva as linhas e os vínculos) — {recusas}/9 recusadas")
+    try:
+        T21.sql_contar_objetos("exercicios", [f"{EX_X}.png"])
+        obj_recusado = False
+    except SystemExit:
+        obj_recusado = True
+    est = B.Estado({"rodada": "x", "schema": "staging", "area": "hml21d", "linhas": [], "storage": [], "n8": None})
+    est.salvar = lambda: None  # o --seco não grava o Estado
+    T21.anotar_linha(est, "tb_exercicios", EX_X, uid)
+    T21.anotar_linha(est, "physiq_professores", EX_X, uid)  # fora da massa: não anota
+    T21.anotar_objeto(est, "exercicios-staging", f"{EX_X}.png")
+    T21.anotar_objeto(est, "exercicios", f"{EX_X}.png")  # o bucket da produção: não anota
+    T21.anotar_objeto(est, "exercicios-staging", f"{uid}/x.png")  # fora do caminho do servidor: não anota
+    m = est.d[B.CHAVE_21D]
+    o.ok(B.tem_massa_21d(est) and m["linhas"] == [["tb_exercicios", EX_X, uid]] and m["donos"] == [uid] and m["storage"] == [["exercicios-staging", f"{EX_X}.png"]]
+         and obj_recusado, "[seco] o Estado: a massa da 21d na chave hml21d (só as 4 tabelas; o dono junto; o arquivo só no exercicios-staging e no "
+                           "caminho <id>.<ext>) — nenhuma rodada da 21a/21b abre por cima")
+
+    class Placar:
+        def __init__(self) -> None:
+            self.r: list[bool] = []
+
+        def ok(self, c: object, _t: str, parar: object = None) -> bool:
+            self.r.append(bool(c))
+            return bool(c)
+
+        def linha(self, _t: str) -> None:
+            pass
+
+    cheio = B.Estado({"rodada": "x", "schema": "public", "area": "hml21d", "linhas": [], "storage": [], "n8": None,
+                      B.CHAVE_21D: {"donos": [uid], "linhas": [["tb_exercicios", EX_X, uid]], "storage": []}})
+    cheio.salvar = lambda: None
+    pl1 = Placar()
+    T21.limpar_massa_21d(pl1, cheio, "public", None)
+    o.ok(B.CHAVE_21D in cheio.d and pl1.r == [False], "[seco] o --limpar usa o schema GRAVADO no Estado: num Estado fora do staging com massa anotada "
+                                                       "nada sai (e avisa); a chave hml21d fica")
+    o.ok(len(T21.marca("10131234-ab12")) <= 200 and T21.corpo_exercicio("x", "y")["nome"].startswith(B.MARCA), "[seco] a marca cabe no nome (até 200)")
+    o.ok(T21.fase_do_codigo_21d("local", "x") == "antes" and T21.fase_do_codigo_21d("staging", "7c1a637") == "antes"
+         and T21.fase_do_codigo_21d("staging", "fd49b66") == "depois" and T21.fase_do_codigo_21d("staging", "HEAD") == "antes"
+         and T21.fase_do_codigo_21d("staging", "0123abc") == "antes",
+         "[seco] antes × depois vem do CÓDIGO medido (o 7c1a637 e o HEAD — o desvio do gate — leem o Treino direto: antes; o fd49b66 lia pela "
+         "treinos: depois; um commit que o repo não tem: antes)")
+    # 🟡1 da revisão: o N1 da biblioteca — a OUTRA conta com o filtros.professor = o personal (o arg da RPC de hoje passa no leitor do servidor)
+    rb = T21.regras_treinos([{"acao": "ler", "itens": [B.item("exercicios_lista", filtros={"professor": FALSO, "q": B.MARCA}, offset=0, limite=20)]}])
+    ib = rb["pedidos"][0]["itens"][0]
+    import inspect  # noqa: PLC0415
+    fonte_n1 = inspect.getsource(n1_outra)
+    o.ok(ib.get("ok") is True and set(ib["params"]["filtros"]) == {"professor", "q"} and '"exercicios_lista", filtros={"professor": uid' in fonte_n1
+         and "ACHADO N1 exercicios_lista" in fonte_n1,
+         "[seco] 🟡1: o N1 pede a biblioteca do personal pela exercicios_lista com o filtros.professor (o arg de hoje passa no leitor) e REGISTRA o "
+         "resultado como ACHADO (o RLS de hoje deixa; restringir é da etapa 4)")
+    # ⚪10 da revisão: a identidade no Treino conferida ANTES de cada troca de token do script
+    fonte_ctx = inspect.getsource(contexto_21d) + inspect.getsource(limpar_21d) + inspect.getsource(so_leitura_21d)
+    pares = [("T21.exige_identidade(o, s, T21.PERSONAL)", "L.token_treino(T21.PERSONAL)"), ("T21.exige_identidade(o, s, T21.OUTRA)", "L.token_treino(T21.OUTRA)"),
+             ("T21.exige_identidade(o, B.schema(), conta)", "L.token_treino(conta)")]
+    o.ok(all(a in fonte_ctx and b in fonte_ctx and fonte_ctx.index(a) < fonte_ctx.index(b) for a, b in pares),
+         "[seco] ⚪10: antes de cada troca de token do script (o personal, a w13-dono, a conta do smoke) o SELECT só leitura confere que ela já "
+         "existe no Treino (physiq_identidades) — nenhuma conta nova")
+
+
+def um_treino(sql: str) -> dict:
+    return (T21.ler_treino(sql) or [{}])[0]
+
+
+def comparar_21d(o, rotulo: str, obtido: object, esperado: object, conjunto: bool = False) -> bool:
+    """P: o que a função devolveu = o SQL da lib como a pessoa (as listas sem ordem total, como conjunto)."""
+    if conjunto:
+        obtido, esperado = B.como_conjunto(obtido), B.como_conjunto(esperado)
+    n = len(esperado) if isinstance(esperado, list) else "—"
+    return igual_ao_sql(o, f"P {rotulo} ({n} linha(s)" + (", como conjunto)" if conjunto else ")"), obtido, esperado)
+
+
+def lib_treino(ctx: dict, q: str, s: str, **valores) -> object:
+    """O SQL FIXO da lib como a pessoa no Treino (o token dela) → o valor (a lista ou o valor da RPC)."""
+    return (T21.ler_como_treino(ctx["tok"], T21.sql_da_lib_21d(q, s, **valores)) or [{}])[-1].get("v")
+
+
+def contexto_21d(o, L, s: str, casos: set) -> dict:
+    """As contas de teste da rodada: o personal (o token do Treino — a troca, a mesma do app — e o id do Treino, o papel), a OUTRA (N1/N12) e
+    a matrícula da aluna (SQL só leitura)."""
+    T21.exige_identidade(o, s, T21.PERSONAL)  # ⚪10 da revisão: a troca não cria conta nova no Treino
+    tok = L.token_treino(T21.PERSONAL)
+    uid = str((C.claims(tok) or {}).get("sub") or "")
+    papel = T21.papel_do_token(tok)
+    o.ok(C.eh_uuid(uid), f"o personal de teste no Treino (a troca de token, como o app): o papel {papel}", parar=True)
+    ctx: dict = {"tok": tok, "uid": uid, "papel": papel, "tok_p": L.token(T21.PERSONAL), "uid_p": L.uid(T21.PERSONAL), "email_p": B.B5.CONTAS[T21.PERSONAL][0],
+                 "pac": T21.matricula_do_aluno(s), "casos": casos}
+    if casos & {"N1", "N12"}:
+        T21.exige_identidade(o, s, T21.OUTRA)  # ⚪10 da revisão: a w13-dono já existe no Treino (nenhuma conta nova)
+        tok_o = L.token_treino(T21.OUTRA)
+        ctx.update({"tok_o": tok_o, "uid_o": str((C.claims(tok_o) or {}).get("sub") or ""), "tok_po": L.token(T21.OUTRA)})
+        o.ok(C.eh_uuid(ctx["uid_o"]) and ctx["uid_o"] != uid, "a OUTRA conta de teste no Treino (N1/N12): outro id do Treino", parar=True)
+    return ctx
+
+
+def p_leituras_21d(o, L, s: str, ctx: dict) -> list[dict]:
+    """P: cada consulta da área = o SQL FIXO da lib do 7c1a637 COMO A PESSOA (o personal no Treino; o aluno_treino no principal). Devolve
+    a página de treinos (os ids do Detalhe)."""
+    tok, uid = ctx["tok"], ctx["uid"]
+    filtros_bib = {"escopo": "visiveis"}
+    lote = [B.item("modelos", filtros={}, offset=0, limite=20), B.item("pastas"), B.item("grupos_musculares"), B.item("catalogo_modelos"),
+            B.item("catalogo_pastas"), B.item("busca_treinos", termo=T21.TERMO_BUSCA), B.item("treinos_prontos"),
+            B.item("exercicios_lista", filtros=filtros_bib, offset=0, limite=20)]
+    st, r, _h, ms = T21.ler(tok, lote)
+    its = T21.itens_de(r)
+    o.ok(st == 200 and len(its) == len(lote) and all(i.get("ok") for i in its), f"P: o lote da área treinos pela treinos como o personal → 200, "
+         f"{len(lote)} itens ok ({ms} ms)", parar=True)
+    pag, pastas, musculos, cat_m, cat_p, busca, prontos, bib = its
+    comparar_21d(o, "modelos (a RPC modelos_da_lista) = o SQL da lib (src/painel/treinos/api.ts:135)", pag.get("valor"),
+                 lib_treino(ctx, "modelos", s, filtros={}, offset=0, limite=20))
+    comparar_21d(o, "pastas = o SQL da lib (src/painel/treinos/api.ts:86)", pastas.get("linhas"), lib_treino(ctx, "pastas", s, uid=uid))
+    comparar_21d(o, "grupos_musculares = o SQL da lib (src/painel/treinos/api.ts:92)", musculos.get("linhas"), lib_treino(ctx, "grupos_musculares", s, uid=uid))
+    modelos_cat = T21.sem_embutidos(cat_m.get("linhas") or [], "linhas")
+    comparar_21d(o, "catalogo_modelos (os modelos) = o SQL da lib (src/painel/treinos/api.ts:102)", modelos_cat, lib_treino(ctx, "catalogo_modelos", s, uid=uid))
+    ids_cat = [x["id"] for x in modelos_cat if C.eh_uuid(x.get("id"))]
+    comparar_21d(o, "catalogo_modelos (as linhas embutidas) = o linhasDosModelos da lib (src/painel/treinos/api.ts:75)",
+                 T21.detalhes_da_funcao(cat_m.get("linhas") or [])["linhas"], lib_treino(ctx, "linhas", s, ids=ids_cat), conjunto=True)
+    pastas_cat = T21.sem_embutidos(cat_p.get("linhas") or [], "vinculos")
+    comparar_21d(o, "catalogo_pastas (as pastas) = o SQL da lib (src/painel/treinos/api.ts:86)", pastas_cat, lib_treino(ctx, "pastas", s, uid=uid))
+    comparar_21d(o, "catalogo_pastas (os vínculos embutidos) = o vinculosDasPastas da lib (src/painel/treinos/api.ts:78)",
+                 T21.detalhes_da_funcao(cat_p.get("linhas") or [])["vinculos"],
+                 lib_treino(ctx, "vinculos_das_pastas", s, ids=[x["id"] for x in pastas_cat if C.eh_uuid(x.get("id"))]), conjunto=True)
+    comparar_21d(o, "busca_treinos = o SQL da Busca (src/painel/busca/Treinos.tsx:36-41)", busca.get("linhas"),
+                 lib_treino(ctx, "busca_treinos", s, uid=uid, padrao=T21.padrao_da_busca(T21.TERMO_BUSCA)), conjunto=True)
+    comparar_21d(o, "treinos_prontos = o SQL da lib (src/app-aluno/sozinho/api.ts:131; os embutidos como conjunto)",
+                 T21.prontos_canonicos(prontos.get("linhas")), T21.prontos_canonicos(lib_treino(ctx, "treinos_prontos", s)))
+    comparar_21d(o, "exercicios_lista (a RPC exercicios_da_lista) = o SQL da lib (src/treino/editor/api.ts:171)", bib.get("valor"),
+                 lib_treino(ctx, "exercicios_lista", s, filtros=filtros_bib, offset=0, limite=20))
+    itens_pag = [x for x in ((pag.get("valor") or {}).get("itens") or []) if isinstance(x, dict) and C.eh_uuid(x.get("id"))]
+    if itens_pag:
+        ids = [x["id"] for x in itens_pag]
+        st, r, _h, ms = T21.ler(tok, [B.item("modelos_detalhes", ids=ids), B.item("modelo", id=ids[0])])
+        det, aberto = (T21.itens_de(r) + [{}, {}])[:2]
+        o.ok(st == 200 and det.get("ok") and aberto.get("ok"), f"P: os detalhes da página ({len(ids)} treino(s)) e o treino pelo id → 200 ({ms} ms)")
+        fn = T21.detalhes_da_funcao(det.get("linhas") or [])
+        sql_linhas = lib_treino(ctx, "linhas", s, ids=ids)
+        comparar_21d(o, "modelos_detalhes (as linhas) = o linhasDosModelos da lib", fn["linhas"], sql_linhas)
+        citados = sorted({x.get("exercicio_id") for x in (sql_linhas or []) if C.eh_uuid(x.get("exercicio_id"))})
+        comparar_21d(o, "modelos_detalhes (os exercícios citados, global ou meu) = o detalhesDosModelos da lib (api.ts:120)", fn["exercicios"],
+                     lib_treino(ctx, "exercicios_citados", s, ids=citados, uid=uid) if citados else [])
+        comparar_21d(o, "modelos_detalhes (os vínculos) = o vinculosDosModelos da lib (api.ts:81)", fn["vinculos"], lib_treino(ctx, "vinculos_dos_modelos", s, ids=ids))
+        comparar_21d(o, "modelo (o treino pelo id) = o carregarModeloPorId da lib (api.ts:152)", T21.sem_embutidos(aberto.get("linhas") or [], "linhas", "vinculos"),
+                     lib_treino(ctx, "modelo", s, id=ids[0], uid=uid))
+    else:
+        o.linha("   PADRÃO: a página de treinos do personal veio vazia — os detalhes ficam para a massa (o P do modelo de teste)")
+    # o editor (Aluno › Treino): a aluno_treino pela conta (principal) = a RPC como o personal
+    if ctx.get("pac"):
+        st, r, _h, ms = B.ler(ctx["tok_p"], [B.item("aluno_treino", aluno=ctx["pac"])])
+        i0 = (B.itens_de(r) or [{}])[0]
+        o.ok(st == 200 and i0.get("ok"), f"P: a conta › aluno_treino (o editor) → 200, o item ok ({ms} ms)")
+        sql = T21.sql_da_lib_21d("aluno_treino", s, aluno=ctx["pac"])
+        v = (B.B20.ler_como(B.PRINCIPAL_REF, ctx["uid_p"], sql, ctx["email_p"]) or [{}])[-1].get("v")
+        comparar_21d(o, "aluno_treino (a conta) = a RPC do principal como o personal (src/treino/editor/api.ts:62)", B.sem_relogio(i0.get("valor")), B.sem_relogio(v))
+    else:
+        o.linha("   PADRÃO: sem a matrícula de TESTE da aluna na conta do personal — o aluno_treino fica no Vitest (contaServidor21d.test.ts)")
+    return itens_pag
+
+
+def globais_de_teste(s: str) -> list[str]:
+    """2 exercícios GLOBAIS (professor_id nulo) para o modelo de teste — SQL só leitura, só os ids (nada muda neles)."""
+    return [x["id"] for x in T21.ler_treino(f"select id::text as id from {s}.tb_exercicios where professor_id is null order by id limit 2") if C.eh_uuid(x.get("id"))]
+
+
+def p_acoes_21d(o, L, s: str, estado, rodada: str, ctx: dict, casos: set) -> None:  # noqa: PLR0915
+    """P/N4/N5/N8/N1/N12 das gravações pela treinos, na massa de TESTE (decisão I): a pasta, o modelo (3 exercícios: o de teste e 2 globais;
+    a prescrição; a ordem pela RPC nova; o vínculo com a pasta), o grupo muscular, o exercício (com a foto pelo link que o servidor assina) —
+    cada efeito conferido por SQL só leitura; a OUTRA conta não lê nem grava nada disso (N1) nem o perfil do personal (N12); a limpeza no
+    fim da rodada (fechar_rodada_21d)."""
+    tok, uid = ctx["tok"], ctx["uid"]
+    mk = T21.marca(rodada)
+    T21.anotar_dono(estado, uid)
+    q = C.txt
+    # ── a pasta e o modelo (N4: o dono do corpo cai) ──
+    st, r, _h, _ms = T21.treinos(tok, "pasta_criar", {"nome": mk, "professor_id": ctx.get("uid_o") or OUTRO, "id": FALSO})
+    pasta = r.get("id")
+    T21.anotar_linha(estado, "tb_pastas_treino", pasta, uid)
+    linha = um_treino(f"select professor_id::text as dono, nome = {q(mk)} as nome_ok from {s}.tb_pastas_treino where id = {q(C.uuid_ok(pasta))}") if C.eh_uuid(pasta) else {}
+    o.ok(st == 200 and linha.get("dono") == uid and linha.get("nome_ok") is True,
+         f"P/N4 pasta_criar → 200 e a pasta de teste com o dono = quem chama (o professor_id e o id do corpo caíram) ({st})", parar=True)
+    st, r, _h, _ms = T21.treinos(tok, "modelo_criar", {"nome": mk, "professor_id": ctx.get("uid_o") or OUTRO})
+    modelo = r.get("id")
+    T21.anotar_linha(estado, "tb_grupos_treino", modelo, uid)
+    linha = um_treino(f"select professor_id::text as dono from {s}.tb_grupos_treino where id = {q(C.uuid_ok(modelo))}") if C.eh_uuid(modelo) else {}
+    o.ok(st == 200 and linha.get("dono") == uid, f"P/N4 modelo_criar → 200 e o treino-modelo de teste com o dono = quem chama ({st})", parar=True)
+    st1, _r, _h, _ms = T21.treinos(tok, "pasta_editar", {"id": pasta, "nome": mk + " editada"})
+    st2, _r, _h, _ms = T21.treinos(tok, "modelo_editar", {"id": modelo, "nome": mk + " editado"})
+    v = um_treino(f"select (select nome from {s}.tb_pastas_treino where id = {q(pasta)}) = {q(mk + ' editada')} as p, "
+                  f"(select nome from {s}.tb_grupos_treino where id = {q(modelo)}) = {q(mk + ' editado')} as m")
+    o.ok(st1 == 200 and st2 == 200 and v.get("p") is True and v.get("m") is True, f"P pasta_editar e modelo_editar → o nome novo (SQL) ({st1}, {st2})")
+    # ── o grupo muscular e o exercício (N5: o emoji, a imagem e o dono do corpo caem) ──
+    st, r, _h, _ms = T21.treinos(tok, "grupo_muscular_criar", {"nome": mk, "professor_id": ctx.get("uid_o") or OUTRO})
+    grupo = (r.get("linha") or {}).get("id")
+    T21.anotar_linha(estado, "grupos_musculares", grupo, uid)
+    o.ok(st == 200 and (r.get("linha") or {}).get("professor_id") == uid, f"P/N4 grupo_muscular_criar → 200, a linha com o dono = quem chama ({st})")
+    corpo = {**T21.corpo_exercicio(rodada, mk), "emoji": "x", "professor_id": ctx.get("uid_o") or OUTRO, "imagem_url": "https://exemplo.example/x.png", "id": FALSO}
+    st, r, _h, _ms = T21.treinos(tok, "exercicio_criar", corpo)
+    ex = r.get("id")
+    T21.anotar_linha(estado, "tb_exercicios", ex, uid)
+    v = um_treino(f"select professor_id::text as dono, emoji = '🏋️' as emoji_ok, imagem_url is null as sem_imagem from {s}.tb_exercicios "
+                  f"where id = {q(C.uuid_ok(ex))}") if C.eh_uuid(ex) else {}
+    o.ok(st == 200 and v.get("dono") == uid and v.get("emoji_ok") is True and v.get("sem_imagem") is True,
+         f"P/N5 exercicio_criar → 200; o dono = quem chama, o emoji 🏋️ do servidor e sem a imagem do corpo (SQL) ({st})", parar=True)
+    # ── a foto pelo link que o servidor assina (o caminho <id>.png nasce no servidor) e o N8 ──
+    png = B.png_sintetico(12)
+    bucket = "exercicios-staging" if s == "staging" else "exercicios"
+    st, r, _h, _ms = T21.treinos(tok, "exercicio_foto_preparar", {"exercicio": ex, "tipo": "image/png", "tamanho": len(png)})
+    if st == 403 and r.get("erro") == "sem_acesso" and ctx.get("papel") != "professor":
+        o.ok(True, f"PULADO a foto: o personal de teste não tem o papel professor no Treino ({ctx.get('papel')}) — a policy do bucket "
+                   "(exercicios_professor_write) recusa o link a quem não é; o caminho da foto fica no Vitest (treinosServidor.test.ts)")
+    else:
+        caminho = r.get("caminho")
+        ok_prep = st == 200 and r.get("bucket") == bucket and caminho == f"{ex}.png" and isinstance(r.get("token"), str)
+        if ok_prep:
+            T21.anotar_objeto(estado, bucket, caminho)
+        o.ok(ok_prep, f"P exercicio_foto_preparar → 200, o caminho <id do exercício>.png no {bucket} e o token do link ({st})", parar=True)
+        put = B.B19.subir_no_link_treino(bucket, caminho, r["token"], png, "image/png", tok)
+        url = T21.url_publica(bucket, caminho, int(time.time() * 1000))
+        st2, _r, _h, _ms = T21.treinos(tok, "exercicio_editar", {"id": ex, "imagem_url": url})
+        v = um_treino(f"select imagem_url = {q(url)} as url_ok from {s}.tb_exercicios where id = {q(ex)}")
+        n = int(um_treino(T21.sql_contar_objetos(bucket, [caminho])).get("n") or 0)
+        o.ok(put in (200, 201) and st2 == 200 and v.get("url_ok") is True and n == 1,
+             f"P a foto pelo link assinado: PUT {put} → exercicio_editar com a URL pública → gravada (SQL) e o arquivo no bucket ({n})")
+        if "N8" in casos:
+            outras = [(T21.url_publica(bucket, f"{FALSO}.png", 1), "de outro exercício"),
+                      (T21.url_publica("exercicios" if bucket == "exercicios-staging" else "exercicios-staging", caminho, 1), "de outro bucket"),
+                      (f"https://exemplo.example/storage/v1/object/public/{bucket}/{caminho}", "de outro host")]
+            res = [T21.treinos(tok, "exercicio_editar", {"id": ex, "imagem_url": u})[:2] for u, _ in outras]
+            st3, r3, _h, _ms = T21.treinos(tok, "exercicio_editar", {"id": ex, "imagem_url": T21.url_publica(bucket, f"{ex}.gif", 1)})
+            v = um_treino(f"select imagem_url = {q(url)} as igual from {s}.tb_exercicios where id = {q(ex)}")
+            o.ok(all(a == 400 and b.get("erro") == "dados_invalidos" for a, b in res) and st3 == 404 and r3.get("erro") == "nao_encontrado" and v.get("igual") is True,
+                 f"N8 a imagem_url fora do caminho do servidor ({', '.join(x for _u, x in outras)}) → 400 dados_invalidos; o caminho certo SEM o arquivo "
+                 f"(.gif) → 404 nao_encontrado; a foto gravada não mudou (SQL) ({[a for a, _b in res]}, {st3})")
+    # ── o modelo: 3 exercícios, a prescrição, a ordem (a RPC nova) e a pasta ──
+    globais = globais_de_teste(s)
+    o.ok(len(globais) == 2, "o modelo de teste: 2 exercícios globais para compor (SQL só leitura)", parar=True)
+    ids = [ex, *globais]
+    sts = [T21.treinos(tok, "modelo_exercicio_incluir", {"grupo": modelo, "exercicio": x, "ordem": i})[0] for i, x in enumerate(ids)]
+    n = int(um_treino(f"select count(*)::int as n from {s}.tb_grupos_exercicios where grupo_id = {q(modelo)}").get("n") or 0)
+    o.ok(sts == [200, 200, 200] and n == 3, f"P modelo_exercicio_incluir ×3 → as 3 linhas no modelo de teste (SQL: {n}) ({sts})")
+    st, _r, _h, _ms = T21.treinos(tok, "modelo_exercicio_prescrever", {"grupo": modelo, "exercicio": globais[0], "num_series": 4, "reps_alvo": "8-10",
+                                                                        "descanso_segundos": 90, "carga_sugerida_kg": 22.5})
+    v = um_treino(f"select num_series = 4 and reps_alvo = '8-10' and descanso_segundos = 90 and carga_sugerida_kg = 22.5 as ok from {s}.tb_grupos_exercicios "
+                  f"where grupo_id = {q(modelo)} and exercicio_id = {q(globais[0])}")
+    o.ok(st == 200 and v.get("ok") is True, f"P modelo_exercicio_prescrever → as 4 colunas da prescrição no par (SQL) ({st})")
+    nova = [globais[1], globais[0], ex]
+    st, r, _h, _ms = T21.treinos(tok, "modelo_ordenar", {"grupo": modelo, "ids": nova})
+    ordem = [x.get("exercicio_id") for x in T21.ler_treino(f"select exercicio_id::text from {s}.tb_grupos_exercicios where grupo_id = {q(modelo)} order by ordem")]
+    o.ok(st == 200 and r.get("n") == 3 and ordem == nova, f"P modelo_ordenar (a RPC nova, numa transação) → n 3 e a ordem nova (SQL) ({st})")
+    sts = [T21.treinos(tok, "pasta_vincular", {"pasta": pasta, "grupo": modelo})[0] for _ in range(2)]
+    n = int(um_treino(f"select count(*)::int as n from {s}.tb_pastas_treino_grupos where pasta_id = {q(pasta)} and grupo_id = {q(modelo)}").get("n") or 0)
+    o.ok(sts == [200, 200] and n == 1, f"P pasta_vincular ×2 → 1 vínculo (o que já existe = ok, como hoje) ({sts}; SQL {n})")
+    # o P do treino de teste pelo id (as linhas, o exercício citado, o vínculo) = a lib
+    st, r, _h, _ms = T21.ler(tok, [B.item("modelo", id=modelo)])
+    aberto = (T21.itens_de(r) or [{}])[0]
+    fn = T21.detalhes_da_funcao(aberto.get("linhas") or [])
+    comparar_21d(o, "modelo de teste (as linhas) = o linhasDosModelos da lib", fn["linhas"], lib_treino(ctx, "linhas", s, ids=[modelo]))
+    comparar_21d(o, "modelo de teste (os exercícios citados) = o detalhesDosModelos da lib", fn["exercicios"],
+                 lib_treino(ctx, "exercicios_citados", s, ids=sorted(ids), uid=uid))
+    comparar_21d(o, "modelo de teste (o vínculo) = o vinculosDosModelos da lib", fn["vinculos"], lib_treino(ctx, "vinculos_dos_modelos", s, ids=[modelo]))
+    # ── N1: a OUTRA conta não lê nem grava nada disso (antes de tirar) ──
+    if "N1" in casos and ctx.get("tok_o"):
+        n1_outra(o, s, ctx, {"pasta": pasta, "modelo": modelo, "grupo": grupo, "ex": ex, "globais": globais})
+    st1, _r, _h, _ms = T21.treinos(tok, "modelo_exercicio_tirar", {"grupo": modelo, "exercicio": globais[1]})
+    st2, _r, _h, _ms = T21.treinos(tok, "pasta_desvincular", {"pasta": pasta, "grupo": modelo})
+    v = um_treino(f"select (select count(*) from {s}.tb_grupos_exercicios where grupo_id = {q(modelo)})::int as linhas, "
+                  f"(select count(*) from {s}.tb_pastas_treino_grupos where pasta_id = {q(pasta)})::int as vinculos")
+    o.ok(st1 == 200 and st2 == 200 and v == {"linhas": 2, "vinculos": 0}, f"P modelo_exercicio_tirar e pasta_desvincular → 2 linhas e 0 vínculo (SQL) ({st1}, {st2})")
+    # ── o espelho do perfil: o MESMO valor de hoje (nada muda) — e o N12 ──
+    antes = um_treino(f"select nome, foto_url from {s}.physiq_professores where id = {q(uid)}")
+    corpo = {k: antes.get(k) for k in ("nome", "foto_url") if k in antes and (k == "foto_url" or isinstance(antes.get(k), str))}
+    if not corpo:
+        o.linha("   PADRÃO: o personal de teste sem a linha (ou sem o nome) no physiq_professores do Treino — o professor_perfil fica no Vitest")
+    else:
+        st, r, _h, _ms = T21.treinos(tok, "professor_perfil", corpo)
+        depois = um_treino(f"select nome, foto_url from {s}.physiq_professores where id = {q(uid)}")
+        o.ok(st == 200 and depois == antes, f"P professor_perfil com o MESMO valor de hoje → 200 e a linha do personal igual (SQL) ({st})")
+    if "N12" in casos and ctx.get("tok_o"):
+        dela = um_treino(f"select nome, foto_url from {s}.physiq_professores where id = {q(ctx['uid_o'])}")
+        corpo_o = {k: dela.get(k) for k in ("nome", "foto_url") if k in dela and (k == "foto_url" or isinstance(dela.get(k), str))}
+        st, r, _h, _ms = T21.treinos(ctx["tok_o"], "professor_perfil", {**corpo_o, "id": uid, "user_id": uid, "professor_id": uid})
+        o.ok(um_treino(f"select nome, foto_url from {s}.physiq_professores where id = {q(uid)}") == antes
+             and um_treino(f"select nome, foto_url from {s}.physiq_professores where id = {q(ctx['uid_o'])}") == dela,
+             f"N12 a OUTRA conta com o id do personal no corpo → o physiq_professores do personal NÃO muda (o id vem do token) e o dela fica igual ({st})")
+
+
+def sql_da_massa(s: str, m: dict) -> str:
+    """Só leitura (Treino): o retrato da massa de teste (os nomes, a foto, as linhas e a ordem do modelo, o grupo e os vínculos) — o N1
+    confere que a OUTRA conta não mudou nada."""
+    q = C.txt
+    mo, pa, ex, gr = (q(C.uuid_ok(m[k])) for k in ("modelo", "pasta", "ex", "grupo"))
+    return (f"select (select nome from {s}.tb_grupos_treino where id = {mo}) as m, (select nome from {s}.tb_pastas_treino where id = {pa}) as p, "
+            f"(select nome || coalesce(imagem_url, '') from {s}.tb_exercicios where id = {ex}) as e, "
+            f"(select count(*) from {s}.tb_grupos_exercicios where grupo_id = {mo})::int as linhas, "
+            f"(select string_agg(exercicio_id::text || ':' || ordem, ',' order by ordem) from {s}.tb_grupos_exercicios where grupo_id = {mo}) as ordem, "
+            f"(select count(*) from {s}.grupos_musculares where id = {gr})::int as g, "
+            f"(select count(*) from {s}.tb_pastas_treino_grupos where pasta_id = {pa} or grupo_id = {mo})::int as vinculos")
+
+
+def n1_outra(o, s: str, ctx: dict, m: dict) -> None:
+    """N1: a OUTRA conta (w13-dono) não lê (nada do personal) nem grava (404/403; a massa igual, SQL) o modelo, a pasta, o exercício e o grupo
+    de teste do personal pela treinos — nem pede o link da foto do exercício dele (403: a policy do bucket)."""
+    tok_o, uid = ctx["tok_o"], ctx["uid"]
+    q = C.txt
+    massa = {m["pasta"], m["modelo"], m["grupo"], m["ex"]}
+    st, r, _h, _ms = T21.ler(tok_o, [B.item("modelo", id=m["modelo"]), B.item("modelos_detalhes", ids=[m["modelo"]]), B.item("pastas"), B.item("grupos_musculares"),
+                                     B.item("catalogo_modelos"), B.item("catalogo_pastas"), B.item("busca_treinos", termo=B.MARCA),
+                                     B.item("modelos", filtros={"q": B.MARCA}, offset=0, limite=20)])
+    vazou = []
+    for it in T21.itens_de(r):
+        for x in (it.get("linhas") or []) + ((it.get("valor") or {}).get("itens") or [] if isinstance(it.get("valor"), dict) else []):
+            if isinstance(x, dict) and (x.get("id") in massa or x.get("professor_id") == uid or any(isinstance(y, dict) and y.get("grupo_id") in massa
+                                                                                                      for y in (x.get("linhas") or []) + (x.get("vinculos") or []))):
+                vazou.append(str(x.get("id"))[:8])
+    o.ok(st == 200 and not vazou, f"N1 OUTRA conta lê o modelo/a pasta/o grupo/a busca do personal pela treinos → nada dele (o RLS e o recorte) ({st}; vazou: {vazou or '—'})")
+    antes = um_treino(sql_da_massa(s, m))
+    tentativas = [
+        ("modelo_editar", {"id": m["modelo"], "nome": "x"}, (404,)), ("modelo_excluir", {"id": m["modelo"]}, (404,)),
+        ("pasta_editar", {"id": m["pasta"], "nome": "x"}, (404,)), ("pasta_excluir", {"id": m["pasta"]}, (404,)),
+        ("exercicio_editar", {"id": m["ex"], "nome": "x"}, (404,)), ("exercicio_excluir", {"id": m["ex"]}, (404,)),
+        ("grupo_muscular_excluir", {"id": m["grupo"]}, (404,)),
+        ("modelo_exercicio_incluir", {"grupo": m["modelo"], "exercicio": m["globais"][0], "ordem": 9}, (403, 404)),
+        ("modelo_exercicio_tirar", {"grupo": m["modelo"], "exercicio": m["ex"]}, (404,)),
+        ("modelo_ordenar", {"grupo": m["modelo"], "ids": [m["ex"], *m["globais"]]}, (404,)),
+        ("pasta_vincular", {"pasta": m["pasta"], "grupo": m["modelo"]}, (403, 404)),
+        ("exercicio_foto_preparar", {"exercicio": m["ex"], "tipo": "image/png", "tamanho": 100}, (403,)),
+    ]
+    res = [(a, T21.treinos(tok_o, a, c)[0], esperado) for a, c, esperado in tentativas]
+    # 🟡1 da revisão: a biblioteca do personal pela exercicios_lista com o filtros.professor = o personal, pedida pela OUTRA conta. O arg é o
+    # da RPC de hoje (decisão B: o código fica) e o RLS do tb_exercicios de hoje deixa qualquer profissional ler — o resultado é REGISTRADO
+    # (o ## ACHADO), não reprovado: restringir é da etapa 4
+    st_b, r_b, _h, _ms = T21.ler(tok_o, [B.item("exercicios_lista", filtros={"professor": uid, "q": B.MARCA}, offset=0, limite=20)])
+    it_b = (T21.itens_de(r_b) or [{}])[0]
+    valor_b = it_b.get("valor") if isinstance(it_b.get("valor"), dict) else {}
+    dele = [x for x in (valor_b.get("itens") or []) if isinstance(x, dict) and x.get("professor_id") == uid]
+    com_o_de_teste = m["ex"] in {x.get("id") for x in dele}
+    o.ok(st_b == 200 and it_b.get("ok") is True,
+         f"N1 (registro, 🟡1) a OUTRA conta pede a biblioteca do personal pela exercicios_lista (filtros.professor = o personal; q = a marca) → "
+         f"{st_b}; {len(dele)} exercício(s) DELE na resposta (o de teste {'incluído' if com_o_de_teste else 'não'}) — o RLS de hoje")
+    o.linha(f"ACHADO N1 exercicios_lista: a OUTRA conta lê {len(dele)} exercício(s) do personal pelo filtros.professor (o de teste "
+            f"{'visível' if com_o_de_teste else 'não visível'}) — o RLS do tb_exercicios de hoje; restringir é da etapa 4 (o código fica, decisão B)")
+    depois = um_treino(sql_da_massa(s, m))
+    o.ok(all(st in esperado for _a, st, esperado in res) and depois == antes,
+         f"N1 OUTRA conta tenta mudar/apagar/ordenar/vincular a massa do personal e pedir o link da foto dele → recusado "
+         f"({', '.join(f'{a} {st}' for a, st, _e in res)}); a massa igual (SQL)")
+    st, r, _h, _ms = B.ler(ctx["tok_po"], [B.item("aluno_treino", aluno=ctx["pac"])]) if ctx.get("pac") else (0, {}, {}, 0)
+    if ctx.get("pac"):
+        i0 = (B.itens_de(r) or [{}])[0]
+        o.ok(st == 200 and i0.get("ok") is False and i0.get("erro") in ("sem_acesso", "nao_encontrado"),
+             f"N1 OUTRA conta pede o aluno_treino da aluna do personal pela conta → o item {i0.get('erro')} (a recusa de hoje), nunca os dados ({st})")
+
+
+def n_gerais_21d(o, L, casos: set, ctx: dict) -> None:
+    """N2, N3, N6, N7, N9 e o N10 (o personal não é master: TODA ação e leitura do Master → 403 antes do banco; nada muda — SQL)."""
+    tok = ctx["tok"]
+    s = B.schema()
+    q0 = B.item("pastas")
+    if "N2" in casos:
+        st, _r, _h, _ms = T21.ler(None, [q0], sem_auth=True)
+        st2, _r2, _h, _ms = T21.treinos(None, "modelo_criar", {"nome": "x"}, sem_auth=True)
+        o.ok(st == 401 and st2 == 401, f"N2 sem login → 401 (o `ler` {st}, a ação {st2})")
+    if "N3" in casos:
+        st, r, _h, _ms = T21.ler(tok, [q0, B.item("treinos_de_todo_mundo")])
+        st2, r2, _h, _ms = T21.treinos(tok, "treinos_apagar_tudo")
+        o.ok(st == 200 and [i.get("erro") for i in T21.itens_de(r)] == [None, "consulta_invalida"] and st2 == 400 and r2.get("erro") == "acao_invalida",
+             f"N3 q desconhecida → o item consulta_invalida; ação desconhecida → 400 acao_invalida ({st}, {st2})")
+    if "N6" in casos:
+        st, r, _h, _ms = T21.ler(tok, [q0], schema_="outro")
+        o.ok(st == 400 and r.get("erro") == "schema_invalido", f"N6 x-schema inválido → 400 schema_invalido ({st})")
+    if "N7" in casos:
+        st, h = T21.preflight(B.ORIGEM_FORA)
+        st2, h2 = T21.preflight(B.BASES["staging"])
+        o.ok(B.cors(h) == B.ORIGEM_PADRAO and B.cors(h2) == B.BASES["staging"], f"N7 origem fora → o CORS padrão ({st}); a do site volta ela mesma ({st2})")
+    if "N9" in casos:
+        st, r, _h, _ms = T21.ler(tok, [q0] * 17)
+        o.ok(st == 400 and r.get("erro") == "lote_grande", f"N9 lote de 17 → 400 lote_grande ({st})")
+    if "N10" in casos:
+        if ctx.get("papel") in ("admin", "master"):
+            o.ok(False, "N10: o personal de teste é master no Treino — o N10 pede quem NÃO é (nada rodou)", parar=False)
+            return
+        rodada = "n10"
+        mk = T21.marca(rodada)
+        antes = um_treino(f"select (select count(*) from {s}.tb_exercicios where professor_id is null and nome like {C.txt('%' + B.MARCA + '%')})::int as ex, "
+                          f"(select count(*) from {s}.grupos_musculares where professor_id is null and nome like {C.txt('%' + B.MARCA + '%')})::int as g, "
+                          f"(select count(*) from {s}.physiq_treinos_prontos where nome like {C.txt('%' + B.MARCA + '%')})::int as p")
+        corpos = {"treino_pronto_salvar": treino_pronto_de_exemplo(rodada), "treino_pronto_ativo": {"id": FALSO, "ativo": True},
+                  "exercicio_global_criar": {"nome": mk, "grupo_muscular": "Peito", "emoji": "x"}, "exercicio_global_editar": {"id": FALSO, "nome": mk},
+                  "exercicio_global_excluir": {"id": FALSO}, "exercicio_global_promover": {"id": FALSO}, "grupo_global_criar": {"nome": mk},
+                  "grupo_global_excluir": {"id": FALSO}}
+        res = [(a, *T21.treinos(tok, a, corpos[a])[:2]) for a in ACOES_MASTER_21D]
+        lidas = [(qm, *T21.ler(tok, [B.item(qm, **({"pagina": 1} if qm == "exercicios_globais" else {"nome": "Peito"} if qm == "globais_do_grupo" else {}))])[:2])
+                 for qm in CONSULTAS_MASTER_21D]
+        st_meio, r_meio, _h, _ms = T21.ler(tok, [q0, B.item("grupos_globais")])
+        depois = um_treino(f"select (select count(*) from {s}.tb_exercicios where professor_id is null and nome like {C.txt('%' + B.MARCA + '%')})::int as ex, "
+                           f"(select count(*) from {s}.grupos_musculares where professor_id is null and nome like {C.txt('%' + B.MARCA + '%')})::int as g, "
+                           f"(select count(*) from {s}.physiq_treinos_prontos where nome like {C.txt('%' + B.MARCA + '%')})::int as p")
+        o.ok(all(st == 403 and r.get("erro") == "sem_acesso" for _a, st, r in res + lidas) and st_meio == 403 and depois == antes,
+             f"N10 quem NÃO é master (o personal, papel {ctx.get('papel')}): as {len(res)} ações e as {len(lidas)} leituras do Master → 403 sem_acesso "
+             f"(antes do banco); 1 do Master no meio do lote → o pedido inteiro 403 ({st_meio}); nada global/pronto novo (SQL: {depois})")
+
+
+def rodar_21d(o, base: str, casos: set) -> None:
+    """A rodada da 21d (--area treinos): o P das leituras (a função = o SQL da lib como a pessoa), o P/N das gravações na massa de TESTE, os
+    N — e a limpeza no finally (a massa: o Storage, as ações e o SQL da marca; o Estado)."""
+    s = B.usar_base(base)
+    if base == "prod":
+        raise SystemExit("na produção só o --so-leitura (nada grava)")
+    B.usar_area("treinos")
+    B.exigir_saude(o, "o api.py --area treinos da hml-21d")
+    L = B.Sessoes(f"api21 treinos {base}")
+    estado = T21.abrir_rodada_21d(o, s)
+    rodada = estado.d["rodada"]
+    ctx: dict = {}
+    try:
+        ctx = contexto_21d(o, L, s, casos)
+        if "P" in casos:
+            p_leituras_21d(o, L, s, ctx)
+            p_acoes_21d(o, L, s, estado, rodada, ctx, casos)
+        n_gerais_21d(o, L, casos, ctx)
+    finally:
+        try:
+            T21.fechar_rodada_21d(o, estado, s, ctx.get("tok"))
+        finally:
+            L.fechar(o)
+
+
+def limpar_21d(o, base: str) -> None:
+    """O --limpar da 21d (--area treinos): a massa do Treino (o Estado — a chave hml21d — e, por SQL, o que tem a marca dos donos de teste) e
+    os arquivos de teste — conferido por SQL só leitura, só contagem. Sem Estado: as linhas com a marca da hml-21 do personal de teste (uma
+    rodada que caiu antes de anotar)."""
+    s = B.usar_base(base)
+    B.usar_area("treinos")
+    estado = B.Estado.ler()
+    if estado.d.get("area") not in (None, B.CHAVE_21D):
+        o.ok(False, f"a rodada pendente é de outra área ({estado.d.get('area')}): rode o --limpar dela", parar=True)
+    s = estado.d.get("schema") or s
+    L = B.Sessoes("api21 treinos --limpar")
+    tok = None
+    try:
+        if s == "staging":
+            T21.exige_identidade(o, s, T21.PERSONAL)
+            tok = L.token_treino(T21.PERSONAL)
+            sobra = T21.ler_treino(T21.sql_contar_massa_21d(s))[0]
+            if any(int(v or 0) for v in sobra.values()):
+                T21.anotar_dono(estado, (C.claims(tok) or {}).get("sub"))
+        T21.fechar_rodada_21d(o, estado, s, tok)
+    finally:
+        L.fechar(o)
+    if s == "staging":
+        sobra = T21.ler_treino(T21.sql_contar_massa_21d(s))[0]
+        o.ok(not any(int(v or 0) for v in sobra.values()), f"--limpar (21d) conferido (SQL só leitura, Treino): 0 linha com a marca da hml-21 ({sobra})")
+
+
+def so_leitura_21d(o, base: str) -> None:
+    """O smoke só leitura da treinos (a produção no F8, ou o staging logo depois de publicar): OPTIONS (o CORS), sem login → 401, x-schema
+    inválido → 400, a q desconhecida → consulta_invalida e 1 `ler` P (treinos_prontos → o item ok: a treinos v1 publicada) — nada grava; e a
+    conta v4 (o `ler` novo: aluno_treino com um aluno que não existe → o item da recusa, não consulta_invalida — a v3 não conhecia a q). 1
+    login por base (a conta de teste da base, a MESMA das áreas da 21a: a sessão do principal reaproveitada + a troca do Treino)."""
+    B.usar_base(base)
+    B.usar_area("treinos")
+    origem = B.BASES[base]
+    st, h = T21.preflight(origem)
+    st2, h2 = T21.preflight(B.ORIGEM_FORA)
+    o.ok(st in (200, 204) and B.cors(h) == origem and B.cors(h2) == B.ORIGEM_PADRAO,
+         f"[{base}] treinos · OPTIONS → {st}; a origem do site volta ela mesma e a de fora, o padrão ({st2})")
+    st, _r, _h, _ms = T21.ler(None, [B.item("treinos_prontos")], sem_auth=True, origem=origem)
+    o.ok(st == 401, f"[{base}] treinos · sem login → 401 ({st})")
+    L = B.Sessoes(f"api21 so-leitura treinos {base}")  # na produção o motivo termina em "prod" (o registro: fora do teto do staging)
+    try:
+        conta = B.PROD_CONTA if base == "prod" else B.ALUNA
+        if base != "prod":
+            T21.exige_identidade(o, B.schema(), conta)
+        tok = L.token_treino(conta)
+        st, r, _h, _ms = T21.ler(tok, [B.item("treinos_prontos")], schema_="outro", origem=origem)
+        o.ok(st == 400 and r.get("erro") == "schema_invalido", f"[{base}] treinos · x-schema inválido → 400 schema_invalido ({st})")
+        st, r, _h, ms = T21.ler(tok, [B.item("q_que_nao_existe")], origem=origem)
+        o.ok(st == 200 and [i.get("erro") for i in T21.itens_de(r)] == ["consulta_invalida"],
+             f"[{base}] treinos · a q desconhecida → consulta_invalida (o `ler` recusa antes do banco; {ms} ms)")
+        st, r, _h, ms = T21.ler(tok, [B.item("treinos_prontos")], origem=origem)
+        its = T21.itens_de(r)
+        o.ok(st == 200 and len(its) == 1 and its[0].get("ok") is True,
+             f"[{base}] treinos · 1 `ler` P: treinos_prontos → o item ok ({len(its[0].get('linhas') or []) if its else 0} linha(s); {ms} ms)")
+        st, r, _h, ms = B.ler(L.token(conta), [B.item("aluno_treino", aluno=FALSO)], origem=origem)
+        its = B.itens_de(r)
+        o.ok(st == 200 and len(its) == 1 and its[0].get("ok") is False and its[0].get("erro") not in (None, "consulta_invalida"),
+             f"[{base}] conta · o `ler` novo: aluno_treino de um aluno que não existe → o item {its[0].get('erro') if its else '?'} (a recusa da "
+             f"matrícula; a v3 responderia consulta_invalida) — a conta v4 publicada ({st}; {ms} ms)")
+    finally:
+        L.fechar(o)
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-21a/21b — os casos de servidor da função conta (a casca e o app do aluno; a Agenda e os Alunos)")
+    ap = argparse.ArgumentParser(description="hml-21a/21b/21d — os casos de servidor da função conta (a casca e o app do aluno; a Agenda e os Alunos) "
+                                             "e da função treinos (o Treino)")
     ap.add_argument("--area", default="casca", choices=AREAS)
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
-    ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--casos", default=None, help="padrão: " + ",".join(CASOS) + " (a 21d: " + ",".join(CASOS_21D) + ")")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--seco", action="store_true")
     g.add_argument("--limpar", action="store_true")
@@ -1269,8 +2023,9 @@ def main() -> int:
     a = ap.parse_args()
     B.corte_vira_saida()
     B.usar_area(a.area)  # hml-21b: a Agenda e os Alunos gravam na área hml21b (prints/hml21/b)
-    casos = {c.strip() for c in a.casos.split(",") if c.strip()}
-    fora = casos - set(CASOS)
+    da_21d = a.area in B.AREAS_DA_21D
+    casos = {c.strip() for c in (a.casos or ",".join(CASOS_21D if da_21d else CASOS)).split(",") if c.strip()}
+    fora = casos - set(CASOS) - (set(CASOS_21D) if da_21d else set())
     if fora:
         raise SystemExit(f"casos desconhecidos: {sorted(fora)}")
     nome = f"api21_{a.area}_" + ("seco" if a.seco else "limpar" if a.limpar else "sair" if a.sair else f"{a.base}_so_leitura" if a.so_leitura
@@ -1278,19 +2033,26 @@ def main() -> int:
     o = C.Saida(nome)
     try:
         if a.seco:
-            if a.area in B.AREAS_DA_21B:
+            if da_21d:
+                seco_21d(o)
+            elif a.area in B.AREAS_DA_21B:
                 seco_21b(o, a.area)
             else:
                 seco(o, a.area)
         elif a.limpar:
-            if a.area in B.AREAS_DA_21B:
+            if da_21d:
+                limpar_21d(o, a.base)
+            elif a.area in B.AREAS_DA_21B:
                 limpar_21b(o, a.base)
             else:
                 limpar(o, a.base)
         elif a.sair:
             sair(o)
         elif a.so_leitura:
-            so_leitura(o, a.base, a.area)
+            if da_21d:
+                so_leitura_21d(o, a.base)
+            else:
+                so_leitura(o, a.base, a.area)
         elif a.guardar_sino:
             B.guardar_sino(o, B.usar_base(a.base))
         elif a.devolver_sino:

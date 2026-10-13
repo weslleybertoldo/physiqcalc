@@ -34,6 +34,13 @@ Alunos, o Dashboard e a Busca), o dono (a Agenda com a equipe / os Alunos) e a a
 Dashboard — a série aceita, decisão 04:23), 0 gravação e 0 ação ao abrir; a outra área e as de fora à parte; a planilha
 hml21/medicao/rede_hml21b.tsv (antes × depois). A Agenda do painel só abre com calendário próprio e as 3 tags base (senão o app gravaria ao
 abrir — PULADA com o motivo; SQL só leitura, só contagem); na produção a nutri-legado e a aluno-calc, só leitura, com a Guarda.
+hml-21d (decisões H, I e N do contrato da 21d): --area treinos (e2e/hml21/treinos21d.py): o personal (Meus treinos, o Detalhe — o 1º treino da
+lista —, a Biblioteca, a Folha — o 1º exercício —, os Modelos › Treinos, a Busca e o Aluno › Treino da aluna de TESTE) e o aluno sem
+profissional (os Treinos prontos), cada conta no seu contexto; em cada tela 0 chamada direta da área (as tabelas, as RPCs e o bucket do Treino
+que saíram do navegador e a aluno_treino do principal), o `ler` da treinos ≤ o teto (3 em Meus treinos — 2 em série, a série
+aceita, DECISÃO 12:1x, + a contagem com GIF sozinha em paralelo, 89d8e30), 0
+gravação e 0 ação ao abrir; as de fora à parte; a planilha hml21/medicao/rede_hml21d.tsv (antes × depois). Na produção a nutri-legado (só com
+o Treino na conta ativa) e a aluno-calc (só sem profissional), só leitura, com a Guarda — o editor fica de fora (sem aluno de TESTE lá).
 """
 from __future__ import annotations
 
@@ -48,6 +55,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 import painel21b as P21  # noqa: E402  (hml-21b: as contas e as telas da Agenda e dos Alunos)
+import treinos21d as T21  # noqa: E402  (hml-21d: as contas e as telas do Treino)
 
 C = B.C
 PLANILHA = B.MEDICAO / "rede_hml21a.tsv"
@@ -228,6 +236,9 @@ def conta_do_app(base: str) -> str:
 def rodar(o, area: str, base: str, canal: str | None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
+    if area in B.AREAS_DA_21D:  # hml-21d
+        rodar_21d(o, base, canal)
+        return
     if area in B.AREAS_DA_21B:
         rodar_21b(o, area, base, canal)
         return
@@ -456,9 +467,183 @@ def seco_21b(o, area: str) -> None:
          "sem conta ativa ela abre (o useMeuLink não roda); a Agenda não depende do código")
 
 
+# ───────────────────────── hml-21d: a rede do Treino (--area treinos) ─────────────────────────
+def rodar_21d(o, base: str, canal: str | None) -> None:
+    """A rede de cada tela da 21d, conta por conta (um navegador; um contexto por conta, a sessão reaproveitada): o personal (Meus treinos,
+    o Detalhe — o 1º treino da lista —, a Biblioteca, a Folha — o 1º exercício —, os Modelos › Treinos, a Busca e o Aluno › Treino da aluna
+    de TESTE) e o aluno sem profissional (os Treinos prontos). Na produção (decisão N): a nutri-legado (só com o Treino na conta ativa) e a
+    aluno-calc (só sem profissional), com a Guarda (as RPCs de leitura do front antigo passam), sem a marca local de aviso visto e o
+    LegalDesligado — o editor fica de fora (sem aluno de TESTE lá). Nada de massa: a rede só abre as telas."""
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    s = B.usar_base(base)
+    B.usar_area("treinos")
+    L = B.Sessoes(f"rede21 treinos {base}")  # na produção o motivo termina em "prod" (o registro: fora do teto do staging)
+    commit = B.commit_medido(base)
+    fase = T21.fase_do_codigo_21d(base, commit)
+    try:
+        B.exigir_saude(o, "o rede.py --area treinos da hml-21d")
+        o.linha(f"[{base}] {commit}: o {fase} · área treinos · contas {T21.contas_da_area(base)}")
+        with sync_playwright() as pw:
+            nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
+            try:
+                for conta in T21.contas_da_area(base):
+                    telas = T21.telas_que_abrem(o, s, base, conta)
+                    if not telas:
+                        continue
+                    guarda = B.guarda_da_w() if base == "prod" else None
+                    t, pend = T21.abrir_conta(nav, base, conta, f"rede_treinos_{conta}", guarda)
+                    try:
+                        T21.entrar(o, t, pend, L, base, conta)
+                        for tela in telas:
+                            nome, (como, alvo), marca, teto = tela
+                            if como == "clique" and not t.esperar(lambda: t.n(alvo) > 0, 20):
+                                o.ok(True, f"[{base}] {conta} · {nome}: PULADO — a tela de cima sem item para abrir ({alvo})")
+                                continue
+                            pronta = T21.abrir_tela(t, pend, tela, s)
+                            o.ok(t.n(marca) > 0, f"[{base}] {conta} · {nome}: a tela abriu ({marca[:60]}; marca em {pronta['t_marca_s']} s)")
+                            cont = T21.contar_tela(pronta["pedidos"])
+                            T21.conferir_tela(o, base, fase, conta, nome, teto, cont, pronta)
+                            T21.anotar_rede(base, commit, fase, conta, nome, cont, pronta)
+                        T21.fechar_janelas(t)
+                        if guarda:
+                            o.ok(not guarda.bloqueadas, f"[prod] {conta}: a Guarda não barrou nada (as telas só leram): {guarda.bloqueadas or '—'}")
+                    finally:
+                        T21.sair_da_conta(o, t, L, base, conta, "rede treinos")
+            finally:
+                nav.close()
+    finally:
+        L.fechar(o)
+
+
+def seco_21d(o) -> None:  # noqa: PLR0915
+    """O --seco da 21d (sem rede, sem navegador): os seletores no código, nenhuma tela da área grava ao abrir, a guarda da área em pedidos de
+    exemplo (antes e depois), a Guarda da produção com as 3 RPCs de leitura da 21d e as contas/telas de cada base (decisão N)."""
+    B.usar_area("treinos")
+    faltam = [f"{arq}: {sel}" for arq, sels in T21.SELETORES.items() for sel in sels if sel not in (B.REPO / arq).read_text(encoding="utf-8")]
+    o.ok(not faltam, f"os {sum(len(v) for v in T21.SELETORES.values())} seletores e rotas das telas da 21d existem no código" + (f" — faltam: {faltam}" if faltam else ""))
+    gravam = {arq: T21.efeitos_que_gravam(arq) for arq in T21.TELAS_SEM_GRAVAR_AO_ABRIR}
+    exemplo = "useEffect(() => { if (x) { void criarPasta(nome, dono); } }, [x]);\nconst f = () => criarModelo(a, b);"
+    o.ok(not any(gravam.values()) and T21.gravacoes_em_efeitos(exemplo) == ["criarPasta"],
+         f"nenhuma tela da área grava ao abrir: 0 gravação dentro de um useEffect nos {len(gravam)} arquivos das telas (o detector acha a de um "
+         f"efeito de exemplo e não a de um clique) — {[(a, g) for a, g in gravam.items() if g] or '—'}")
+    P, T = B.API_P, B.API_T
+    ex = "77777777-7777-4777-8777-777777777777"
+    rpc = lambda n, h=T: {"metodo": "POST", "tipo": "rpc", "nome": n, "url": f"{h}/rest/v1/rpc/{n}", "corpo": "{}"}  # noqa: E731
+    tab = lambda n, m="GET", h=T: {"metodo": m, "tipo": "tab", "nome": n, "url": f"{h}/rest/v1/{n}?select=id", "corpo": "" if m == "GET" else "{}"}  # noqa: E731
+    fn = lambda nome, corpo, h=T: {"metodo": "POST", "tipo": "fn", "nome": nome, "acao": corpo.get("action") or corpo.get("acao"),  # noqa: E731
+                                   "url": f"{h}/functions/v1/{nome}", "corpo": json.dumps(corpo)}
+    sto = lambda m, caminho: {"metodo": m, "tipo": "storage", "nome": "objeto", "url": f"{T}/storage/v1/object/{caminho}", "corpo": ""}  # noqa: E731
+    antes = [tab("tb_grupos_treino"), rpc("modelos_da_lista"), tab("tb_grupos_exercicios"), tab("tb_pastas_treino_grupos"), tab("tb_exercicios"),
+             rpc("exercicios_da_lista"), tab("physiq_treinos_prontos"), rpc("aluno_treino", P), tab("tb_grupos_treino", "POST"),
+             sto("POST", f"exercicios-staging/{ex}.png"), tab("physiq_professores", "PATCH"), rpc("whatsapp_resumo", P), tab("physiq_profiles")]
+    c = T21.contar_tela(antes)
+    o.ok(c["diretas"] == {"tab:tb_grupos_treino:GET": 1, "rpc:modelos_da_lista": 1, "tab:tb_grupos_exercicios:GET": 1, "tab:tb_pastas_treino_grupos:GET": 1,
+                          "tab:tb_exercicios:GET": 1, "rpc:exercicios_da_lista": 1, "tab:physiq_treinos_prontos:GET": 1, "rpc:aluno_treino": 1,
+                          "tab:tb_grupos_treino:POST": 1, "storage:exercicios-staging": 1, "tab:physiq_professores:PATCH": 1}
+         and c["fora"] == {"rpc:whatsapp_resumo": 1, "tab:physiq_profiles": 1} and not c["ler"]
+         and any(k.startswith("rest_") for k in c["gravacoes"]) and "storage_grava" in c["gravacoes"],
+         f"a guarda do ANTES: as tabelas, as RPCs e o bucket do Treino (e a aluno_treino do principal) diretos; o de fora à parte; o insert, o "
+         f"PATCH e o upload direto são gravação: {c}")
+    ler1 = {"acao": "ler", "itens": [{"q": "modelos", "filtros": {}, "offset": 0, "limite": 20}, {"q": "pastas"}, {"q": "exercicios_lista", "filtros": {},
+                                                                                                             "offset": 0, "limite": 1}]}
+    ler2 = {"acao": "ler", "itens": [{"q": "modelos_detalhes", "ids": [ex]}]}
+    depois = [fn("treinos", ler1), fn("treinos", ler2), fn("conta", {"acao": "ler", "itens": [{"q": "aluno_treino", "aluno": ex}]}, P),
+              fn("treinos", {"nome": "x", "acao": "modelo_criar"}),
+              {"metodo": "PUT", "tipo": "storage", "nome": "objeto", "url": f"{T}/storage/v1/object/upload/sign/exercicios-staging/{ex}.png?token=t", "corpo": ""},
+              sto("GET", f"public/exercicios-staging/{ex}.png"), rpc("whatsapp_resumo", P),
+              {"metodo": "OPTIONS", "tipo": "fn", "nome": "treinos", "acao": None, "url": f"{T}/functions/v1/treinos", "corpo": ""}]
+    c = T21.contar_tela(depois)
+    o.ok(not c["diretas"] and c["ler"] == 2 and c["ler_conta"] == 1 and c["acoes"] == {"treinos:modelo_criar": 1}
+         and c["consultas"] == {"modelos": 1, "pastas": 1, "exercicios_lista": 1, "modelos_detalhes": 1} and c["consultas_conta"] == {"aluno_treino": 1}
+         and c["gravacoes"] == {"fn:treinos(modelo_criar)": 1, "storage_link_assinado": 1} and c["fora"] == {"rpc:whatsapp_resumo": 1},
+         f"a guarda do DEPOIS: 0 direta (o PUT no link que o servidor assinou e a imagem pública não contam), 2 `ler` da treinos (as consultas), 1 "
+         f"`ler` da conta (o editor), 1 ação (gravação), o de fora à parte: {c}")
+    disfarce = T21.contar_tela([fn("treinos", {"action": "ler", "acao": "pasta_excluir"}), fn("treinos", {"acao": "ler", "x": 1})])
+    o.ok(disfarce["acoes"] == {"treinos:pasta_excluir": 1} and disfarce["gravacoes"] == {"fn:treinos(ler)": 1} and disfarce["ler"] == 1,
+         f"o `ler` disfarçado (action: ler, acao: <ação>) conta como a ação/gravação — o campo é o que a treinos lê: {disfarce}")
+    # a Guarda da produção (decisão N): o `ler` das 2 funções e as 3 RPCs de leitura do front antigo passam; o resto é barrado
+    g = B.guarda_da_w()
+    Ped = type("Ped", (), {})
+
+    def pedido(metodo: str, url: str, corpo: dict | None = None):
+        x = Ped()
+        x.method, x.url, x.post_data = metodo, url, (json.dumps(corpo) if corpo is not None else None)
+        return x
+
+    passam = [pedido("POST", f"{T}/functions/v1/treinos", ler1), pedido("POST", f"{P}/functions/v1/conta", {"acao": "ler", "itens": [{"q": "aluno_treino"}]}),
+              pedido("POST", f"{T}/rest/v1/rpc/modelos_da_lista", {}), pedido("POST", f"{T}/rest/v1/rpc/exercicios_da_lista", {}),
+              pedido("POST", f"{P}/rest/v1/rpc/aluno_treino", {}), pedido("GET", f"{T}/rest/v1/tb_grupos_treino?select=id")]
+    barram = [pedido("POST", f"{T}/functions/v1/treinos", {"acao": a}) for a in ("modelo_criar", "exercicio_foto_preparar", "professor_perfil",
+                                                                                  "treino_pronto_salvar", "modelo_ordenar")] + [
+        pedido("POST", f"{T}/functions/v1/treinos", {"action": "ler", "acao": "pasta_excluir"}), pedido("POST", f"{T}/rest/v1/tb_grupos_treino", {}),
+        pedido("PATCH", f"{T}/rest/v1/tb_exercicios?id=eq.{ex}", {}), pedido("POST", f"{T}/rest/v1/rpc/modelo_ordenar", {}),
+        pedido("POST", f"{T}/rest/v1/rpc/treino_pronto_salvar", {}), pedido("POST", f"{T}/storage/v1/object/exercicios/{ex}.png", None),
+        pedido("PUT", f"{T}/storage/v1/object/upload/sign/exercicios/{ex}.png?token=t", None)]
+    o.ok(not any(g.escrita(x) for x in passam) and all(g.escrita(x) for x in barram),
+         f"a Guarda da produção: passam o `ler` da treinos e da conta e as 3 RPCs de leitura do front antigo da 21d ({len(passam)}); barram as ações "
+         f"da treinos (as do Master inclusive), o `ler` disfarçado, a escrita direta no Treino, as 2 RPCs novas e o upload ({len(barram)})")
+    o.ok(B.RPCS_DE_LEITURA_DA_21D <= B.B17.Guarda().leitura,
+         "a lista da Guarda do repo (o RPC_SO_LEITURA do repeticao.ts) tem as 3 de novo — o desvio do gate do F7: as leituras do Treino voltaram ao "
+         "navegador (a guarda_da_w() também as soma)")
+    # as contas e as telas de cada base (decisão N): a produção NUNCA com a conta do staging
+    staging = {T21.PERSONAL, T21.SOZINHO, T21.OUTRA}
+    o.ok(T21.contas_da_area("prod") == ["nutri-legado", "aluno-calc"] and not staging & set(T21.contas_da_area("prod"))
+         and T21.contas_da_area("staging") == [T21.PERSONAL, T21.SOZINHO] and T21.contas_da_area("local") == [T21.PERSONAL, T21.SOZINHO],
+         "decisão N: na produção a nutri-legado (painel) e a aluno-calc (app) — nunca a conta do staging; no local/staging as de teste da W")
+    o.ok([x[0] for x in T21.telas_da_conta(T21.PERSONAL, "staging")] == ["meus_treinos", "detalhe", "biblioteca", "folha", "modelos_treinos", "busca", "editor"]
+         and [x[0] for x in T21.telas_da_conta("nutri-legado", "prod")] == ["meus_treinos", "detalhe", "biblioteca", "folha", "modelos_treinos", "busca"]
+         and [x[0] for x in T21.telas_da_conta(T21.SOZINHO, "local")] == ["treinos_prontos_aluno"]
+         and [x[0] for x in T21.telas_da_conta("aluno-calc", "prod")] == ["treinos_prontos_aluno"]
+         and {x[0]: x[3] for x in T21.TELAS_DO_PAINEL + (T21.PRONTOS,)} == {"meus_treinos": 3, "detalhe": 1, "biblioteca": 1, "folha": 1, "modelos_treinos": 1,
+                                                                             "busca": 1, "editor": 1, "treinos_prontos_aluno": 1},
+         "as telas de cada conta (o Detalhe e a Folha pelo clique na tela de cima; o editor fora da produção — sem aluno de TESTE lá) e o teto de "
+         "`ler` (3 só em Meus treinos — 2 em série, a série aceita, DECISÃO 12:1x, + a contagem com GIF sozinha, 89d8e30)")
+    # a trava das telas que PULAM (decisão N): sem o Treino na conta ativa / com profissional / sem a matrícula de teste — com valores FALSOS
+    originais = (T21.painel_tem_treino, T21.aluno_sem_profissional, T21.matricula_do_aluno, T21.exige_identidade)
+
+    class Calado:
+        def ok(self, c: object, _t: str, parar: object = None) -> bool:
+            return bool(c)
+
+        def linha(self, _t: str) -> None:
+            pass
+
+    try:
+        T21.painel_tem_treino = lambda _s, _c: (False, "falso")  # type: ignore[assignment]
+        T21.aluno_sem_profissional = lambda _s, _c: (False, "falso")  # type: ignore[assignment]
+        T21.matricula_do_aluno = lambda _s: None  # type: ignore[assignment]
+        identidades: list[str] = []
+        T21.exige_identidade = lambda _o, _s, c: identidades.append(c)  # type: ignore[assignment]  (o ⚪10: SQL só leitura — aqui, falso)
+        pula = ([x[0] for x in T21.telas_que_abrem(Calado(), "public", "prod", "nutri-legado")], [x[0] for x in T21.telas_que_abrem(Calado(), "public", "prod", "aluno-calc")],
+                [x[0] for x in T21.telas_que_abrem(Calado(), "staging", "local", T21.PERSONAL)])
+        T21.painel_tem_treino = lambda _s, _c: (True, "falso")  # type: ignore[assignment]
+        T21.aluno_sem_profissional = lambda _s, _c: (True, "falso")  # type: ignore[assignment]
+        abre = ([x[0] for x in T21.telas_que_abrem(Calado(), "public", "prod", "nutri-legado")], [x[0] for x in T21.telas_que_abrem(Calado(), "public", "prod", "aluno-calc")])
+    finally:
+        T21.painel_tem_treino, T21.aluno_sem_profissional, T21.matricula_do_aluno, T21.exige_identidade = originais
+    o.ok(pula == ([], [], ["meus_treinos", "detalhe", "biblioteca", "folha", "modelos_treinos", "busca"])
+         and abre == (["meus_treinos", "detalhe", "biblioteca", "folha", "modelos_treinos", "busca"], ["treinos_prontos_aluno"])
+         and identidades == [T21.PERSONAL],
+         "decisão N: na produção o painel sem o Treino na conta ativa e o aluno com profissional PULAM (com o motivo, nada aberto); o editor sem a "
+         "matrícula de TESTE pula — e com as pré-condições, abrem; ⚪10: fora da produção, a identidade no Treino é conferida ANTES de a conta "
+         "abrir no navegador (a troca do app não cria conta nova)")
+    fonte = Path(__file__).read_text(encoding="utf-8").split("def seco_21d", 1)[0]
+    base21d = (B.REPO / "e2e" / "hml21" / "treinos21d.py").read_text(encoding="utf-8")
+    o.ok('guarda = B.guarda_da_w() if base == "prod" else None\n                    t, pend = T21.abrir_conta(nav, base, conta, f"rede_treinos_{conta}", guarda)' in fonte
+         and 'if base == "prod":\n        t.ctx.add_init_script(B.JS_SEM_AVISO_VISTO)' in base21d and "B.LegalDesligado().instalar(t.ctx)" in base21d,
+         "a trava da produção no código: a Guarda da W em cada contexto da produção, sem a marca local de aviso visto, e o LegalDesligado da 21a")
+    o.ok(not any(T21.ENTRADA_PAINEL.startswith(r) for r in ("/painel/treinos", "/painel/modelos", "/painel/alunos")) and T21.ENTRADA_APP == "/perfil"
+         and not T21.efeitos_que_gravam("src/painel/configuracoes/Perfil.tsx"),
+         "a entrada é de fora da 21d (a carga fria não entra na medida da 1ª tela) e não grava ao abrir (o espelho do Treino só no salvar)")
+    o.ok(T21.fase_do_codigo_21d("local", "x") == "antes" and T21.fase_do_codigo_21d("staging", "7c1a637") == "antes"
+         and T21.fase_do_codigo_21d("staging", "fd49b66") == "depois" and T21.fase_do_codigo_21d("staging", "HEAD") == "antes",
+         "antes × depois vem do CÓDIGO medido (o 7c1a637 e o HEAD — o desvio do gate —: antes; o fd49b66: depois)")
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-21a/21b — a rede das telas (antes × depois): a casca e o app do aluno; a Agenda e os Alunos")
-    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos"))
+    ap = argparse.ArgumentParser(description="hml-21a/21b/21d — a rede das telas (antes × depois): a casca e o app do aluno; a Agenda e os Alunos; o Treino")
+    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos", "treinos"))
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--seco", action="store_true")
@@ -467,7 +652,9 @@ def main() -> int:
     B.usar_area(a.area)
     if a.seco:
         o = C.Saida(f"rede21_{a.area}_seco")
-        if a.area in B.AREAS_DA_21B:
+        if a.area in B.AREAS_DA_21D:
+            seco_21d(o)
+        elif a.area in B.AREAS_DA_21B:
             seco_21b(o, a.area)
         else:
             seco(o)

@@ -225,6 +225,35 @@ def casos_hml17(b) -> list[tuple]:
            g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/{n}", {})), True) for n in ("alunos_da_conta", "agenda_horarios", "equipe_da_conta", "minhas_regras_agenda")],
         ("hml-21b: RPC agenda_excluir_calendario (nova; só a conta chama: direta = grava)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/agenda_excluir_calendario", {})), True),
         ("hml-21b: RPC agenda_garantir_inicio (nova; só a conta chama: direta = grava)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/agenda_garantir_inicio", {})), True),
+        # hml-21d (decisão F): a treinos (Treino) — o `ler` com as consultas novas passa (inclusive as do Master e a especial); TODA ação dela é
+        # barrada (as do painel, a foto, o perfil e as do Master); a conta com q=aluno_treino passa (leitura); as 2 RPCs novas, diretas, são
+        # gravação na Guarda de base. F7: o gate de latência reprovou as leituras pela treinos → as 3 RPCs de leitura voltaram ao front (o
+        # desvio) e ao RPC_SO_LEITURA: diretas, passam como leitura
+        ("hml-21d: treinos (Treino) › ler (Meus treinos, os detalhes, as pastas, a busca, os treinos prontos)", g.escrita(Pedido("POST", f"{T}/functions/v1/treinos", {"acao": "ler", "itens": [
+            {"filtros": {}, "offset": 0, "limite": 20, "q": "modelos"}, {"ids": ["x"], "q": "modelos_detalhes"}, {"q": "pastas"}, {"termo": "a", "q": "busca_treinos"},
+            {"q": "treinos_prontos"}, {"q": "catalogo_modelos"}, {"q": "catalogo_pastas"}, {"q": "grupos_musculares"}, {"id": "x", "q": "modelo"}]})), False),
+        ("hml-21d: treinos › ler (o Master e a biblioteca: a especial exercicios_lista)", g.escrita(Pedido("POST", f"{T}/functions/v1/treinos", {"acao": "ler", "itens": [
+            {"q": "treinos_prontos_todos"}, {"pagina": 1, "q": "exercicios_globais"}, {"q": "grupos_globais"}, {"nome": "Peito", "q": "globais_do_grupo"},
+            {"filtros": {"escopo": "global"}, "offset": 0, "limite": 20, "q": "exercicios_lista"}]})), False),
+        ("hml-21d: treinos › OPTIONS (preflight)", fn("treinos", "ler", "OPTIONS", host=T), False),
+        *[(f"hml-21d: treinos › {a} (grava)", fn("treinos", a, host=T), True) for a in (
+            "modelo_criar", "modelo_editar", "modelo_excluir", "modelo_exercicio_incluir", "modelo_exercicio_tirar", "modelo_exercicio_prescrever",
+            "modelo_ordenar", "pasta_criar", "pasta_editar", "pasta_excluir", "pasta_vincular", "pasta_desvincular", "exercicio_criar", "exercicio_editar",
+            "exercicio_excluir", "exercicio_foto_preparar", "grupo_muscular_criar", "grupo_muscular_excluir", "professor_perfil", "treino_pronto_salvar",
+            "treino_pronto_ativo", "exercicio_global_criar", "exercicio_global_editar", "exercicio_global_excluir", "exercicio_global_promover",
+            "grupo_global_criar", "grupo_global_excluir")],
+        ("hml-21d: treinos › sem ação", fn("treinos", host=T), True),
+        ("hml-21d: treinos › disfarçado {action: ler, acao: modelo_excluir}", g.escrita(Pedido("POST", f"{T}/functions/v1/treinos", {"action": "ler", "acao": "modelo_excluir"})), True),
+        ("hml-21d: treinos › corpo ilegível", g.escrita(Pedido("POST", f"{T}/functions/v1/treinos", cru="{acao: ler")), True),
+        ("hml-21d: funcao_grava SEM o corpo: treinos 'ler' segue gravação (só o corpo libera)", b.funcao_grava("treinos", "ler"), True),
+        ("hml-21d: treinos-x (outra função, desconhecida: grava)", fn("treinos-x", "ler", host=T), True),
+        ("hml-21d: conta › ler (q=aluno_treino — o editor do Aluno › Treino)", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"acao": "ler", "itens": [
+            {"aluno": "x", "q": "aluno_treino"}]})), False),
+        *[(f"hml-21d F7: RPC {n} direta (voltou ao front — o desvio do gate; leitura)", g.escrita(Pedido("POST", f"{h}/rest/v1/rpc/{n}", {})), False)
+          for h, n in ((T, "modelos_da_lista"), (T, "exercicios_da_lista"), (P, "aluno_treino"))],
+        ("hml-21d: RPC treino_pronto_salvar (nova; só a treinos chama: direta = grava)", g.escrita(Pedido("POST", f"{T}/rest/v1/rpc/treino_pronto_salvar", {})), True),
+        ("hml-21d: RPC modelo_ordenar (nova; só a treinos chama: direta = grava)", g.escrita(Pedido("POST", f"{T}/rest/v1/rpc/modelo_ordenar", {})), True),
+        ("hml-21d: o PUT da foto do exercício no link assinado (Storage do Treino: grava)", g.escrita(Pedido("PUT", f"{T}/storage/v1/object/upload/sign/exercicios/x.gif?token=t", {})), True),
     ]
     # toda função das pastas do repo está decidida (conhecida ou "sempre grava"): função nova sem decisão falha aqui
     pastas = {d.name for raiz in ("supabase-principal/functions", "supabase/functions") for d in (REPO / raiz).iterdir()
@@ -242,6 +271,8 @@ def casos_hml17(b) -> list[tuple]:
     saida.append(("W-A P2: as 3 fora das 'conhecidas', nas que gravam sempre e com o `ler` pelo corpo", all(
         f not in b.FUNCOES_CONHECIDAS and f in b.FUNCOES_QUE_SEMPRE_GRAVAM and b.LEITURAS_PELO_CORPO.get(f) == ("acao", frozenset({"ler"}))
         for f in ("acessos", "aluno-dia", "treino-acessos")), True, ("sim", "não")))
+    saida.append(("hml-21d: a treinos fora das 'conhecidas', nas que gravam sempre e com o `ler` pelo corpo", "treinos" not in b.FUNCOES_CONHECIDAS
+                  and "treinos" in b.FUNCOES_QUE_SEMPRE_GRAVAM and b.LEITURAS_PELO_CORPO.get("treinos") == ("acao", frozenset({"ler"})), True, ("sim", "não")))
     return saida
 
 
@@ -307,6 +338,18 @@ def casos_w26(w) -> list[tuple]:
           for a in ("agenda_garantir", "calendario_excluir", "agendamento_criar", "regras_salvar", "agenda_marcar", "pacote_definir")],
         ("w26 · hml-21b: POST conta disfarçado {action: ler, acao: agendamento_excluir}",
          e("POST", f"{P}/functions/v1/conta", json.dumps({"action": "ler", "acao": "agendamento_excluir"})), True),
+        # hml-21d (risco 4): a treinos (Treino) é escrita (antes, função desconhecida = leitura aqui); o `ler` dela passa pelo corpo
+        ("w26 · hml-21d: POST treinos", e("POST", f"{T}/functions/v1/treinos"), True),
+        ("w26 · hml-21d: POST treinos {acao: ler, itens: [modelos, pastas, exercicios_lista]}",
+         e("POST", f"{T}/functions/v1/treinos", json.dumps({"acao": "ler", "itens": [{"q": "modelos"}, {"q": "pastas"}, {"q": "exercicios_lista"}]})), False),
+        *[(f"w26 · hml-21d: POST treinos {{acao: {a}}}", e("POST", f"{T}/functions/v1/treinos", json.dumps({"acao": a})), True)
+          for a in ("modelo_criar", "modelo_ordenar", "exercicio_foto_preparar", "professor_perfil", "treino_pronto_salvar", "exercicio_global_excluir")],
+        ("w26 · hml-21d: POST treinos disfarçado {action: ler, acao: pasta_excluir}", e("POST", f"{T}/functions/v1/treinos", json.dumps({"action": "ler", "acao": "pasta_excluir"})), True),
+        ("w26 · hml-21d: OPTIONS treinos", e("OPTIONS", f"{T}/functions/v1/treinos"), False),
+        ("w26 · hml-21d: POST treinos-x (outra função)", e("POST", f"{T}/functions/v1/treinos-x"), False),
+        ("w26 · hml-21d: POST conta {acao: ler, itens: [aluno_treino]}", e("POST", f"{P}/functions/v1/conta", json.dumps({"acao": "ler", "itens": [{"q": "aluno_treino"}]})), False),
+        ("w26 · hml-21d: RPC modelo_ordenar direta (escrita)", e("POST", f"{T}/rest/v1/rpc/modelo_ordenar"), True),
+        ("w26 · hml-21d: RPC treino_pronto_salvar direta (escrita)", e("POST", f"{T}/rest/v1/rpc/treino_pronto_salvar"), True),
     ]
 
 

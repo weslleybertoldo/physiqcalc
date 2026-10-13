@@ -12,6 +12,7 @@ import {
   CAMPOS_EQUIVALENCIA_VAZIOS, camposDoExercicio, camposParaGravar, rotuloEquipamento, rotuloPadrao, type CamposEquivalencia,
 } from "@/treino/equivalencia";
 import { codigosDaBusca } from "@/treino/equivalenciaBusca";
+import { ErroGravacaoConta, acaoTreinos, type AcaoTreinos } from "@/treino/servidor";
 import { FormExercicioBiblioteca } from "@/treino/ui/FormExercicioBiblioteca";
 import { usePaginaNaUrl } from "@/ui/casca/usePaginaNaUrl";
 import { Paginacao } from "@/ui/premium/Paginacao";
@@ -95,6 +96,21 @@ async function nomesDosDonos(ids: string[]): Promise<Map<string, string>> {
 }
 const SEM_NOMES = new Map<string, string>();
 
+/**
+ * hml-21d (H-43 · jeito 2, etapa 3): uma gravação da Biblioteca global pela função treinos (o papel de master conferido no servidor ANTES do
+ * banco; o RLS decide de novo) — o erro no formato que o erroBanco desta página já lê: o código do Postgres de hoje para o nome repetido, o
+ * item em uso e o RLS (as MESMAS frases); o resto, a frase fixa do código (a mensagem crua do banco não chega mais à tela).
+ */
+async function gravarNaBiblioteca(acao: AcaoTreinos, corpo: Record<string, unknown>): Promise<void> {
+  try {
+    await acaoTreinos(acao, corpo);
+  } catch (e) {
+    const codigo = e instanceof ErroGravacaoConta ? e.codigo : "";
+    const pg = ({ conflito: "23505", em_uso: "23503", sem_acesso: "42501" } as Record<string, string>)[codigo];
+    throw pg ? { code: pg } : e;
+  }
+}
+
 function erroBanco(e: unknown): string {
   const err = (e ?? {}) as { code?: string; message?: string };
   if (err.code === "23505") return "Já existe um registro com esse nome.";
@@ -176,12 +192,11 @@ const BibliotecaPage = () => {
     try {
       const campos = { nome: fNome.trim(), grupo_muscular: grupo, emoji: fEmoji, subgrupo: fSub.trim() || null, dica: fDica.trim() || null, ...camposParaGravar(fEquiv) };
       if (editor?.ex) {
-        const { error } = await tabela("tb_exercicios").update(campos).eq("id", editor.ex.id);
-        if (error) throw error;
+        await gravarNaBiblioteca("exercicio_global_editar", { ...campos, id: editor.ex.id });
         toast.success("Exercício atualizado.");
       } else {
-        const { error } = await tabela("tb_exercicios").insert({ ...campos, professor_id: null, tipo: "musculacao" });
-        if (error) throw error;
+        // o professor_id nulo e o tipo musculação nascem no servidor (o insert de hoje)
+        await gravarNaBiblioteca("exercicio_global_criar", campos);
         toast.success("Exercício global criado. Foto/GIF: Admin › Treinos › Biblioteca.");
       }
       setEditor(null);
@@ -201,8 +216,7 @@ const BibliotecaPage = () => {
     if (!ok) return;
     setBusyId(ex.id);
     try {
-      const { error } = await tabela("tb_exercicios").delete().eq("id", ex.id);
-      if (error) throw error;
+      await gravarNaBiblioteca("exercicio_global_excluir", { id: ex.id });
       toast.success("Exercício excluído.");
       void lista.refetch();
     } catch (e) {
@@ -221,8 +235,7 @@ const BibliotecaPage = () => {
     if (!ok) return;
     setBusyId(ex.id);
     try {
-      const { error } = await tabela("tb_exercicios").update({ professor_id: null }).eq("id", ex.id);
-      if (error) throw error;
+      await gravarNaBiblioteca("exercicio_global_promover", { id: ex.id });
       toast.success("Exercício promovido para global.");
       void lista.refetch();
     } catch (e) {
@@ -240,8 +253,7 @@ const BibliotecaPage = () => {
     if (!nome) return;
     setSalvandoGrupo(true);
     try {
-      const { error } = await tabela("grupos_musculares").insert({ nome, professor_id: null });
-      if (error) throw error;
+      await gravarNaBiblioteca("grupo_global_criar", { nome });
       setNovoGrupo("");
       toast.success("Grupo muscular criado.");
       void gruposQ.refetch();
@@ -266,8 +278,7 @@ const BibliotecaPage = () => {
     });
     if (!ok) return;
     try {
-      const { error } = await tabela("grupos_musculares").delete().eq("id", g.id);
-      if (error) throw error;
+      await gravarNaBiblioteca("grupo_global_excluir", { id: g.id });
       toast.success("Grupo excluído.");
       void gruposQ.refetch();
     } catch (e) {

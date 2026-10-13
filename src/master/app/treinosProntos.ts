@@ -3,9 +3,14 @@
  * scripts/conteudo/carregar_treinos_prontos.py (physiq_treinos_prontos / _grupos / _exercicios; a RLS da W27 deixa só o master
  * escrever). Salvar refaz as divisões e os exercícios do treino, como a carga do JSON (o JSON segue valendo para recarregar). O que o
  * aluno já escolheu é cópia dele e não muda.
+ * hml-21d (H-43 · jeito 2, etapa 3): as GRAVAÇÕES vão pela função treinos (src/treino/servidor.ts: acaoTreinos — o papel de master conferido
+ * no servidor ANTES do banco, e o RLS decide de novo): o salvar vira 1 ação numa transação (a RPC treino_pronto_salvar: a linha, as divisões e
+ * os exercícios juntos — antes 2 + 2×N pedidos em série, e uma falha no meio deixava o treino sem as divisões — achado 3); a mesma assinatura;
+ * o erro com a frase fixa do código (a mensagem crua do banco não chega mais à tela).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { acaoTreinos } from "@/treino/servidor";
 
 export const OBJETIVOS = ["emagrecer", "manter", "ganhar_massa"] as const;
 export const NIVEIS = ["iniciante", "intermediario", "avancado"] as const;
@@ -82,39 +87,28 @@ export function validarTreino(t: TreinoPronto): string | null {
   return null;
 }
 
+/**
+ * Salva o treino pronto: a MESMA linha (os mesmos padrões — o código, os dias por semana, a divisão, a descrição) e as divisões na ordem da
+ * tela (a ordem = a posição, a partir de 1; os exercícios idem), numa transação no servidor (a RPC treino_pronto_salvar). → o id.
+ */
 export async function salvarTreinoPronto(t: TreinoPronto): Promise<string> {
-  const db = cliente();
   const linha = {
     codigo: t.codigo || `master-${Math.random().toString(36).slice(2, 10)}`,
     nome: t.nome.trim(), objetivo: t.objetivo, nivel: t.nivel, dias_por_semana: t.grupos.flatMap((g) => g.dias).length,
     divisao: t.divisao.trim() || t.grupos.map((g) => g.letra).join(" · "), descricao: t.descricao?.trim() || null, ordem: t.ordem, ativo: t.ativo,
   };
-  let id = t.id;
-  if (id) {
-    const { error } = await db.from("physiq_treinos_prontos").update(linha).eq("id", id);
-    if (error) throw new Error(error.message);
-    const { error: ed } = await db.from("physiq_treinos_prontos_grupos").delete().eq("treino_id", id);
-    if (ed) throw new Error(ed.message);
-  } else {
-    const { data, error } = await db.from("physiq_treinos_prontos").insert(linha).select("id").single();
-    if (error) throw new Error(error.message);
-    id = (data as { id: string }).id;
-  }
-  for (const [i, g] of t.grupos.entries()) {
-    const { data: gd, error: eg } = await db.from("physiq_treinos_prontos_grupos")
-      .insert({ treino_id: id, letra: g.letra, nome: g.nome.trim(), dias: g.dias, ordem: i + 1 }).select("id").single();
-    if (eg) throw new Error(eg.message);
-    const exs = g.exercicios.map((e, j) => ({ grupo_id: (gd as { id: string }).id, exercicio_id: e.exercicio_id, ordem: j + 1, series: e.series,
-      reps: e.reps.trim(), descanso_segundos: e.descanso_segundos, observacao: e.observacao?.trim() || null }));
-    const { error: ee } = await db.from("physiq_treinos_prontos_exercicios").insert(exs);
-    if (ee) throw new Error(ee.message);
-  }
-  return id!;
+  const divisoes = t.grupos.map((g) => ({
+    letra: g.letra, nome: g.nome.trim(), dias: g.dias,
+    exercicios: g.exercicios.map((e) => ({
+      exercicio_id: e.exercicio_id, series: e.series, reps: e.reps.trim(), descanso_segundos: e.descanso_segundos, observacao: e.observacao?.trim() || null,
+    })),
+  }));
+  const r = await acaoTreinos<{ id: string | null }>("treino_pronto_salvar", { id: t.id, treino: linha, divisoes });
+  return (r.id ?? t.id)!;
 }
 
 export async function ativarTreinoPronto(id: string, ativo: boolean): Promise<void> {
-  const { error } = await cliente().from("physiq_treinos_prontos").update({ ativo }).eq("id", id);
-  if (error) throw new Error(error.message);
+  await acaoTreinos("treino_pronto_ativo", { id, ativo });
 }
 
 export function treinoNovo(): TreinoPronto {

@@ -13,6 +13,8 @@
 // Os contadores da casca (o número de Alunos, o whatsapp_resumo e a faixa mensagens_desligadas) vão com a área deles (21b e 21c).
 // hml-21b (13/10/2026): + a Agenda (do profissional e do aluno), os Alunos (lista, filtros, seletor, pendentes, convites, o número do menu,
 // a Busca) e a parte não saúde do Dashboard — CONSULTAS_AGENDA e CONSULTAS_ALUNOS (o bloco 21b da §2.2), no fim deste arquivo.
+// hml-21d (13/10/2026): + o aluno_treino (o editor do Aluno › Treino acha o usuário do Treino do aluno da rota antes das funções do Treino)
+// — CONSULTAS_TREINO_DA_CONTA, no fim. Por ACRÉSCIMO: as consultas da 21a e da 21b não mudam.
 import type { CatalogoLeitura, ConsultaLeitura } from "./leitura-lote.ts";
 import type { CatalogoDoServidor } from "./leitura-servidor.ts";
 
@@ -291,21 +293,32 @@ export const CONSULTAS_ALUNOS = {
   equipe_da_conta: { params: { conta: uuidObrigatorio }, fonte: { rpc: "equipe_da_conta", args: { p_conta: "conta" } } },
 } as const satisfies Record<string, ConsultaLeitura>;
 
-/** Todas as consultas da função: a 21a (a casca e o app do aluno) + a 21b (a Agenda e os Alunos). */
-const TODAS = { ...CONSULTAS_CONTA, ...CONSULTAS_AGENDA, ...CONSULTAS_ALUNOS };
+// ───────────────────────── hml-21d — o editor do Aluno › Treino (src/treino/editor/api.ts, acharAlunoNoTreino) ─────────────────────────
+// A MESMA RPC que a lib chamava no navegador no 7c1a637 (v3.116), com o MESMO argumento: a aluno_treino(p_aluno) — stable, definer, SÓ LÊ
+// (supabase-principal/migrations/20260930200000_w16_dieta.sql:163: a matrícula da rota pela w14_matricula_da_rota, que confere quem pode, e
+// o user_id/treino_user_id/conta_id dela) — por isso no `ler` (não vira ação, como o aluno_acesso da decisão 13). O raise da
+// w14_matricula_da_rota (sem_login, sem_acesso, aluno_inexistente) volta como o código (o que a lib recebia na mensagem hoje).
+export const CONSULTAS_TREINO_DA_CONTA = {
+  aluno_treino: { params: { aluno: uuidObrigatorio }, fonte: { rpc: "aluno_treino", args: { p_aluno: "aluno" }, erros: ERROS_DA_MATRICULA_DA_ROTA } },
+} as const satisfies Record<string, ConsultaLeitura>;
+
+/** Todas as consultas da função: a 21a (a casca e o app do aluno) + a 21b (a Agenda e os Alunos) + a 21d (o aluno_treino do editor). */
+const TODAS = { ...CONSULTAS_CONTA, ...CONSULTAS_AGENDA, ...CONSULTAS_ALUNOS, ...CONSULTAS_TREINO_DA_CONTA };
 
 export type ConsultaDaConta = keyof typeof TODAS;
 /** As consultas da 21a (a casca e o app do aluno) — a lista que o teste da 21a fixa. */
 export const CONSULTAS_DA_CONTA = Object.keys(CONSULTAS_CONTA) as Array<keyof typeof CONSULTAS_CONTA>;
 /** hml-21b: as consultas da Agenda e dos Alunos. */
 export const CONSULTAS_DA_21B = [...Object.keys(CONSULTAS_AGENDA), ...Object.keys(CONSULTAS_ALUNOS)] as ConsultaDaConta[];
-/** Todas as consultas da função, na ordem (21a e 21b). */
+/** hml-21d: a consulta do editor do Aluno › Treino. */
+export const CONSULTAS_DA_21D = Object.keys(CONSULTAS_TREINO_DA_CONTA) as ConsultaDaConta[];
+/** Todas as consultas da função, na ordem (21a, 21b e 21d). */
 export const TODAS_AS_CONSULTAS = Object.keys(TODAS) as ConsultaDaConta[];
 
-/** O catálogo da conta para o motor comum (sem Storage, sem filtros a mais, o valor das RPCs como veio) — as 21a e as 21b. */
+/** O catálogo da conta para o motor comum (sem Storage, sem filtros a mais, o valor das RPCs como veio) — as 21a, as 21b e a 21d. */
 export const CATALOGO_CONTA: CatalogoDoServidor = { consultas: TODAS as unknown as CatalogoLeitura };
 
-/** A consulta, se está no catálogo (21a ou 21b); senão null. */
+/** A consulta, se está no catálogo (21a, 21b ou 21d); senão null. */
 export function consultaDaConta(q: unknown): ConsultaLeitura | null {
   return typeof q === "string" && Object.prototype.hasOwnProperty.call(TODAS, q) ? (TODAS as Record<string, ConsultaLeitura>)[q] : null;
 }

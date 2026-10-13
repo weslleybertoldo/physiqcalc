@@ -33,6 +33,10 @@ e a rodada na área "hml21b"); o regras_conta() com o catálogo INTEIRO da funç
 Agenda e dos Alunos; o SQL FIXO das libs da 21b no d357719 (o SQL_DA_LIB, as listas sem ordem total comparadas como conjunto); as áreas
 "agenda" e "alunos" do contar_area (a outra área e as de fora da 21b à parte); a Guarda da produção com as 9 RPCs de LEITURA que saíram do
 front na 21b; o Estado com a chave "hml21b" (a massa da 21b — e2e/hml21/painel21b.py — nunca abre por cima de outra rodada).
+hml-21d (13/10/2026 — o Treino pela função NOVA `treinos`), só por acréscimo: a área "treinos" (prints em prints/hml21/d, a rodada na área
+"hml21d" — o usar_area); o que a guarda conta na 21d (AREAS["treinos"]: as tabelas, as RPCs e o bucket do Treino que saíram do navegador
+e a aluno_treino do principal); a Guarda da produção com as 3 RPCs de LEITURA que saíram do front na 21d; o Estado com a chave "hml21d"
+(a massa da 21d — e2e/hml21/treinos21d.py — nunca abre por cima de outra rodada, nem outra por cima dela).
 """
 from __future__ import annotations
 
@@ -62,18 +66,25 @@ C.SAIDA = SCRATCH / "agente"
 MEDICAO = SCRATCH / "medicao"
 PRINTS_A = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "a"
 PRINTS_B = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "b"
+PRINTS_D = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "d"  # hml-21d
 PRINTS = PRINTS_A
 MARCA = "hml21 e2e"
 AREA_ESTADO = "hml21a"  # a área no Estado (o --limpar desta W só desfaz a rodada dela)
 # hml-21b (decisão I do contrato da 21b): as áreas da Agenda e dos Alunos gravam os prints em prints/hml21/b e a rodada na área "hml21b"
 AREAS_DA_21B = ("agenda", "alunos")
 CHAVE_21B = "hml21b"  # a chave da massa da 21b no Estado (o vazio() da hml-19 não a conhece: o abrir/fechar_rodada daqui conferem)
+# hml-21d (decisão I do contrato da 21d): a área do Treino grava os prints em prints/hml21/d e a rodada na área "hml21d"
+AREAS_DA_21D = ("treinos",)
+CHAVE_21D = "hml21d"  # a chave da massa da 21d no Estado (como a da 21b: o abrir/fechar_rodada daqui conferem)
 
 
 def usar_area(area: str) -> None:
     """A pasta dos prints e a área no Estado de cada sub-W: a 21a (casca/app) em prints/hml21/a e "hml21a"; a 21b (agenda/alunos) em
     prints/hml21/b e "hml21b" — o --limpar de cada uma só desfaz a rodada dela; sem chamar, a 21a (o --area casca|app não muda)."""
     global PRINTS, AREA_ESTADO
+    if area in AREAS_DA_21D:  # hml-21d: o Treino em prints/hml21/d e "hml21d"
+        PRINTS, AREA_ESTADO = PRINTS_D, CHAVE_21D
+        return
     da_21b = area in AREAS_DA_21B
     PRINTS = PRINTS_B if da_21b else PRINTS_A
     AREA_ESTADO = "hml21b" if da_21b else "hml21a"
@@ -478,13 +489,26 @@ RPCS_DE_LEITURA_DA_21A = frozenset({"meu_perfil_aluno", "meu_plano_app", "minha_
 # release da 21b) ainda as chama direto: a Guarda da produção as deixa passar (só leem; STABLE no catálogo — hml21/medicao/agenda21b_rpcs.txt)
 RPCS_DE_LEITURA_DA_21B = frozenset({"agenda_horarios", "aluno_agenda_horarios", "aluno_compromissos", "aluno_convites", "alunos_da_conta",
                                     "alunos_novos_por_mes", "alunos_pendentes", "equipe_da_conta", "minhas_regras_agenda"})
+# hml-21d: as 3 RPCs de LEITURA que saíram do front na 21d (o RPC_SO_LEITURA do repeticao.ts: 30 → 27; STABLE no catálogo — as 2 do Treino em
+# hml21/medicao/treino21d_funcoes.txt; a aluno_treino do principal é a do editor) — o front ANTIGO (a produção até a release da 21d) ainda as
+# chama direto: a Guarda da produção as deixa passar (só leem)
+RPCS_DE_LEITURA_DA_21D = frozenset({"modelos_da_lista", "exercicios_da_lista", "aluno_treino"})
+# hml-21d — o que sai do navegador na 21d (as leituras e as gravações do Painel › Treinos, da Biblioteca, da Busca, do Master, dos Treinos
+# prontos do app, do espelho do perfil e do editor; as 2 RPCs novas nunca são chamadas pelo front): as tabelas do Treino, as RPCs (as 2 de
+# lista e as 2 novas no Treino; a aluno_treino no principal) e o bucket das fotos dos exercícios (menos o PUT no link assinado e a imagem)
+AREAS["treinos"] = {
+    "tabelas": {"tb_grupos_treino", "tb_grupos_exercicios", "tb_pastas_treino", "tb_pastas_treino_grupos", "tb_exercicios", "grupos_musculares",
+                "physiq_treinos_prontos", "physiq_treinos_prontos_grupos", "physiq_treinos_prontos_exercicios", "physiq_professores"},
+    "rpcs": {"modelos_da_lista", "exercicios_da_lista", "modelo_ordenar", "treino_pronto_salvar", "aluno_treino"},
+    "buckets": {"exercicios", "exercicios-staging"},
+}
 
 
 def guarda_da_w():
     """A Guarda da produção (e2e/hml17: toda escrita barrada; a conta: só o `ler` passa) + as RPCs de leitura que saíram do front na 21a e
     na 21b (o front antigo ainda as chama: só leem)."""
     g = Guarda()
-    g.leitura = set(g.leitura) | set(RPCS_DE_LEITURA_DA_21A) | set(RPCS_DE_LEITURA_DA_21B)
+    g.leitura = set(g.leitura) | set(RPCS_DE_LEITURA_DA_21A) | set(RPCS_DE_LEITURA_DA_21B) | set(RPCS_DE_LEITURA_DA_21D)  # hml-21d: + as 3
     return g
 
 
@@ -727,10 +751,16 @@ def tem_massa_21b(estado) -> bool:
     return isinstance(m, dict) and any(bool(v) for v in m.values())
 
 
+def tem_massa_21d(estado) -> bool:
+    """hml-21d: o Estado ainda tem massa do Treino (a chave "hml21d": os donos, as linhas criadas pelas ações, os arquivos de teste)."""
+    m = estado.d.get(CHAVE_21D)
+    return isinstance(m, dict) and any(bool(m.get(k)) for k in ("linhas", "storage", "donos"))
+
+
 def abrir_rodada(o, s: str):
     """A rodada nova: recusa se há outra pendente (de qualquer W: o vazio() da hml-19 + a foto desta) e grava o Estado com a área desta W."""
     pendente = Estado.ler()
-    if not pendente.vazio() or pendente.d.get("hml21_foto") or pendente.d.get("hml21_destino") or tem_massa_21b(pendente):
+    if not pendente.vazio() or pendente.d.get("hml21_foto") or pendente.d.get("hml21_destino") or tem_massa_21b(pendente) or tem_massa_21d(pendente):
         o.ok(False, f"há uma rodada que caiu no meio (área {pendente.d.get('area') or '?'}): rode o --limpar dela antes", parar=True)
     estado = Estado({"rodada": nova_rodada(), "schema": s, "area": AREA_ESTADO, "linhas": [], "storage": [], "n8": None})
     estado.salvar()
@@ -748,7 +778,7 @@ def fechar_rodada(o, estado, s: str, L) -> None:
             limpar_push(o, estado, s, L)
         finally:
             limpar_foto(o, estado, s, L)
-    if estado.vazio() and not estado.d.get("hml21_foto") and not estado.d.get("hml21_push") and not tem_massa_21b(estado):
+    if estado.vazio() and not estado.d.get("hml21_foto") and not estado.d.get("hml21_push") and not tem_massa_21b(estado) and not tem_massa_21d(estado):
         estado.apagar()
     else:
         o.ok(False, "o Estado ficou com pendência (a massa, o push ou a foto): rode o api.py --limpar", parar=False)

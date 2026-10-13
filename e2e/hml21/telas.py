@@ -33,6 +33,12 @@ barrada —, b_alunos, b_dashboard, b_busca; o dono: os _personal; a aluna: b_ag
 antes + 0,3 s; o antes = a rodada do staging com o código antigo em hml21/medicao/telas_hml21b.tsv, senão o da spec) e o FLUXO PELA TELA na
 Agenda da nutri (a massa de TESTE com a marca: o calendário, a consulta sem aluno — criar/editar/excluir —, a trava, o bloqueio e a tag;
 cada gravação = 1 ação da conta e 0 escrita direta; o calendário sai pela RPC nova) — a massa limpa no fim (o Estado, a chave hml21b).
+hml-21d (contrato da 21d, decisões I e K): --area treinos [--casos prints,tempo] [--gate] — conta por conta (e2e/hml21/treinos21d.py), os
+prints d_* em prints/hml21/d (o personal: d_treinos, d_detalhe, d_biblioteca, d_folha, d_modelos_treinos, d_busca, d_editor e d_erro — Meus
+treinos com a treinos barrada; o aluno sem profissional: d_treinos_prontos_aluno), o tempo de cada tela (3 aberturas aquecidas, ≤ o antes +
+0,3 s; o antes = a rodada do staging com o código antigo em hml21/medicao/telas_hml21d.tsv, senão o da spec) e o GATE (--gate, no FIM da
+etapa 2, um por vez): Meus treinos e os Treinos prontos do aluno, 10 aberturas cada (5 com a treinos ociosa — ≥ 10 min sem pedido, o
+critério da medição logs_borda — e 5 quente) × as 5 do antes (o staging servindo a main), registradas à parte (hml21/medicao/gate_hml21d.tsv).
 """
 from __future__ import annotations
 
@@ -48,6 +54,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 import painel21b as P21  # noqa: E402  (hml-21b: as contas, as telas e a massa da Agenda e dos Alunos)
 import rede as R  # noqa: E402
+import treinos21d as T21  # noqa: E402  (hml-21d: as contas, as telas e o gate do Treino)
 
 C = B.C
 PLANILHA = B.MEDICAO / "telas_hml21a.tsv"
@@ -675,33 +682,510 @@ def seco_21b(o, area: str) -> None:
     o.ok(CASOS_21B == ("prints", "tempo", "fluxo") and (FOLGA_S, ABERTURAS_TEMPO) == (0.3, 3), "o tempo: 3 aberturas, ≤ antes + 0,3 s (decisão K)")
 
 
+# ───────────────────────── hml-21d: as telas do Treino (--area treinos) ─────────────────────────
+CASOS_21D = ("prints", "tempo")
+CAB_21D = ["quando", "base", "commit", "fase", "conta", "medida", "n", "valores_s", "mediana_s", "referencia_s", "ok"]
+# os prints d_* (contrato da 21d, F5): o personal — Meus treinos, o Detalhe, a Biblioteca, a Folha, os Modelos › Treinos, a Busca, o editor e
+# o erro (Meus treinos com a treinos barrada); o aluno sem profissional — os Treinos prontos
+CASO_DA_TELA_21D = {"meus_treinos": "d_treinos", "detalhe": "d_detalhe", "biblioteca": "d_biblioteca", "folha": "d_folha", "modelos_treinos": "d_modelos_treinos",
+                    "busca": "d_busca", "editor": "d_editor", "treinos_prontos_aluno": "d_treinos_prontos_aluno"}
+PRINTS_21D = (*CASO_DA_TELA_21D.values(), "d_erro")
+# d_erro: depois, a função treinos barrada; antes (o código antigo), as leituras DIRETAS de Meus treinos (a RPC da página e as pastas)
+BARRA_DEPOIS_21D = re.compile(r"https://api\.physiqcalc\.com\.br/functions/v1/treinos(\?|$)")
+BARRA_ANTES_21D = re.compile(r"https://api\.physiqcalc\.com\.br/rest/v1/(rpc/modelos_da_lista|tb_pastas_treino)(\?|$)")
+ERRO_DOS_TREINOS = '[data-pagina-treinos-painel] [data-estado="erro"]'
+# o "pai" de cada tela aberta pelo clique (o tempo: a tela de cima de novo, FORA da medida; o clique, DENTRO)
+PAI_DO_CLIQUE = {"detalhe": "/painel/treinos?aba=treinos", "folha": "/painel/treinos?aba=biblioteca"}
+# o GATE (decisão K): o Painel › Treinos e os Treinos prontos do aluno, 10 aberturas cada — 5 com a treinos OCIOSA (a 1ª depois de ≥ 10 min
+# sem nenhum pedido a ela: o MESMO critério da medição hml21/medicao/logs_borda_* — "ociosa = a anterior da mesma função há ≥ 10 min") e 5
+# QUENTE (seguidas); o antes = 5 aberturas da tela de hoje (o staging servindo a main), na mesma hora. Passa: o Painel p50 ≤ antes + 0,3 s; os
+# Treinos prontos p50 ≤ 2,0 s
+OCIOSA_S = 600
+ABERTURAS_OCIOSA = 5
+ABERTURAS_QUENTE = 5
+ABERTURAS_ANTES_GATE = 5
+GATE_FOLGA_S = 0.3
+GATE_ALUNO_MAX_S = 2.0
+TELAS_DO_GATE = ((T21.PERSONAL, T21.MEUS_TREINOS), (T21.SOZINHO, T21.PRONTOS))
+FONTE_DO_CRITERIO = B.MEDICAO / "logs_borda_treino_72h.txt"
+
+
+def referencia_21d(conta: str, medida: str) -> float | None:
+    """O ANTES desta medida: a última rodada do staging com o código antigo nesta planilha (a mesma conta); sem ela, o da spec."""
+    if T21.PLANILHA_TELAS.exists():
+        linhas = T21.PLANILHA_TELAS.read_text(encoding="utf-8").splitlines()
+        cab = linhas[0].split("\t") if linhas else []
+        antes = [dict(zip(cab, x.split("\t"))) for x in linhas[1:]]
+        antes = [x for x in antes if x.get("fase") == "antes" and x.get("conta") == conta and x.get("medida") == medida and x.get("mediana_s") not in ("", "None")]
+        if antes:
+            return float(antes[-1]["mediana_s"])
+    return T21.antes_da_spec(conta).get(T21.ROTA_DA_SPEC.get(medida.split(":", 1)[-1], "?"))
+
+
+def abrir_para_medir(t, pend, tela: tuple, conta: str, s: str) -> dict:
+    """Uma abertura aquecida: a entrada (ou a tela de cima, no clique) FORA da medida e a tela pela navegação do app — a medida do "pronto"."""
+    nome, (como, _alvo), _marca, _teto = tela
+    T21.fechar_janelas(t)
+    if como == "clique":
+        B.navegar(t, PAI_DO_CLIQUE[nome])
+        B.esperar_pronto(t, pend, max_s=40)
+    elif como in ("rota", "editor"):
+        B.navegar(t, T21.ENTRADA_APP if T21.eh_do_app(conta) else T21.ENTRADA_PAINEL)
+        t.pg.wait_for_timeout(600)
+    return T21.abrir_tela(t, pend, tela, s)
+
+
+def tempo_21d(o, t, pend, base: str, commit: str, fase: str, conta: str, telas: list[tuple], s: str) -> None:
+    """Decisão K: cada tela 3 vezes pela navegação do app (aquecido: a tela já foi aberta), a mediana do "pronto" ≤ o antes + 0,3 s."""
+    for tela in telas:
+        nome = tela[0]
+        valores = [abrir_para_medir(t, pend, tela, conta, s)["t_pronto_s"] for _ in range(ABERTURAS_TEMPO)]
+        T21.fechar_janelas(t)
+        med = B.mediana(valores)
+        chave = f"tempo:{nome}"
+        ref = referencia_21d(conta, chave)
+        ok = None if fase == "antes" or ref is None or med is None else med <= ref + FOLGA_S
+        B.anotar_planilha(T21.PLANILHA_TELAS, CAB_21D, [time.strftime("%Y-%m-%d %H:%M"), base, commit, fase, conta, chave, len(valores),
+                                                        ",".join(str(v) for v in valores), med, ref, ok])
+        if fase == "antes":
+            o.linha(f"   [antes] {conta} · {nome}: {valores} → mediana {med} s (a referência do depois)")
+            continue
+        if not o.ok(ok is not False, f"[depois] {conta} · {nome}: mediana {med} s ≤ antes {ref} + {FOLGA_S} s ({valores})" + (" — sem o antes medido" if ref is None else "")):
+            o.linha(f"TEMPO {nome} {ref} × {med} (valores {valores}) — o ## TEMPO no progresso; a decisão é da sessão principal")
+
+
+def print_erro_21d(o, t, pend, base: str, fase: str, prefixo: str | None) -> None:
+    """d_erro: Meus treinos RECARREGADO com a treinos barrada (depois) / com as leituras diretas da página e das pastas barradas (antes): o
+    aviso de erro ("Não deu para abrir os treinos"), nunca a lista vazia."""
+    barra = BARRA_DEPOIS_21D if fase == "depois" else BARRA_ANTES_21D
+    barrados: list[str] = []
+
+    def barrar(route, req) -> None:
+        barrados.append(req.method)
+        route.abort()
+
+    t.ctx.route(barra, barrar)
+    try:
+        t.ir("/painel/treinos?aba=treinos")
+        ok = t.esperar(lambda: t.n(ERRO_DOS_TREINOS) > 0, 90)
+        o.ok(ok and bool(barrados), f"[{base}] d_erro: {'a treinos barrada' if fase == 'depois' else 'as leituras diretas de Meus treinos barradas'} "
+             f"({len(barrados)} pedido(s)) → o aviso de erro (\"{t.texto(ERRO_DOS_TREINOS)[:60]}\")")
+        B.print_reduzido(t.pg, prefixo or base, "d_erro", o)
+    finally:
+        t.ctx.unroute(barra)
+    t.ir("/painel/treinos?aba=treinos")
+    t.esperar(lambda: t.n(T21.MEUS_TREINOS[2]) > 0, 90)
+    B.esperar_pronto(t, pend, max_s=40)
+
+
+def p50(v: list) -> float | None:
+    return B.mediana([x for x in v if x is not None])
+
+
+def referencia_gate(tela: str) -> tuple[float | None, str | None]:
+    """O ANTES do gate: o p50 das 5 aberturas da última rodada do staging com o código antigo (a planilha do gate) e QUANDO foi medido (o
+    🟡2 da revisão: só vale até 30 min antes do depois)."""
+    if not T21.PLANILHA_GATE.exists():
+        return None, None
+    linhas = T21.PLANILHA_GATE.read_text(encoding="utf-8").splitlines()
+    cab = linhas[0].split("\t") if linhas else []
+    antes = [dict(zip(cab, x.split("\t"))) for x in linhas[1:]]
+    antes = [x for x in antes if x.get("tipo") == "antes" and x.get("tela") == tela and x.get("p50_s") not in ("", "None")]
+    return (float(antes[-1]["p50_s"]), antes[-1].get("quando")) if antes else (None, None)
+
+
+def anotar_gate(base: str, commit: str, fase: str, conta: str, tela: str, tipo: str, valores: list, ref: float | None, ok: object) -> None:
+    B.anotar_planilha(T21.PLANILHA_GATE, ["quando", "base", "commit", "fase", "conta", "tela", "tipo", "n", "valores_s", "p50_s", "referencia_s", "ok"],
+                      [time.strftime("%Y-%m-%d %H:%M"), base, commit, fase, conta, tela, tipo, len(valores), ",".join(str(v) for v in valores), p50(valores), ref, ok])
+
+
+def criterio_ociosa() -> bool:
+    """O critério de ociosa da medição (hml21/medicao/logs_borda_treino_72h.txt): a anterior da mesma função há ≥ 10 min."""
+    return FONTE_DO_CRITERIO.exists() and "ociosa = a anterior da mesma função há ≥ 10 min" in FONTE_DO_CRITERIO.read_text(encoding="utf-8")
+
+
+PESADO_LOCK = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "hml12" / "ferramentas" / "pesado.lock"
+
+
+class LockPesado:
+    """O pesado.lock SÓ nas aberturas (a medida): o gate NÃO roda dentro do flock — nas esperas da ociosa o lock fica livre para o trabalho
+    pesado que preenche a espera (o Vitest, o lint, a regressão de tela); na hora de medir, o gate espera o lock (ninguém pesado rodando:
+    a medida sem disputa de CPU) e solta logo depois."""
+
+    def __init__(self) -> None:
+        self.f = None
+
+    def __enter__(self):
+        import fcntl  # noqa: PLC0415
+        self.f = PESADO_LOCK.open("a")
+        fcntl.flock(self.f.fileno(), fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        import fcntl  # noqa: PLC0415
+        if self.f is not None:
+            fcntl.flock(self.f.fileno(), fcntl.LOCK_UN)
+            self.f.close()
+            self.f = None
+
+
+def esperar_prontos(itens: list[tuple], min_s: float = B.MIN_S, max_s: float = B.MAX_S, quieto_s: float = B.QUIETO_S) -> list[dict]:
+    """O esperar_pronto da hml-20 (a MESMA regra: sem "carregando", sem pedido em voo, quieto 3 s) para VÁRIAS páginas no MESMO laço — as
+    aberturas SIMULTÂNEAS do gate (as 2 telas logo depois da espera da ociosa: as 2 são "a 1ª abertura depois de ≥ 10 min"). itens =
+    [(tela, pendentes, marca)] → [{t_pronto_s, t_marca_s, pedidos}] de cada uma, medidos do MESMO início."""
+    inicio = time.time()
+    est = [{"amostras": [], "quieto_desde": time.time(), "ultimo": len(t.pedidos), "t_marca": None, "pronta": False} for t, _p, _m in itens]
+    while time.time() - inicio < max_s and not all(e["pronta"] for e in est):
+        itens[0][0].pg.wait_for_timeout(100)
+        for (t, pend, marca), e in zip(itens, est):
+            if e["pronta"]:
+                continue
+            n = len(t.pedidos)
+            if n != e["ultimo"]:
+                e["ultimo"], e["quieto_desde"] = n, time.time()
+            try:
+                carregando = int(t.pg.evaluate(B.B20.JS_CARREGANDO))
+            except Exception:  # noqa: BLE001 — a página trocou no meio
+                carregando = 1
+            agora_s = round(time.time() - inicio, 2)
+            if marca and e["t_marca"] is None and t.n(marca) > 0:
+                e["t_marca"] = agora_s
+            e["amostras"].append((agora_s, carregando, pend.n))
+            if carregando == 0 and pend.n == 0 and time.time() - e["quieto_desde"] >= quieto_s and time.time() - inicio >= min_s:
+                e["pronta"] = True
+    saida = []
+    for (t, _pend, _marca), e in zip(itens, est):
+        am = e["amostras"]
+        sujos = [i for i, (_t, c, p) in enumerate(am) if c > 0 or p > 0]
+        if not am:
+            tp = None
+        elif not sujos:
+            tp = am[0][0]
+        elif sujos[-1] + 1 < len(am):
+            tp = am[sujos[-1] + 1][0]
+        else:
+            tp = None
+        saida.append({"t_pronto_s": tp, "t_marca_s": e["t_marca"], "pedidos": list(t.pedidos)})
+    return saida
+
+
+# o staleTime das consultas de Meus treinos (src/painel/treinos/useTreinos.ts: 30 s) — uma abertura do gate depois dele busca DE VERDADE
+VELHO_MEUS_TREINOS_S = 31
+ultima_medida: dict[str, float] = {}
+
+
+def preparar_medida(t, pend, conta: str, tela_nome: str) -> None:
+    """Antes de cada abertura MEDIDA do gate, o dado da tela fica VELHO (a abertura busca de verdade, como a 1ª visita — nunca o cache do
+    React Query): o painel (Meus treinos, staleTime 30 s) espera ≥ 31 s desde a medida anterior dele, na entrada (o pré-busca do painel
+    só roda na carga e o recarregar o dispararia — por isso não recarrega); o app (Treinos prontos, staleTime 5 min) RECARREGA a entrada
+    (o cliente do React Query nasce vazio; o app do aluno não tem pré-busca). Fora da medida."""
+    T21.fechar_janelas(t)
+    if T21.eh_do_app(conta):
+        t.ir(T21.ENTRADA_APP)
+        t.esperar(lambda: t.n("[data-aba-perfil]") > 0, 60)
+        B.esperar_pronto(t, pend, max_s=40)
+        return
+    B.navegar(t, T21.ENTRADA_PAINEL)
+    falta = VELHO_MEUS_TREINOS_S - (time.time() - ultima_medida.get(tela_nome, 0.0))
+    if falta > 0:
+        t.pg.wait_for_timeout(int(falta * 1000))
+
+
+def medir_gate(t, pend, tela: tuple, conta: str, s: str) -> dict:
+    """Uma abertura medida do gate (o antes e o quente): o dado velho (preparar_medida) e a tela pela navegação do app."""
+    preparar_medida(t, pend, conta, tela[0])
+    r = T21.abrir_tela(t, pend, tela, s)
+    ultima_medida[tela[0]] = time.time()
+    return r
+
+
+def ociosa_agora(ultimo: dict) -> tuple[bool, int, str]:
+    """A treinos está parada há ≥ OCIOSA_S? A escuta deste processo E a borda (os logs da função: QUALQUER quem chama — outro processo, outro
+    E2E). → (ociosa?, há quantos s, a nota). Os logs da borda fora do ar → só a escuta deste processo (anotado)."""
+    if time.time() - ultimo["t"] < OCIOSA_S:
+        return False, round(time.time() - ultimo["t"]), ""
+    t_borda, erro = T21.ultimo_pedido_na_borda()
+    if erro:
+        return True, round(time.time() - ultimo["t"]), f"os logs da borda não responderam ({erro}): só a escuta deste processo"
+    if t_borda and time.time() - t_borda < OCIOSA_S:
+        ultimo["t"] = max(ultimo["t"], t_borda)
+        return False, round(time.time() - ultimo["t"]), "a borda viu um pedido de outro processo: a espera recomeça"
+    return True, round(time.time() - ultimo["t"]), ("a borda também parada" if t_borda else "nenhum pedido na borda nos últimos 40 min")
+
+
+def gate_21d(o, nav, L, base: str, commit: str, fase: str, s: str, ate: float | None = None) -> None:  # noqa: PLR0915
+    """O GATE (decisão K), no FIM da etapa 2: o personal (Meus treinos) e o aluno sem profissional (os Treinos prontos), cada um no seu
+    contexto. Antes (o staging com o código antigo): 5 aberturas de cada (e 0 pedido à treinos — o antes não acorda a função). Depois: 5
+    rodadas com a treinos OCIOSA — a espera de ≥ 10 min sem NENHUM pedido a ela (a escuta dos 2 contextos E a borda: qualquer quem chama;
+    chamou → a espera recomeça) com as 2 telas paradas na entrada e, ao fim, as 2 aberturas SIMULTÂNEAS (as 2 são "a 1ª depois de ≥ 10 min":
+    5 esperas em vez de 10) — e 5 QUENTE de cada (seguidas). O pesado.lock só nas medidas (as esperas ficam livres para o trabalho que as
+    preenche). Registradas à parte (hml21/medicao/gate_hml21d.tsv); o antes só vale até 30 min antes do depois (🟡2 da revisão)."""
+    ultimo = {"t": 0.0}
+    inicio = time.time()
+
+    def ouvir(req) -> None:
+        if "/functions/v1/treinos" in req.url and req.method == "POST":
+            ultimo["t"] = time.time()
+
+    abertos = []
+    try:
+        with LockPesado():
+            for conta, tela in TELAS_DO_GATE:
+                T21.exige_identidade(o, s, conta)  # ⚪10: a troca que o app faz no navegador não cria conta nova no Treino
+                t, pend = T21.abrir_conta(nav, base, conta, f"gate_{conta}")
+                t.ctx.on("request", ouvir)
+                abertos.append((conta, tela, t, pend))
+                T21.entrar(o, t, pend, L, base, conta)
+                T21.abrir_tela(t, pend, tela, s)  # a 1ª (a sessão do Treino, a troca): fora da medida
+                B.navegar(t, T21.ENTRADA_APP if T21.eh_do_app(conta) else T21.ENTRADA_PAINEL)
+        medidas: dict[str, dict[str, list]] = {tela[0]: {"antes": [], "ociosa": [], "quente": []} for _c, tela in TELAS_DO_GATE}
+        if fase == "antes":
+            with LockPesado():
+                for conta, tela, t, pend in abertos:
+                    pedidos_treinos = 0
+                    for _ in range(ABERTURAS_ANTES_GATE):
+                        r = medir_gate(t, pend, tela, conta, s)
+                        medidas[tela[0]]["antes"].append(r["t_pronto_s"])
+                        pedidos_treinos += sum(1 for x in r["pedidos"] if x.get("tipo") == "fn" and x.get("nome") == "treinos")
+                    anotar_gate(base, commit, fase, conta, tela[0], "antes", medidas[tela[0]]["antes"], None, None)
+                    o.ok(pedidos_treinos == 0, f"[antes] gate {conta} · {tela[0]}: {medidas[tela[0]]['antes']} → p50 {p50(medidas[tela[0]]['antes'])} s "
+                         f"(a referência do depois; vale por 30 min) — {pedidos_treinos} pedido(s) à treinos (o antes não a chama: não acorda a função)")
+            return
+        # o QUENTE primeiro (a treinos acabou de ser chamada na preparação: < 120 s entre as aberturas) e as ociosas depois, até o prazo
+        with LockPesado():
+            for conta, tela, t, pend in abertos:
+                for _ in range(ABERTURAS_QUENTE):
+                    medidas[tela[0]]["quente"].append(medir_gate(t, pend, tela, conta, s)["t_pronto_s"])
+        o.linha("   gate quente: " + "; ".join(f"{tela[0]} {medidas[tela[0]]['quente']}" for _c, tela, _t, _p in abertos))
+        feitas, tentativas = 0, 0
+        while feitas < ABERTURAS_OCIOSA and tentativas < ABERTURAS_OCIOSA + 3:
+            if ate is not None and time.time() + OCIOSA_S + 90 > ate:
+                o.linha(f"   gate: o prazo ({time.strftime('%H:%M', time.localtime(ate))}) não cabe outra espera de {OCIOSA_S // 60} min — as ociosas "
+                        f"que faltam ({ABERTURAS_OCIOSA - feitas}) ficam para depois (o F7)")
+                break
+            tentativas += 1
+            for conta, tl, t, pnd in abertos:  # as 2 telas paradas na entrada, o dado velho (nada chama a treinos enquanto espera)
+                if T21.eh_do_app(conta):
+                    preparar_medida(t, pnd, conta, tl[0])
+                else:
+                    T21.fechar_janelas(t)
+                    B.navegar(t, T21.ENTRADA_PAINEL)
+            teto = time.time() + 3 * OCIOSA_S  # algo chamando a treinos sem parar (a espera não acaba): a rodada não conta como ociosa
+            while True:
+                ociosa, desde, nota = ociosa_agora(ultimo)
+                if ociosa or time.time() > teto or (ate is not None and time.time() > ate):
+                    break
+                abertos[0][2].pg.wait_for_timeout(5000)
+            if not ociosa:
+                o.ok(False, f"gate ociosa (tentativa {tentativas}): a treinos não ficou {OCIOSA_S} s parada em {3 * OCIOSA_S} s (o último pedido há "
+                            f"{desde} s; {nota}) — a rodada não conta", parar=False)
+                continue
+            with LockPesado():
+                ociosa, desde, nota = ociosa_agora(ultimo)  # de novo, já com o lock (a espera pelo lock pode ter visto um pedido)
+                if ociosa:
+                    for conta, tela, t, _p in abertos:
+                        T21.fechar_janelas(t)
+                        B.navegar(t, tela[1][1])
+                    rs = esperar_prontos([(t, p, tela[2]) for _c, tela, t, p in abertos])
+                    for _c, tela, _t, _p in abertos:
+                        ultima_medida[tela[0]] = time.time()
+            if not ociosa:
+                o.linha(f"   gate ociosa (tentativa {tentativas}): um pedido à treinos durante a espera do lock ({nota}) — a rodada recomeça")
+                continue
+            feitas += 1
+            for (conta, tela, _t, _p), r in zip(abertos, rs):
+                medidas[tela[0]]["ociosa"].append(r["t_pronto_s"])
+            o.linha(f"   gate ociosa {feitas}/{ABERTURAS_OCIOSA} (as 2 juntas, a treinos parada há {desde} s; {nota}): "
+                    + ", ".join(f"{tela[0]} {r['t_pronto_s']} s" for (_c, tela, _t, _p), r in zip(abertos, rs)))
+        parcial = len(next(iter(medidas.values()))["ociosa"]) < ABERTURAS_OCIOSA
+        for conta, tela, _t, _pend in abertos:
+            m = medidas[tela[0]]
+            todas = m["ociosa"] + m["quente"]
+            if tela[0] == "meus_treinos":
+                ref, quando = referencia_gate(tela[0])
+                vale, intervalo = T21.antes_do_gate_vale(quando, inicio)
+                ok = None if ref is None or p50(todas) is None else (p50(todas) <= ref + GATE_FOLGA_S if vale else False)
+                regra = (f"≤ antes {ref} + {GATE_FOLGA_S} s (o antes medido {intervalo} min antes do depois)" if vale else
+                         f"— o antes ({ref} s) medido {intervalo if intervalo is not None else '?'} min antes do depois: só vale até 30 min — "
+                         "meça o antes de novo")
+            else:
+                ref = GATE_ALUNO_MAX_S
+                ok = None if p50(todas) is None else p50(todas) <= GATE_ALUNO_MAX_S
+                regra = f"≤ {GATE_ALUNO_MAX_S} s"
+            for tipo in ("ociosa", "quente"):
+                anotar_gate(base, commit, fase, conta, tela[0], tipo, m[tipo], ref, None)
+            if parcial:
+                anotar_gate(base, commit, fase, conta, tela[0], "parcial", todas, ref, None)
+                o.ok(True, f"GATE {tela[0]} PARCIAL (o prazo do BANCO): {len(m['ociosa'])} de {ABERTURAS_OCIOSA} ociosas {m['ociosa']} (p50 "
+                           f"{p50(m['ociosa'])}) e {len(m['quente'])} quentes {m['quente']} (p50 {p50(m['quente'])}); p50 de todas = {p50(todas)} s {regra} "
+                           f"— o veredito fica para o F7 (faltam {ABERTURAS_OCIOSA - len(m['ociosa'])} ociosas)")
+                continue
+            anotar_gate(base, commit, fase, conta, tela[0], "todas", todas, ref, ok)
+            if not o.ok(ok is True, f"GATE {tela[0]}: p50 das {len(todas)} = {p50(todas)} s {regra} (ociosa {m['ociosa']} p50 {p50(m['ociosa'])}; "
+                                    f"quente {m['quente']} p50 {p50(m['quente'])})" + (" — sem o antes medido" if ref is None else ""), parar=False):
+                o.linha(f"TEMPO gate {tela[0]} {ref} × {p50(todas)} (ociosa {m['ociosa']}, quente {m['quente']}) — o ## TEMPO no progresso; "
+                        "reverter o F3b é decisão da sessão principal")
+    finally:
+        for conta, _tela, t, _pend in abertos:
+            T21.sair_da_conta(o, t, L, base, conta, "gate treinos")
+
+
+def rodar_21d(o, base: str, canal: str | None, casos: list[str], prefixo: str | None = None, gate: bool = False, ate: float | None = None) -> None:
+    """As telas da 21d, conta por conta: os prints d_* (conferir cada um: tela certa, sem login nem "carregando", nomes de teste), o tempo
+    (decisão K) — ou, com --gate, SÓ o gate (decisão K: no fim da etapa 2, um por vez)."""
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    if base == "prod":
+        raise SystemExit("telas.py é local e staging (a produção é o F8 da sessão principal: rede.py --base prod)")
+    s = B.usar_base(base)
+    B.usar_area("treinos")
+    L = B.Sessoes(f"telas21 treinos{' gate' if gate else ''} {base}")
+    commit = B.commit_medido(base)
+    fase = T21.fase_do_codigo_21d(base, commit)
+    try:
+        B.exigir_saude(o, f"o telas.py --area treinos{' --gate' if gate else ''} da hml-21d")
+        o.linha(f"[{base}] {commit}: o {fase} · área treinos" + (" · o GATE" if gate else ""))
+        with sync_playwright() as pw:
+            nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
+            try:
+                if gate:
+                    gate_21d(o, nav, L, base, commit, fase, s, ate)
+                    return
+                for conta in T21.contas_da_area(base):
+                    telas = T21.telas_que_abrem(o, s, base, conta)
+                    if not telas:
+                        continue
+                    t, pend = T21.abrir_conta(nav, base, conta, f"telas_treinos_{conta}")
+                    try:
+                        T21.entrar(o, t, pend, L, base, conta)
+                        if "prints" in casos:
+                            for tela in telas:
+                                nome, (como, alvo), marca, _teto = tela
+                                if como == "clique" and not t.esperar(lambda: t.n(alvo) > 0, 20):
+                                    o.ok(True, f"[{base}] {conta} · {CASO_DA_TELA_21D[nome]}: PULADO — a tela de cima sem item para abrir")
+                                    continue
+                                r = T21.abrir_tela(t, pend, tela, s)
+                                o.ok(t.n(marca) > 0 and r["t_pronto_s"] is not None,
+                                     f"[{base}] {conta} · {CASO_DA_TELA_21D[nome]}: a tela pronta em {r['t_pronto_s']} s ({marca[:60]})")
+                                B.print_reduzido(t.pg, prefixo or base, CASO_DA_TELA_21D[nome], o)
+                            if not T21.eh_do_app(conta):
+                                print_erro_21d(o, t, pend, base, fase, prefixo)
+                        if "tempo" in casos:
+                            tempo_21d(o, t, pend, base, commit, fase, conta, telas, s)
+                    finally:
+                        T21.sair_da_conta(o, t, L, base, conta, "telas treinos")
+            finally:
+                nav.close()
+    finally:
+        L.fechar(o)
+
+
+def seco_21d(o) -> None:
+    """O --seco da 21d: os seletores das telas e do erro, os prints d_* (na pasta da 21d), as telas do tempo (decisão K), o antes da spec, a
+    barra do d_erro e o GATE (o critério de ociosa da medição, as aberturas e as regras de passar)."""
+    B.usar_area("treinos")
+    sel = {"src/painel/treinos/MeusTreinos.tsx": ['titulo="Não deu para abrir os treinos"', "<EstadoErro"],
+           "src/ui/premium/Estados.tsx": ["data-estado={estado}", 'estado="erro"']}
+    faltam = [f"{arq}: {x}" for arq, xs in {**T21.SELETORES, **sel}.items() for x in xs if x not in (B.REPO / arq).read_text(encoding="utf-8")]
+    o.ok(not faltam, "os seletores das telas e do erro existem no código" + (f" — faltam: {faltam}" if faltam else ""))
+    o.ok(B.PRINTS == Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "d" and B.AREA_ESTADO == "hml21d",
+         f"a 21d grava os prints em prints/hml21/d e a rodada na área hml21d ({B.PRINTS})")
+    o.ok(set(PRINTS_21D) == {"d_treinos", "d_detalhe", "d_biblioteca", "d_folha", "d_busca", "d_modelos_treinos", "d_treinos_prontos_aluno", "d_editor", "d_erro"}
+         and set(CASO_DA_TELA_21D) == {x[0] for x in T21.TELAS_DO_PAINEL + (T21.PRONTOS,)},
+         "os prints d_* do contrato (Meus treinos, o Detalhe, a Biblioteca, a Folha, a Busca, os Modelos › Treinos, os Treinos prontos do aluno, "
+         "o editor e o erro) — cada tela da área com o seu")
+    spec = T21.antes_da_spec(T21.PERSONAL)
+    o.ok(spec.get("/painel/treinos") == 2.06 and spec.get("/painel/alunos/:id/treino") == 5.06 and spec.get("/painel/modelos") == 0.82
+         and set(T21.ROTA_DA_SPEC) == {"meus_treinos", "editor", "modelos_treinos"},
+         f"o antes da spec (rede_por_tela.tsv, o personal, aquecido): Meus treinos {spec.get('/painel/treinos')} s, o editor "
+         f"{spec.get('/painel/alunos/:id/treino')} s, os Modelos {spec.get('/painel/modelos')} s (as outras: a rodada antes do staging, nesta W)")
+    T = "https://api.physiqcalc.com.br"
+    o.ok(BARRA_DEPOIS_21D.match(f"{T}/functions/v1/treinos") and not BARRA_DEPOIS_21D.match(f"{T}/functions/v1/treinos-x")
+         and BARRA_ANTES_21D.match(f"{T}/rest/v1/rpc/modelos_da_lista") and BARRA_ANTES_21D.match(f"{T}/rest/v1/tb_pastas_treino?select=id")
+         and not BARRA_ANTES_21D.match(f"{T}/rest/v1/tb_pastas_treino_grupos?select=id") and not BARRA_ANTES_21D.match(f"{T}/functions/v1/treinos"),
+         "o d_erro barra SÓ a área: depois a função treinos; antes as leituras diretas de Meus treinos (a RPC da página e as pastas)")
+    o.ok(criterio_ociosa() and OCIOSA_S == 600 and (ABERTURAS_OCIOSA, ABERTURAS_QUENTE, ABERTURAS_ANTES_GATE) == (5, 5, 5)
+         and (GATE_FOLGA_S, GATE_ALUNO_MAX_S) == (0.3, 2.0) and [tl[0] for _c, tl in TELAS_DO_GATE] == ["meus_treinos", "treinos_prontos_aluno"],
+         "o GATE: Meus treinos e os Treinos prontos do aluno, 10 aberturas cada (5 com a treinos OCIOSA — ≥ 10 min sem pedido, o critério da "
+         "medição logs_borda_treino_72h — e 5 QUENTE), o antes = 5 aberturas; passa com o Painel p50 ≤ antes + 0,3 s e o aluno p50 ≤ 2,0 s")
+    o.ok(set(PAI_DO_CLIQUE) == {x[0] for x in T21.TELAS_DO_PAINEL if x[1][0] == "clique"} and CASOS_21D == ("prints", "tempo")
+         and (FOLGA_S, ABERTURAS_TEMPO) == (0.3, 3), "o tempo: 3 aberturas aquecidas, ≤ antes + 0,3 s (decisão K); o Detalhe e a Folha medidos do clique")
+    # 🟡2 da revisão: o antes do gate só vale até 30 min antes do depois (com o intervalo na linha do GATE)
+    agora = time.time()
+    q = lambda min_atras: time.strftime("%Y-%m-%d %H:%M", time.localtime(agora - min_atras * 60))  # noqa: E731
+    casos_antes = [T21.antes_do_gate_vale(q(20), agora), T21.antes_do_gate_vale(q(31), agora), T21.antes_do_gate_vale(None, agora),
+                   T21.antes_do_gate_vale(q(-5), agora), T21.antes_do_gate_vale("ontem", agora)]
+    o.ok(casos_antes[0][0] is True and casos_antes[0][1] in (20, 21) and casos_antes[1][0] is False and casos_antes[1][1] in (31, 32)
+         and casos_antes[2] == (False, None) and casos_antes[3][0] is False and casos_antes[4] == (False, None),  # (o "quando" é em minutos)
+         f"🟡2: o antes do gate vale só até 30 min antes do depois (20 min → vale; 31 → \"meça o antes de novo\"; sem antes ou depois do depois → não) {casos_antes}")
+    # a ociosa: a escuta deste processo E a borda (qualquer quem chama) — com a borda FALSA (nada vai à rede)
+    original = T21.ultimo_pedido_na_borda
+    try:
+        res = []
+        for borda, ultimo in (((None, None), time.time() - 30), ((None, None), time.time() - 700), ((time.time() - 60, None), time.time() - 700),
+                              ((time.time() - 900, None), time.time() - 700), ((None, "HTTP 500"), time.time() - 700)):
+            T21.ultimo_pedido_na_borda = lambda _b=borda: _b  # type: ignore[assignment]
+            u = {"t": ultimo}
+            res.append((ociosa_agora(u)[0], round(time.time() - u["t"]) < 120))
+    finally:
+        T21.ultimo_pedido_na_borda = original
+    import calendar  # noqa: PLC0415
+    utc_ok = (T21.instante_da_borda("2026-10-13T17:24:03")[0] == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0))
+              and T21.instante_da_borda(1760376243000000)[0] == 1760376243.0 and T21.instante_da_borda("x")[1] == "instante ilegível")
+    o.ok(utc_ok, "o instante dos logs da borda: o texto ISO SEM fuso é UTC (tomá-lo como hora local o punha 3 h no futuro e a espera da "
+                 "ociosa nunca acabava — o defeito das 14:48); os microssegundos; o ilegível")
+    o.ok(res == [(False, True), (True, False), (False, True), (True, False), (True, False)],
+         f"a ociosa: parada há < 10 min aqui → espera; parada aqui e na borda → mede; a borda viu um pedido de OUTRO processo → a espera recomeça; "
+         f"os logs da borda fora → só a escuta deste processo (anotado) {res}")
+    fonte = Path(__file__).read_text(encoding="utf-8").split("def seco_21d", 1)[0]
+    gate = fonte[fonte.index("def gate_21d"):fonte.index("def rodar_21d")]
+    o.ok(gate.count("with LockPesado():") == 4 and "esperar_prontos([(t, p, tela[2])" in gate and "T21.exige_identidade(o, s, conta)" in gate
+         and "fcntl.flock(self.f.fileno(), fcntl.LOCK_EX)" in fonte,
+         "o gate: o pesado.lock SÓ nas medidas (as esperas livres para o trabalho que as preenche), as 2 aberturas da ociosa juntas (5 esperas em vez "
+         "de 10) e a identidade no Treino conferida antes de cada conta abrir (⚪10)")
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-21a/21b — as telas: os prints a_*/b_* e o tempo antes × depois (a casca e o app do aluno; a Agenda e os Alunos)")
-    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos"))
+    ap = argparse.ArgumentParser(description="hml-21a/21b/21d — as telas: os prints a_*/b_*/d_* e o tempo antes × depois (a casca e o app do aluno; a Agenda "
+                                             "e os Alunos; o Treino e o gate)")
+    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos", "treinos"))
     ap.add_argument("--base", default="local", choices=("local", "staging"))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--casos", default=None, help="prints,tempo (21a) · prints,tempo,fluxo (21b)")
     # o nome dos prints (<prefixo>_a_*.png; padrão = a base): o antes no staging usa antes_staging (decisão H)
     ap.add_argument("--prefixo", default=None)
     ap.add_argument("--seco", action="store_true")
+    ap.add_argument("--gate", action="store_true", help="hml-21d: SÓ o gate de latência (decisão K) — no fim da etapa 2, um por vez")
+    ap.add_argument("--gate-ate", default=None, help="hml-21d: HH:MM — o prazo do gate (a janela do BANCO): nenhuma espera nova que não acabe até lá")
     a = ap.parse_args()
     B.corte_vira_saida()
     B.usar_area(a.area)
     da_21b = a.area in B.AREAS_DA_21B
-    validos = CASOS_21B if da_21b else CASOS
+    da_21d = a.area in B.AREAS_DA_21D
+    if a.gate and not da_21d:
+        raise SystemExit("o --gate é da 21d (--area treinos)")
+    validos = CASOS_21D if da_21d else CASOS_21B if da_21b else CASOS
     casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
     if any(c not in validos for c in casos):
         raise SystemExit(f"caso desconhecido (os casos: {', '.join(validos)})")
     if a.seco:
         o = C.Saida(f"telas21_{a.area}_seco")
-        if da_21b:
+        if da_21d:
+            seco_21d(o)
+        elif da_21b:
             seco_21b(o, a.area)
         else:
             seco(o)
         return o.fim()
-    o = C.Saida(f"telas21_{a.area}_{a.base}")
+    o = C.Saida(f"telas21_{a.area}_{a.base}" + ("_gate" if a.gate else ""))
     try:
-        if da_21b:
+        if da_21d:
+            ate = None
+            if a.gate_ate:
+                hh, mm = (int(x) for x in a.gate_ate.split(":"))
+                ate = time.mktime(time.localtime()[:3] + (hh, mm, 0) + time.localtime()[6:])
+            rodar_21d(o, a.base, a.canal, casos, a.prefixo, gate=a.gate, ate=ate)
+        elif da_21b:
             rodar_21b(o, a.area, a.base, a.canal, casos, a.prefixo)
         else:
             rodar(o, a.area, a.base, a.canal, casos, a.prefixo)

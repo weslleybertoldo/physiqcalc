@@ -340,3 +340,49 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
 - Nenhum grant de tabela nem policy muda (decisão 12 da spec hml-21: a função usa a sessão da pessoa; os APKs antigos ainda chamam direto).
   Ordem: a migration no staging ANTES de publicar a `conta` v2 e na produção ANTES do merge (o front antigo não chama as RPCs novas). Prova:
   `python3 e2e/hml21/sql_agenda.py` (staging, como a pessoa, blocos desfeitos).
+
+## Treino (e o editor no principal): o Painel › Treinos, a Biblioteca, o Master e os treinos prontos pela função `treinos` (hml-21d, H-43 parte 3 · jeito 2, etapa 3)
+- **A função NOVA `treinos`** (Treino, `verify_jwt` true; a porta `abrirPedidoNoTreino(req, "treinos", { freio: 120, jwtLeitura: "jwks" })` de
+  `_shared/porta-treino.ts`) roda tudo **como a pessoa** (a chave anon do Treino + o token do Treino de quem chama — a sessão da troca, a
+  mesma do app; nenhuma chave secreta): o dono vem do `sub` do token (o master cria no global, como o `donoAoCriar` da tela), nunca do
+  corpo; o erro do banco vira o código (`sem_acesso`, `nao_encontrado`, `dados_invalidos`, `conflito`, `em_uso`, `storage_falhou`,
+  `tempo_esgotado`, `erro_interno`), nunca a mensagem crua; o catch final responde `erro_interno` (o log do Treino). No `ler`, o token é
+  conferido localmente pelo JWKS do Treino (`_shared/jwks-treino.ts`; falhou por rede/chave → o `getUser` de reserva).
+- **Master:** as ações e as leituras do Master são conferidas NA FUNÇÃO antes do banco pelo `app_metadata.role` do token (admin/master — o
+  mesmo que o `physiq_papel()` lê): quem não é → 403 `sem_acesso`, sem ida ao banco; o RLS do Treino (`physiq_is_master()`) decide de novo.
+- **2 RPCs novas** (migration `20261013100000_hml21d_treinos_atomicas` do Treino, aplicada com `set physiq.schemas = 'staging'` ou `'public'`;
+  reversa em `supabase/reversas/`): `SECURITY INVOKER`, `VOLATILE`, `search_path = ''`, o 2º jeito da tabela "Funções" (`revoke … from
+  public, anon` + `grant execute … to authenticated, service_role`), chamadas SÓ pela `treinos` COMO A PESSOA. Sem login → `sem_login`
+  (42501); corpo fora da forma → `dados_invalidos` (22023); o que não existe ou o RLS esconde → `nao_encontrado` (P0002) e nada muda.
+  - `treino_pronto_salvar(p_id uuid, p_treino jsonb, p_divisoes jsonb) → uuid`: a linha do treino pronto, as divisões e os exercícios numa
+    transação (antes, 2 + 2×N pedidos em série: uma falha no meio deixava o treino sem as divisões — achado 3 da spec); editar troca as
+    divisões (as de antes saem pela FK em cascata) e devolve o MESMO id. Só o master grava (o RLS de hoje).
+  - `modelo_ordenar(p_grupo uuid, p_ids uuid[]) → integer`: a ordem de todos os exercícios do modelo de uma vez (antes, 1 pedido por
+    exercício — achado 4); um id que não é do modelo → `nao_encontrado` e nada muda (antes, os outros mudavam).
+- **⚠️ Desvio do gate (F7 da hml-21d):** o gate de latência reprovou as leituras pela `treinos` (o Meus treinos p50 2,65 s × 2,04 s lendo direto; com a função quente empatam, mas a 1ª abertura com ela ociosa — ≥ 10 min sem pedido — levou 4,6–12,6 s). O front **não usa** as leituras abaixo: o Painel › Treinos, os Modelos › Treinos, a Busca, o editor, o Master e os treinos prontos do aluno seguem lendo DIRETO (como antes, com o RLS de hoje); o catálogo de leituras fica publicado na `treinos` (provado no E2E) para quando o frio da função for resolvido. As GRAVAÇÕES (abaixo) vão pela `treinos`.
+- **Leituras (`acao: "ler"`, em lote; o motor é a CÓPIA do comum do principal — `_shared/leitura-lote.ts` e `_shared/leitura-servidor.ts`,
+  iguais byte a byte, o Vitest confere):** o catálogo `_shared/treinos-leituras.ts`, as mesmas linhas que as libs liam no navegador, como a
+  pessoa: Meus treinos (a RPC `modelos_da_lista` e os detalhes da página — as linhas com o exercício citado e os vínculos de pasta, numa
+  consulta), o treino pelo id, as pastas, os grupos musculares, o catálogo dos Modelos › Treinos, a Busca (os treinos), os treinos prontos
+  ativos do aluno sem profissional e a biblioteca (a RPC `exercicios_da_lista`, a consulta especial); do Master, todos os treinos prontos, a
+  biblioteca global (com página — antes cortava calado em 1000), os grupos globais e quantos exercícios globais usam um grupo. O "global ou
+  meu" (o `doEscopo` de hoje) é montado no servidor com o `sub` do token. Colunas em lista fechada (nenhum `*`).
+- **Gravações (27 ações, o MESMO efeito de hoje):** os modelos e as pastas (`modelo_*`, `pasta_*` — a ordem pela RPC nova; o vínculo que já
+  existe = ok, como hoje), a biblioteca (`exercicio_criar`/`_editar`/`_excluir`, `grupo_muscular_criar`/`_excluir`), o espelho do perfil
+  (`professor_perfil`: o nome e a foto SÓ na linha de quem chama — o `physiq_professores.id` = o `sub`) e o Master (`treino_pronto_salvar`
+  pela RPC nova, `treino_pronto_ativo`, `exercicio_global_*`, `grupo_global_*`). Corpo em lista fechada; mudar ou apagar 0 linha →
+  `nao_encontrado`; o 23503 do apagar (em uso num treino pronto) → `em_uso`, a frase de hoje.
+- **Storage (`exercicios`/`exercicios-staging`, 5 MB, gif/webp/png/jpeg — a policy `exercicios_professor_write`: o exercício do nome do
+  arquivo é de quem grava; ou o admin):** `exercicio_foto_preparar` decide o caminho NO SERVIDOR (`<id do exercício>.<ext>`, o de hoje — a
+  policy exige esse nome, sem a pasta do user) e assina o link de upload como a pessoa (upsert); o navegador sobe o arquivo nesse link (o PUT
+  do `uploadToSignedUrl` — é gravação e fica); `exercicio_editar` só grava como foto nova a URL pública DESTE exercício neste bucket com o
+  arquivo lá (outra → `dados_invalidos`; sem o arquivo → `nao_encontrado`), a que já estava, ou nenhuma.
+- **A `conta` (principal) v4:** + a consulta `aluno_treino` (publicada; o front não usa — o desvio do gate; o editor do Aluno › Treino: a RPC `aluno_treino` de hoje pelo EXECUTE do
+  `authenticated`, com a recusa da matrícula da rota).
+- **Ficam como estão:** o login e a sessão (`auth.*` e a troca de token), as funções do Treino de antes (`admin-*`, `treino-leitura`,
+  `painel-resumo-treino` — o desvio 22), o PowerSync (desvio 3) e a parte do Treino do Início/Evolução (desvio 23). As ações da `treinos`
+  não repetem; as 3 RPCs de leitura (`modelos_da_lista`, `exercicios_da_lista`,
+  `aluno_treino`) seguem no navegador e no `RPC_SO_LEITURA` (`src/integrations/repeticao.ts`) — o desvio do gate; a `BASE` da `semBancoNoNavegador.test.ts` diminuiu só nas gravações.
+- Nenhum grant de tabela nem policy muda (decisão 12 da spec hml-21: a função usa a sessão da pessoa; os APKs antigos ainda chamam direto).
+  Ordem: a migration no staging do Treino ANTES de publicar a `treinos` (as ações chamam as RPCs) e na produção ANTES do merge (o front
+  antigo não chama as RPCs novas). Prova: `python3 e2e/hml21/sql_treinos.py` (staging do Treino, como a pessoa, blocos desfeitos).
