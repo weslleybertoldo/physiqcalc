@@ -381,8 +381,9 @@ def casos() -> dict[str, tuple[str, str, dict]]:
                + f"  v_j := {S}.dia_extra_salvar(null, jsonb_build_object('dia', v_hoje, 'nome', '  Lanche   da tarde ', 'horario', '16:00'));\n"
                + "  v_id := (v_j -> 'extra' ->> 'id')::uuid;\n"
                + res(nome="v_j -> 'extra' ->> 'nome'", comi="(v_j -> 'extra' ->> 'concluida_em') is not null",
-                     matricula="(v_j -> 'extra' ->> 'paciente_id')::uuid = (select pl.paciente_id from " + S + ".planos_alimentares pl where pl.id = "
-                               f"(select (({S}.meu_dia(v_hoje) -> 'plano_ativo') ->> 'plano_id')::uuid))",
+                     # P2 (Task 1): comparado com o paciente_id do plano_ativo do meu_dia (definer) — NÃO com o plano lido como a aluna: o RLS
+                     # dela é o meu_paciente_id() (limit 1 sem order by) e o preâmbulo cria a 2ª matrícula viva dela (deu null 1× no staging)
+                     matricula=f"(v_j -> 'extra' ->> 'paciente_id') = ({S}.meu_dia(v_hoje) -> 'plano_ativo' ->> 'paciente_id')",
                      pus=f"{S}.dia_adicionar(v_hoje, jsonb_build_object('extra_id', v_id, 'alimento_id', v_taco, 'quantidade_g', 80)) -> 'ok'",
                      desmarcar=f"{S}.dia_extra_marcar(v_id, false) -> 'concluida_em'",
                      sem_dia=f"{S}.dia_extra_salvar(null, '{{\"nome\": \"x\"}}'::jsonb) ->> 'erro'",
