@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building2, Crown, Dumbbell, Gem, Link2, Salad, Users } from "lucide-react";
 import { toast } from "sonner";
-import { principal } from "@/integrations/principal/client";
 import { useConta } from "@/nucleo/conta";
 import { useSessao } from "@/nucleo/sessao";
 import { NOME_FAIXA, NOME_PLANO } from "@/nucleo/cobranca/regras";
@@ -14,6 +13,7 @@ import { EstadoVazio } from "@/ui/premium/Estados";
 import { KpiCompacto } from "@/ui/premium/Kpi";
 import { LinhaInfo, SecaoForm } from "./pecas/Form";
 import { ORIGEM_CONTA as ORIGEM, validarNomeConta } from "./pecas/regras";
+import { salvarNomeDaConta } from "./perfil/api";
 
 /**
  * Configurações › Conta (W5, spec 4.6 — só o dono): o nome da conta (aparece no card do topo do menu e nos convites) e o
@@ -43,9 +43,8 @@ export default function Conta() {
     if (nome.trim() === conta.nome) return;
     setSalvando(true);
     try {
-      const { data, error } = await principal.from("contas").update({ nome: nome.trim() }).eq("id", conta.id).select("id, nome");
-      if (error) throw error;
-      if (!data?.length) throw new Error("sem permissão");
+      // hml-21c: pela função conta (o RLS: só o dono; 0 linha = recusa — o "sem permissão" de antes)
+      await salvarNomeDaConta(conta.id, nome.trim());
       await recarregarSituacao();
       toast.success("Nome da conta salvo.");
     } catch (err) {

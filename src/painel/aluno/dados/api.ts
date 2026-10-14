@@ -6,8 +6,13 @@
  * aluno_perfil — a MESMA RPC lá, como a pessoa, no lote da tela (src/nutricao/leitura.ts). O erro chega como antes: o código na
  * mensagem do ErroPerfil (o sem_acesso/aluno_inexistente/sem_login que a w14_matricula_da_rota levanta, o { ok:false, erro } da RPC; a
  * rede que caiu → sem_internet, que a tela traduz como "Sem conexão…"). As gravações e o aviso da P15 seguem como estão (H-43).
+ * hml-21c (H-43 · jeito 2, etapa 3): as gravações (os dados, as "Mensagens automáticas", o link) e a faixa da P15 (ler, "Ligar para todos" e
+ * fechar) vão pela função conta, COM A SESSÃO de quem está logado — as MESMAS RPCs e os MESMOS argumentos, no servidor; a leitura da faixa
+ * vai no lote da casca. O erro como antes: o código na mensagem do ErroPerfil (o raise de propósito da RPC volta como o código; o { ok: false,
+ * erro } dela, como hoje; a rede que caiu → sem_internet). O perfil (nutricao) e o Treino (as 2 funções de lá) seguem como estão.
  */
-import { principal } from "@/integrations/principal/client";
+import { acaoConta, codigoDaGravacao, type AcaoConta } from "@/conta/gravar";
+import { lerConta } from "@/conta/ler";
 import { supabase } from "@/integrations/supabase/client";
 import { ErroLeitura, lerNutricao } from "@/nutricao/leitura";
 import type { AjustesAluno, ChaveAjuste, MensagensDesligadas, PerfilAluno, PerfilTreinoAluno } from "./tipos";
@@ -20,15 +25,24 @@ export class ErroPerfil extends Error {
 
 const online = () => (typeof navigator === "undefined" ? true : navigator.onLine !== false);
 
-async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T> {
-  if (!online()) throw new ErroPerfil("sem_internet");
-  const { data, error } = await principal.rpc(nome as never, args as never);
-  if (error) throw new ErroPerfil(error.message || "erro_interno");
-  const r = data as unknown;
+/** O { ok: false, erro } da RPC → ErroPerfil com o código (como hoje); senão, o valor. */
+function valorOuErro<T>(r: unknown): T {
   if (r && typeof r === "object" && !Array.isArray(r) && (r as { ok?: unknown }).ok === false) {
     throw new ErroPerfil(String((r as { erro?: unknown }).erro ?? "erro_interno"), r as Record<string, unknown>);
   }
   return r as T;
+}
+
+/** hml-21c: uma ação da conta (a RPC de hoje no servidor, como a pessoa) — o erro com o código na mensagem (a rede que caiu → sem_internet). */
+async function acao<T>(nome: AcaoConta, corpo: Record<string, unknown>): Promise<T> {
+  if (!online()) throw new ErroPerfil("sem_internet");
+  let r: unknown;
+  try {
+    r = (await acaoConta<{ resultado?: unknown }>(nome, corpo)).resultado;
+  } catch (e) {
+    throw new ErroPerfil(codigoDaGravacao(e));
+  }
+  return valorOuErro<T>(r);
 }
 
 /** O erro de uma leitura pela função no formato do perfil: o código na mensagem; a rede que caiu → sem_internet (como antes). */
@@ -58,35 +72,42 @@ export async function buscarPerfilAluno(alunoId: string): Promise<PerfilAluno> {
 }
 
 export async function salvarDadosAluno(alunoId: string, dados: Record<string, unknown>): Promise<PerfilAluno> {
-  const r = await rpc<{ ok: true; perfil: PerfilAluno }>("aluno_salvar_dados", { p_aluno: alunoId, p_dados: dados });
+  const r = await acao<{ ok: true; perfil: PerfilAluno }>("aluno_dados_salvar", { aluno: alunoId, dados });
   return r.perfil;
 }
 
 export async function salvarAjusteAluno(alunoId: string, chave: ChaveAjuste, valor: boolean): Promise<AjustesAluno> {
-  const r = await rpc<{ ok: true; ajustes: AjustesAluno }>("aluno_salvar_ajustes", { p_aluno: alunoId, p_ajustes: { [chave]: valor } });
+  const r = await acao<{ ok: true; ajustes: AjustesAluno }>("aluno_ajustes_salvar", { aluno: alunoId, ajustes: { [chave]: valor } });
   return r.ajustes;
 }
 
 export async function gerarNovoLink(alunoId: string): Promise<string> {
-  const r = await rpc<{ ok: true; link_codigo: string }>("aluno_novo_link", { p_aluno: alunoId });
+  const r = await acao<{ ok: true; link_codigo: string }>("aluno_link_novo", { aluno: alunoId });
   return r.link_codigo;
 }
 
 // ───────────────────────── aviso único da P15 (mensagens desligadas) ─────────────────────────
 
 export async function buscarMensagensDesligadas(): Promise<MensagensDesligadas | null> {
-  const r = await rpc<MensagensDesligadas | null>("mensagens_desligadas", {});
+  if (!online()) throw new ErroPerfil("sem_internet");
+  let valor: unknown;
+  try {
+    valor = (await lerConta("mensagens_desligadas")).valor;
+  } catch (e) {
+    throw erroDoPerfil(e);
+  }
+  const r = valorOuErro<MensagensDesligadas | null>(valor);
   if (!r) return null;
   return { ...r, alunos: Array.isArray(r.alunos) ? r.alunos : [] };
 }
 
 export async function ligarMensagensParaTodos(ids: string[]): Promise<number> {
-  const r = await rpc<{ ok: true; ligados: number }>("mensagens_ligar_para_todos", { p_ids: ids });
+  const r = await acao<{ ok: true; ligados: number }>("faixa_ligar_para_todos", { ids });
   return Number(r.ligados) || 0;
 }
 
 export async function fecharAvisoMensagens(): Promise<void> {
-  await rpc("mensagens_aviso_fechar", {});
+  await acao("faixa_fechar", {});
 }
 
 // ───────────────────────── Banco do Treino (quem tem treino) ─────────────────────────

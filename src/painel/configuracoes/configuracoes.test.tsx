@@ -32,21 +32,32 @@ vi.mock("@/lib/apkRelease", () => ({
   baixarNoNavegador: vi.fn(),
   RELEASES_PAGE: "https://x",
 }));
-vi.mock("@/integrations/principal/client", () => {
-  const cadeia = (resultado: () => unknown) => {
+// hml-21c (H-43): o Perfil e a Conta leem e gravam pela função conta — o functions.invoke("conta") roda os módulos de verdade do servidor
+// (src/test/contaFalsa.ts) sobre o MESMO banco falso; o servidor lê o perfil com limit(1) (não maybeSingle): o then dá a linha do perfil
+// numa leitura do profiles. O que o teste prova não muda.
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const cadeia = (resultado: () => unknown, tabela = "") => {
+    let gravou = false;
     const c: Record<string, unknown> = {};
     for (const m of ["select", "eq", "is", "order", "limit"]) c[m] = () => c;
     c.maybeSingle = async () => ({ data: resultado(), error: null });
     c.update = (v: unknown) => {
       h.atualizou.push(v);
+      gravou = true;
       return c;
     };
-    c.then = (ok: (x: unknown) => unknown) => ok({ data: [{ id: "c1", nome: "x" }], error: null });
+    c.then = (ok: (x: unknown) => unknown) =>
+      ok(tabela === "profiles" && !gravou ? { data: resultado() ? [resultado()] : [], error: null } : { data: [{ id: "c1", nome: "x" }], error: null });
     return c;
   };
+  const banco = { from: (t: string) => cadeia(() => h.perfil, t) };
   return {
     PRINCIPAL_SCHEMA: "staging",
-    principal: { from: () => cadeia(() => h.perfil), auth: { updateUser: vi.fn(async () => ({ error: null })) }, storage: { from: () => ({}) } },
+    principal: {
+      ...banco, functions: { invoke: invocarComConta(banco, { userId: "u1" }) }, auth: { updateUser: vi.fn(async () => ({ error: null })) },
+      storage: { from: () => ({}) },
+    },
   };
 });
 vi.mock("./equipe/api", async (orig) => {

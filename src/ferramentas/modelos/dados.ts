@@ -4,7 +4,14 @@
 // Treino). Só o que é DA PESSOA (autor = ela) — também para o master, como a W24 fez com Alimentos e Receitas ("TACO + os seus") — e,
 // nos planos, só os alunos da conta ativa. `Promise.allSettled` por fonte: uma que falhar não derruba a tela (o erro vai em
 // `erros[tipo]`). Tirar o ★ é o mesmo UPDATE da tela dona (RLS: só o autor).
-import { principal } from "@/integrations/principal/client";
+// hml-21c (H-43/H-112 · jeito 2, etapa 3): os ★ pelas funções (o servidor lê como a pessoa, o mesmo filtro de hoje): os 9 tipos da nutrição
+// num `ler` da nutricao (modelos_favoritos_<tipo>, no MESMO lote dos planos ★) ∥ os de recibo num `ler` da financeiro
+// (fin_modelos_recibo_favoritos) — 2 funções em paralelo, não série. Tirar o ★ pelas ações *_editar que já existem (o mesmo UPDATE, no
+// servidor; 0 linha = a frase de hoje). Os treinos (o catálogo do Treino) seguem como estão (o desvio do gate da 21d).
+import { lerFinanceiro } from "@/financeiro/ler";
+import { gravarFinanceiro } from "@/financeiro/gravar";
+import { lerNutricao, type ConsultaDaNutricao } from "@/nutricao/leitura";
+import { acaoNutricao, type AcaoDaFuncao } from "@/nutricao/servidor";
 import { totaisDoPlano } from "@/nutricao/editor/lib/dietaUtil";
 import { listarPlanosFavoritos } from "@/nutricao/editor/lib/planos";
 import { calcularReceita, type IngredienteCalc } from "@/nutricao/editor/lib/receitasUtil";
@@ -18,22 +25,15 @@ export interface ResultadoModelos {
 }
 
 const mensagem = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-const falhou = (error: { message: string } | null): void => {
-  if (error) throw new Error(error.message);
-};
-// as tabelas das donas são várias; o supabase-js tipado não aceita o nome dinâmico
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tabela = (nome: string) => (principal.from as any)(nome);
 
-/** As linhas ★ da pessoa numa tabela de modelos (fora da lixeira). */
-async function favoritosDe<T>(nome: string, colunas: string, uid: string, coluna = "favorito"): Promise<T[]> {
-  const { data, error } = await tabela(nome).select(colunas).eq(coluna, true).eq("nutricionista_id", uid).is("deleted_at", null).limit(500);
-  falhou(error);
-  return (data ?? []) as T[];
+/**
+ * hml-21c: as linhas ★ da pessoa num tipo (fora da lixeira, até 500) — a consulta da função (o servidor filtra pelo dono do token: o `uid` não
+ * vai mais; as colunas são as do select de hoje). O erro: o da leitura (a frase fixa do código), por tipo, como hoje.
+ */
+async function favoritosDe<T>(q: ConsultaDaNutricao): Promise<T[]> {
+  return ((await lerNutricao(q)).linhas ?? []) as T[];
 }
 
-// as receitas ★ são só as da pessoa (o RLS de receitas e alimentos de quem é a autora basta)
-const ALIMENTO = "alimento:alimentos(id, nome, fonte, grupo, energia_kcal, proteina_g, carboidrato_g, lipidio_g, fibra_g, sodio_mg, medidas_caseiras(*))";
 /** Os planos ★ que a Ferramentas › Modelos lista (o limite de antes da hml-17). */
 const MAX_PLANOS = 300;
 
@@ -70,7 +70,7 @@ export async function listarModelos(q: QuemListaModelos): Promise<ResultadoModel
   const { uid, contaId } = q;
   const todos: { tipo: TipoModelo; rodar: () => Promise<void> }[] = [
     { tipo: "treino", rodar: async () => { fontes.treinos = await treinosDasPastas(q.treinoId); } },
-    { tipo: "anamnese", rodar: async () => { fontes.anamneses = await favoritosDe("modelos_anamnese", "id, updated_at, titulo, perguntas", uid); } },
+    { tipo: "anamnese", rodar: async () => { fontes.anamneses = await favoritosDe("modelos_favoritos_anamnese"); } },
     {
       tipo: "plano",
       // hml-17 (H-38): os ★ vêm da planos_favoritos (o banco monta o plano com os alimentos de verdade — lidos direto, o RLS de
@@ -90,18 +90,20 @@ export async function listarModelos(q: QuemListaModelos): Promise<ResultadoModel
         }));
       },
     },
-    { tipo: "orientacao", rodar: async () => { fontes.orientacoes = await favoritosDe("modelos_orientacao", "id, updated_at, titulo, conteudo", uid); } },
-    { tipo: "recibo", rodar: async () => { fontes.recibos = await favoritosDe("modelos_recibo", "id, updated_at, titulo, conteudo", uid); } },
-    { tipo: "documento", rodar: async () => { fontes.documentos = await favoritosDe("modelos_documento", "id, updated_at, titulo, tipo", uid); } },
-    { tipo: "meta", rodar: async () => { fontes.metas = await favoritosDe("modelos_meta", "id, updated_at, titulo, dias_semana", uid); } },
-    { tipo: "manipulado", rodar: async () => { fontes.manipulados = await favoritosDe("modelos_formula", "id, updated_at, titulo, ativos", uid); } },
-    { tipo: "exame", rodar: async () => { fontes.exames = await favoritosDe("exames_catalogo", "id, updated_at, nome, unidade, ref_min, ref_max, referencia_texto", uid); } },
-    { tipo: "questionario", rodar: async () => { fontes.questionarios = await favoritosDe("questionarios", "id, updated_at, titulo, perguntas", uid); } },
-    { tipo: "produto", rodar: async () => { fontes.produtos = await favoritosDe("produtos", "id, updated_at, nome, marca, categoria", uid); } },
+    { tipo: "orientacao", rodar: async () => { fontes.orientacoes = await favoritosDe("modelos_favoritos_orientacao"); } },
+    // os ★ de recibo moram na financeiro (o outro `ler`, em paralelo)
+    { tipo: "recibo", rodar: async () => { fontes.recibos = ((await lerFinanceiro("fin_modelos_recibo_favoritos")).linhas ?? []) as NonNullable<FontesModelos["recibos"]>; } },
+    { tipo: "documento", rodar: async () => { fontes.documentos = await favoritosDe("modelos_favoritos_documento"); } },
+    { tipo: "meta", rodar: async () => { fontes.metas = await favoritosDe("modelos_favoritos_meta"); } },
+    { tipo: "manipulado", rodar: async () => { fontes.manipulados = await favoritosDe("modelos_favoritos_manipulado"); } },
+    { tipo: "exame", rodar: async () => { fontes.exames = await favoritosDe("modelos_favoritos_exame"); } },
+    { tipo: "questionario", rodar: async () => { fontes.questionarios = await favoritosDe("modelos_favoritos_questionario"); } },
+    { tipo: "produto", rodar: async () => { fontes.produtos = await favoritosDe("modelos_favoritos_produto"); } },
     {
       tipo: "receita",
       rodar: async () => {
-        const linhas = await favoritosDe<ReceitaBruta>("receitas", `id, nome, updated_at, porcoes, rendimento_g, ingredientes:ingredientes_receita(quantidade_g, medida_caseira_id, quantidade_medida, ${ALIMENTO})`, uid, "favorita");
+        // os ingredientes com o alimento e as medidas (o medidas_caseiras(*) de antes escrito coluna a coluna no servidor)
+        const linhas = await favoritosDe<ReceitaBruta>("modelos_favoritos_receita");
         fontes.receitas = linhas.map((r) => {
           const ingredientes = r.ingredientes ?? [];
           const calc = calcularReceita({ porcoes: Number(r.porcoes), rendimento_g: r.rendimento_g === null ? null : Number(r.rendimento_g) }, ingredientes);
@@ -119,25 +121,33 @@ export async function listarModelos(q: QuemListaModelos): Promise<ResultadoModel
   return { itens: montarModelos(fontes), erros };
 }
 
-const TABELA_DO_TIPO: Partial<Record<TipoModelo, { tabela: string; coluna: string }>> = {
-  anamnese: { tabela: "modelos_anamnese", coluna: "favorito" },
-  plano: { tabela: "planos_alimentares", coluna: "favorito" },
-  orientacao: { tabela: "modelos_orientacao", coluna: "favorito" },
-  recibo: { tabela: "modelos_recibo", coluna: "favorito" },
-  documento: { tabela: "modelos_documento", coluna: "favorito" },
-  meta: { tabela: "modelos_meta", coluna: "favorito" },
-  manipulado: { tabela: "modelos_formula", coluna: "favorito" },
-  exame: { tabela: "exames_catalogo", coluna: "favorito" },
-  questionario: { tabela: "questionarios", coluna: "favorito" },
-  produto: { tabela: "produtos", coluna: "favorito" },
-  receita: { tabela: "receitas", coluna: "favorita" },
+/** hml-21c: a ação que tira o ★ de cada tipo (a *_editar da tela dona, que já existe) e a coluna dele. */
+const ACAO_DO_TIPO: Partial<Record<TipoModelo, { acao: string; coluna: "favorito" | "favorita"; financeiro?: true }>> = {
+  anamnese: { acao: "modelo_anamnese_editar", coluna: "favorito" },
+  plano: { acao: "plano_editar", coluna: "favorito" },
+  orientacao: { acao: "modelo_orientacao_editar", coluna: "favorito" },
+  recibo: { acao: "modelo_recibo_editar", coluna: "favorito", financeiro: true },
+  documento: { acao: "modelo_documento_editar", coluna: "favorito" },
+  meta: { acao: "modelo_meta_editar", coluna: "favorito" },
+  manipulado: { acao: "modelo_formula_editar", coluna: "favorito" },
+  exame: { acao: "exame_catalogo_editar", coluna: "favorito" },
+  questionario: { acao: "questionario_editar", coluna: "favorito" },
+  produto: { acao: "produto_editar", coluna: "favorito" },
+  receita: { acao: "receita_editar", coluna: "favorita" },
 };
 
-/** ★ Tirar dos modelos — o mesmo UPDATE da tela dona (a RLS só deixa o autor). 0 linhas = sem permissão. */
+/**
+ * ★ Tirar dos modelos — o mesmo UPDATE da tela dona (a RLS só deixa o autor), pela ação *_editar da função (hml-21c). 0 linhas
+ * (nao_encontrado) = a frase de hoje; o resto, a frase fixa do código.
+ */
 export async function desfavoritar(tipo: TipoModelo, id: string): Promise<void> {
-  const t = TABELA_DO_TIPO[tipo];
+  const t = ACAO_DO_TIPO[tipo];
   if (!t) throw new Error("Os treinos não têm estrela: eles ficam nas pastas do Painel › Treinos.");
-  const { data, error } = await tabela(t.tabela).update({ [t.coluna]: false }).eq("id", id).select("id").maybeSingle();
-  falhou(error);
-  if (!data) throw new Error("Só quem criou pode tirar a estrela.");
+  try {
+    if (t.financeiro) await gravarFinanceiro(t.acao as Parameters<typeof gravarFinanceiro>[0], { id, [t.coluna]: false });
+    else await acaoNutricao(t.acao as AcaoDaFuncao, { id, [t.coluna]: false });
+  } catch (e) {
+    if ((e as { codigo?: unknown })?.codigo === "nao_encontrado") throw new Error("Só quem criou pode tirar a estrela.");
+    throw e;
+  }
 }

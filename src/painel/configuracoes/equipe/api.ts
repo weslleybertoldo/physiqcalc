@@ -4,8 +4,12 @@
  * hml-21b (H-43 · jeito 2, etapa 3): SÓ a leitura (buscarEquipe — a Equipe, e os seletores do dono na Agenda, no Financeiro e na
  * Pré-consulta) vai pela função conta, COM A SESSÃO de quem está logado (a mesma equipe_da_conta, no lote da tela); as gravações da Equipe
  * (papéis, remover, o meu código) são da hml-21c e seguem como estão.
+ * hml-21c (H-43 · jeito 2, etapa 3): as 3 gravações (papéis, remover e o meu código — o Convite e o "meu link" dos Alunos) também, como ações
+ * da conta (equipe_papeis, equipe_remover, meu_codigo_garantir: as MESMAS RPCs e os MESMOS argumentos, no servidor). O erro como hoje: sem
+ * internet; o { ok: false, erro } da RPC com o código dela; o resto (a função, o banco) = erro_interno com o código no extra.
  */
 import { principal } from "@/integrations/principal/client";
+import { acaoConta, codigoDaGravacao, type AcaoConta } from "@/conta/gravar";
 import { codigoDaLeitura, lerConta } from "@/conta/ler";
 import { normalizarEquipe, type Equipe, type PapelModulo } from "./regras";
 
@@ -17,10 +21,16 @@ export class ErroEquipe extends Error {
 
 const online = () => (typeof navigator === "undefined" ? true : navigator.onLine !== false);
 
-async function rpc<T = Record<string, unknown>>(nome: string, args: Record<string, unknown>): Promise<T> {
+/** hml-21c: uma gravação pela conta (a RPC de hoje no servidor, como a pessoa); o { ok: false, erro } dela → ErroEquipe com o código. */
+async function acao<T = Record<string, unknown>>(nome: AcaoConta, corpo: Record<string, unknown>): Promise<T> {
   if (!online()) throw new ErroEquipe("sem_internet");
-  const { data, error } = await principal.rpc(nome as never, args as never);
-  if (error) throw new ErroEquipe("erro_interno", { detalhe: error.message });
+  let data: unknown;
+  try {
+    data = (await acaoConta<{ resultado?: unknown }>(nome, corpo)).resultado;
+  } catch (e) {
+    const codigo = codigoDaGravacao(e);
+    throw codigo === "sem_internet" ? new ErroEquipe("sem_internet") : new ErroEquipe("erro_interno", { codigo });
+  }
   const r = (data ?? {}) as Record<string, unknown>;
   if (r.ok === false) throw new ErroEquipe(String(r.erro ?? "erro_interno"), r);
   return r as T;
@@ -88,14 +98,14 @@ export function cancelarConviteMembro(conviteId: string): Promise<{ ok: true }> 
 }
 
 export function alterarPapeisMembro(membroId: string, papeis: string[]): Promise<{ papeis: string[]; alunos_sem_treino: number; alunos_sem_nutricao: number }> {
-  return rpc("alterar_papeis_membro", { p_membro: membroId, p_papeis: papeis });
+  return acao("equipe_papeis", { membro: membroId, papeis });
 }
 
 export function removerMembro(membroId: string, novoPersonal: string | null, novoNutri: string | null): Promise<{ alunos_treino: number; alunos_nutricao: number }> {
-  return rpc("remover_membro", { p_membro: membroId, p_novo_personal: novoPersonal, p_novo_nutri: novoNutri });
+  return acao("equipe_remover", { membro: membroId, novo_personal: novoPersonal, novo_nutri: novoNutri });
 }
 
 export async function garantirMeuCodigo(contaId: string): Promise<string> {
-  const r = await rpc<{ codigo: string }>("garantir_meu_codigo", { p_conta: contaId });
+  const r = await acao<{ codigo: string }>("meu_codigo_garantir", { conta: contaId });
   return r.codigo;
 }

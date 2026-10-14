@@ -16,6 +16,9 @@
 // as 14 RPCs que saíram do navegador (a casca e o app do aluno: 6 de leitura e 8 que gravam) saíram das 2 listas — o front não as chama
 // mais (a conta chama no servidor). O E2E que mede o front ANTIGO (o "antes" do staging) soma as 6 de leitura à lista da Guarda dele
 // (e2e/hml21/_base.py), no molde do RPCS_DO_APP da hml-19b.
+// hml-21c (H-43): + as 25 RPCs do Aluno › Resumo, das Configurações, da Mensagens, da Lixeira (e a faixa da casca) saíram das 2 listas (7 de
+// leitura e 18 que gravam: a função conta as chama no servidor) — sobram em RPC_QUE_GRAVAM só as 5 dos links públicos (o desvio 21). O E2E
+// que mede o front ANTIGO soma as 7 de leitura à Guarda dele (RPCS_DE_LEITURA_DA_21C, e2e/hml21/_base.py).
 import type { BancoErro } from "../../supabase-principal/functions/_shared/erros";
 import { avisarErro, type AvisoDoApp } from "@/lib/avisoDeErro";
 
@@ -40,15 +43,16 @@ export const TENTATIVAS_LEITURA = 1;
  * hml-17, STABLE pela migração 20261010100000): podem repetir. hml-21a: saíram as 6 que a função conta chama (meu_perfil_aluno,
  * meu_plano_app, minha_agenda, minha_agenda_lista, minha_situacao, pratos_prontos_do_app) — eram 45. hml-21b: saíram as 9 da Agenda e dos
  * Alunos que a função conta chama (agenda_horarios, aluno_agenda_horarios, aluno_compromissos, aluno_convites, alunos_da_conta,
- * alunos_novos_por_mes, alunos_pendentes, equipe_da_conta, minhas_regras_agenda) — eram 39.
+ * alunos_novos_por_mes, alunos_pendentes, equipe_da_conta, minhas_regras_agenda) — eram 39. hml-21c: saíram as 7 do Resumo, das
+ * Configurações, da Mensagens, da Lixeira e da faixa que a função conta chama (aluno_responsavel, lixeira_da_conta, mensagens_desligadas,
+ * paciente_dado_livre, w2l_prontuarios_para_baixar, whatsapp_fila, whatsapp_resumo) — eram 30.
  */
 export const RPC_SO_LEITURA = new Set<string>([
   "aluno_anotacoes", "aluno_evolucao",
-  "aluno_perfil", "aluno_responsavel", "aluno_treino",
-  "financeiro_do_aluno", "grupos_alimentos", "lixeira_da_conta", "master_alunos_do_app", "mensagens_desligadas",
+  "aluno_perfil", "aluno_treino",
+  "financeiro_do_aluno", "grupos_alimentos", "master_alunos_do_app",
   "minha_dieta", "minha_evolucao",
-  "paciente_dado_livre", "painel_resumo", "w2l_prontuarios_para_baixar",
-  "whatsapp_fila", "whatsapp_resumo",
+  "painel_resumo",
   // hml-14b (B21): as listas do painel por página, com o total e as somas do banco
   "financeiro_lancamentos", "financeiro_recibos", "financeiro_resumo_periodo", "receitas_da_nutricionista", "respostas_da_conta",
   // hml-14d (B21): as listas do Treino (banco do Treino), os números da Pré-consulta e as listas/somas por aluno
@@ -65,18 +69,17 @@ export const RPC_SO_LEITURA = new Set<string>([
  * (o aviso "avaliação nova" vai pela função nutricao, ação avaliacao_avisar, que chama a RPC lá). hml-21a: saíram as 8 que a função conta
  * chama (aceitar_no_acesso, criar_minha_conta, entrar_sem_profissional, marcar_aviso_mudanca, minha_senha_definida, mudar_objetivo_app,
  * push_esquecer, push_registrar) — eram 37. hml-21b: saíram as 6 da Agenda que a função conta chama (agenda_garantir_tags,
- * aluno_agenda_confirmar, aluno_agenda_desistir, aluno_agenda_marcar, aluno_agenda_reagendar, aluno_definir_pacote) — eram 29.
+ * aluno_agenda_confirmar, aluno_agenda_desistir, aluno_agenda_marcar, aluno_agenda_reagendar, aluno_definir_pacote) — eram 29. hml-21c:
+ * saíram as 18 do Resumo, das Configurações, da Mensagens, da Lixeira e da faixa que a função conta chama (aluno_acesso, alterar_papeis_membro,
+ * aluno_avisar_plano, aluno_novo_link, aluno_responsavel_registrar, aluno_salvar_ajustes, aluno_salvar_dados, garantir_meu_codigo,
+ * lixeira_apagar, lixeira_restaurar, mensagens_aviso_fechar, mensagens_ligar_para_todos, paciente_criar_acesso, paciente_redefinir_senha,
+ * remover_membro, whatsapp_limpar_falhas, whatsapp_reenviar, whatsapp_salvar_config) — eram 23; sobram só as 5 dos links públicos (o desvio 21).
  */
 export const RPC_QUE_GRAVAM = new Set<string>([
-  // sem escrita direta no corpo, mas mexem no limite_publico / garantir_* (4)
-  "aluno_acesso", "diario_link", "diario_listar", "preconsulta_formulario",
-  // gravam (19)
-  "alterar_papeis_membro", "aluno_avisar_plano",
-  "aluno_novo_link", "aluno_responsavel_registrar", "aluno_salvar_ajustes", "aluno_salvar_dados",
-  "diario_enviar", "garantir_meu_codigo", "lixeira_apagar", "lixeira_restaurar", "mensagens_aviso_fechar",
-  "mensagens_ligar_para_todos", "paciente_criar_acesso",
-  "paciente_redefinir_senha", "preconsulta_responder", "remover_membro",
-  "whatsapp_limpar_falhas", "whatsapp_reenviar", "whatsapp_salvar_config",
+  // sem escrita direta no corpo, mas mexem no limite_publico (3) — os links públicos /d/ e /f/
+  "diario_link", "diario_listar", "preconsulta_formulario",
+  // gravam (2) — os links públicos /d/ e /f/
+  "diario_enviar", "preconsulta_responder",
 ]);
 
 /**

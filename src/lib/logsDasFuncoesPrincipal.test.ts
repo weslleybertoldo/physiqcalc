@@ -154,6 +154,8 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     // hml-21a: a conta — o motor comum, a conferência local do JWT e o catálogo/as regras dela passam pelas mesmas guardas
     for (const s of ["leitura-servidor", "jwks-principal", "conta-leituras", "conta-regras"]) expect(todos).toContain(`_shared/${s}.ts`);
     for (const m of ["casca", "app", "comum"]) expect(todos).toContain(`conta/${m}.ts`);
+    // hml-21c (decisão F): + os 4 módulos da 21c (o Resumo, as Configurações, a Mensagens e a Lixeira) passam pelas mesmas guardas
+    for (const m of ["aluno", "configuracoes", "mensagens", "lixeira"]) expect(todos).toContain(`conta/${m}.ts`);
     // W-A P2: as regras das 2 da W-A e os módulos da aluno-dia passam pelas mesmas guardas
     for (const s of ["acessos-regras", "aluno-dia-regras"]) expect(todos).toContain(`_shared/${s}.ts`);
     for (const m of ["comum", "rotinas", "dieta", "profissional"]) expect(todos).toContain(`aluno-dia/${m}.ts`);

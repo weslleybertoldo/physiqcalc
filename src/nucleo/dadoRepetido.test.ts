@@ -3,14 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const rpc = vi.fn();
 // a falha de rede vem por uma função comum (um vi.fn que lança deixa o teste vermelho no Vitest 3 mesmo com o erro tratado)
 let falhar = false;
-vi.mock("@/integrations/principal/client", () => ({
-  principal: {
+// hml-21c (H-43): a pré-checagem lê pela função conta — o functions.invoke("conta") roda os módulos de verdade do servidor
+// (src/test/contaFalsa.ts) sobre o MESMO banco falso (a RPC de hoje, como a pessoa); o que o teste prova não muda
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const banco = {
     rpc: (...a: unknown[]) => {
       if (falhar) throw new Error("rede");
       return rpc(...a);
     },
-  },
-}));
+  };
+  return { principal: { ...banco, functions: { invoke: invocarComConta(banco) } } };
+});
 
 import { conferirDadoLivre } from "./dadoLivre";
 import {

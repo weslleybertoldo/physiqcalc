@@ -134,7 +134,8 @@ describe("hml-19a — o detector acha o que procura (controle positivo)", () => 
   it("Storage: upload e remove (fora do link assinado); RPC que grava", () => {
     expect(gravacoesDiretas("await supabase.storage.from(BUCKET).upload(path, arquivo, { upsert: false });")).toEqual(["1: storage.upload"]);
     expect(gravacoesDiretas("await supabase.storage.from(bucketDoAmbiente(\"anexos\")).remove([path]);")).toEqual(["1: storage.remove"]);
-    expect(gravacoesDiretas('await supabase.rpc("lixeira_apagar", { p_id: id });')).toEqual(["1: rpc.lixeira_apagar"]);
+    // hml-21c (a regra das listas): a lixeira_apagar saiu do RPC_QUE_GRAVAM (vai pela função conta) — o exemplo usa uma que segue nela
+    expect(gravacoesDiretas('await supabase.rpc("diario_enviar", { p_codigo: codigo });')).toEqual(["1: rpc.diario_enviar"]);
   });
 
   it("o que NÃO é gravação passa: leituras, o PUT no link assinado, o link de leitura, Array.from, RPC de leitura, comentário", () => {
@@ -157,7 +158,7 @@ describe("hml-19a — o detector acha o que procura (controle positivo)", () => 
     expect(gravacoesDiretas('await principal.from("mp_contas").update({ ativo: false }).eq("id", id);', tabelas)).toEqual([]);
     expect(gravacoesDiretas("await principal.from(TABELA).delete().eq(\"id\", id);", tabelas)).toEqual(["1: tabela.delete"]);
     expect(gravacoesDiretas("await principal.storage.from(BUCKET).upload(path, arquivo);", tabelas)).toEqual([]);
-    expect(gravacoesDiretas('await principal.rpc("lixeira_apagar", { p_id: id });', tabelas)).toEqual([]);
+    expect(gravacoesDiretas('await principal.rpc("diario_enviar", { p_codigo: codigo });', tabelas)).toEqual([]);
     // sem a lista, como antes
     expect(gravacoesDiretas('await principal.from("mp_contas").update({ ativo: false });')).toEqual(["1: tabela.update"]);
   });
