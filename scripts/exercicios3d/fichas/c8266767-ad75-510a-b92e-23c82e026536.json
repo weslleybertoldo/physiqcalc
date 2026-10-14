@@ -1,0 +1,875 @@
+{
+ "uuid": "c8266767-ad75-510a-b92e-23c82e026536",
+ "nome": "Alongamento de Extensão da Coluna",
+ "cena": "alongamento_de_extensao_da_coluna",
+ "grupo": "Alongamento",
+ "subgrupo": "Lombar (extensão) · reto abdominal · flexores do quadril",
+ "padrao_movimento": "along_coluna",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado de bruços, apoio nas mãos",
+ "alvos": [
+  "lombar",
+  "abdomen"
+ ],
+ "auxiliares": [
+  "quadriceps",
+  "tensor"
+ ],
+ "camera": {
+  "az": 74,
+  "el": 10,
+  "dist": 3.2,
+  "alvo": [
+   0.0,
+   0.0,
+   0.22
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.9,
+  "alvo": [
+   0.0,
+   0.09,
+   0.22
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Alongamento parado pelo mesmo jeito da Prancha (Caminho A, decisão do Weslley de 11/10/2026 pras pranchas, \"1\": entrar na posição, segurar e sair; pros alongamentos do lote 15 é decisão do Claude principal por coerência — fica pra validação final dele). t = 0 → 1 é UM ciclo e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar). t = 0 é o alongamento SEGURADO (a foto parada do app): o tronco levantado nas mãos, a lombar arqueada e a pelve no colchonete; segura 5 s — uma segurada representativa, a mesma das pranchas (as fontes mandam mais: ACE \"Hold this position for 15 - 30 seconds\"; NASM \"Static cobra holds for 15-30 seconds\"; Arthritis Research UK \"Hold for a count of 5\"; Kulig 2007 \"hold the end press-up position for a count of 10\"; ACSM \"Holding a static stretch for 10-30s is recommended for most adults\" — o tempo de verdade vai na prescrição, séries × segundos); desce em 2,0 s até deitar de bruços com as mãos no lugar (ACE: \"Gently relax and lower your upper body to rest back upon the mat or floor\"; NASM: \"Lower yourself back to the floor with control\"; Kulig: \"slowly lower the trunk to the resting position\"), fica 1,0 s deitado (NASM: \"Rest briefly before repeating the stretch\"; o meio do tempo deitado cai em t = 0,5: os prints de t = 0,5 mostram o começo) e sobe de novo em 2,0 s (ACE: \"Gently exhale and press your hips into the mat or floor and pull your chest away from the ground\"; NASM: \"Jerky or uncontrolled movements during extension\" é erro). Nenhuma fonte dá os segundos da descida, de deitado e da subida: são escolha minha, devagar e sem tranco. ida_s = 10,0 s = 1 ciclo (160 quadros a 16/s); a descida e a subida começam e acabam paradas (seno). Pra validação final: se o Weslley preferir a foto na posição de começo (deitado), basta deslocar a fase do ciclo, sem mudar o resto.",
+ "ida_s": 10.0,
+ "movimento": "Deitado de bruços no colchonete, com as pernas esticadas e relaxadas (os pés juntos até a largura do quadril, com o peito do pé e os dedos encostados no colchonete) e as mãos espalmadas no colchonete do lado do rosto, um pouco por fora dos ombros, com os dedos pra frente e um pouco pra dentro. Os braços empurram o colchonete e levantam o peito e os ombros devagar, soltando o ar, enquanto a pelve continua apoiada no colchonete: a lombar arqueia, a parte de cima das costas estende um pouco e o peito abre pra frente, com os ombros relaxados (longe das orelhas) e a cabeça acompanhando o tronco, olhando pra frente. Os braços estendem só até onde a pelve continua no colchonete — os cotovelos ficam um pouco dobrados. Segura a posição sentindo o alongamento na barriga e na frente do quadril, sem dor, respirando normalmente; depois relaxa e desce o tronco devagar até o peito voltar a encostar no colchonete, descansa um pouco e sobe de novo. As mãos, a pelve e as pernas não saem do lugar.",
+ "cinesiologia": {
+  "plano": "sagital: extensão PASSIVA da coluna em cadeia cinética fechada nas mãos — os braços empurram o colchonete e a coluna estende até o fim da amplitude (alongamento estático: segura lá); a pelve e as pernas ficam paradas no colchonete",
+  "articulacoes": "segurando: a lombar estendida ~30° a mais que deitado — ~39° a mais que em pé (Kulig 2007 mediu 20,9° de L1 a S1 no press-up; a amplitude normal da lombar é 25° pela AAOS, 35° por Kendall e 40 ± 10,2° em Apti 2023) — e a torácica ~20° (Edmondston 2012: 12,0 ± 8,9°, até 26°); os braços inclinados ~46° pra frente e pra baixo (as mãos ~32 cm à frente dos ombros), os cotovelos dobrados ~44° (a versão intermediária do ExRx), os punhos estendidos ~37° com as mãos espalmadas, as escápulas um pouco pra trás (o peito abrindo) e o pescoço estendido o bastante pra cabeça olhar pra frente; quadris, joelhos (~2–3°, esticados) e tornozelos (~46° de flexão plantar) parados. Na descida a coluna volta até o peito encostar e os cotovelos dobram até ~117° com as mãos paradas; na subida, o caminho de volta",
+  "agonistas": "nenhum músculo trabalha pra alongar: quem levanta o tronco são os braços. Músculos ALONGADOS: o reto do abdômen e o iliopsoas (ExRx: Target \"Rectus Abdominis\", Other \"Iliopsoas\"); ACE: \"This will arch your low back and stretch the muscles in your chest and abdominal region\"; NASM: \"Pectoralis Major – primary stretch target in anterior chest\" e \"Anterior Deltoid – assists in anterior shoulder stretching\", secundários \"Rectus Abdominis\" e \"Serratus Anterior\". A lombar é a região que ESTENDE (encurta) — o catálogo põe \"Lombar (extensão) · reto abdominal · flexores do quadril\"",
+  "sinergistas": "tríceps braquial (estende os cotovelos), peitoral maior, deltoide anterior e serrátil anterior empurrando o colchonete com as mãos paradas (cadeia fechada); NASM: \"Prepare to extend through your spine using your arm strength\"",
+  "estabilizadores": "o glúteo e as pernas relaxados no colchonete (NASM: \"Keep your hips and legs relaxed on the floor\"), o abdômen um pouco ativo (NASM: \"engaging your core slightly\") e os ombros relaxados (NASM: \"Keep your shoulders relaxed and allow the chest to open toward the ceiling\"); a respiração solta (ACE: \"Gently exhale\"; NASM: \"Holding the breath\" é erro). O RSS da ACE lista como primários \"Erector Spinae,Transverse Abdominus,Trapezius (Traps)\" (sem dizer o papel de cada um)",
+  "fases": "subida (2,0 s, devagar: ACE \"Gently exhale and press your hips into the mat or floor and pull your chest away from the ground\"; NASM \"Press upward with your hands to extend your spine and lift your torso off the floor\"); segurada (5 s no clipe; ACE e NASM \"15 - 30 seconds\"; Arthritis Research UK \"Hold for a count of 5\"; Kulig \"a count of 10\"; ACSM \"10-30s\"); descida (2,0 s: ACE \"Gently relax and lower your upper body to rest back upon the mat or floor\"; Kulig \"slowly lower the trunk to the resting position\"); deitado (1,0 s: NASM \"Rest briefly before repeating the stretch\")"
+ },
+ "referencias": [
+  "ExRx.net — Lying (prone) Abdominal Stretch (o site direto responde 403; lido pela cópia do Internet Archive de 24/10/2025: https://web.archive.org/web/20251024230205/https://exrx.net/Stretches/RectusAbdominis/Prone, 13/10/2026): Preparation \"Lie prone on mat or floor. Position hands on floor to sides of shoulders.\" / Execution \"Push torso up keeping pelvis on floor. Hold stretch.\" / Comments \"For beginners or those with less flexibility, position forearms on floor. Arms can also be positioned somewhat bent as an intermediate version of this stretch. Also known as Cobra pose in yoga.\" / Target \"Rectus Abdominis\", Other \"Iliopsoas\". Na foto: os braços quase esticados, as mãos à frente dos ombros, a pelve e as coxas no chão, a cabeça bem pra trás e os dedos dos pés no chão.",
+  "American Council on Exercise (ACE) — Cobra (Exercise Library #16), https://www.acefitness.org/resources/everyone/exercise-library/16/cobra/ (lido em 13/10/2026): \"Lie prone (on your stomach) on an exercise mat or floor with your hands by your sides, positioned directly under your shoulders and hands facing forward. Extend your legs and plantar flex your ankles (toes point away from body).\" / \"Upward Phase: Gently exhale and press your hips into the mat or floor and pull your chest away from the ground while keeping your hips stable. This will arch your low back and stretch the muscles in your chest and abdominal region. Hold this position for 15 - 30 seconds\" / \"Downward Phase: Gently relax and lower your upper body to rest back upon the mat or floor.\" / \"As the length of arms differ, individuals may often lift their hips off the mat or floor as they fully extend their arms. In this case, limit the extension in your arms to keep the hips on the mat.\" Item do RSS: \"Target Body Part: Abs,Back\"; \"Primary Muscles: Erector Spinae,Transverse Abdominus,Trapezius (Traps)\". Nas fotos (num colchonete fino): deitado com as mãos do lado do peito e os cotovelos dobrados pra cima; em cima, o tronco bem levantado com os cotovelos ainda dobrados, as mãos à frente dos ombros e a cabeça na linha do tronco.",
+  "NASM — Floor Prone Cobra (Exercise Library), https://www.nasm.org/resource-center/exercise-library/floor-prone-cobra (lido em 13/10/2026): \"Lie face down on the floor with your hands positioned under your shoulders, palms down and elbows close to your body.\" / \"Keep your hips and legs relaxed on the floor while engaging your core slightly. Prepare to extend through your spine using your arm strength.\" / \"Press upward with your hands to extend your spine and lift your torso off the floor, creating an upward arch. Keep your shoulders relaxed and allow the chest to open toward the ceiling.\" / \"Lower yourself back to the floor with control. Rest briefly before repeating the stretch\"; músculos \"Pectoralis Major\", \"Anterior Deltoid\" (primários), \"Rectus Abdominis\", \"Serratus Anterior\" (secundários); erros \"Excessive spinal extension that strains the lower back\", \"Holding the breath\", \"Jerky or uncontrolled movements during extension\"; FAQ \"Static cobra holds for 15-30 seconds promote stretching\".",
+  "Arthritis Research UK — Back pain: Information and exercise sheet, 3. Half push-ups (hospedada pelo Herefordshire and Worcestershire Health and Care NHS Trust: https://www.hacw.nhs.uk/download/back-pain-exercise-sheet.pdf?ver=668, lido em 13/10/2026): \"Lie on your front on a firm surface, with your hands under your shoulders, palms down. Look up and push up, lifting your head and shoulders up with your arms. Keep your hips on the floor. Hold for a count of 5 and then gently lower yourself back down. To start with, you may not be able to lift your shoulders far. As you become more flexible, work towards trying to straighten your arms, still keeping your hips on the floor.\"",
+  "Kulig K, Powers CM, Landel RF et al. Segmental lumbar mobility in individuals with low back pain: in vivo assessment during manual and self-imposed motion using dynamic MRI. BMC Musculoskelet Disord 2007;8:8 (texto inteiro, PMC1794409): \"subjects placed their hands in front of them and arched their back as far as possible within pain tolerance\" / \"Subjects were instructed to hold the end press-up position for a count of 10 and slowly lower the trunk to the resting position.\" / tabela 3 (o press-up, 20 sem dor): L1–L2 3,4 (1,6)°, L2–L3 4,1 (2,5)°, L3–L4 4,6 (2,2)°, L4–L5 4,1 (1,9)°, L5–S1 4,7 (2,3)° — 20,9° de L1 a S1.",
+  "Mazzone B, Wood R, Gombatto S. Spine Kinematics During Prone Extension in People With and Without Low Back Pain and Among Classification-Specific Low Back Pain Subgroups. J Orthop Sports Phys Ther 2016;46(7):571-579 (resumo, PubMed 27170528): \"Subjects with LBP displayed less lower lumbar extension (13.3° ± 4.9°) than control subjects (21.4° ± 9.2°).\"",
+  "Bandy WD, Reese NB. Strapped versus unstrapped technique of the prone press-up for measurement of lumbar extension using a tape measure. Arch Phys Med Rehabil 2004;85(1):99-103 (resumo, PubMed 14970976): \"the amount of lumbar extension, as measured by the prone press-up, during the strapped condition was significantly greater than with the unstrapped condition\" — com a pelve presa a lombar estende mais.",
+  "Edmondston SJ et al. Thoracic spine extension mobility in young adults: influence of subject position and spinal curvature. J Orthop Sports Phys Ther 2011;41(4):266-273 (resumo, PubMed 21335925): \"mean extension range was 8.7° (3.7°)\" / \"Unloaded positions (4-point kneeling and prone), compared to positions that load the spine (standing and sitting), appear to promote a greater range of thoracic extension motion.\"; Edmondston SJ et al. Functional radiographic analysis of thoracic spine extension motion in asymptomatic men. J Manipulative Physiol Ther 2012;35(3):203-208 (resumo, PubMed 22386914): \"The range of thoracic extension motion measured radiologically was between 0 and 26° (mean ± SD, 12.0° ± 8.9°)\".",
+  "ACSM — Stretching and Flexibility Guidelines Update (blog, 18/03/2021; cópia do Internet Archive de 16/02/2025): \"Stretch to the point of feeling tightness or slight discomfort.\" / \"Holding a static stretch for 10-30s is recommended for most adults.\"; Garber CE et al. Med Sci Sports Exerc 2011;43(7):1334-1359 (resumo, PubMed 21694556).",
+  "Amplitude normal: lombar — Apti A, Kuru Çolak T, Akçay B. Normative values for cervical and lumbar range of motion in healthy young adults. J Turk Spinal Surg 2023;34:113-117 (doi:10.4274/jtss.galenos.2023.33042, lido em 13/10/2026): \"The mean values for lumbar extension ROM are stated as 25 degrees according to the AAOS and 35 degrees according to Kendall et al.\" e, com goniômetro em jovens, \"extension 40±10.2º\"; tornozelo — Alazzawi S et al. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop 2017;8(1):21-29 (PMC5241541), tabela 5: \"Dorsiflexion 0-20 degrees\", \"Plantar flexion 0-50 degrees\"; punho e demais juntas — Norkin CC, White DJ, Measurement of Joint Motion (a referência do limites.py).",
+  "free-exercise-db (Yuhonas, domínio público): não tem o press-up/cobra — o \"Lower Back Curl\" (\"Do not use your arms to push yourself up\") e o \"Superman\" são extensões SEM o apoio das mãos (outros exercícios). AAOS OrthoInfo (Spine Conditioning Program): não tem o press-up (o \"Kneeling Back Extension\" é de quatro apoios)."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "chao_mm": 12,
+  "chao_mm_motivo": "Deitado de bruços no colchonete de 12 mm dos prontos de costas (a regra do lote 15 pros alongamentos deitados; ExRx: \"Lie prone on mat or floor\"; ACE: \"on an exercise mat or floor\"): os pés ficam deitados em cima dele (o peito do pé e os dedos encostando), então o \"chão\" dos pés é o topo do colchonete.",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os dois pés chapados (largura dos pés, ponta do pé, os 2 pés virados igual, um pé à frente do outro, joelho na direção do pé e coluna até 20°) foram feitas pra quem está em pé. Aqui o corpo está deitado de bruços com os pés em flexão plantar, o peito do pé e os dedos no colchonete (a ponta_pe perde o sentido), e a coluna ARQUEIA de propósito — é o alongamento (ACE: \"This will arch your low back\"). As que valem estão abaixo: os pés entre juntos e a largura do quadril, sem um à frente do outro, a coluna arqueada até o fim da amplitude normal e nunca dobrada pra frente, a pelve nivelada e sem girar.",
+  "zonas": [],
+  "alturas": [
+   {
+    "nome": "palma da mão esquerda espalmada no colchonete",
+    "partes": [
+     "LeftHand"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ],
+    "fonte": "ACE, Cobra (#16) (\"positioned directly under your shoulders and hands facing forward\"); NASM, Floor Prone Cobra (\"palms down\"); pedido: as palmas e os dedos ficam PARADOS no colchonete, espalmados, encostando ~1 mm dentro (o jeito da Flexão de Braço e da Prancha); a altura é do chão de verdade: o colchonete tem 12 mm"
+   },
+   {
+    "nome": "dedo indicador da mão esquerda no colchonete",
+    "partes": [
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "dedo médio da mão esquerda no colchonete",
+    "partes": [
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "dedo anelar da mão esquerda no colchonete",
+    "partes": [
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "dedo mínimo da mão esquerda no colchonete",
+    "partes": [
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "polegar da mão esquerda no colchonete",
+    "partes": [
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "palma da mão direita espalmada no colchonete",
+    "partes": [
+     "RightHand"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ],
+    "fonte": "ACE, Cobra (#16) (\"positioned directly under your shoulders and hands facing forward\"); NASM, Floor Prone Cobra (\"palms down\"); pedido: as palmas e os dedos ficam PARADOS no colchonete, espalmados, encostando ~1 mm dentro (o jeito da Flexão de Braço e da Prancha); a altura é do chão de verdade: o colchonete tem 12 mm"
+   },
+   {
+    "nome": "dedo indicador da mão direita no colchonete",
+    "partes": [
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "dedo médio da mão direita no colchonete",
+    "partes": [
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "dedo anelar da mão direita no colchonete",
+    "partes": [
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "dedo mínimo da mão direita no colchonete",
+    "partes": [
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "polegar da mão direita no colchonete",
+    "partes": [
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ]
+   },
+   {
+    "nome": "PELVE NO COLCHONETE o ciclo todo (a pele mais baixa da pelve encostando, sem sair)",
+    "partes": [
+     "Hips"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     8.0,
+     13.5
+    ],
+    "fonte": "ExRx, Lying (prone) Abdominal Stretch (\"Push torso up keeping pelvis on floor.\"); ACE, Cobra (#16) (\"press your hips into the mat or floor and pull your chest away from the ground while keeping your hips stable\"; \"limit the extension in your arms to keep the hips on the mat\"); Arthritis Research UK, Half push-ups (\"Keep your hips on the floor.\"); NASM, Floor Prone Cobra (\"Keep your hips and legs relaxed on the floor\"). A pelve aperta o colchonete até 4 mm (\"press your hips into the mat\") e nunca sai dele (+1,5 mm)"
+   },
+   {
+    "nome": "coxas deitadas no colchonete (o meio da coxa encostando)",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     4.5,
+     13.5
+    ],
+    "fonte": "NASM, Floor Prone Cobra (\"Keep your hips and legs relaxed on the floor\"); ACE, Cobra (#16) (\"Extend your legs\"). A coxa musculosa do boneco não amassa: o meio dela afunda até 7,5 mm no colchonete (que tem 12) pra pelve encostar também, e o joelho fica ~4 cm acima do colchonete (pernas relaxadas)"
+   },
+   {
+    "nome": "peito do pé e dedos dos pés no colchonete",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     13.5
+    ],
+    "fonte": "ACE, Cobra (#16) (\"Extend your legs and plantar flex your ankles (toes point away from body)\"); NASM, Floor Prone Cobra (\"Keep your hips and legs relaxed on the floor\")"
+   },
+   {
+    "nome": "corpo nunca atravessa o colchonete (afunda no máximo 9 dos 12 mm)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftArm",
+     "RightArm"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o chão; o colchonete cede, como nos prontos de costas)"
+   },
+   {
+    "nome": "antebraços acima do colchonete",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     10.5,
+     5012.0
+    ],
+    "fonte": "regra da fábrica (só a mão apoia; o pé da mão encosta junto com a palma)"
+   },
+   {
+    "nome": "cabeça longe do colchonete (deitado, o rosto levantado)",
+    "partes": [
+     "Head"
+    ],
+    "acima_de": "chao",
+    "t": "todos",
+    "mm": [
+     40,
+     5000
+    ],
+    "fonte": "fotos de baixo da ACE (foto 1) e da Arthritis Research UK (desenho 1): deitado, a cabeça um pouco levantada, olhando pra frente e pra baixo"
+   },
+   {
+    "nome": "deitado: o peito encosta no colchonete",
+    "partes": [
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.451,
+     0.549
+    ],
+    "mm": [
+     9.0,
+     13.5
+    ],
+    "fonte": "ACE, Cobra (#16) (\"Lie prone (on your stomach) on an exercise mat or floor\"; \"Gently relax and lower your upper body to rest back upon the mat or floor\"); NASM, Floor Prone Cobra (\"Lower yourself back to the floor with control\")"
+   },
+   {
+    "nome": "deitado: a barriga perto do colchonete",
+    "partes": [
+     "Spine",
+     "Spine1"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.451,
+     0.549
+    ],
+    "mm": [
+     9.0,
+     18.0
+    ],
+    "fonte": "ACE, Cobra (#16) (\"Lie prone (on your stomach)\"); pedido: no começo o peito e a barriga também encostam (o boneco não amassa: a barriga fica a poucos mm)"
+   },
+   {
+    "nome": "segurando: o peito alto, longe do colchonete (o tronco levantado nas mãos)",
+    "partes": [
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.0,
+     0.249
+    ],
+    "mm": [
+     100,
+     5000
+    ],
+    "fonte": "ACE, Cobra (#16) (\"pull your chest away from the ground\"); NASM, Floor Prone Cobra (\"lift your torso off the floor, creating an upward arch\"); Arthritis Research UK, Half push-ups (\"lifting your head and shoulders up with your arms\")"
+   },
+   {
+    "nome": "segurando de novo: o peito alto, longe do colchonete",
+    "partes": [
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.751,
+     1.0
+    ],
+    "mm": [
+     100,
+     5000
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços longe da cabeça (sem encostar no rosto nem no cabelo)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Head",
+     "Neck"
+    ],
+    "cabelo": true,
+    "mm": [
+     20,
+     2000
+    ],
+    "fonte": "ACE, Cobra (#16) (\"hands by your sides\"): deitado, as mãos ficam do lado do rosto, sem encostar"
+   },
+   {
+    "nome": "antebraços e mãos sem entrar no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "uma mão longe da outra (na largura dos ombros)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     150,
+     5000
+    ],
+    "fonte": "ACE, Cobra (#16) (\"hands by your sides, positioned directly under your shoulders\")"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "palmas viradas pro colchonete",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     165,
+     180
+    ],
+    "fonte": "NASM, Floor Prone Cobra (\"palms down\")"
+   },
+   {
+    "nome": "dedos das mãos pra frente, um pouco pra dentro",
+    "medida": "dedos_mao_dentro",
+    "t": "todos",
+    "graus": [
+     10,
+     25
+    ],
+    "fonte": "ACE, Cobra (#16) (\"hands facing forward\"); deitado o cotovelo abre pro lado e o antebraço chega na mão vindo de fora: com os dedos ~18° pra dentro o punho não desvia além do normal (ACE, Push-up: \"fingers facing forward or turned slightly inward\")"
+   },
+   {
+    "nome": "punho sem desviar de lado além do normal",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -28,
+     15
+    ],
+    "fonte": "amplitude normal do punho (Norkin & White, AAOS — a do limites.py): desvio radial até 20° e ulnar até 30°; em cima a mão segue a linha do antebraço e deitado (cotovelo aberto pro lado) o punho desvia um pouco pro lado do dedo mínimo"
+   },
+   {
+    "nome": "segurando: a mão na linha do antebraço",
+    "medida": "punho_desvio",
+    "t": [
+     0.0,
+     0.249
+    ],
+    "graus": [
+     -10,
+     10
+    ],
+    "fonte": "ACE, Cobra (#16) (\"hands facing forward\")"
+   },
+   {
+    "nome": "segurando de novo: a mão na linha do antebraço",
+    "medida": "punho_desvio",
+    "t": [
+     0.751,
+     1.0
+    ],
+    "graus": [
+     -10,
+     10
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "mãos na largura dos ombros",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     0.95,
+     1.3
+    ],
+    "fonte": "ACE, Cobra (#16) (\"positioned directly under your shoulders\"); Arthritis Research UK, Half push-ups (\"with your hands under your shoulders\"); fotos do ExRx e da ACE: as mãos na largura dos ombros"
+   },
+   {
+    "nome": "segurando: cotovelos um pouco dobrados (os braços estendem só até onde a pelve fica no chão)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": [
+     0.0,
+     0.249
+    ],
+    "graus": [
+     35,
+     55
+    ],
+    "fonte": "ACE, Cobra (#16) (\"As the length of arms differ, individuals may often lift their hips off the mat or floor as they fully extend their arms. In this case, limit the extension in your arms to keep the hips on the mat.\"; na foto 2 os cotovelos ficam dobrados); ExRx, Lying (prone) Abdominal Stretch (\"Arms can also be positioned somewhat bent as an intermediate version of this stretch.\"). Com a coluna no fim da amplitude e a pelve no colchonete, o braço do boneco (ombro → punho 515 mm, com o ombro 16 cm acima do colchonete deitado) não estica mais que isso"
+   },
+   {
+    "nome": "segurando de novo: cotovelos um pouco dobrados",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": [
+     0.751,
+     1.0
+    ],
+    "graus": [
+     35,
+     55
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "segurando: as mãos à frente dos ombros (o braço inclinado pra frente)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "Hand"
+    ],
+    "t": [
+     0.0,
+     0.249
+    ],
+    "graus": [
+     40,
+     60
+    ],
+    "fonte": "fotos de cima do ExRx, da ACE (foto 2) e da Arthritis Research UK (desenho 3): as mãos ficam à frente dos ombros; Kulig 2007 (\"subjects placed their hands in front of them\"). 90 = braço em pé"
+   },
+   {
+    "nome": "segurando de novo: as mãos à frente dos ombros",
+    "medida": "inclinacao",
+    "segmento": [
+     "Arm",
+     "Hand"
+    ],
+    "t": [
+     0.751,
+     1.0
+    ],
+    "graus": [
+     40,
+     60
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "deitado: cotovelos dobrados (as mãos do lado do rosto)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": [
+     0.451,
+     0.549
+    ],
+    "graus": [
+     110,
+     125
+    ],
+    "fonte": "foto 1 da ACE e desenho 1 da Arthritis Research UK: deitado, os cotovelos bem dobrados, apontando pra cima; a mão o mais perto de embaixo do ombro (ACE, NASM, Arthritis Research UK) sem o antebraço entrar no braço (a 129° ele entrava 2,5 mm na Flexão de Braço)"
+   },
+   {
+    "nome": "segurando: a lombar arqueada (extensão da coluna no fim da amplitude, sem exagero)",
+    "medida": "coluna_sinal",
+    "t": [
+     0.0,
+     0.249
+    ],
+    "graus": [
+     -49,
+     -41
+    ],
+    "fonte": "Kulig et al. 2007, tabela 3 (o press-up dos sem dor, \"as far as possible within pain tolerance\"): de 3,4 a 4,7° por segmento, 20,9° de L1 a S1; Mazzone et al. 2016 (resumo): \"lower lumbar extension\" de 21,4 ± 9,2° nos sem dor (só a lombar baixa); Edmondston et al. 2012: a torácica estende 12,0 ± 8,9° (0 a 26°) e, pela 2011, mais deitado de bruços que em pé; amplitude normal da lombar: \"25 degrees according to the AAOS and 35 degrees according to Kendall\" e \"extension 40±10.2º\" (Apti et al. 2023); NASM, Floor Prone Cobra: \"Excessive spinal extension that strains the lower back\" é erro. O coluna_sinal mede a lombar (quadril → Spine1) contra a torácica (Spine1 → pescoço): deitado já marca ~−7 (o peito do boneco é mais alto que a pelve) e em cima soma a lombar (+30°, entre Kulig e o normal) e a parte da torácica (+20°)"
+   },
+   {
+    "nome": "segurando de novo: a lombar arqueada",
+    "medida": "coluna_sinal",
+    "t": [
+     0.751,
+     1.0
+    ],
+    "graus": [
+     -49,
+     -41
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "a coluna nunca dobra pra frente nem passa do arco de cima",
+    "medida": "coluna_sinal",
+    "t": "todos",
+    "graus": [
+     -49,
+     0
+    ],
+    "fonte": "Kulig et al. 2007, tabela 3 (o press-up dos sem dor, \"as far as possible within pain tolerance\"): de 3,4 a 4,7° por segmento, 20,9° de L1 a S1; Mazzone et al. 2016 (resumo): \"lower lumbar extension\" de 21,4 ± 9,2° nos sem dor (só a lombar baixa); Edmondston et al. 2012: a torácica estende 12,0 ± 8,9° (0 a 26°) e, pela 2011, mais deitado de bruços que em pé; amplitude normal da lombar: \"25 degrees according to the AAOS and 35 degrees according to Kendall\" e \"extension 40±10.2º\" (Apti et al. 2023); NASM, Floor Prone Cobra: \"Excessive spinal extension that strains the lower back\" é erro. O coluna_sinal mede a lombar (quadril → Spine1) contra a torácica (Spine1 → pescoço): deitado já marca ~−7 (o peito do boneco é mais alto que a pelve) e em cima soma a lombar (+30°, entre Kulig e o normal) e a parte da torácica (+20°)"
+   },
+   {
+    "nome": "deitado: a coluna quase reta",
+    "medida": "coluna_sinal",
+    "t": [
+     0.451,
+     0.549
+    ],
+    "graus": [
+     -10,
+     -3
+    ],
+    "fonte": "ACE, Cobra (#16) (\"rest back upon the mat or floor\"): deitado, o peito e a pelve no colchonete (o peito do boneco é mais alto que a pelve: a lombar fica ~9° mais estendida que em pé)"
+   },
+   {
+    "nome": "segurando: o tórax bem levantado",
+    "medida": "torax_chao",
+    "t": [
+     0.0,
+     0.249
+    ],
+    "graus": [
+     50,
+     62
+    ],
+    "fonte": "fotos de cima do ExRx, da ACE (foto 2) e da Arthritis Research UK (desenho 3): o peito alto, o tronco bem inclinado; 0 = deitado, 90 = em pé"
+   },
+   {
+    "nome": "segurando de novo: o tórax bem levantado",
+    "medida": "torax_chao",
+    "t": [
+     0.751,
+     1.0
+    ],
+    "graus": [
+     50,
+     62
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "segurando: a cabeça acompanha o tronco olhando pra frente, sem jogar pra trás",
+    "medida": "cabeca_tronco",
+    "t": [
+     0.0,
+     0.249
+    ],
+    "graus": [
+     14,
+     26
+    ],
+    "fonte": "Arthritis Research UK, Half push-ups (\"Look up and push up, lifting your head and shoulders up with your arms\"); foto 2 da ACE: a cabeça na linha do tronco; a foto do ExRx joga a cabeça bem pra trás (divergência: ficou o meio-termo). O boneco em pé mede ~−11°: +20 = o pescoço estendido ~31° a mais que em pé, o rosto olhando pra frente e um pouco pra baixo (o pescoço vai até ~50°: limites.py, AAOS)"
+   },
+   {
+    "nome": "segurando de novo: a cabeça olhando pra frente",
+    "medida": "cabeca_tronco",
+    "t": [
+     0.751,
+     1.0
+    ],
+    "graus": [
+     14,
+     26
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "a cabeça nunca joga pra trás nem cai no peito",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -15,
+     26
+    ],
+    "fonte": "foto 2 da ACE (a cabeça na linha do tronco) e Arthritis Research UK, Half push-ups (\"Look up\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ACE, Cobra (#16) (\"keeping your hips stable\")"
+   },
+   {
+    "nome": "pelve sem girar",
+    "medida": "pelve_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "ACE, Cobra (#16) (\"keeping your hips stable\")"
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "tórax sem girar em relação à pelve",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "joelhos esticados (as pernas relaxadas)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "ACE, Cobra (#16) (\"Extend your legs\"); NASM, Floor Prone Cobra (\"Keep your hips and legs relaxed on the floor\")"
+   },
+   {
+    "nome": "pés em flexão plantar (o peito do pé no colchonete)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     26,
+     36
+    ],
+    "fonte": "ACE, Cobra (#16) (\"plantar flex your ankles (toes point away from body)\"); Alazzawi et al. 2017, tabela 5 (\"Plantar flexion 0-50 degrees\"; no boneco ~76° em pé e ~26° com 50°)"
+   },
+   {
+    "nome": "pernas juntas (os pés entre juntos e a largura do quadril)",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     0.4,
+     1.6
+    ],
+    "fonte": "fotos do ExRx e da ACE: as pernas juntas (no boneco musculoso as coxas encostam com os pés a ~28 cm)"
+   },
+   {
+    "nome": "um pé não fica à frente do outro",
+    "medida": "pes_alinhados",
+    "t": "todos",
+    "mm": [
+     0,
+     20
+    ]
+   }
+  ]
+ }
+}

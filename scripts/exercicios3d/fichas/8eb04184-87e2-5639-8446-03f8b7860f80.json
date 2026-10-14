@@ -1,0 +1,837 @@
+{
+ "uuid": "8eb04184-87e2-5639-8446-03f8b7860f80",
+ "nome": "Alongamento Abraçando os Joelhos",
+ "cena": "alongamento_abracando_os_joelhos",
+ "grupo": "Alongamento",
+ "subgrupo": "Eretores da espinha (lombar) · glúteo máximo",
+ "padrao_movimento": "along_coluna",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado, joelhos ao peito",
+ "alvos": [
+  "lombar",
+  "gluteo"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 78,
+  "el": 10,
+  "dist": 3.0,
+  "alvo": [
+   0.0,
+   0.18,
+   0.3
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.3,
+  "alvo": [
+   0.0,
+   0.12,
+   0.3
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Alongamento parado pelo mesmo jeito da Prancha (Caminho A, decisão do Weslley de 11/10/2026 pras pranchas, \"1\": entrar na posição, segurar e sair; pros alongamentos do lote 15 é decisão do Claude principal por coerência — fica pra validação final dele). t = 0 → 1 é UM ciclo e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar). t = 0 é o ABRAÇO SEGURADO (a foto parada do app): os 2 joelhos no peito, cada mão segurando a sua canela logo abaixo do joelho, a lombar encostada no colchonete e o sacro um pouco fora dele, a cabeça e os ombros apoiados. Segura 5 s — uma segurada representativa, a mesma das pranchas e a das fontes deste exercício (Mayo: \"Hold for five seconds\"; AAOS: \"Hold for 5 seconds\"; Arthritis Research UK: \"hold for a count of 5\"); as fontes de alongamento pedem mais (NHS inform: \"You should try to hold stretches for 20 to 30 seconds if possible\"; ACSM: \"Holding a static stretch for 10-30s is recommended for most adults\") — o tempo de verdade vai na prescrição, séries × segundos. Solta em 4 s (NHS inform: \"Slowly release the knee hug\"; Mayo: \"Return to the starting position\"): a pelve desenrola e os joelhos se afastam do peito, as mãos abrem e voltam pra barriga e os pés descem até o colchonete; fica 1,0 s na posição de começo (o meio do tempo lá cai em t = 0,5: os prints de t = 0,5 mostram o começo) e abraça de novo em 4 s (free-exercise-db: \"Slowly pull the knees toward your shoulders\"; NHS inform: \"slowly bring your knees in towards your chest\"): os joelhos sobem juntos, as mãos saem da barriga e sobem por fora das coxas até a face de fora das canelas, seguram e puxam (os joelhos vêm pro peito e a pelve enrola). Nenhuma fonte dá os segundos de soltar, do começo e de abraçar (só \"slowly\"/\"gently\"): são escolha minha, devagar e sem tranco. ida_s = 14,0 s = 1 ciclo (224 quadros a 16/s); cada parte começa e acaba parada. Com 2,5 s pra soltar e pra abraçar a mão andava até 105 mm num quadro (a mão virando no meio do caminho entre a barriga e a canela), acima do limite de 80 mm da checagem: com 4 s o maior salto da checagem completa cai pra 57 mm, sem mudar nenhuma pose. Pra validação final: se o Weslley preferir a foto na posição de começo (deitado, pés chapados), basta deslocar a fase do ciclo, sem mudar o resto (ficaria quase a foto da Ponte de Glúteo).",
+ "ida_s": 14.0,
+ "movimento": "Deitado de costas no colchonete, com os joelhos dobrados, os pés chapados e juntos e as mãos apoiadas na barriga. Devagar, leva os dois joelhos juntos em direção ao peito, tirando os pés do chão; as mãos saem da barriga, sobem por fora das coxas e cada uma segura a sua canela logo abaixo do joelho — a palma do lado de fora da canela e os dedos por cima dela, sem apertar a patela. Com os braços, puxa os joelhos em direção aos ombros: os cotovelos dobram, a lombar fica encostada no colchonete e o quadril sai um pouco do chão (o sacro sobe alguns centímetros), enquanto a cabeça e os ombros continuam apoiados. Segura a posição sentindo o alongamento na lombar e no glúteo, sem dor e sem balançar, respirando normalmente. Para sair, solta devagar: o quadril volta ao colchonete, as mãos voltam para a barriga e os pés descem até ficar chapados de novo.",
+ "cinesiologia": {
+  "plano": "sagital: alongamento ESTÁTICO (free-exercise-db: \"force\": \"static\") — flexão da coluna lombar e do quadril segurada pelos braços, com a parte de cima das costas, os ombros e a cabeça apoiados no colchonete; na entrada e na saída as pernas e a pelve giram no plano sagital",
+  "articulacoes": "segurando: quadris dobrados (a coxa ~38° além da vertical, na direção do peito; ~128° entre a coxa e a linha quadril → pescoço, que já soma a lombar enrolada), joelhos dobrados ~105°, tornozelos soltos (~16° de flexão plantar), a lombar flexionada (a pelve enrolada ~30° pra trás em relação a deitado: a lombar encosta no colchonete e o sacro sobe ~4 cm), a parte de cima das costas, os ombros e a cabeça parados no colchonete; cotovelos dobrados ~67° puxando, punhos quase neutros com a palma na face de fora da canela. Na posição de começo: quadris ~49°, joelhos ~100°, pés chapados, cotovelos ~121° com as mãos na barriga",
+  "agonistas": "nenhum músculo trabalha pra alongar: quem segura a posição são os braços. Músculos ALONGADOS: os eretores da espinha da lombar (ExRx, Lying Lower Back Stretch: Target \"Erector Spinae\"; free-exercise-db: \"primaryMuscles\": [\"lower back\"]) e o glúteo máximo (free-exercise-db: \"secondaryMuscles\": [\"glutes\"]; \"This also stretches your buttocks muscles\"); a AAOS põe \"Main muscles worked: Quadratus lumborum\" (o quadrado lombar, na mesma região — o app pinta a lombar); Sakaguchi et al. 2024, Figura 1: \"Double knees to chest to stretch the elector spine\" (sic); StatPearls (Williams Back Exercises), num estudo de 8 semanas com os exercícios de Williams (que incluem o \"double knee-to-chest motion\"): \"an increase in the flexibility of their hamstring, hip flexor, and lumbar extensor muscles\"",
+  "sinergistas": "bíceps braquial e braquial (os cotovelos dobram puxando as canelas), com os flexores dos dedos segurando a canela; os flexores do quadril trazem os joelhos pra cima na entrada, antes de as mãos segurarem",
+  "estabilizadores": "o abdômen ajuda a manter a lombar encostada (Mayo: \"Tighten the muscles in your belly and press your spine to the floor\"; AAOS: \"Tighten your abdominals and press your spine to the floor\"); a cabeça e os ombros relaxados no colchonete",
+  "fases": "entrada (4 s): os joelhos sobem juntos, as mãos sobem por fora das coxas e seguram as canelas, os braços puxam (free-exercise-db: \"Slowly pull the knees toward your shoulders\"); segurada (5 s no clipe: Mayo, AAOS e Arthritis Research UK; 20–30 s na prescrição: NHS inform; 10–30 s: ACSM), sem dor (AAOS: \"You should not feel pain during an exercise\"; NHS inform: \"you should be able to feel a gentle stretch. This shouldn’t be sore or uncomfortable\"); saída (4 s): solta devagar (NHS inform: \"Slowly release the knee hug\") e os pés voltam ao colchonete"
+ },
+ "referencias": [
+  "free-exercise-db (yuhonas, domínio público) — Hug Knees To Chest. https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hug_Knees_To_Chest.json (lido em 13/10/2026): \"Lie down on your back and pull both knees up to your chest.\" / \"Hold your arms under the knees, not over (that would put to much pressure on your knee joints).\" / \"Slowly pull the knees toward your shoulders. This also stretches your buttocks muscles.\"; \"force\": \"static\"; \"primaryMuscles\": [\"lower back\"]; \"secondaryMuscles\": [\"glutes\"]. Fotos: no começo os pés chapados e as mãos na barriga; segurando, os joelhos no peito, as mãos na frente das canelas logo abaixo dos joelhos (dedos entrelaçados), o quadril fora do colchonete e a cabeça e os ombros apoiados.",
+  "ExRx.net — Lying Lower Back Stretch. https://exrx.net/Stretches/ErectorSpinae/Lying (cópia do Internet Archive de 09/06/2026; o site direto responde 403): \"Lie supine on floor or mat. Raise both knees and grasp back of thighs behind knees.\" / \"Pull knees toward shoulders allowing hips to be raised further off floor. Hold stretch.\" / \"Upper back can also be lifted off of floor to stretch Splenius and cervical portion of Erector Spinae.\"; Target \"Erector Spinae\".",
+  "Mayo Clinic — Back exercises in 15 minutes a day, Knee-to-chest stretch (22/07/2026; cópia do Internet Archive de 03/10/2026): \"Lie on your back with your knees bent and your feet flat on the floor (A). Using both hands, pull up one knee and press it toward your chest (B). Tighten the muscles in your belly and press your spine to the floor. Hold for five seconds. Return to the starting position and repeat with the other leg (C). Go back to the starting position. Then repeat with both legs at the same time (D).\" https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/back-pain/art-20546859",
+  "American Academy of Orthopaedic Surgeons (AAOS), OrthoInfo — Spine Conditioning Program, 5. Knee to Chest (Daniel K. Park, MD): \"Lift one leg and bring your knee toward your chest. Grasp your knee or shin and pull your leg in as far as it will go.\" / \"Tighten your abdominals and press your spine to the floor. Hold for 5 seconds.\" / \"Repeat on the other side, then pull both legs in together.\" / \"Keep your spine aligned to the floor throughout the sequence.\"; \"Main muscles worked: Quadratus lumborum\". https://orthoinfo.aaos.org/en/recovery/spine-conditioning-program/",
+  "NHS inform (NHS 24) — Exercises for back pain, Double knee hug (cópia do Internet Archive de 18/02/2026): \"Lying on your back, slowly bring your knees in towards your chest. You can place the hands over the knees to feel the stretch a little deeper.\" / \"Slowly release the knee hug.\" / \"You should try to hold stretches for 20 to 30 seconds if possible.\" https://www.nhsinform.scot/illnesses-and-conditions/muscle-bone-and-joints/neck-and-back-problems-and-conditions/exercises-for-back-pain/",
+  "Arthritis Research UK — Back pain: Information and exercise sheet, 1. Hugging knees to chest (folha hospedada pelo Herefordshire and Worcestershire Health and Care NHS Trust): \"Lying on your back with bent knees, lift one leg and hold on to it with one hand and then lift and hold the other leg. Pull both knees gently closer to your chest, hold for a count of 5, then relax your arms but don't let go completely.\" https://www.hacw.nhs.uk/download/back-pain-exercise-sheet.pdf",
+  "ACSM — Stretching and Flexibility Guidelines Update (18/03/2021): \"Intensity: Stretch to the point of feeling tightness or slight discomfort.\" / \"Time: Holding a static stretch for 10-30s is recommended for most adults.\"; Garber CE et al. Med Sci Sports Exerc 2011;43(7):1334-1359 (PubMed 21694556).",
+  "StatPearls (NCBI Bookshelf) — Williams Back Exercises, Dydyk AM, Hu Y, Stretanski MF (atualizado em 02/06/2025; cópia do Internet Archive de 10/03/2026, o NCBI direto pede reCAPTCHA): \"The double knee-to-chest stretch is also performed with the patient lying on their back. The patient is instructed to bring one knee at a time to their chest. With their hands held together, the patient pulls their knees towards their chest and curls their head forward. While performing the motion, the patient is instructed to keep their knees together and to have their shoulders flat on the floor. The patient then lowers one leg at a time.\" / \"exercises such as pelvic tilt, curl-up, knee-to-chest motion, and hamstring stretch are most effective at minimizing electromyographic activity in the lumbar and sacral regions when performed with a posterior tilt.\" (a cabeça levantada do Williams é a variação que o ExRx separa: \"Upper back can also be lifted off of floor\"; aqui ela fica apoiada) https://www.ncbi.nlm.nih.gov/books/NBK551558/",
+  "Sakaguchi T, Gunjotikar S, Tanaka M et al. Evaluation and Rehabilitation after Adult Lumbar Spine Surgery. J Clin Med 2024;13(10):2915 (PubMed 38792457), legenda da Figura 1 (exercícios de flexão de Williams): \"( C ): Double knees to chest to stretch the elector spine\" (sic). https://pmc.ncbi.nlm.nih.gov/articles/PMC11122457/"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pes_no_chao_motivo": "no começo os pés ficam chapados e parados no colchonete (Mayo: \"Lie on your back with your knees bent and your feet flat on the floor (A)\"); no resto do ciclo eles saem do chão (ver pe_fora_do_chao)",
+  "chao_mm": 12,
+  "chao_mm_motivo": "deitado no colchonete de 12 mm dos prontos de costas (ExRx: \"Lie supine on floor or mat\"; regra do lote 15: deitado no chão = o colchonete de 12 mm), com os pés em cima dele no começo: a planta é medida no topo dele",
+  "pe_fora_do_chao": [
+   "E",
+   "D"
+  ],
+  "pe_fora_do_chao_motivo": "os 2 pés saem do colchonete na entrada e ficam soltos no ar o tempo todo segurando (free-exercise-db, Hug Knees To Chest (\"Lie down on your back and pull both knees up to your chest.\" / \"Hold your arms under the knees, not over (that would put to much pressure on your knee joints).\" / \"Slowly pull the knees toward your shoulders. This also stretches your buttocks muscles.\"); NHS inform, Double knee hug (\"Lying on your back, slowly bring your knees in towards your chest. You can place the hands over the knees to feel the stretch a little deeper.\" / \"Slowly release the knee hug.\"); fotos do free-exercise-db e do ExRx: os pés no ar) e só voltam a ficar chapados no começo — essa parte é medida nas alturas (pés chapados no começo, pés no ar segurando)",
+  "pe_no_ar": [
+   "E",
+   "D"
+  ],
+  "pe_no_ar_motivo": "os pés MEXEM fora do chão (sobem até o peito e descem): sem a regra do pé escorregando entre os quadros",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "as regras padrão de base (pés de 0,8 a 2,6 × a largura dos quadris, ponta do pé, os 2 pés virados igual, um pé à frente do outro, joelho na direção do pé e coluna até 20°) são de quem está em pé: aqui o corpo está deitado, os pés ficam juntos (~0,9 × a largura dos quadris) e no ar a maior parte do ciclo, e a lombar FLEXIONA de propósito (é o alongamento). As que valem estão abaixo, do jeito deste exercício",
+  "zonas": [
+   {
+    "nome": "parte de cima das costas (escápulas) apoiada o ciclo todo",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "fotos do free-exercise-db e do ExRx e desenhos da Mayo (D) e da AAOS: a parte de cima das costas e os ombros no chão; ExRx: levantar a parte de cima das costas é OUTRA coisa (\"Upper back can also be lifted off of floor to stretch Splenius and cervical portion of Erector Spinae\")"
+   },
+   {
+    "nome": "cabeça apoiada (o cabelo da nuca no colchonete)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     8
+    ],
+    "fonte": "fotos do free-exercise-db e do ExRx e desenhos da Mayo e da AAOS: a cabeça apoiada. Medido na pele: o cabelo da nuca encosta no colchonete e a pele fica uns mm acima dele"
+   },
+   {
+    "nome": "lombar encostada no colchonete segurando",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine"
+    ],
+    "t": [
+     0.0,
+     0.1786
+    ],
+    "mm": [
+     -20,
+     5
+    ],
+    "fonte": "Mayo Clinic, Knee-to-chest stretch (\"Lie on your back with your knees bent and your feet flat on the floor (A).\" / \"Tighten the muscles in your belly and press your spine to the floor. Hold for five seconds.\" / \"Then repeat with both legs at the same time (D).\"); AAOS OrthoInfo, Spine Conditioning Program, 5. Knee to Chest (\"Grasp your knee or shin and pull your leg in as far as it will go.\" / \"Tighten your abdominals and press your spine to the floor. Hold for 5 seconds.\" / \"Keep your spine aligned to the floor throughout the sequence.\")"
+   },
+   {
+    "nome": "lombar encostada no colchonete segurando (fim do ciclo)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine"
+    ],
+    "t": [
+     0.8214,
+     1.0
+    ],
+    "mm": [
+     -20,
+     5
+    ],
+    "fonte": "Mayo Clinic, Knee-to-chest stretch (\"Lie on your back with your knees bent and your feet flat on the floor (A).\" / \"Tighten the muscles in your belly and press your spine to the floor. Hold for five seconds.\" / \"Then repeat with both legs at the same time (D).\"); AAOS OrthoInfo, Spine Conditioning Program, 5. Knee to Chest (\"Grasp your knee or shin and pull your leg in as far as it will go.\" / \"Tighten your abdominals and press your spine to the floor. Hold for 5 seconds.\" / \"Keep your spine aligned to the floor throughout the sequence.\")"
+   },
+   {
+    "nome": "glúteo e sacro apoiados no começo",
+    "equipamento": "colchonete",
+    "partes": [
+     "Hips"
+    ],
+    "t": [
+     0.4643,
+     0.5357
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "Mayo Clinic, Knee-to-chest stretch (\"Lie on your back with your knees bent and your feet flat on the floor (A).\" / \"Tighten the muscles in your belly and press your spine to the floor. Hold for five seconds.\" / \"Then repeat with both legs at the same time (D).\") (A); foto 0 do free-exercise-db (deitado com os pés chapados)"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "tronco e glúteo sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado), como na Ponte de Glúteo"
+   },
+   {
+    "nome": "cabeça e pescoço sem atravessar o colchonete",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "braços, mãos e pernas sem atravessar o colchonete",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "pés chapados no colchonete no começo (a planta no topo dele)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.4643,
+     0.5357
+    ],
+    "mm": [
+     10,
+     14
+    ],
+    "fonte": "Mayo Clinic, Knee-to-chest stretch (\"Lie on your back with your knees bent and your feet flat on the floor (A).\" / \"Tighten the muscles in your belly and press your spine to the floor. Hold for five seconds.\" / \"Then repeat with both legs at the same time (D).\") (\"your feet flat on the floor\"); o pé fica com a orientação de em pé (chapado) até sair do chão"
+   },
+   {
+    "nome": "pés soltos no ar segurando",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.0,
+     0.1786
+    ],
+    "mm": [
+     350,
+     2000
+    ],
+    "fonte": "free-exercise-db, Hug Knees To Chest (\"Lie down on your back and pull both knees up to your chest.\" / \"Hold your arms under the knees, not over (that would put to much pressure on your knee joints).\" / \"Slowly pull the knees toward your shoulders. This also stretches your buttocks muscles.\"); fotos do free-exercise-db e do ExRx (os pés no ar)"
+   },
+   {
+    "nome": "pés soltos no ar segurando (fim do ciclo)",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "t": [
+     0.8214,
+     1.0
+    ],
+    "mm": [
+     350,
+     2000
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mão esquerda segurando a canela esquerda (encosta sem entrar)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "LeftLeg",
+     "LeftUpLeg"
+    ],
+    "t": [
+     0.0,
+     0.1786
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "free-exercise-db, Hug Knees To Chest (\"Lie down on your back and pull both knees up to your chest.\" / \"Hold your arms under the knees, not over (that would put to much pressure on your knee joints).\" / \"Slowly pull the knees toward your shoulders. This also stretches your buttocks muscles.\"); AAOS OrthoInfo, Spine Conditioning Program, 5. Knee to Chest (\"Grasp your knee or shin and pull your leg in as far as it will go.\" / \"Tighten your abdominals and press your spine to the floor. Hold for 5 seconds.\" / \"Keep your spine aligned to the floor throughout the sequence.\"); Arthritis Research UK, 1. Hugging knees to chest (\"Lying on your back with bent knees, lift one leg and hold on to it with one hand and then lift and hold the other leg. Pull both knees gently closer to your chest, hold for a count of 5\")"
+   },
+   {
+    "nome": "mão esquerda segurando a canela esquerda (fim do ciclo)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "LeftLeg",
+     "LeftUpLeg"
+    ],
+    "t": [
+     0.8214,
+     1.0
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "mão direita segurando a canela direita (encosta sem entrar)",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "RightLeg",
+     "RightUpLeg"
+    ],
+    "t": [
+     0.0,
+     0.1786
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "free-exercise-db, Hug Knees To Chest (\"Lie down on your back and pull both knees up to your chest.\" / \"Hold your arms under the knees, not over (that would put to much pressure on your knee joints).\" / \"Slowly pull the knees toward your shoulders. This also stretches your buttocks muscles.\"); AAOS OrthoInfo, Spine Conditioning Program, 5. Knee to Chest (\"Grasp your knee or shin and pull your leg in as far as it will go.\" / \"Tighten your abdominals and press your spine to the floor. Hold for 5 seconds.\" / \"Keep your spine aligned to the floor throughout the sequence.\"); Arthritis Research UK, 1. Hugging knees to chest (\"Lying on your back with bent knees, lift one leg and hold on to it with one hand and then lift and hold the other leg. Pull both knees gently closer to your chest, hold for a count of 5\")"
+   },
+   {
+    "nome": "mão direita segurando a canela direita (fim do ciclo)",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "RightLeg",
+     "RightUpLeg"
+    ],
+    "t": [
+     0.8214,
+     1.0
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "mãos na barriga no começo (encostam sem entrar)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "t": [
+     0.4643,
+     0.5357
+    ],
+    "mm": [
+     -2,
+     3
+    ],
+    "fonte": "foto 0 do free-exercise-db e desenho A da Mayo (as mãos apoiadas na barriga)"
+   },
+   {
+    "nome": "mãos e antebraços sem entrar nas pernas",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftArm",
+     "RightArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica): a mão encosta na canela e o antebraço passa rente à coxa"
+   },
+   {
+    "nome": "mãos sem entrar no tronco",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     -2,
+     5000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "mão esquerda longe da perna direita",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "Arthritis Research UK, 1. Hugging knees to chest (\"Lying on your back with bent knees, lift one leg and hold on to it with one hand and then lift and hold the other leg. Pull both knees gently closer to your chest, hold for a count of 5\"): cada mão na sua perna"
+   },
+   {
+    "nome": "mão direita longe da perna esquerda",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg"
+    ],
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "Arthritis Research UK, 1. Hugging knees to chest (\"Lying on your back with bent knees, lift one leg and hold on to it with one hand and then lift and hold the other leg. Pull both knees gently closer to your chest, hold for a count of 5\"): cada mão na sua perna"
+   },
+   {
+    "nome": "joelhos e canelas sem entrar no peito",
+    "partes": [
+     "LeftLeg",
+     "RightLeg"
+    ],
+    "com": [
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     3,
+     5000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelhos dobrados no começo, pés chapados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": [
+     0.4643,
+     0.5357
+    ],
+    "graus": [
+     95,
+     106
+    ],
+    "fonte": "Mayo Clinic, Knee-to-chest stretch (\"Lie on your back with your knees bent and your feet flat on the floor (A).\" / \"Tighten the muscles in your belly and press your spine to the floor. Hold for five seconds.\" / \"Then repeat with both legs at the same time (D).\") (A)"
+   },
+   {
+    "nome": "joelhos dobrados segurando",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": [
+     0.0,
+     0.1786
+    ],
+    "graus": [
+     98,
+     112
+    ],
+    "fonte": "fotos do free-exercise-db e do ExRx e desenho D da Mayo (os joelhos bem dobrados, as canelas pra cima); nenhuma fonte dá o ângulo"
+   },
+   {
+    "nome": "joelhos dobrados segurando (fim do ciclo)",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": [
+     0.8214,
+     1.0
+    ],
+    "graus": [
+     98,
+     112
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "joelhos no peito segurando: a coxa passa da vertical na direção do peito",
+    "medida": "coxa_vertical",
+    "t": [
+     0.0,
+     0.1786
+    ],
+    "graus": [
+     32,
+     46
+    ],
+    "fonte": "free-exercise-db, Hug Knees To Chest (\"Lie down on your back and pull both knees up to your chest.\" / \"Hold your arms under the knees, not over (that would put to much pressure on your knee joints).\" / \"Slowly pull the knees toward your shoulders. This also stretches your buttocks muscles.\"); ExRx, Lying Lower Back Stretch (\"Lie supine on floor or mat. Raise both knees and grasp back of thighs behind knees.\" / \"Pull knees toward shoulders allowing hips to be raised further off floor. Hold stretch.\")"
+   },
+   {
+    "nome": "joelhos no peito segurando (fim do ciclo)",
+    "medida": "coxa_vertical",
+    "t": [
+     0.8214,
+     1.0
+    ],
+    "graus": [
+     32,
+     46
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "no começo as coxas inclinadas pros pés (pés chapados)",
+    "medida": "coxa_vertical",
+    "t": [
+     0.4643,
+     0.5357
+    ],
+    "graus": [
+     -48,
+     -34
+    ],
+    "fonte": "Mayo Clinic, Knee-to-chest stretch (\"Lie on your back with your knees bent and your feet flat on the floor (A).\" / \"Tighten the muscles in your belly and press your spine to the floor. Hold for five seconds.\" / \"Then repeat with both legs at the same time (D).\") (A)"
+   },
+   {
+    "nome": "lombar flexionada segurando (a pelve enrola, a lombar encosta)",
+    "medida": "coluna_sinal",
+    "t": [
+     0.0,
+     0.1786
+    ],
+    "graus": [
+     8,
+     20
+    ],
+    "fonte": "ExRx, Lying Lower Back Stretch (\"Lie supine on floor or mat. Raise both knees and grasp back of thighs behind knees.\" / \"Pull knees toward shoulders allowing hips to be raised further off floor. Hold stretch.\"); Mayo Clinic, Knee-to-chest stretch (\"Lie on your back with your knees bent and your feet flat on the floor (A).\" / \"Tighten the muscles in your belly and press your spine to the floor. Hold for five seconds.\" / \"Then repeat with both legs at the same time (D).\"); ExRx: alvo Erector Spinae (a lombar alongada em flexão)"
+   },
+   {
+    "nome": "lombar flexionada segurando (fim do ciclo)",
+    "medida": "coluna_sinal",
+    "t": [
+     0.8214,
+     1.0
+    ],
+    "graus": [
+     8,
+     20
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "a coluna nunca arqueia (sem extensão)",
+    "medida": "coluna_sinal",
+    "t": "todos",
+    "graus": [
+     -3,
+     25
+    ],
+    "fonte": "AAOS OrthoInfo, Spine Conditioning Program, 5. Knee to Chest (\"Grasp your knee or shin and pull your leg in as far as it will go.\" / \"Tighten your abdominals and press your spine to the floor. Hold for 5 seconds.\" / \"Keep your spine aligned to the floor throughout the sequence.\") (\"Keep your spine aligned to the floor throughout the sequence\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco, apoiada",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -10,
+     15
+    ],
+    "fonte": "fotos do free-exercise-db e do ExRx: a cabeça apoiada, olhando pro teto (o boneco em pé mede ~−11)"
+   },
+   {
+    "nome": "cotovelos dobrados puxando os joelhos",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": [
+     0.0,
+     0.1786
+    ],
+    "graus": [
+     55,
+     85
+    ],
+    "fonte": "fotos do free-exercise-db e do ExRx (os cotovelos dobrados, puxando); free-exercise-db, Hug Knees To Chest (\"Lie down on your back and pull both knees up to your chest.\" / \"Hold your arms under the knees, not over (that would put to much pressure on your knee joints).\" / \"Slowly pull the knees toward your shoulders. This also stretches your buttocks muscles.\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "os 2 joelhos juntos e iguais (NHS inform, Double knee hug (\"Lying on your back, slowly bring your knees in towards your chest. You can place the hands over the knees to feel the stretch a little deeper.\" / \"Slowly release the knee hug.\"))"
+   },
+   {
+    "nome": "ombros nivelados",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "os 2 braços iguais"
+   },
+   {
+    "nome": "pés juntos (o mais junto que o boneco deixa sem uma coxa entrar na outra)",
+    "medida": "pes_base_lateral",
+    "t": "todos",
+    "faixa": [
+     0.5,
+     1.05
+    ],
+    "fonte": "fotos do free-exercise-db e do ExRx (os joelhos e os pés juntos)"
+   },
+   {
+    "nome": "tornozelo sem passar da flexão plantar normal",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     27,
+     96
+    ],
+    "fonte": "Alazzawi S et al., World J Orthop 2017;8(1):21-29, tabela 5: flexão plantar 0–50°, dorsiflexão 0–20° (no boneco ~26° a ~96° na medida tornozelo)"
+   }
+  ]
+ }
+}

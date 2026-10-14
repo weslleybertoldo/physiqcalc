@@ -897,3 +897,52 @@ def test_antebraco_e_pe_pra_frente_do_tronco():
     lado = girar(j, -72, (0, 1, 0))
     assert tc.antebraco_frente(lado) == pytest.approx([90, 0], abs=1e-6)
     assert tc.pe_frente(lado) == pytest.approx(tc.pe_frente(j), abs=1e-6)
+
+
+def test_cabeca_inclinacao_com_sinal_fixo_do_corpo_na_mobilidade_cervical():
+    """Mobilidade cervical (lote 15): a cabeça (base do crânio → topo, a ponta do osso Head) inclinada 28° pro lado DIREITO do corpo (−X: o
+    boneco olha pra −Y) dá +28 e pro esquerdo −28 com os 2 ombros na mesma altura (o cabeca_lado põe o + pro ombro mais alto); a cabeça
+    dobrada pra frente não mexe no número; o corpo inteiro inclinado ou deitado também não; sem a ponta da cabeça nas juntas, []."""
+    j = em_pe()
+    for L, s in (("Left", 1), ("Right", -1)):
+        j[L + "Shoulder"] = np.array([s * 0.06, 0, 1.44])
+    j["Head"] = np.array([0, 0, 1.55])
+
+    def topo(lado_graus, frente_graus=0.0):
+        a, f = math.radians(lado_graus), math.radians(frente_graus)
+        return j["Head"] + 0.2 * np.array([-math.sin(a) * math.cos(f), -math.sin(f), math.cos(a) * math.cos(f)])
+
+    direita = dict(j, Head_ponta=topo(28))
+    esquerda = dict(j, Head_ponta=topo(-28))
+    assert tc.cabeca_inclinacao(direita) == pytest.approx([28], abs=1e-6)
+    assert tc.cabeca_inclinacao(esquerda) == pytest.approx([-28], abs=1e-6)
+    assert tc.cabeca_inclinacao(dict(j, Head_ponta=topo(0, 20))) == pytest.approx([0], abs=1e-6)
+    for eixo, graus in (((1, 0, 0), 30), ((1, 0, 0), -90), ((0, 1, 0), 15)):
+        assert tc.cabeca_inclinacao(girar(direita, graus, eixo, (0, 0, 1.0))) == pytest.approx([28], abs=1e-6)
+    assert tc.cabeca_inclinacao(em_pe()) == [] and tc.cabeca_inclinacao(j) == []
+    assert "cabeca_inclinacao" in tc.MEDIDAS and "Head" in tc.PONTAS
+
+
+def test_joelhos_tombam_deitado_de_costas_na_mobilidade_de_coluna():
+    """Mobilidade de coluna deitado (lote 15): de costas, com os joelhos dobrados apontando pro teto, dá 0; os 2 joelhos tombados em volta
+    da reta quadris → tornozelos pra ESQUERDA do corpo (+X: deitado de costas com a cabeça pra +Y) dão +, pra direita −, no ângulo do giro;
+    virar o boneco inteiro em volta da vertical (deitado com a cabeça pra outro lado) não muda o número."""
+    j = {"Hips": np.array([0, 0.04, 0.12]), "Neck": np.array([0, 0.55, 0.12])}
+    for L, s in (("Left", 1), ("Right", -1)):
+        j[L + "UpLeg"] = np.array([s * 0.106, 0.0, 0.10])
+        j[L + "Foot"] = np.array([s * 0.05, -0.85, 0.08])
+        j[L + "Leg"] = np.array([s * 0.06, -0.42, 0.45])
+    assert tc.joelhos_tombam(j) == pytest.approx([0], abs=1e-6)
+    q = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    eixo = (j["LeftFoot"] + j["RightFoot"]) / 2 - q
+
+    def tomba(graus):
+        k = girar({"LeftLeg": j["LeftLeg"], "RightLeg": j["RightLeg"]}, graus, eixo, q)
+        return dict(j, **k)
+
+    for graus in (45, -45, 20, 80):
+        # com a reta apontando pros pés (−Y), girar −g pela mão direita leva o topo dos joelhos pra +X (a esquerda do corpo)
+        assert tc.joelhos_tombam(tomba(-graus)) == pytest.approx([graus], abs=1e-6)
+    virado = girar(tomba(-45), 180, (0, 0, 1))
+    assert tc.joelhos_tombam(virado) == pytest.approx([45], abs=1e-6)
+    assert "joelhos_tombam" in tc.MEDIDAS

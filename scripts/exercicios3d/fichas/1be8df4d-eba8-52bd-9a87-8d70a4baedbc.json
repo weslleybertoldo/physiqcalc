@@ -1,0 +1,803 @@
+{
+ "uuid": "1be8df4d-eba8-52bd-9a87-8d70a4baedbc",
+ "nome": "Alongamento Borboleta",
+ "cena": "alongamento_borboleta",
+ "grupo": "Alongamento",
+ "subgrupo": "Adutores (longo · curto · magno)",
+ "padrao_movimento": "along_quadril",
+ "equipamento": "peso_corporal",
+ "variacao": "sentado, solas dos pés juntas",
+ "alvos": [
+  "adutores"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 30,
+  "el": 20,
+  "dist": 2.9,
+  "alvo": [
+   0.0,
+   -0.15,
+   0.3
+  ]
+ },
+ "camera_vistas": {
+  "dist": 2.9,
+  "alvo": [
+   0.0,
+   -0.15,
+   0.3
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Alongamento parado pelo mesmo jeito da Prancha (Caminho A, decisão do Weslley de 11/10/2026 pras pranchas, \"1\": entrar na posição, segurar e sair; pros alongamentos do lote 15 é decisão do Claude principal por coerência — fica pra validação final dele), igual à Extensão da Coluna. t = 0 → 1 é UM ciclo e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar). t = 0 é o alongamento SEGURADO (a foto parada do app): sentado com as solas juntas, o tronco inclinado ~35° à frente a partir do quadril com as costas retas e os antebraços, perto dos cotovelos, encostados por dentro das canelas (a foto 2 da ACE; ExRx: \"position elbows on inside of lower legs\"); segura 5 s — uma segurada representativa, a mesma das pranchas e da Extensão da Coluna (as fontes mandam mais: ACE \"Hold this position for 15 - 30 seconds\"; NASM \"Maintain this stretched position for 15-30 seconds\"; NSCA \"Hold each stretch for 15 to 30 seconds\"; NHS \"Inner thigh stretch – hold for 15 to 20 seconds\"; ACSM \"Holding a static stretch for 10-30s is recommended for most adults\" — o tempo de verdade vai na prescrição do app, séries × segundos); volta em 2,0 s até sentar com o tronco em pé (ACE: \"then relax by returning to your starting position\"), fica 1,0 s sentado ereto com as mãos nos pés (a foto 1 da ACE: \"Sit upright (i.e., trunk vertical) ... and place your hands on the top of your feet\"; o meio desse tempo cai em t = 0,5: os prints de t = 0,5 mostram a posição de começo) e inclina de novo em 2,0 s (ACE: \"gently exhale and slowly bend forward from your hips\"; NASM: \"gently draw your torso forward\"). Nenhuma fonte dá os segundos da volta, do começo e da entrada: são escolha minha, devagar e sem tranco (ACE: \"do not bounce\"; NASM: \"Avoid bouncing\"), os mesmos da Extensão da Coluna. ida_s = 10,0 s = 1 ciclo (160 quadros a 16/s); a volta e a entrada começam e acabam paradas (seno). Pra validação final: se o Weslley preferir a foto na posição de começo (sentado ereto), basta deslocar a fase do ciclo, sem mudar o resto.",
+ "ida_s": 10.0,
+ "movimento": "Sentado no colchonete com as solas dos pés juntas, encostadas uma na outra na frente do corpo, os calcanhares perto da virilha, os joelhos caídos pros lados e a borda de fora dos pés apoiada no colchonete. Começa sentado com o tronco em pé, as costas retas e a cabeça na linha da coluna, com as mãos por cima dos pés, segurando-os, e os braços quase esticados. Firma o abdômen, solta o ar e inclina devagar o tronco à frente a partir do quadril, com as costas retas — sem arredondar a lombar —, enquanto os cotovelos dobram e descem até os antebraços, perto dos cotovelos, encostarem por dentro das canelas, empurrando os joelhos um pouco pra baixo, sem forçar. Segura a posição sentindo o alongamento na parte de dentro das coxas, sem dor e sem balançar, respirando fundo; depois volta devagar à posição de começo, com o tronco em pé. As mãos, os pés e o glúteo não saem do lugar.",
+ "cinesiologia": {
+  "plano": "sagital: o tronco inclina à frente em volta das articulações do quadril (a pelve e a coluna juntas, a coluna parada e reta), com as coxas abertas pros lados (o quadril dobrado, aberto e girado pra fora); alongamento estático: segura lá",
+  "articulacoes": "quadril: dobrado ~109° (coxa × prolongamento do tronco) no começo e ~115° segurando — o tronco inteiro inclina ~35° à frente sobre as coxas, a pelve junto —, aberto ~60° (abdução: as coxas quase deitadas pros lados, o centro do joelho a ~20 cm do chão no começo e ~17 cm segurando, os joelhos empurrados uns 3 cm pra baixo pelos braços) e girado pra fora; coluna parada e reta (o movimento é do quadril, não da lombar) e a cabeça na linha dela; joelhos dobrados ~139° (os calcanhares a um palmo da virilha) e parados; tornozelos parados, com o pé de lado — ~22° de flexão plantar e a sola virada pro meio, encostada na do outro pé, a borda de fora no colchonete; ombros e cotovelos: os braços descem até os pés quase esticados no começo (cotovelo ~39°) e dobram até ~106° segurando, com os antebraços, perto dos cotovelos, apoiados por dentro das canelas; punhos: ~11° no começo e ~43° de extensão segurando (desvio ~10° pro lado do dedo mínimo segurando e ~16° pro lado do polegar no começo), com as mãos paradas por cima e por fora dos pés, perto dos tornozelos",
+  "agonistas": "nenhum músculo trabalha pra alongar: quem leva o tronco à frente é o peso dele e quem empurra as coxas são os braços. Músculos ALONGADOS: os adutores do quadril — ExRx, Seated Groin Stretch: Target \"Adductors, Hip\"; NASM: \"Primary Muscles: Adductor Longus -- primary target muscle for inner thigh stretching / Adductor Brevis -- assists in adduction and contributes to inner thigh stretch / Gracilis -- aids in adduction and hip flexion, providing stretching sensation\"; o adutor magno alonga mais quanto mais o tronco desce (ExRx, Seated Groin Stretch (chair or bench): \"Adductor Magnus is stretched more as torso is lowered\"); ACE: \"This should create a stretch through your inner thighs\"; NHS: \"Inner thigh stretch\". O catálogo põe \"Adutores (longo · curto · magno)\"",
+  "sinergistas": "também alongados (NASM, secundários): \"Pectineus\" e \"Obturator Externus\" — sem id próprio no 3D, vão no id adutores. O ExRx lista o eretor da espinha e o glúteo máximo SÓ se a coluna enrolar ou o quadril dobrar muito (\"Erector Spinae may be stretched if spine is flexed during stretch. Gluteus Maximus may be stretched if hip is flexed enough\"): aqui as costas ficam retas (ACE, NASM), por isso sem auxiliares. Trabalham de leve: o tríceps e o peitoral, com os cotovelos empurrando as coxas (ACE: \"push the thighs downward\")",
+  "estabilizadores": "o abdômen firme e os eretores seguram a coluna reta com o tronco inclinado (ACE: \"Stiffen (“brace”) your abdominal muscles to stabilize your spine\" / \"Attempt to maintain a flat back position, avoid rounding your back towards the ceiling (i.e., move from the hips and not your low back)\"; NASM, erro: \"Rounding the lower back\"); a respiração solta (NASM: \"while breathing deeply\"; erro: \"Holding the breath during stretching\")",
+  "fases": "começo sentado ereto com as solas juntas e as mãos nos pés (1,0 s no clipe; ACE: \"Sit upright (i.e., trunk vertical) with your head aligned with your spine and place your hands on the top of your feet\"); entrada inclinando do quadril e baixando os cotovelos (2,0 s; ACE: \"gently exhale and slowly bend forward from your hips, lowering your elbows to rest against the inside of your thighs and push the thighs downward\"); segurada sem balançar (5 s no clipe; ACE: \"Continue to press downward to the point of tension in the stretch, but do not bounce or push to a point of pain\"); volta à posição de começo (2,0 s; ACE: \"then relax by returning to your starting position\")"
+ },
+ "referencias": [
+  "American Council on Exercise (ACE) — Seated Butterfly Stretch (Exercise Library #216), https://www.acefitness.org/resources/everyone/exercise-library/216/seated-butterfly-stretch/ (lido em 13/10/2026; cópia em lote4/alongamento_borboleta/fontes/): \"Starting Position: Assume a seated position with your legs folded in front of you. Sit upright (i.e., trunk vertical) with your head aligned with your spine and place your hands on the top of your feet.\" / \"Stiffen (“brace”) your abdominal muscles to stabilize your spine, then gently exhale and slowly bend forward from your hips, lowering your elbows to rest against the inside of your thighs and push the thighs downward. Attempt to maintain a flat back position, avoid rounding your back towards the ceiling (i.e., move from the hips and not your low back) and keep you head aligned with your spine. This should create a stretch through your inner thighs.\" / \"Continue to press downward to the point of tension in the stretch, but do not bounce or push to a point of pain. Hold this position for 15 - 30 seconds, then relax by returning to your starting position and repeat 2-4 times. You may elect to grasp your ankles to hold this position.\" Nas 2 fotos (3/4 de frente, num colchonete fino atravessado): sentada em pé com as solas juntas, os calcanhares perto da virilha, os joelhos baixos e as mãos por cima dos pés; depois o tronco inclinado à frente pelo quadril (~35°), as costas retas, a cabeça na linha e os cotovelos encostados por dentro das pernas, perto dos joelhos.",
+  "ExRx.net — Seated Groin Stretch (no chão; o site direto responde 403: lido pela cópia do Internet Archive de 24/10/2025, https://web.archive.org/web/20251024230204/https://exrx.net/Stretches/HipAdductors/SeatedGroinFloor, 13/10/2026): Preparation \"Sit on floor or mat with soles of feet together on floor and close to body. Grasp feet with both hands and position elbows on inside of lower legs.\" / Execution \"Press knees toward floor with elbows. Hold stretch.\" / Comments \"Erector Spinae may be stretched if spine is flexed during stretch. Gluteus Maximus may be stretched if hip is flexed enough.\" / Target \"Adductors, Hip\"; Other \"Erector Spinae\", \"Gluteus Maximus\". Os parentes (cópias do Internet Archive): Seated Groin Stretch (chair or bench) — \"Adductor Magnus is stretched more as torso is lowered as in Seated Adductor Magnus Stretch.\"; Lying Groin Stretch — \"Lie on floor or mat. Place soles of feet together on floor close to body with knees far apart.\" / \"Lower knees toward floor. Hold stretch.\" / \"Arms can push legs down if preferred.\"",
+  "NASM — Static Butterfly Stretch (Exercise Library), https://www.nasm.org/resource-center/exercise-library/static-butterfly-stretch (lido em 13/10/2026): \"Sit on the floor with your back upright and your posture neutral. Bring the soles of your feet together in front of your body with your knees falling outward to the sides.\" / \"Hold your ankles or the tops of your feet and gently draw your torso forward while maintaining an upright spine.\" / \"Maintain this stretched position for 15-30 seconds while breathing deeply and allowing the hip muscles to relax progressively. Avoid bouncing or forcing the stretch beyond mild discomfort.\" / \"Release your feet and straighten your legs.\"; músculos primários \"Adductor Longus\", \"Adductor Brevis\", \"Gracilis\", secundários \"Pectineus\", \"Obturator Externus\"; erros \"Forcing the knees toward the floor aggressively\", \"Rounding the lower back\", \"Holding the breath during stretching\", \"Performing asymmetrically\"; FAQ \"beginners can keep their feet farther from their body to reduce stretch intensity\".",
+  "NSCA, Essentials of Strength Training and Conditioning, cap. 14 — pelo resumo da Achievable CSCS, \"14.2 Static stretching techniques\" (https://app.achievable.me/study/cscs/learn/warm-up-and-flexibility-training-static-stretching-techniques, lido em 13/10/2026): \"Stretch to the point of mild discomfort (not pain).\" / \"Hold each stretch for 15 to 30 seconds.\"; \"Groin: Butterfly\": \"Sit with the soles of your feet together and your knees dropped to the sides.\" / \"Hold your feet with your hands.\" / \"Gently press your knees toward the floor using your elbows.\"",
+  "NHS — How to stretch after exercising (página revisada em 16/03/2026), https://www.nhs.uk/live-well/exercise/how-to-stretch-after-exercising/ (lido em 13/10/2026): \"Inner thigh stretch – hold for 15 to 20 seconds\" / \"Sit down with your back straight and your legs bent.\" / \"Put the soles of your feet together.\" / \"Holding on to your feet, try to lower your knees towards the floor.\"; legenda da foto: \"A man sitting on the floor with the soles of his feet together and his hands resting on his ankles\".",
+  "The University of Iowa, Community Health Collaborative — Lower Body Stretches (Butterfly Stretch, com um GIF), https://chtc.sites.uiowa.edu/lower-body-stretches (lido em 13/10/2026): \"Starting position: Sitting up with your torso perpendicular to the floor, shoulders and neck relaxed, knees hugging your chest, and head facing forward.\" / \"Let your legs fall to respective sides on floor.\" / \"Bring soles of feet together, holding your feet at the ankle for support\" / \"Move feet closer to your body for a deeper stretch.\" / \"Hold for 30 seconds.\"",
+  "Mayo Clinic — Stretching: Focus on flexibility (cópia de 01/01/2026): \"Don't bounce. Stretch in a smooth movement, without bouncing.\" / \"Breathe normally and hold each stretch for about 30 seconds\" / \"Expect to feel tension while you're stretching, not pain.\"; ACSM — Stretching and Flexibility Guidelines Update (blog, 18/03/2021): \"Stretch to the point of feeling tightness or slight discomfort.\" / \"Holding a static stretch for 10-30s is recommended for most adults.\"; Garber CE et al. Med Sci Sports Exerc 2011;43(7):1334-1359 (resumo, PubMed 21694556).",
+  "Kenhub — Sartorius muscle (https://www.kenhub.com/en/library/anatomy/the-sartorius-muscle, lido em 13/10/2026): \"the sartorius muscle flexes, abducts and externally rotates the thigh, and flexes and internally rotates the leg\" / \"The combination of all these movements allows an individual to sit in a cross-legged position.\" — na borboleta o sartório fica ENCURTADO (o id adutores do 3D pinta ele junto).",
+  "Amplitude normal: tornozelo — Alazzawi S et al. Foot and ankle history and clinical examination: A guide to everyday practice. World J Orthop 2017;8(1):21-29 (PMC5241541), tabela 5: \"Dorsiflexion 0-20 degrees\", \"Plantar flexion 0-50 degrees\"; punho, joelho, quadril e demais juntas — Norkin CC, White DJ, Measurement of Joint Motion (a referência do limites.py).",
+  "free-exercise-db (Yuhonas, domínio público): não tem a borboleta parada — o \"Groin and Back Stretch\" é sentado com os pés juntos, mas com as mãos atrás da cabeça e em repetições (\"Curl downwards, bringing your elbows to the inside of your thighs\"), e o \"Lying Bent Leg Groin\" é deitado com parceiro: outros exercícios. PubMed (\"butterfly stretch\", 13/10/2026): nenhum estudo do alongamento."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pes_no_chao_motivo": "os pés ficam no colchonete o ciclo todo, PARADOS, de lado: a sola de um encostada na do outro e a borda de fora de cada pé apoiada no colchonete (a planta medida é a pele mais baixa do pé — a borda de fora — e o calcanhar, a mais baixa da metade de trás; os 2 ficam no topo do colchonete) e o tornozelo não escorrega. ExRx: \"Sit on floor or mat with soles of feet together on floor and close to body\"; nas fotos da ACE, do NHS, da NSCA e de Iowa os pés ficam de lado, com a borda de fora no chão",
+  "chao_mm": 12,
+  "chao_mm_motivo": "sentado no colchonete de 12 mm dos prontos de chão (a regra do lote 15 pros alongamentos de chão; a Extensão da Coluna, o 1º pronto do lote, também usa; ExRx: \"Sit on floor or mat\"; a ACE faz num colchonete fino): os pés ficam em cima dele, então o \"chão\" dos pés é o topo do colchonete",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "As regras padrão de base com os dois pés chapados (largura dos pés, ponta do pé, os 2 pés virados igual, um pé à frente do outro, joelho na direção do pé e coluna até 20°) foram feitas pra quem está em pé. Aqui os pés ficam de LADO, sola com sola: a distância entre os tornozelos fica ~0,7 × a dos quadris (abaixo do 0,8 da regra), a ponta_pe (tornozelo → base dos dedos vista de cima) mede ~−18° porque o osso do pé, que desce do tornozelo pra base dos dedos com o pé chapado, fica deitado de lado (a sola continua reta pra frente), e os joelhos caem pros lados de propósito (o joelho_valgo mede ~+39 cm). As que valem estão abaixo: os 2 pés lado a lado e virados igual, solas juntas, coluna reta, pelve e ombros nivelados e sem girar",
+  "zonas": [
+   {
+    "nome": "glúteo e parte de trás das coxas apoiados no colchonete",
+    "equipamento": "colchonete",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -8,
+     2
+    ],
+    "fonte": "ExRx (\"Sit on floor or mat\"); NASM (\"Sit on the floor\"); a foto da ACE num colchonete fino: sentado, o peso fica no glúteo e na parte de trás das coxas, perto do glúteo (a pele afunda uns mm no colchonete)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "solas juntas: a sola do pé esquerdo encosta na do direito sem entrar",
+    "partes": [
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "com": [
+     "RightLeg",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "NASM (\"Bring the soles of your feet together in front of your body\"); ExRx (\"soles of feet together\"); NHS (\"Put the soles of your feet together\"); NSCA (\"Sit with the soles of your feet together\"); corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "mão esquerda por cima do pé esquerdo, encostando sem entrar",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "LeftLeg",
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "ACE (\"place your hands on the top of your feet\"); NASM (\"Hold your ankles or the tops of your feet\"); ExRx (\"Grasp feet with both hands\"); NSCA (\"Hold your feet with your hands\"); NHS (\"Holding on to your feet\")"
+   },
+   {
+    "nome": "mão direita por cima do pé direito, encostando sem entrar",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "RightLeg",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "cada mão longe do outro pé e da outra mão",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "com": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "RightLeg",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica): cada mão segura o seu pé (ACE: \"place your hands on the top of your feet\")"
+   },
+   {
+    "nome": "o direito longe do outro pé",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "LeftLeg",
+     "LeftFoot",
+     "LeftToeBase"
+    ],
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "segurando: o antebraço esquerdo, perto do cotovelo, encostado por dentro da canela esquerda",
+    "t": [
+     0.0,
+     0.25
+    ],
+    "partes": [
+     "LeftArm",
+     "LeftForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg"
+    ],
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "ACE (\"lowering your elbows to rest against the inside of your thighs and push the thighs downward\"); ExRx (\"position elbows on inside of lower legs\" / \"Press knees toward floor with elbows\"); NSCA (\"Gently press your knees toward the floor using your elbows\")"
+   },
+   {
+    "nome": "segurando (fim do ciclo): o antebraço esquerdo encostado por dentro da canela esquerda",
+    "t": [
+     0.75,
+     1.0
+    ],
+    "partes": [
+     "LeftArm",
+     "LeftForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg"
+    ],
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "segurando: o antebraço direito, perto do cotovelo, encostado por dentro da canela direita",
+    "t": [
+     0.0,
+     0.25
+    ],
+    "partes": [
+     "RightArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "segurando (fim do ciclo): o antebraço direito encostado por dentro da canela direita",
+    "t": [
+     0.75,
+     1.0
+    ],
+    "partes": [
+     "RightArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     0,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "braço esquerdo sem entrar na perna o ciclo todo",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm"
+    ],
+    "com": [
+     "LeftUpLeg",
+     "LeftLeg"
+    ],
+    "mm": [
+     0,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica)"
+   },
+   {
+    "nome": "braço direito sem entrar na perna o ciclo todo",
+    "partes": [
+     "RightArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "RightUpLeg",
+     "RightLeg"
+    ],
+    "mm": [
+     0,
+     2000
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "antebraços e mãos sem entrar no tronco",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "idem"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "glúteo, coxas, pernas e pés sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "LeftLeg",
+     "LeftFoot",
+     "LeftToeBase",
+     "RightUpLeg",
+     "RightLeg",
+     "RightFoot",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado), como no Abdominal Russo"
+   },
+   {
+    "nome": "mãos no ar, por cima dos pés (não apoiam no colchonete)",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     18,
+     2000
+    ],
+    "fonte": "ACE (\"place your hands on the top of your feet\"): as mãos ficam nos pés, não no chão"
+   },
+   {
+    "nome": "tronco longe do chão (sentado; inclina sem deitar nas pernas)",
+    "partes": [
+     "Spine1",
+     "Spine2"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     150,
+     2000
+    ],
+    "fonte": "ACE (\"slowly bend forward from your hips ... to the point of tension in the stretch\")"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "segurando: tronco inclinado à frente ~35° a partir do quadril",
+    "medida": "tronco",
+    "t": [
+     0.0,
+     0.25
+    ],
+    "graus": [
+     30,
+     40
+    ],
+    "fonte": "ACE (\"slowly bend forward from your hips\"; na foto 2 da ACE o tronco fica a ~35° da vertical); NASM (\"gently draw your torso forward while maintaining an upright spine\"). Nenhuma fonte dá o número: é o da foto da ACE. Medido da pelve à base do pescoço (0 = vertical)"
+   },
+   {
+    "nome": "segurando (fim do ciclo): tronco inclinado à frente ~35°",
+    "medida": "tronco",
+    "t": [
+     0.75,
+     1.0
+    ],
+    "graus": [
+     30,
+     40
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "começo: tronco em pé (na vertical)",
+    "medida": "tronco",
+    "t": [
+     0.45,
+     0.55
+    ],
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "ACE (\"Sit upright (i.e., trunk vertical)\"); NASM (\"Sit on the floor with your back upright and your posture neutral\"); NHS (\"Sit down with your back straight\"); Iowa (\"Sitting up with your torso perpendicular to the floor\")"
+   },
+   {
+    "nome": "segurando: o quadril dobra mais (o tronco vai à frente sobre as coxas)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": [
+     0.0,
+     0.25
+    ],
+    "graus": [
+     108,
+     122
+    ],
+    "fonte": "ACE (\"slowly bend forward from your hips\" / \"move from the hips and not your low back\"); ExRx (\"Gluteus Maximus may be stretched if hip is flexed enough\"). Medido entre a coxa e o prolongamento do tronco (o teto da fábrica é 130°)"
+   },
+   {
+    "nome": "segurando (fim do ciclo): o quadril dobra mais",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": [
+     0.75,
+     1.0
+    ],
+    "graus": [
+     108,
+     122
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "começo: o quadril dobrado com o tronco em pé",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": [
+     0.45,
+     0.55
+    ],
+    "graus": [
+     102,
+     116
+    ],
+    "fonte": "ACE (\"Sit upright (i.e., trunk vertical)\"): sentado com as coxas quase deitadas pros lados"
+   },
+   {
+    "nome": "costas retas o ciclo todo (o movimento é do quadril, não da lombar)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     8
+    ],
+    "fonte": "ACE (\"Attempt to maintain a flat back position, avoid rounding your back towards the ceiling (i.e., move from the hips and not your low back)\"); NASM (\"maintaining an upright spine\"; erro: \"Rounding the lower back, which reduces stretch effectiveness and increases lumbar strain\"); o ExRx avisa que a coluna enrolada estica os eretores (\"Erector Spinae may be stretched if spine is flexed during stretch\"). Medido entre a lombar e a torácica (o boneco em pé mede ~1°)"
+   },
+   {
+    "nome": "cabeça na linha da coluna",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     -5
+    ],
+    "fonte": "ACE (\"with your head aligned with your spine\" / \"keep you head aligned with your spine\"). Medida contra a linha pelve → pescoço (o boneco em pé, no repouso, mede ~−11°)"
+   },
+   {
+    "nome": "joelhos bem dobrados, os calcanhares perto da virilha",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     132,
+     142
+    ],
+    "fonte": "ExRx (\"soles of feet together on floor and close to body\"); Iowa (\"Move feet closer to your body for a deeper stretch\"); ACE (\"legs folded in front of you\"; nas fotos da ACE os calcanhares ficam perto da virilha). A NASM deixa o iniciante pôr os pés mais longe (\"beginners can keep their feet farther from their body to reduce stretch intensity\"). O teto da fábrica é 145° (limites.py)"
+   },
+   {
+    "nome": "segurando: as coxas abertas pros lados (os joelhos caídos)",
+    "medida": "coxa_abducao",
+    "t": [
+     0.0,
+     0.25
+    ],
+    "graus": [
+     55,
+     70
+    ],
+    "fonte": "NASM (\"with your knees falling outward to the sides\"); NSCA (\"your knees dropped to the sides\"); ExRx deitado (\"knees far apart\"). Medida da coxa pra fora do plano sagital da pelve (como o goniômetro mede a abdução)"
+   },
+   {
+    "nome": "segurando (fim do ciclo): as coxas abertas pros lados",
+    "medida": "coxa_abducao",
+    "t": [
+     0.75,
+     1.0
+    ],
+    "graus": [
+     55,
+     70
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "começo: as coxas abertas pros lados",
+    "medida": "coxa_abducao",
+    "t": [
+     0.45,
+     0.55
+    ],
+    "graus": [
+     52,
+     68
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "segurando: os joelhos mais baixos que no começo (os cotovelos empurram as coxas, sem forçar)",
+    "medida": "joelho_altura",
+    "t": [
+     0.0,
+     0.25
+    ],
+    "mm": [
+     150,
+     185
+    ],
+    "fonte": "ACE (\"push the thighs downward\" / \"Continue to press downward to the point of tension in the stretch\"); NHS (\"try to lower your knees towards the floor\"); ExRx (\"Press knees toward floor with elbows\"); sem forçar (NASM, erro: \"Forcing the knees toward the floor aggressively\"). Altura do centro do joelho acima do chão (mm): ~17 cm segurando e ~20 cm no começo (as fotos da ACE: os joelhos baixos, as coxas quase deitadas)"
+   },
+   {
+    "nome": "segurando (fim do ciclo): os joelhos mais baixos que no começo",
+    "medida": "joelho_altura",
+    "t": [
+     0.75,
+     1.0
+    ],
+    "mm": [
+     150,
+     185
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "começo: os joelhos caídos pros lados, um pouco mais altos",
+    "medida": "joelho_altura",
+    "t": [
+     0.45,
+     0.55
+    ],
+    "mm": [
+     185,
+     215
+    ],
+    "fonte": "NASM (\"knees falling outward to the sides\"); fotos 1 da ACE e do NHS"
+   },
+   {
+    "nome": "pés de lado, os 2 iguais: tornozelo dentro da amplitude normal",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     45,
+     70
+    ],
+    "fonte": "amplitude normal do tornozelo (Alazzawi 2017, tabela 5: flexão plantar 0–50°, dorsiflexão 0–20°; no boneco ~26° a ~96°, em pé ~76°): com as solas juntas o pé fica em ~20° de flexão plantar"
+   },
+   {
+    "nome": "os 2 pés lado a lado (um não fica à frente do outro)",
+    "medida": "pes_alinhados",
+    "t": "todos",
+    "mm": [
+     0,
+     10
+    ],
+    "fonte": "NASM (\"Bring the soles of your feet together in front of your body\"); NHS (\"Put the soles of your feet together\"); fotos da ACE, do NHS e da NSCA: os 2 pés lado a lado, sola com sola"
+   },
+   {
+    "nome": "os 2 pés virados igual",
+    "medida": "ponta_pe_diferenca",
+    "t": "todos",
+    "graus": [
+     0,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "a pelve não inclina de lado",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "NASM, erro: \"Performing asymmetrically, which creates muscular imbalances and uneven mobility\""
+   },
+   {
+    "nome": "a pelve não gira no chão",
+    "medida": "pelve_giro",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "o tronco não gira (os 2 lados iguais)",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "os ombros nivelados",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "começo: os braços quase esticados até os pés",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": [
+     0.45,
+     0.55
+    ],
+    "graus": [
+     25,
+     50
+    ],
+    "fonte": "ACE (\"place your hands on the top of your feet\"; na foto 1 da ACE os braços ficam quase esticados, os cotovelos um pouco dobrados)"
+   },
+   {
+    "nome": "segurando: os cotovelos dobrados, apoiados nas pernas",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": [
+     0.0,
+     0.25
+    ],
+    "graus": [
+     95,
+     115
+    ],
+    "fonte": "ACE (\"lowering your elbows to rest against the inside of your thighs\"; na foto 2 da ACE os cotovelos ficam dobrados ~90–100°)"
+   },
+   {
+    "nome": "segurando (fim do ciclo): os cotovelos dobrados, apoiados nas pernas",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": [
+     0.75,
+     1.0
+    ],
+    "graus": [
+     95,
+     115
+    ],
+    "fonte": "idem"
+   },
+   {
+    "nome": "punho sem desviar de lado além do normal (as mãos paradas nos pés)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "amplitude normal do punho (Norkin & White, AAOS — a do limites.py): desvio radial (+, pro lado do polegar) até 20° e ulnar (−, pro lado do dedo mínimo) até 30°; medido: ~10° ulnar segurando e ~16° radial no começo. As mãos ficam paradas nos pés (ACE: \"place your hands on the top of your feet\") e o antebraço muda de direção entre o começo e a segurada: a mão fica virada pra dividir a diferença"
+   },
+   {
+    "nome": "punho estendido dentro do normal (sem dobrar pra trás demais)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -55,
+     20
+    ],
+    "fonte": "amplitude normal do punho (Norkin & White, AAOS): extensão até 70° e flexão até 80°; segurando, com o cotovelo na perna e a mão por cima do pé, o punho fica estendido ~43°"
+   }
+  ]
+ }
+}

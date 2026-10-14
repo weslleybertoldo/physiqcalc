@@ -1,0 +1,733 @@
+{
+  "uuid": "6122eb99-fb03-5254-8823-05bef03bd1c6",
+  "nome": "Alongamento de Posterior em Pé",
+  "cena": "alongamento_de_posterior_em_pe",
+  "grupo": "Alongamento",
+  "subgrupo": "Isquiotibiais · gastrocnêmio",
+  "padrao_movimento": "along_posterior",
+  "equipamento": "peso_corporal",
+  "variacao": "em pé, tronco à frente",
+  "alvos": [
+    "posterior"
+  ],
+  "auxiliares": [
+    "panturrilha"
+  ],
+  "camera": {
+    "az": 110,
+    "el": 8,
+    "dist": 4.1,
+    "alvo": [
+      0.0,
+      0.0,
+      0.84
+    ]
+  },
+  "camera_vistas": {
+    "dist": 4.2,
+    "alvo": [
+      0.0,
+      0.0,
+      0.84
+    ]
+  },
+  "ciclo": true,
+  "ciclo_motivo": "Alongamento parado pelo mesmo jeito da Prancha (Caminho A, decisão do Weslley de 11/10/2026 pras pranchas, \"1\": entrar na posição, segurar e sair; pros alongamentos do lote 15 é decisão do Claude principal por coerência — fica pra validação final dele). t = 0 → 1 é UM ciclo e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar). t = 0 é o alongamento SEGURADO (a foto parada do app): o tronco dobrado à frente com a coluna solta, a cabeça pendurada e as pontas dos dedos encostando nos dedos dos pés; segura 5 s — uma segurada representativa, a mesma das pranchas (as fontes mandam mais: free-exercise-db \"Hold for 10 to 20 seconds.\"; ACE \"Hold this position for 15 - 30 seconds\"; NSCA \"Hold each stretch for 15 to 30 seconds.\"; Mayo \"hold each stretch for about 30 seconds\"; ACSM \"Holding a static stretch for 10-30s is recommended for most adults\"; Bandy & Irion 1994 e Bandy, Irion & Briggler 1997: 30 s pro posterior da coxa — o tempo de verdade vai na prescrição, séries × segundos); volta devagar pra em pé em 3,0 s, primeiro pelo quadril e por último pela lombar (McClure 1997: razão lombar/quadril 0,26 no 1º quarto da volta e 2,3 no último), fica 1,0 s em pé, ereto, com os braços soltos ao lado do corpo (a foto 0 do free-exercise-db; o meio do tempo em pé cai em t = 0,5: os prints de t = 0,5 mostram a posição de começo) e desce de novo em 3,0 s, devagar, a lombar enrolando mais no começo e o quadril terminando a dobra (Esola 1996: razão lombar/quadril 1,9 no começo, 0,9 no meio e 0,4 no fim) — ACE: \"slowly bend forward from your hips\" e \"do not bounce\"; Mayo: \"Stretch in a smooth movement, without bouncing\" e \"Keep stretches gentle and slow\". Nenhuma fonte dá os segundos da descida e da volta (McClure: \"at a self-selected speed\"): são escolha minha, devagar e sem tranco. ida_s = 12,0 s = 1 ciclo (192 quadros a 16/s); a descida e a volta começam e acabam paradas (seno). Pra validação final: o pedido sugeria t = 0 em pé (a foto mostraria a pessoa ANTES de alongar); a regra do lote 15 põe a foto no alongamento — pra trocar, basta deslocar a fase do ciclo.",
+  "ida_s": 12.0,
+  "movimento": "Em pé, com os pés juntos e as pontas para a frente, os joelhos esticados (sem travar) e os braços soltos ao lado do corpo. Dobra o tronco à frente devagar, a partir do quadril, deixando as costas, os ombros e a cabeça relaxarem e penderem, com os braços e as mãos soltos, pendurados, até as pontas dos dedos encostarem nos dedos dos pés — ou só até sentir o posterior da coxa esticar, sem dor. Os joelhos continuam esticados, os pés ficam inteiros no chão e o quadril vai um pouco para trás dos calcanhares, com o peso nos calcanhares. Segura a posição parado, respirando normalmente, sem balançar; depois volta devagar para em pé, subindo primeiro pelo quadril e por último desenrolando as costas e levantando a cabeça.",
+  "cinesiologia": {
+    "plano": "sagital: flexão PASSIVA do tronco à frente em pé, em cadeia cinética fechada nos pés — o peso do tronco, da cabeça e dos braços pendurados leva a dobra até a tensão no posterior da coxa (alongamento estático: segura lá); os pés ficam parados e chapados",
+    "articulacoes": "segurando: o quadril dobrado ~83° (a coxa × a pelve: a pelve inclina ~73° à frente e as pernas ~10° pra trás, com o quadril ~12 cm atrás dos calcanhares); a lombar flexionada ~42° (Esola 1996) e a torácica ~28° (as costas em arco), o pescoço ~10° com a cabeça pendurada; as escápulas protraídas (~20°) e deslizando pro lado da cabeça (~12°) com o peso dos braços; os ombros flexionados ~114° em relação ao tronco, com os braços pendurados quase na vertical (o antebraço a ~4° dela), os cotovelos a ~8° e os punhos retos, as mãos soltas com os dedos um pouco dobrados; os joelhos esticados (~3°, sem travar) e parados o ciclo todo; os tornozelos em ~13° de flexão plantar, com os pés chapados. Na volta o quadril estende primeiro e a lombar por último (McClure 1997); na descida, o contrário (Esola 1996). Em pé: tudo reto, os braços soltos ao lado do corpo",
+    "agonistas": "nenhum músculo trabalha pra alongar: o tronco desce pelo próprio peso. Músculos ALONGADOS: os isquiotibiais (bíceps femoral, semitendíneo e semimembranáceo) — o alvo (free-exercise-db: \"primaryMuscles\": [\"hamstrings\"]; ExRx: Target \"Hamstrings\") — e, junto, o gastrocnêmio, com os joelhos esticados — o auxiliar (free-exercise-db: \"secondaryMuscles\": [\"calves\"]; ExRx, Pike Straight Leg Calf Stretch: \"As hamstrings are stretched through hip, they pull on gastrocnemius due to intertwining contact hamstrings have on gastrocnemius behind knee.\"); o catálogo põe \"Isquiotibiais · gastrocnêmio\". Os eretores da espinha também alongam com a coluna enrolada (ExRx: Other \"Erector Spinae\"; ACE, Seated Toe Touches: \"with some stretching in your low and middle back\"), mas ficam fora do subgrupo do catálogo e da fonte decisiva: a lombar NÃO foi pintada (dúvida pro Weslley)",
+    "sinergistas": "nenhum (alongamento passivo); os braços só pendem (free-exercise-db: \"Let your arms and hands hang down naturally.\") e as escápulas vão pra frente com o peso deles",
+    "estabilizadores": "quadríceps segurando os joelhos esticados (ExRx: \"Keep knees straight by tensing Quadriceps.\"); os músculos da perna e do pé seguram o equilíbrio com o quadril atrás dos calcanhares e o peso nos calcanhares (os pés inteiros no chão); a respiração solta (Mayo: \"Breathe normally\"; ACE: \"gently exhale and slowly bend forward from your hips\")",
+    "fases": "segurada (5 s no clipe; free-exercise-db \"Hold for 10 to 20 seconds.\"; ACE \"Hold this position for 15 - 30 seconds\"; NSCA \"Hold each stretch for 15 to 30 seconds.\"; Mayo \"about 30 seconds\"; ACSM \"10-30s\"), sem balançar (Mayo: \"Don't bounce.\"; ACE: \"do not bounce or push to a point of pain\"); volta (3,0 s, devagar, o quadril estendendo primeiro e a lombar por último — McClure 1997); em pé (1,0 s); descida (3,0 s, devagar — ACE \"slowly bend forward from your hips\" —, a lombar enrolando mais no começo e o quadril no fim — Esola 1996)"
+  },
+  "referencias": [
+    "free-exercise-db (yuhonas), Standing Toe Touches — a FONTE DECISIVA (os músculos batem com o subgrupo do catálogo), domínio público (The Unlicense). https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Toe_Touches.json (lido em 13/10/2026; cópia em lote4/alongamento_de_posterior_em_pe/fontes/fedb_Standing_Toe_Touches.json): \"Stand with some space in front and behind you.\" / \"Bend at the waist, keeping your legs straight, until you can relax and let your upper body hang down in front of you. Let your arms and hands hang down naturally. Hold for 10 to 20 seconds.\" Campos: \"force\": \"static\", \"category\": \"stretching\", \"primaryMuscles\": [\"hamstrings\"], \"secondaryMuscles\": [\"calves\"]. As 2 fotos da mesma ficha (Standing_Toe_Touches/0.jpg e 1.jpg; o que eu vi, não é frase da fonte): foto 0 — em pé, ereto, os braços soltos ao lado do corpo, as palmas pras coxas; foto 1 — os pés juntos ou quase, os joelhos esticados, o quadril um pouco atrás dos calcanhares (as pernas inclinadas pra trás), as costas ARREDONDADAS, a cabeça pendurada olhando pros joelhos e os braços pendurados com as pontas dos dedos ENCOSTANDO nos dedos dos pés (na frente do tênis).",
+    "ExRx.net — Standing Hamstring Stretch (o site direto responde 403: lido pela cópia do Internet Archive de 27/01/2026, https://web.archive.org/web/20260127130416/https://exrx.net/Stretches/Hamstrings/Standing, em 13/10/2026): Preparation \"Stand and bend over with knees straight.\" / Execution \"Reach toward toes or floor or bring torso toward legs. Hold stretch.\" / Comments \"Keep knees straight by tensing Quadriceps. Spine may be kept straight. Pelvis may be tilted forward to intensify stretch.\" / Muscles: Target \"Hamstrings\"; Other \"Erector Spinae\". Foto (o que eu vi): os pés quase juntos, os joelhos esticados, o tronco bem dobrado com as costas um pouco arredondadas, a cabeça baixa e as 2 mãos com os dedos encostando nos dedos dos pés, por cima do tênis. Os parentes em pé (Standing Single Leg e Standing Cross Leg Hamstring Stretch, cópias de 28/01/2021 e 20/02/2022) repetem \"Spine may be kept straight. Pelvis may be tilted forward to intensify stretch.\"",
+    "ExRx.net — Pike Straight Leg Calf Stretch (Gastrocnemius; cópia do Internet Archive de 16/08/2025, lida em 13/10/2026) — a ligação posterior da coxa × gastrocnêmio: \"Although angle of ankles increase as hands travel closer to feet (requiring less ankle/Gastrocnemius flexibility), angle of hips decreases (requiring more hip/Hamstrings flexibility). As hamstrings are stretched through hip, they pull on gastrocnemius due to intertwining contact hamstrings have on gastrocnemius behind knee.\"",
+    "American Council on Exercise (ACE) — Exercise Library, Seated Toe Touches (nº 213; a ACE não tem o alongamento de posterior EM PÉ: usei o sentado pelas regras de tensão, tempo e volta). https://www.acefitness.org/resources/everyone/exercise-library/213/seated-toe-touches/ (lido em 13/10/2026): \"gently exhale and slowly bend forward from your hips, sliding your hands down your legs towards your ankles. Attempt to maintain a flat back position and avoid rounding your back towards the ceiling\" / \"This should create a stretch through your calves and hamstrings, with some stretching in your low and middle back.\" / \"Continue to bend and reach forward to the point of tension in the stretch, but do not bounce or push to a point of pain. Hold this position for 15 - 30 seconds, then relax by returning to your starting position and repeat 2-4 times.\" / \"During this stretch, avoid any excessive rounding of your low back.\" (as costas retas e a cabeça na linha são do SENTADO: no em pé valeu a fonte decisiva, a coluna solta)",
+    "National Strength and Conditioning Association — Essentials of Strength Training and Conditioning, cap. 14 (Warm-up and flexibility training, 14.2 Static stretching techniques), pelo resumo do preparatório do CSCS da Achievable, https://app.achievable.me/study/cscs/learn/warm-up-and-flexibility-training-static-stretching-techniques (lido em 13/10/2026): \"Position your body so the target muscles can relax.\" / \"Stretch to the point of mild discomfort (not pain).\" / \"Hold each stretch for 15 to 30 seconds.\"; Hamstring: Sitting toe touch (sentado): \"Lean forward from your hips and reach for your toes.\" / \"Keep your back straight, and bend your knees slightly if needed.\"",
+    "Mayo Clinic — Stretching: Focus on flexibility (https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/stretching/art-20047931; o site direto deu 403: lido pela cópia do Internet Archive de 01/01/2026, em 13/10/2026): \"Don't bounce. Stretch in a smooth movement, without bouncing.\" / \"Hold your stretch. Breathe normally and hold each stretch for about 30 seconds; in problem areas, you may need to hold for around 60 seconds.\" / \"Don't aim for pain. Expect to feel tension while you're stretching, not pain.\"; e A guide to basic stretches (art-20546848, cópia de 25/12/2025): \"Keep stretches gentle and slow. Don't bounce. Breathe through your stretches.\"",
+    "American College of Sports Medicine — Stretching and Flexibility Guidelines Update (blog do ACSM, 18/03/2021; cópia do Internet Archive de 26/12/2024, lida em 13/10/2026): \"Intensity: Stretch to the point of feeling tightness or slight discomfort.\" / \"Time: Holding a static stretch for 10-30s is recommended for most adults.\"; Garber CE et al. Med Sci Sports Exerc 2011;43(7):1334-1359 (resumo, PubMed 21694556): \"a total of 60 s per exercise\".",
+    "Bandy WD, Irion JM. The effect of time on static stretch on the flexibility of the hamstring muscles. Phys Ther 1994;74(9):845-850 (resumo, PubMed 8066111): \"a duration of 30 seconds is an effective time of stretching for enhancing the flexibility of the hamstring muscles.\"; Bandy WD, Irion JM, Briggler M. Phys Ther 1997;77(10):1090-1096 (resumo, PubMed 9327823): \"a 30-second duration is an effective amount of time to sustain a hamstring muscle stretch in order to increase ROM.\" — o tempo da prescrição, não o do clipe.",
+    "Esola MA, McClure PW, Fitzgerald GK, Siegler S. Analysis of lumbar spine and hip motion during forward bending in subjects with and without a history of low back pain. Spine 1996;21(1):71-78 (resumo, PubMed 9122766): \"Mean total forward bending for all subjects was 111 degrees: 41.6 degrees from the lumbar spine and 69.4 degrees from the hips.\" / \"mean lumbar-to-hip ratios for early, middle, and late forward bending were 1.9, 0.9, and 0.4, respectively\" — a lombar da cena (41,6°) e o ritmo da DESCIDA (a lombar enrola mais no começo e o quadril termina; depois dos 90° da dobra a lombar já chegou nos 41,6° e só o quadril continua — conta minha com as razões do resumo).",
+    "McClure PW, Esola M, Schreier R, Siegler S. Kinematic analysis of lumbar and hip motion while rising from a forward, flexed position. Spine 1997;22(5):552-558 (resumo, PubMed 9076888): \"mean lumbar to hip extension ratios were 0.26 for 0-25% of extension, 0.61 for 25-50%, 0.81 for 50-75%, and 2.3 for 75-100%\" / \"the hips had a greater contribution to early extension, with the lumbar spine contribution increasing in the middle intervals and becoming the primary source of motion in the final interval.\" — o ritmo da VOLTA pra em pé.",
+    "Tafazzol A, Arjmand N, Shirazi-Adl A, Parnianpour M. Lumbopelvic rhythm during forward and backward sagittal trunk rotations. Clin Biomech 2014;29(1):7-13 (resumo, PubMed 24246115): \"The mean of peak voluntary flexion rotations of the thorax, pelvis, and lumbar was 121° (SD 9.9), 53.0° (SD 5.2), and 60.2° (SD 8.6), respectively.\" — a ordem de grandeza do tórax na dobra máxima em pé.",
+    "Sullivan MK, Dejulia JJ, Worrell TW. Effect of pelvic position and stretching method on hamstring muscle flexibility. Med Sci Sports Exerc 1992;24(12):1383-1389 (resumo, PubMed 1470022): \"The results suggest that APT position was more important than stretching method for increasing hamstring muscle flexibility.\" — a pelve inclinando à frente é o que alonga o posterior (o ExRx: \"Pelvis may be tilted forward to intensify stretch.\").",
+    "NHS — How to stretch after exercising (revisada em 16/03/2026, lida em 13/10/2026): o alongamento de posterior deles é DEITADO (\"Hamstring stretch – hold for 15 to 20 seconds\"); a NASM não tem página do alongamento de posterior em pé (endereços testados deram 404, agente de fontes). Ficaram só como confirmação do tempo.",
+    "Amplitude normal: Norkin CC, White DJ. Measurement of Joint Motion: A Guide to Goniometry (os valores da AAOS do lib/limites.py: flexão do quadril 120°, pescoço 45°, flexão toracolombar até 80°); tornozelo: Alazzawi S et al. World J Orthop 2017;8(1):21-29, tabela 5 (flexão plantar 0–50°, dorsiflexão 0–20°), a do lib/tecnica3d.py.",
+    "Moldes da fábrica: o equilíbrio (centro de massa do corpo em cima do meio do pé, rumo ao calcanhar), os pés chapados por IK e o tronco girando em volta das articulações do quadril do Stiff com Halteres e do Bom Dia com Barra; o ciclo isométrico (segura 5 s e sai no meio do ciclo) da Prancha; os pés juntos no limite das coxas da Mobilidade de Ombro com Bastão; a coluna em 3 pivôs (Spine, Spine1, Spine2) do Alongamento de Extensão da Coluna."
+  ],
+  "checagens": {
+    "pes_no_chao": true,
+    "tecnica_padrao": {
+      "coluna": [
+        0,
+        58
+      ]
+    },
+    "tecnica_padrao_fonte": "coluna: solta e arredondada, a da fonte decisiva — free-exercise-db, Standing Toe Touches: \"until you can relax and let your upper body hang down in front of you\" (as fotos dele e a do ExRx mostram as costas em arco e a cabeça pendurada). Na dobra máxima à frente em pé a lombar flexiona ~42° (Esola et al. 1996: \"Mean total forward bending for all subjects was 111 degrees: 41.6 degrees from the lumbar spine and 69.4 degrees from the hips.\"; Tafazzol et al. 2014: lombar 60,2 ± 8,6°) e a torácica arredonda um pouco: a medida coluna (lombar × torácica) chega a ~53° segurando (a torácica enrola 28°) — a \"coluna neutra\" (0–20°) do padrão é dos exercícios com peso (o Stiff com Halteres, o Levantamento Terra Romeno e o Bom Dia ficam nela). O ExRx deixa a coluna reta como opção (\"Spine may be kept straight.\") e a ACE e a NSCA mandam as costas retas no alongamento SENTADO (\"Attempt to maintain a flat back position\"; \"Keep your back straight\"): ficou a solta, a do free-exercise-db (dúvida registrada pro Weslley). pes_largura: o padrão (0,8–2,6), com os pés juntos o boneco fica em ~0,90 (tornozelos a ±9,5 cm: o mais junto sem uma coxa entrar na outra)",
+    "limites_juntas": {
+      "quadrilE": [
+        0,
+        136
+      ],
+      "quadrilD": [
+        0,
+        136
+      ]
+    },
+    "limites_juntas_fonte": "Quadril: a medida \"quadril\" do checagem3d é a coxa × a reta quadril → pescoço (o tronco inteiro), não a coxa × a pelve. Com a coluna solta e arredondada (free-exercise-db: \"relax and let your upper body hang down\") essa reta leva junto a flexão da lombar (Esola 1996: \"41.6 degrees from the lumbar spine\") e um pouco da torácica: segurando ela marca ~132°, com o quadril de verdade (a coxa × a pelve) a ~83° — dentro dos 120° de flexão do quadril da AAOS (Norkin & White, a referência do limites.py). O teto de 130° do padrão supõe o tronco reto (\"coxa × tronco\"), com 10° de folga pra pelve no agachamento: aqui fica 136°, só nesta ficha.",
+    "contatos": [
+      {
+        "nome": "pontas dos dedos da mão esquerda encostando nos dedos do pé esquerdo (sem entrar), segurando",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "t": [
+          0.0,
+          0.208333
+        ],
+        "mm": [
+          -1.5,
+          1.0
+        ],
+        "fonte": "free-exercise-db, Standing Toe Touches (a decisiva): \"Let your arms and hands hang down naturally.\" — as fotos dele (foto 1) e a do ExRx mostram as pontas dos dedos ENCOSTANDO nos dedos dos pés, por cima do tênis; ExRx, Standing Hamstring Stretch: \"Reach toward toes or floor or bring torso toward legs.\". A mão não segura nada: encosta sem entrar (pedido), medida da pele da mão até a pele do pé"
+      },
+      {
+        "nome": "pontas dos dedos da mão esquerda encostando nos dedos do pé esquerdo (sem entrar), segurando de novo",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "LeftFoot",
+          "LeftToeBase"
+        ],
+        "t": [
+          0.791667,
+          1.0
+        ],
+        "mm": [
+          -1.5,
+          1.0
+        ],
+        "fonte": "idem"
+      },
+      {
+        "nome": "pontas dos dedos da mão direita encostando nos dedos do pé direito (sem entrar), segurando",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "t": [
+          0.0,
+          0.208333
+        ],
+        "mm": [
+          -1.5,
+          1.0
+        ],
+        "fonte": "idem"
+      },
+      {
+        "nome": "pontas dos dedos da mão direita encostando nos dedos do pé direito (sem entrar), segurando de novo",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "t": [
+          0.791667,
+          1.0
+        ],
+        "mm": [
+          -1.5,
+          1.0
+        ],
+        "fonte": "idem"
+      },
+      {
+        "nome": "mão esquerda nunca entra no pé",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3"
+        ],
+        "com": [
+          "LeftFoot",
+          "LeftToeBase",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "t": "todos",
+        "mm": [
+          -1.5,
+          2000
+        ],
+        "fonte": "regra da fábrica (o corpo não atravessa o próprio corpo): mão × pé medido à parte"
+      },
+      {
+        "nome": "mão direita nunca entra no pé",
+        "partes": [
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "LeftFoot",
+          "LeftToeBase",
+          "RightFoot",
+          "RightToeBase"
+        ],
+        "t": "todos",
+        "mm": [
+          -1.5,
+          2000
+        ],
+        "fonte": "idem"
+      },
+      {
+        "nome": "mãos sem encostar nas pernas (descem soltas, na frente delas)",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "t": "todos",
+        "mm": [
+          5,
+          2000
+        ],
+        "fonte": "free-exercise-db: \"Let your arms and hands hang down naturally.\" — os braços pendurados descem na frente das pernas, soltos, sem encostar nelas (as fotos do free-exercise-db e do ExRx); só as pontas dos dedos encostam, nos dedos dos pés"
+      },
+      {
+        "nome": "cabeça sem encostar nas pernas",
+        "partes": [
+          "Head",
+          "Neck"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg",
+          "LeftLeg",
+          "RightLeg"
+        ],
+        "t": "todos",
+        "mm": [
+          20,
+          2000
+        ],
+        "fonte": "regra da fábrica (o corpo não atravessa o próprio corpo): cabeça × pernas medida à parte (a cabeça pendurada fica na frente dos joelhos)"
+      },
+      {
+        "nome": "braços sem encostar na cabeça (passam do lado dela)",
+        "partes": [
+          "LeftArm",
+          "RightArm",
+          "LeftForeArm",
+          "RightForeArm",
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "com": [
+          "Head",
+          "Neck"
+        ],
+        "cabelo": true,
+        "t": "todos",
+        "mm": [
+          10,
+          2000
+        ],
+        "fonte": "regra da fábrica (o corpo não atravessa o próprio corpo): braços × cabeça (com o cabelo) medidos à parte"
+      },
+      {
+        "nome": "barriga e peito sem entrar nas coxas",
+        "partes": [
+          "Spine",
+          "Spine1",
+          "Spine2"
+        ],
+        "com": [
+          "LeftUpLeg",
+          "RightUpLeg"
+        ],
+        "t": "todos",
+        "mm": [
+          -1.5,
+          2000
+        ],
+        "fonte": "regra da fábrica (o corpo não atravessa o próprio corpo): tronco × coxas medido à parte (o checagem3d só olha braço × tronco, antebraço × braço, coxa × coxa e perna × perna)"
+      }
+    ],
+    "alturas": [
+      {
+        "nome": "mãos acima do chão (encostam nos dedos dos pés, não no chão)",
+        "partes": [
+          "LeftHand",
+          "LeftHandThumb1",
+          "LeftHandThumb2",
+          "LeftHandThumb3",
+          "LeftHandIndex1",
+          "LeftHandIndex2",
+          "LeftHandIndex3",
+          "LeftHandMiddle1",
+          "LeftHandMiddle2",
+          "LeftHandMiddle3",
+          "LeftHandRing1",
+          "LeftHandRing2",
+          "LeftHandRing3",
+          "LeftHandPinky1",
+          "LeftHandPinky2",
+          "LeftHandPinky3",
+          "RightHand",
+          "RightHandThumb1",
+          "RightHandThumb2",
+          "RightHandThumb3",
+          "RightHandIndex1",
+          "RightHandIndex2",
+          "RightHandIndex3",
+          "RightHandMiddle1",
+          "RightHandMiddle2",
+          "RightHandMiddle3",
+          "RightHandRing1",
+          "RightHandRing2",
+          "RightHandRing3",
+          "RightHandPinky1",
+          "RightHandPinky2",
+          "RightHandPinky3"
+        ],
+        "acima_de": "chao",
+        "t": "todos",
+        "mm": [
+          5,
+          2000
+        ],
+        "fonte": "free-exercise-db, Standing Toe Touches (a decisiva): \"Let your arms and hands hang down naturally.\" — as fotos dele (foto 1) e a do ExRx mostram as pontas dos dedos ENCOSTANDO nos dedos dos pés, por cima do tênis; ExRx, Standing Hamstring Stretch: \"Reach toward toes or floor or bring torso toward legs.\". A mão não segura nada: encosta sem entrar (pedido), medida da pele da mão até a pele do pé"
+      }
+    ],
+    "angulos": [
+      {
+        "nome": "joelhos esticados, sem travar, o ciclo todo",
+        "medida": "flexao",
+        "junta": "Leg",
+        "t": "todos",
+        "graus": [
+          1,
+          6
+        ],
+        "fonte": "free-exercise-db, Standing Toe Touches: \"keeping your legs straight\"; ExRx, Standing Hamstring Stretch: \"Stand and bend over with knees straight.\" e \"Keep knees straight by tensing Quadriceps.\"; o pedido: esticados SEM TRAVAR (a cena fica a 3°; o boneco em pé, no repouso, mede ~7,5°). Diferente do Stiff com Halteres (12°), do Levantamento Terra Romeno (15–20°) e do Bom Dia (~20°), de joelhos levemente dobrados"
+      },
+      {
+        "nome": "tronco dobrado à frente, pendurado, segurando",
+        "medida": "tronco",
+        "t": [
+          0.0,
+          0.208333
+        ],
+        "graus": [
+          112,
+          126
+        ],
+        "fonte": "free-exercise-db: \"Bend at the waist, keeping your legs straight, until you can relax and let your upper body hang down in front of you.\"; Esola 1996: \"Mean total forward bending for all subjects was 111 degrees\" (lombar + quadril, sem a torácica); Tafazzol 2014: tórax 121 ± 9,9° na flexão máxima em pé. Medido do quadril ao pescoço × vertical: com a coluna enrolada, ~118° no boneco com as pontas dos dedos nos dedos dos pés"
+      },
+      {
+        "nome": "tronco dobrado à frente, pendurado, segurando de novo",
+        "medida": "tronco",
+        "t": [
+          0.791667,
+          1.0
+        ],
+        "graus": [
+          112,
+          126
+        ],
+        "fonte": "idem"
+      },
+      {
+        "nome": "em pé, ereto, entre as saídas (a posição de começo)",
+        "medida": "tronco",
+        "t": [
+          0.458333,
+          0.541667
+        ],
+        "graus": [
+          0,
+          5
+        ],
+        "fonte": "free-exercise-db: \"Stand with some space in front and behind you.\" e a foto 0 dele (em pé, ereto, os braços soltos ao lado do corpo); ExRx: \"Stand and bend over\""
+      },
+      {
+        "nome": "coluna enrolada (lombar e torácica), segurando",
+        "medida": "coluna_sinal",
+        "t": [
+          0.0,
+          0.208333
+        ],
+        "graus": [
+          46,
+          58
+        ],
+        "fonte": "free-exercise-db: \"until you can relax and let your upper body hang down\" (fotos: as costas em arco); Esola 1996: lombar 41,6° na dobra máxima em pé; a torácica enrola 28° (as costas em arco das fotos; a flexão toracolombar normal vai até 80°, AAOS/Norkin & White)"
+      },
+      {
+        "nome": "coluna enrolada (lombar e torácica), segurando de novo",
+        "medida": "coluna_sinal",
+        "t": [
+          0.791667,
+          1.0
+        ],
+        "graus": [
+          46,
+          58
+        ],
+        "fonte": "idem"
+      },
+      {
+        "nome": "coluna reta em pé",
+        "medida": "coluna_sinal",
+        "t": [
+          0.458333,
+          0.541667
+        ],
+        "graus": [
+          -5,
+          5
+        ],
+        "fonte": "free-exercise-db, foto 0 (em pé, ereto)"
+      },
+      {
+        "nome": "cabeça pendurada, solta, segurando",
+        "medida": "cabeca_tronco",
+        "t": [
+          0.0,
+          0.208333
+        ],
+        "graus": [
+          -52,
+          -38
+        ],
+        "fonte": "as fotos do free-exercise-db (foto 1) e do ExRx: a cabeça pendurada, olhando pros joelhos; free-exercise-db: \"relax and let your upper body hang down\". Medida contra a reta quadril → pescoço: com a torácica enrolada, a cabeça fica ~−46° (o pescoço dobra ~10° sobre a torácica; em pé o boneco mede ~−11°). A ACE manda a cabeça na linha da coluna no alongamento SENTADO (\"Keep your head aligned with your spine\"): ficou a da fonte decisiva"
+      },
+      {
+        "nome": "cabeça pendurada, solta, segurando de novo",
+        "medida": "cabeca_tronco",
+        "t": [
+          0.791667,
+          1.0
+        ],
+        "graus": [
+          -52,
+          -38
+        ],
+        "fonte": "idem"
+      },
+      {
+        "nome": "cabeça na linha do tronco em pé, olhando à frente",
+        "medida": "cabeca_tronco",
+        "t": [
+          0.458333,
+          0.541667
+        ],
+        "graus": [
+          -18,
+          -5
+        ],
+        "fonte": "free-exercise-db, foto 0 (em pé, olhando à frente); o boneco em pé, no repouso, mede ~−11°"
+      },
+      {
+        "nome": "pés juntos",
+        "medida": "pes_largura",
+        "t": "todos",
+        "faixa": [
+          0.8,
+          0.97
+        ],
+        "fonte": "as fotos do free-exercise-db (foto 1) e do ExRx: os pés juntos ou quase (nenhum texto diz a largura; free-exercise-db, Inchworm, outro exercício: \"Stand with your feet close together.\"). No boneco os tornozelos ficam a ±9,5 cm do meio: o mais junto sem uma coxa entrar na outra (a Mobilidade de Ombro com Bastão ficou a ±9 cm; aqui, a ±9 cm, as coxas encostavam 2,2 mm em pé)"
+      },
+      {
+        "nome": "pontas dos pés pra frente",
+        "medida": "ponta_pe",
+        "t": "todos",
+        "graus": [
+          -5,
+          8
+        ],
+        "fonte": "as fotos do free-exercise-db e do ExRx (os pés paralelos, as pontas pra frente)"
+      },
+      {
+        "nome": "pés chapados: tornozelo na amplitude normal (a perna inclina pra trás com o quadril atrás dos calcanhares)",
+        "medida": "tornozelo",
+        "t": "todos",
+        "graus": [
+          26,
+          96
+        ],
+        "fonte": "Alazzawi et al. 2017 (flexão plantar 0–50°, dorsiflexão 0–20°; no boneco ~26° a ~96°), a do lib/tecnica3d.py"
+      },
+      {
+        "nome": "quadril atrás dos calcanhares (as pernas inclinam pra trás), segurando",
+        "medida": "canela_sinal",
+        "t": [
+          0.0,
+          0.208333
+        ],
+        "graus": [
+          -14,
+          -6
+        ],
+        "fonte": "as fotos do free-exercise-db e do ExRx (o quadril um pouco atrás dos calcanhares, as pernas inclinadas pra trás); a conta do equilíbrio: o centro de massa do corpo em cima do pé, 2 cm atrás do meio dele (o pedido: \"peso nos calcanhares\"; NSCA, Romanian Deadlift: \"The balance of the foot (center of mass) starts in the midfoot and, as the bar is lowered, begins to move toward the heel.\")"
+      },
+      {
+        "nome": "quadril atrás dos calcanhares (as pernas inclinam pra trás), segurando de novo",
+        "medida": "canela_sinal",
+        "t": [
+          0.791667,
+          1.0
+        ],
+        "graus": [
+          -14,
+          -6
+        ],
+        "fonte": "idem"
+      },
+      {
+        "nome": "pernas em pé, a canela quase na vertical, em pé",
+        "medida": "canela_sinal",
+        "t": [
+          0.458333,
+          0.541667
+        ],
+        "graus": [
+          -3,
+          6
+        ],
+        "fonte": "free-exercise-db, foto 0 (em pé, ereto)"
+      },
+      {
+        "nome": "braços pendurados (o antebraço perto da vertical)",
+        "medida": "antebraco_vertical",
+        "t": "todos",
+        "graus": [
+          0,
+          15
+        ],
+        "fonte": "free-exercise-db: \"Let your arms and hands hang down naturally.\" (fotos: os braços pendurados na vertical)"
+      },
+      {
+        "nome": "cotovelos soltos, quase esticados",
+        "medida": "flexao",
+        "junta": "ForeArm",
+        "t": "todos",
+        "graus": [
+          4,
+          14
+        ],
+        "fonte": "free-exercise-db: \"Let your arms and hands hang down naturally.\" (fotos: os braços quase esticados, soltos)"
+      },
+      {
+        "nome": "punhos retos (mãos soltas)",
+        "medida": "flexao",
+        "junta": "Hand",
+        "t": "todos",
+        "graus": [
+          0,
+          20
+        ],
+        "fonte": "free-exercise-db: \"Let your arms and hands hang down naturally.\""
+      },
+      {
+        "nome": "palmas viradas pro corpo (pro meio), como pendem",
+        "medida": "palma_dentro",
+        "t": "todos",
+        "graus": [
+          60,
+          95
+        ],
+        "fonte": "free-exercise-db, foto 0 (em pé, as palmas viradas pras coxas) e foto 1 (as mãos penduradas na frente dos pés): os braços pendem sem girar"
+      },
+      {
+        "nome": "tronco sem girar",
+        "medida": "tronco_giro",
+        "t": "todos",
+        "graus": [
+          -3,
+          3
+        ],
+        "fonte": "regra da fábrica: alongamento simétrico, os 2 lados iguais (as fotos)"
+      },
+      {
+        "nome": "pelve nivelada",
+        "medida": "pelve_nivel",
+        "t": "todos",
+        "graus": [
+          -2,
+          2
+        ],
+        "fonte": "regra da fábrica: alongamento simétrico, os 2 lados iguais (as fotos)"
+      }
+    ]
+  }
+}

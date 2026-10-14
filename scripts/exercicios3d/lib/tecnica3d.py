@@ -965,3 +965,51 @@ def pe_frente(j):
 MEDIDAS.update({"quadril_linha_lateral": quadril_linha_lateral, "corpo_rolagem": corpo_rolagem, "cabeca_lado": cabeca_lado,
                 "antebraco_frente": antebraco_frente, "pe_frente": pe_frente})
 UNIDADE.update({"quadril_linha_lateral": "mm"})
+
+
+# ── mobilidade cervical (lote 15, 13/10/2026): sentado com o tronco parado, a CABEÇA inclina de lado — a orelha em direção ao ombro —, pros 2
+# lados (ACE, Lateral Neck Flexion: "Slowly draw your right ear toward your right shoulder stopping when you feel the stretch"; NHS, Neck
+# Mobility Exercises: "Bend your neck to the side bringing your Left ear towards your Left shoulder"). O cabeca_lado mede a reta do PESCOÇO
+# (base do pescoço → base da cabeça) com o sinal pro ombro mais ALTO — com os 2 ombros na mesma altura o sinal fica no ar —; aqui é a CABEÇA
+# inteira (base do crânio → topo da cabeça, a ponta do osso Head), com o sinal fixo pro lado direito do corpo.
+PONTAS = PONTAS + ("Head",)
+
+
+def cabeca_inclinacao(j):
+    """Cabeça (base do crânio → topo da cabeça: cabeça → ponta do osso Head) × eixo do tronco (quadril → pescoço) no plano da FRENTE do
+    tronco (de lado a lado), graus: 0 = a cabeça reta vista de frente, + = inclinada pro lado DIREITO do corpo (o topo da cabeça vai pro
+    ombro direito: a orelha direita desce em direção a ele), − = pro esquerdo. O sinal é do corpo (ombro esquerdo → direito), não do ombro
+    mais alto como no cabeca_lado. No referencial do tronco: vale sentado, em pé ou inclinado. Sem a ponta da cabeça nas juntas (dicionários
+    montados à mão nos testes antigos), devolve []."""
+    if "Head" not in j or "Head_ponta" not in j:
+        return []
+    cima, lado, frente = eixos_tronco(j)
+    c = j["Head_ponta"] - j["Head"]
+    c = c - frente * (c @ frente)
+    return [math.degrees(math.atan2(float(c @ lado), float(c @ cima)))]
+
+
+MEDIDAS.update({"cabeca_inclinacao": cabeca_inclinacao})
+
+
+# ── mobilidade de coluna deitado (lote 15, 13/10/2026): deitado de costas com os joelhos dobrados, os 2 joelhos tombam JUNTOS pra um lado e
+# depois pro outro, com os ombros no chão (Mayo Clinic, Back exercises in 15 minutes a day — Lower back rotational stretch: "Keep your
+# shoulders firmly on the floor, and slowly roll your bent knees to one side"; o desenho marca 45° de cada lado; NHS inform, Knee rolls:
+# "Begin lying down with your knees pointing towards the ceiling. Slowly roll your knees to the right."). O tronco_giro e o corpo_rolagem
+# medem o tórax e a pelve; o quanto os JOELHOS tombaram (o ângulo do desenho da Mayo) não tinha medida.
+def joelhos_tombam(j):
+    """Quanto os 2 joelhos (o meio dos centros dos joelhos) tombaram pro lado em volta da reta quadris → tornozelos (do meio das
+    articulações do quadril ao meio dos tornozelos), vistos ao longo dela, graus: 0 = os joelhos bem em cima da reta, apontando pro teto;
+    + = tombaram pra ESQUERDA do corpo, − = pra direita (como o tronco_giro); ±90 = deitados de lado, na altura da reta. O "cima" é a
+    vertical do mundo e a esquerda sai dela e da reta (cima × reta, com a reta apontando pros pés): vale deitado de costas, com a cabeça
+    pra qualquer lado e a pelve girada ou não."""
+    q = (j["LeftUpLeg"] + j["RightUpLeg"]) / 2
+    u = _u((j["LeftFoot"] + j["RightFoot"]) / 2 - q)
+    k = (j["LeftLeg"] + j["RightLeg"]) / 2 - q
+    k = k - u * float(k @ u)
+    cima = _u(CIMA - u * float(CIMA @ u))
+    esquerda = np.cross(cima, u)
+    return [math.degrees(math.atan2(float(k @ esquerda), float(k @ cima)))]
+
+
+MEDIDAS.update({"joelhos_tombam": joelhos_tombam})

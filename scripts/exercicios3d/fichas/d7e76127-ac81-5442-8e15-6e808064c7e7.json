@@ -1,0 +1,393 @@
+{
+ "uuid": "d7e76127-ac81-5442-8e15-6e808064c7e7",
+ "nome": "Elevação Pélvica na Máquina",
+ "cena": "elevacao_pelvica_na_maquina",
+ "grupo": "Glúteo",
+ "subgrupo": "Glúteo máximo · isquiotibiais",
+ "padrao_movimento": "elevacao_pelvica",
+ "equipamento": "maquina",
+ "variacao": "costas no encosto, apoio no quadril",
+ "alvos": [
+  "gluteo"
+ ],
+ "auxiliares": [
+  "posterior"
+ ],
+ "camera": {
+  "az": 75,
+  "el": 10,
+  "dist": 3.4,
+  "alvo": [
+   0,
+   -0.32,
+   0.5
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.6,
+  "alvo": [
+   0,
+   -0.25,
+   0.55
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado embaixo na máquina, com a parte de cima das costas — na altura da ponta de baixo das escápulas — no encosto, o cinto acolchoado preso por cima do baixo abdômen, os pés chapados na plataforma inclinada, afastados na largura dos ombros, e as mãos apoiadas no cinto; começa com o banco encostado no batente, o tronco inclinado e o quadril bem dobrado. Empurra a plataforma com os pés e sobe o quadril contraindo o glúteo: o encosto, o cinto e o tronco giram juntos, como um bloco, em volta do eixo da máquina — as costas não escorregam no encosto e o cinto não anda no quadril — até o tronco e as coxas ficarem alinhados e paralelos ao chão, com os joelhos a cerca de 90° e as canelas na vertical, sem arquear a lombar e com a cabeça apoiada no encosto, na linha do tronco; desce de volta, devagar, até o banco encostar no batente.",
+ "cinesiologia": {
+  "plano": "sagital (extensão do quadril), cadeia cinética fechada, com os pés parados na plataforma e o tronco preso no banco que gira",
+  "articulacoes": "quadril (extensão na subida, de ~72° de flexão até o neutro, com a coxa na linha do tronco; flexão na descida) e joelho (estende na subida, de ~126° a ~90°, com os pés parados); tornozelos com os pés chapados na plataforma inclinada (~15° de dorsiflexão a mais que em pé); coluna e cabeça neutras e paradas — o tronco gira com o encosto, como um segmento só; ombros, cotovelos e mãos parados (as mãos apoiadas no cinto)",
+  "agonistas": "glúteo máximo",
+  "sinergistas": "isquiotibiais e a porção posterior do adutor magno (Contreras 2011: \"Primary hip extensors\")",
+  "estabilizadores": "eretores da espinha e abdômen (coluna neutra, o tronco firme); o quadríceps segura o joelho perto de 90°",
+  "fases": "subida concêntrica, descida excêntrica até o batente"
+ },
+ "referencias": [
+  "Nautilus (Core Health & Fitness) — Glute Drive (9NP-L1131), ficha técnica e página do produto: \"it features a padded belt and back support for full-spine stabilization\"; \"Foot Platform: Oversized angled foot platform to accommodate users of all sizes\"; \"Restraint System: Heavy reinforced padded waist harness provides optimal lifting application\"; \"Grip Specifications: Rubber, smaller grips.\"; \"Width 60 in (152.5 cm)\", \"Length 62 in (157.5 cm)\", \"Height 35 in (89 cm)\". https://www.corehandf.com/products/nautilus-plate-loaded-glute-drive",
+  "Fitness Superstore — Nautilus Plate Loaded Glute Drive 9NP-L1131-60BZS: \"A comfortable padded belt secures the user to the back pad which supports the full length of the spine for added safety.\"; \"Upper body pivot bench provides full spinal stabilization and support\"; \"Commercial Grade dual pivot bearings\"; \"This product is covered by U.S. patent no. 10,226,665\". https://fitnesssuperstore.com/products/nautilus-plate-loaded-glute-drive-9np-l1131-60bzs-new",
+  "Kordecki M (Kormel LLC). Exercise apparatus for performing a gluteal bridge movement. US 10,226,665 B2, 12/03/2019. https://patents.google.com/patent/US10226665B2/en",
+  "Contreras B, Cronin J, Schoenfeld B. Barbell Hip Thrust. Strength Cond J. 2011;33(5):58-61.",
+  "Contreras B, Vigotsky AD, Schoenfeld BJ, Beardsley C, Cronin J. A Comparison of Gluteus Maximus, Biceps Femoris, and Vastus Lateralis Electromyographic Activity in the Back Squat and Barbell Hip Thrust Exercises. J Appl Biomech. 2015;31(6):452-458.",
+  "ExRx — Barbell Hip Thrust (cópia do Internet Archive de 03/04/2026). https://exrx.net/WeightExercises/GluteusMaximus/BBHipThrust",
+  "free-exercise-db (yuhonas, domínio público) — Barbell Hip Thrust. https://github.com/yuhonas/free-exercise-db (exercises/Barbell_Hip_Thrust.json)",
+  "American Council on Exercise (ACE) — Understanding the Barbell Hip Thrust (ACE Certified, novembro de 2019): \"Equipment companies have just begun developing machines that can facilitate the movement in a more comfortable position and without a barbell compressing the anterior superior iliac spine of the pelvis.\"",
+  "BLK BOX — Plate Loaded Hip Thrust Machine (16-1527): fotos de uma pessoa embaixo e em cima, com as mãos no cinto (observação). https://www.blkboxfitness.com/products/plate-loaded-hip-thrust-machine"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pe_fora_do_chao": [
+   "E",
+   "D"
+  ],
+  "pe_fora_do_chao_motivo": "os 2 pés ficam chapados na PLATAFORMA inclinada da máquina, não no chão (Nautilus: \"Oversized angled foot platform\"): a regra do chão sai e as 4 zonas dos pés (calcanhar e dedos de cada pé) medem a sola na plataforma; continuam a regra do pé que não escorrega e as regras padrão de pés e joelhos",
+  "zonas": [
+   {
+    "nome": "parte de cima das costas no encosto (escápulas)",
+    "equipamento": "glute_drive_encosto",
+    "partes": [
+     "Spine2"
+    ],
+    "mm": [
+     -12,
+     3
+    ],
+    "fonte": "patente US 10,226,665 B2 (a da Glute Drive) (\"aligns the inferior portion of their scapulae at, or proximate the pivot point\"); Contreras 2011 (\"Line up the upper back across a secured and padded bench\")"
+   },
+   {
+    "nome": "cinto por cima do baixo abdômen",
+    "equipamento": "glute_drive_cinto",
+    "partes": [
+     "Hips",
+     "Spine"
+    ],
+    "mm": [
+     -8,
+     3
+    ],
+    "fonte": "patente US 10,226,665 B2 (a da Glute Drive) (\"the user secures the belt assembly 315 across his/her lower abdomen\"); Nautilus Glute Drive (loja Fitness Superstore) (\"A comfortable padded belt secures the user to the back pad\")"
+   },
+   {
+    "nome": "calcanhar esquerdo na plataforma",
+    "equipamento": "glute_drive_plataforma",
+    "partes": [
+     "LeftFoot"
+    ],
+    "mm": [
+     -5,
+     3
+    ],
+    "fonte": "Contreras 2011 (\"The exerciser should keep the feet flat and push through the entire foot.\")"
+   },
+   {
+    "nome": "calcanhar direito na plataforma",
+    "equipamento": "glute_drive_plataforma",
+    "partes": [
+     "RightFoot"
+    ],
+    "mm": [
+     -5,
+     3
+    ],
+    "fonte": "Contreras 2011 (idem)"
+   },
+   {
+    "nome": "dedos do pé esquerdo na plataforma",
+    "equipamento": "glute_drive_plataforma",
+    "partes": [
+     "LeftToeBase"
+    ],
+    "mm": [
+     -5,
+     3
+    ],
+    "fonte": "Contreras 2011 (idem)"
+   },
+   {
+    "nome": "dedos do pé direito na plataforma",
+    "equipamento": "glute_drive_plataforma",
+    "partes": [
+     "RightToeBase"
+    ],
+    "mm": [
+     -5,
+     3
+    ],
+    "fonte": "Contreras 2011 (idem)"
+   },
+   {
+    "nome": "mão esquerda apoiada no cinto",
+    "equipamento": "glute_drive_cinto",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "mm": [
+     -4,
+     4
+    ],
+    "fonte": "fotos da BLK BOX (as mãos no cinto embaixo e em cima; observação)"
+   },
+   {
+    "nome": "mão direita apoiada no cinto",
+    "equipamento": "glute_drive_cinto",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     -4,
+     4
+    ],
+    "fonte": "fotos da BLK BOX (idem)"
+   },
+   {
+    "nome": "cabeça apoiada no encosto (o cabelo da nuca encostando)",
+    "equipamento": "glute_drive_encosto",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -8,
+     8
+    ],
+    "fonte": "patente US 10,226,665 B2 (a da Glute Drive) (\"the bench 305 is designed support the user's entire thorax, including the user's lumbar, thoracic, and cervical spines, in a neutral position\"); Nautilus Glute Drive (loja Fitness Superstore) (\"supports the full length of the spine\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "antebraços e mãos sem entrar no tronco, no quadril nem nas coxas",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -1,
+     2000
+    ],
+    "fonte": "corpo não atravessa o próprio corpo (regra da fábrica): a mão apoiada no cinto pode encostar de leve na barriga em cima dele (até 1 mm; o corpo × corpo da fábrica aceita 2)"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "quadril neutro em cima (a coxa na linha do tronco)",
+    "medida": "quadril_sinal",
+    "t": 1.0,
+    "graus": [
+     -5,
+     8
+    ],
+    "fonte": "Contreras 2011 (\"The hips rise until the torso is parallel with the ground and a hip-neutral position is reached\")"
+   },
+   {
+    "nome": "tronco paralelo ao chão em cima",
+    "medida": "tronco",
+    "t": 1.0,
+    "graus": [
+     85,
+     95
+    ],
+    "fonte": "Contreras 2011 (idem)"
+   },
+   {
+    "nome": "joelho a ~90° em cima",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": 1.0,
+    "graus": [
+     82,
+     98
+    ],
+    "fonte": "Contreras 2011 (\"placed at a distance that creates a 90° angle at the knee joint with a vertical tibia relative to the ground at the top portion of the movement\")"
+   },
+   {
+    "nome": "canela na vertical em cima",
+    "medida": "inclinacao",
+    "segmento": [
+     "Leg",
+     "Foot"
+    ],
+    "t": 1.0,
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "Contreras 2011 (idem)"
+   },
+   {
+    "nome": "quadril dobrado embaixo",
+    "medida": "quadril_sinal",
+    "t": 0.0,
+    "graus": [
+     60,
+     110
+    ],
+    "fonte": "patente US 10,226,665 B2 (a da Glute Drive) (\"the user's hips are bent to an angle between 60 degrees and 110 degrees\")"
+   },
+   {
+    "nome": "banco no batente embaixo: o tronco ~37° acima da horizontal",
+    "medida": "tronco",
+    "t": 0.0,
+    "graus": [
+     50,
+     56
+    ],
+    "fonte": "patente US 10,226,665 B2 (a da Glute Drive) (a âncora a 15\" do pivô sobe \"approximately 9 inches upward and approximately 3 inches closer\": 36,9° de giro do batente até o banco deitado em cima)"
+   },
+   {
+    "nome": "o quadril não passa da linha do tronco",
+    "medida": "quadril_sinal",
+    "t": "todos",
+    "graus": [
+     -5,
+     110
+    ],
+    "fonte": "ExRx, Barbell Hip Thrust (\"Avoid chest arching upward and anterior pelvic tilt, both producing spinal hyperextension.\")"
+   },
+   {
+    "nome": "coluna neutra e parada (o tronco gira com o encosto, como um bloco)",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     5
+    ],
+    "fonte": "ExRx, Barbell Hip Thrust (\"Movement should occur through hip with torso rigid.\"); patente US 10,226,665 B2 (a da Glute Drive) (\"maintaining the lumbar spine in a neutral position throughout the entire range of motion\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -12,
+     12
+    ],
+    "fonte": "Contreras 2011 (\"the head and neck should track accordingly to remain in alignment with the spine\")"
+   },
+   {
+    "nome": "pés na largura dos ombros",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     1.4,
+     2.6
+    ],
+    "fonte": "Contreras 2011 (\"The feet should be positioned around shoulder width apart\"); ExRx (\"approximately shoulder width\")"
+   },
+   {
+    "nome": "pés chapados na plataforma inclinada (canela × pé)",
+    "medida": "tornozelo",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "Nautilus Glute Drive (loja Fitness Superstore) (\"Oversized angled foot platform\"): com a plataforma a ~15° a canela × pé passa dos ~74° de em pé pra ~90°"
+   },
+   {
+    "nome": "a pelve não inclina de lado",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -3,
+     3
+    ]
+   },
+   {
+    "nome": "o tronco não torce",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -6,
+     6
+    ]
+   }
+  ]
+ }
+}
