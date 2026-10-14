@@ -1,0 +1,490 @@
+{
+ "uuid": "839b864e-936e-5b1d-90ce-e86c59bf06bb",
+ "nome": "Mobilidade de Coluna Deitado",
+ "cena": "mobilidade_de_coluna_deitado",
+ "grupo": "Mobilidade",
+ "subgrupo": "Lombar · eretores da espinha · oblíquos",
+ "padrao_movimento": "along_coluna",
+ "equipamento": "peso_corporal",
+ "variacao": "deitado, joelhos para os lados",
+ "alvos": [
+  "lombar",
+  "obliquos"
+ ],
+ "auxiliares": [],
+ "camera": {
+  "az": 20,
+  "el": 35,
+  "dist": 3.4,
+  "alvo": [
+   0.0,
+   -0.15,
+   0.12
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.5,
+  "alvo": [
+   0.0,
+   -0.1,
+   0.15
+  ]
+ },
+ "ciclo": true,
+ "ciclo_motivo": "Mobilidade (ida e volta), como o catálogo (grupo \"Mobilidade\"): os 2 joelhos tombam devagar pra um lado, param um pouco, voltam ao meio e tombam pro outro lado. A SEQUÊNCIA passa pelo meio, como a Mayo Clinic e o NHS inform (Mayo, Lower back rotational stretch: \"Slowly go back to the starting position (C). Repeat on the other side (D).\"; NHS inform, Knee rolls: \"Hold for a few seconds and then raise the knees so that they are pointing towards the ceiling again.\" / \"Repeat on the opposite side\"); a Arthritis Research UK vai direto de um lado pro outro (\"Stay to one side for a count of 5 and then roll to the other side\") — no 3D a diferença é só a parada curta no meio. t = 0 → 1 é UMA repetição, os 2 lados (NHS inform: \"Rolling the knees from one side and to the other is one repetition.\"), e a pose em t = 1 é igual à de t = 0 (o app repete o clipe em vez de ir e voltar): t = 0 é o meio da parada com os joelhos tombados pra DIREITA (a foto parada do app — o NHS inform começa pela direita: \"Slowly roll your knees to the right.\"; com os joelhos pro teto a foto seria quase a da Ponte de Glúteo); 1,0 s parado; volta ao meio em 1,5 s; 0,5 s parado no meio; tomba pra ESQUERDA em 1,5 s; 2,0 s parado (o meio cai em t = 0,5: os prints de t = 0,5 mostram o lado esquerdo); volta ao meio em 1,5 s; 0,5 s no meio; tomba pra direita em 1,5 s; 1,0 s parado (emenda com o começo). Cada ida e cada volta começa e acaba parada (ease seno). TEMPOS: as fontes só dizem \"slowly\" (Mayo; NHS inform) — nenhuma dá os segundos da ida —: 1,5 s (os joelhos a ~30°/s em média), a mesma ida da Mobilidade Cervical; a parada de cada lado é a de mobilidade, curta: 2 s (NHS inform: \"Hold for a few seconds\"; na variação dinâmica do Leg Crossover Stretch da ACE, outro exercício: \"holding the stretched position for 1 - 2 seconds\") — a segurada de 5 a 10 s da Mayo (\"Hold for 5 to 10 seconds\") e a contagem de 5 da Arthritis Research UK são da versão alongamento e ficam na prescrição (séries × segundos); 0,5 s no meio (\"Slowly go back to the starting position (C)\", Mayo). ida_s = 11,0 s = 1 ciclo (176 quadros a 16/s).",
+ "ida_s": 11.0,
+ "movimento": "Deitado de costas no colchonete, com os joelhos dobrados (~100°) e juntos, os pés juntos e chapados no colchonete, os braços abertos ~45° do corpo, esticados, com as palmas das mãos apoiadas no colchonete, e a cabeça apoiada, olhando para o teto. Com os ombros firmes no colchonete, deixa os 2 joelhos tombarem juntos, devagar, para a direita até ~45°: a pelve gira junto e o lado esquerdo do quadril sai do chão; os pés ficam no lugar e rolam de lado (o de baixo pela borda de fora, o de cima pela de dentro). Para uns segundos, volta devagar ao meio, com os joelhos apontando para o teto, para um instante e tomba para a esquerda do mesmo jeito. O tórax, os ombros, os braços e a cabeça não saem do lugar. Vai só até sentir um alongamento leve na cintura e na lombar, sem dor, com a respiração solta.",
+ "cinesiologia": {
+  "plano": "transversal: a pelve e a coluna lombar giram em volta do eixo do corpo em relação ao tórax, que fica parado de costas no colchonete; as pernas, com os joelhos e os pés juntos, acompanham a pelve, tombando pro lado. Mobilidade lenta, de ida e volta, com uma parada curta em cada lado",
+  "articulacoes": "coluna lombar e transição toracolombar: a pelve gira ~23° em relação ao tórax nas pontas (metade do tombo dos joelhos: ExRx, \"Bring both knees and hip to one side\"), repartidos na cintura — 40% entre a pelve e a lombar, 50% na lombar e 10% no fim do tórax —, com a parte de cima das costas (as escápulas) parada; a pelve ROLA no glúteo do lado dos joelhos (o outro lado sai ~25 mm do colchonete); quadris dobrados ~50°: o de cima aduz e gira pra dentro e o de baixo abduz e gira pra fora, ~19° cada; joelhos dobrados ~100°, parados; pés no lugar, rolando de lado em volta da borda da sola que fica no colchonete: o de baixo na borda de fora (rola ~29°; a canela fica ~23° em inversão em relação ao pé — Milgrom 1985 mede 32° de inversão média, 22° com o tornozelo em flexão dorsal) e o de cima na de dentro (rola ~32°; ~10° de eversão); ombros, cotovelos (quase esticados, ~9°), mãos, pescoço e cabeça parados",
+  "agonistas": "ALONGADOS (o alvo do exercício): oblíquos (ExRx, Lying Bent Leg Oblique Stretch: Target \"Obliques\") e eretores da espinha / lombar (ExRx: Other \"Erector Spinae\"), mais do lado oposto ao dos joelhos (raciocínio meu: a pelve gira pro lado dos joelhos com o tórax parado). No movimento lento, o peso das pernas leva os joelhos pro lado e o abdômen (oblíquos) segura a descida e traz as pernas de volta ao meio (raciocínio meu; as fontes não dizem que músculo trabalha)",
+  "sinergistas": "adutores do quadril segurando os joelhos e os pés juntos (Arthritis Research UK: \"keeping your knees and feet together\"; o músculo é raciocínio meu). Na versão com a perna esticada (ExRx, Lying Crossover Stretch — outro exercício), o alongamento pega também glúteo médio e mínimo (\"Gluteus Medius\", \"Gluteus Minimus\")",
+  "estabilizadores": "os ombros e a parte de cima das costas ficam firmes no colchonete (Mayo: \"Keep your shoulders firmly on the floor\"; ExRx: \"Keep both shoulders on floor or mat\"), com os braços abertos e as palmas apoiadas (ExRx: \"Arms can be extended to sides\"; desenho da Arthritis Research UK)",
+  "fases": "tomba (1,5 s, devagar: Mayo \"slowly roll your bent knees to one side\"; NHS inform \"Slowly roll your knees to the right\"); para no lado (2 s: NHS inform \"Hold for a few seconds\" — a Mayo segura 5 a 10 s e a Arthritis Research UK conta até 5, a versão alongamento, que vai na prescrição); volta ao meio (1,5 s: Mayo \"Slowly go back to the starting position\"; NHS inform \"raise the knees so that they are pointing towards the ceiling again\"); para um instante no meio (0,5 s) e repete pro outro lado (Mayo \"Repeat on the other side\"; NHS inform \"Repeat on the opposite side\"). Sem balanço e sem forçar (NHS inform: \"you should be able to feel a gentle stretch. This shouldn't be sore or uncomfortable\"; ACE, outro exercício: \"avoid bouncing\"). Respiração solta: nenhuma das fontes do exercício fala dela (a ACE, no Leg Crossover Stretch: \"Gently exhale and slowly press the knee\")"
+ },
+ "referencias": [
+  "ExRx.net — Lying Bent Leg Oblique Stretch (só há a cópia do Internet Archive de 04/02/2020; o site direto responde 403). https://web.archive.org/web/20200204112902/https://www.exrx.net/Stretches/Obliques/LyingBentLeg — \"Lie supine on floor or mat. Bend knees and place feet flat on floor.\" / \"Bring both knees and hip to one side. Hold stretch. Repeat with opposite side.\" / \"Keep both shoulders on floor or mat. Allow foot of top leg to rest on foot of lower leg. Arms can be extended to sides.\"; Target \"Obliques\", Other \"Erector Spinae\".",
+  "ExRx.net — Lying Crossover Stretch (a versão com uma perna esticada, outro exercício; cópia do Internet Archive de 09/06/2026). https://web.archive.org/web/20260609063643/https://exrx.net/Stretches/Obliques/LyingCrossover — \"On floor or mat, lie supine with arms extended to sides.\" / \"Maintain 90° flexion in hip with both shoulders flat on floor.\"; na foto, os braços em T com as palmas pra baixo (observação).",
+  "Mayo Clinic — Back exercises in 15 minutes a day (22/07/2026), Lower back rotational stretch (lida na cópia do Internet Archive de 03/10/2026). https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/back-pain/art-20546859 — \"Lie on your back with your knees bent and your feet flat on the floor (A). Keep your shoulders firmly on the floor, and slowly roll your bent knees to one side (B). Hold for 5 to 10 seconds. Slowly go back to the starting position (C). Repeat on the other side (D).\"; o desenho marca \"45°\" em cada lado, com os pés juntos no chão e as mãos na barriga (observação).",
+  "NHS inform (NHS 24) — Exercises for back pain, Knee rolls (cópia do Internet Archive de 18/02/2026). https://www.nhsinform.scot/illnesses-and-conditions/muscle-bone-and-joints/neck-and-back-problems-and-conditions/exercises-for-back-pain/ — \"Rolling the knees from one side and to the other is one repetition.\" / \"Begin lying down with your knees pointing towards the ceiling. Slowly roll your knees to the right.\" / \"Hold for a few seconds and then raise the knees so that they are pointing towards the ceiling again.\" / \"Repeat on the opposite side\"; \"When doing the exercise you should be able to feel a gentle stretch. This shouldn't be sore or uncomfortable.\"",
+  "Arthritis Research UK — Back pain: Information and exercise sheet, 4. Knee rolls (folha hospedada pelo Herefordshire and Worcestershire Health and Care NHS Trust). https://www.hacw.nhs.uk/download/back-pain-exercise-sheet.pdf?ver=668 — \"Lying on your back with bent knees, let your knees roll to one side, keeping your knees and feet together. Stay to one side for a count of 5 and then roll to the other side.\"; nos 2 desenhos (vistos de cima, do lado dos pés): os braços abertos ~45° do corpo, retos, com as palmas pra baixo; os joelhos e os pés juntos; a cabeça apoiada olhando pro teto (observação).",
+  "American Council on Exercise (ACE) — Leg Crossover Stretch (#231), outro exercício (o tornozelo em cima do joelho). https://www.acefitness.org/resources/everyone/exercise-library/231/leg-crossover-stretch/ — \"arms outstretched to your sides at shoulder level, with palms facing upwards\"; \"This stretch can become more dynamic by performing slow, controlled movements to complete 1 set of 5 - 10 repetitions with each leg, holding the stretched position for 1 - 2 seconds.\"; \"avoid bouncing\".",
+  "free-exercise-db (yuhonas, domínio público) — Knee Across The Body (de uma perna, outro exercício). https://github.com/yuhonas/free-exercise-db (exercises/Knee_Across_The_Body.json) — \"turn your head to the left\" (a cabeça vira nesse; nos knee rolls das outras fontes ela fica parada olhando pro teto).",
+  "ACSM — Stretching and Flexibility Guidelines Update (18/03/2021; cópia do Internet Archive de 16/02/2025). https://www.acsm.org/blog-detail/acsm-certified-blog/2021/03/18/stretching-and-flexibility-guidelines-update — \"Intensity: Stretch to the point of feeling tightness or slight discomfort.\" / \"Time: Holding a static stretch for 10-30s is recommended for most adults.\"",
+  "Milgrom C, Simkin A, Margulies J et al. The Normal Range of Subtalar Inversion and Eversion in Young Males as Measured by Three Different Techniques. Foot Ankle. 1985;6(3):143-145 (resumo): \"Placing the ankle in dorsiflexion while performing the measurements decreased the mean inversion from 32 to 22 degrees but had little effect on eversion.\""
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "pes_no_chao_motivo": "os pés ficam no colchonete o ciclo todo, sem escorregar: no meio chapados e juntos (Mayo: \"your feet flat on the floor\"; Arthritis Research UK: \"keeping your knees and feet together\") e, com os joelhos tombados, cada pé ROLA de lado em volta da borda da sola que fica no colchonete (a de fora no pé de baixo, a de dentro no de cima) — a planta medida é essa borda e o calcanhar (a borda de trás) continua encostando. O ExRx deixa o pé de cima deitar no de baixo (\"Allow foot of top leg to rest on foot of lower leg\"); ficou o das outras 3 fontes, os 2 pés no chão",
+  "chao_mm": 12,
+  "chao_mm_motivo": "deitado no colchonete de 12 mm dos prontos de costas (ExRx: \"Lie supine on floor or mat\"; regra do lote 15: deitado no chão = o colchonete de 12 mm), com os pés em cima dele: a planta é medida no topo dele",
+  "tecnica_padrao": false,
+  "tecnica_padrao_motivo": "as regras padrão de base (pés de 0,8 a 2,6 × a largura dos quadris, ponta do pé, os 2 pés virados igual, um pé à frente do outro, joelho na direção do pé e coluna até 20°) são de quem está em pé: aqui os pés ficam JUNTOS (~0,5 × a largura dos quadris: Arthritis Research UK, \"keeping your knees and feet together\") e os joelhos tombam de propósito ~45° pro lado (o joelho_valgo mede centenas de mm). As que valem estão abaixo, do jeito deste exercício",
+  "zonas": [
+   {
+    "nome": "costas de cima (escápulas) apoiadas o ciclo todo",
+    "equipamento": "colchonete",
+    "partes": [
+     "Spine2"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "Mayo Clinic, Lower back rotational stretch (\"Keep your shoulders firmly on the floor\"); ExRx, Lying Bent Leg Oblique Stretch (\"Keep both shoulders on floor or mat\")"
+   },
+   {
+    "nome": "glúteo apoiado (no meio os 2 lados; tombado, o do lado dos joelhos)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "Mayo Clinic, Lower back rotational stretch (\"Lie on your back with your knees bent and your feet flat on the floor\"); a pelve rola junto com os joelhos (ExRx, Lying Bent Leg Oblique Stretch: \"Bring both knees and hip to one side\") sobre o glúteo do lado deles"
+   },
+   {
+    "nome": "cabeça apoiada (o cabelo da nuca no colchonete)",
+    "equipamento": "colchonete",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     8
+    ],
+    "fonte": "desenhos da Mayo e da Arthritis Research UK: a cabeça apoiada olhando pro teto (observação). Medido na pele: o cabelo da nuca encosta e a pele fica uns mm acima dele (o jeito da Ponte de Glúteo)"
+   },
+   {
+    "nome": "mãos espalmadas no colchonete, paradas",
+    "equipamento": "colchonete",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx, Lying Bent Leg Oblique Stretch (\"Arms can be extended to sides\"); desenho da Arthritis Research UK, Knee rolls: palmas pra baixo (observação)"
+   },
+   {
+    "nome": "braços apoiados no colchonete, parados",
+    "equipamento": "colchonete",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm"
+    ],
+    "mm": [
+     -20,
+     5
+    ],
+    "fonte": "ExRx, Lying Bent Leg Oblique Stretch (\"Arms can be extended to sides\"); desenho da Arthritis Research UK, Knee rolls: braços abertos e retos (observação)"
+   }
+  ],
+  "alturas": [
+   {
+    "nome": "costas, glúteo e ombros sem atravessar o colchonete (afundam no máximo 9 dos 12 mm dele)",
+    "partes": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica (o corpo não atravessa o apoio; a pele pode afundar no estofado), como na Ponte de Glúteo e no Abdominal Supra. Do lado pra onde os joelhos tombam o glúteo e o fim do tórax levam mais peso e afundam um pouco mais"
+   },
+   {
+    "nome": "cabeça e pescoço sem atravessar o colchonete",
+    "partes": [
+     "Head",
+     "Neck"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "braços e mãos sem atravessar o colchonete",
+    "partes": [
+     "LeftArm",
+     "LeftForeArm",
+     "RightArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   },
+   {
+    "nome": "pernas e pés sem atravessar o colchonete",
+    "partes": [
+     "LeftUpLeg",
+     "RightUpLeg",
+     "LeftLeg",
+     "RightLeg",
+     "LeftFoot",
+     "RightFoot",
+     "LeftToeBase",
+     "RightToeBase"
+    ],
+    "acima_de": "chao",
+    "mm": [
+     3,
+     2000
+    ],
+    "fonte": "regra da fábrica"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "joelhos tombados ~45° pra DIREITA (começo e fim do ciclo: a foto)",
+    "medida": "joelhos_tombam",
+    "t": [
+     0.0,
+     0.09
+    ],
+    "graus": [
+     -47,
+     -43
+    ],
+    "fonte": "Mayo Clinic, Lower back rotational stretch: o desenho marca \"45°\" de cada lado; NHS inform, Knee rolls (\"Slowly roll your knees to the right\")"
+   },
+   {
+    "nome": "joelhos tombados ~45° pra DIREITA (fim do ciclo)",
+    "medida": "joelhos_tombam",
+    "t": [
+     0.91,
+     1.0
+    ],
+    "graus": [
+     -47,
+     -43
+    ],
+    "fonte": "Mayo Clinic, Lower back rotational stretch: o desenho marca \"45°\" de cada lado"
+   },
+   {
+    "nome": "joelhos tombados ~45° pra ESQUERDA (meio do ciclo)",
+    "medida": "joelhos_tombam",
+    "t": [
+     0.41,
+     0.59
+    ],
+    "graus": [
+     43,
+     47
+    ],
+    "fonte": "Mayo Clinic, Lower back rotational stretch (\"Repeat on the other side (D)\", o desenho com \"45°\"); NHS inform, Knee rolls (\"Repeat on the opposite side\")"
+   },
+   {
+    "nome": "joelhos apontando pro teto na parada do meio (1ª)",
+    "medida": "joelhos_tombam",
+    "t": [
+     0.23,
+     0.27
+    ],
+    "graus": [
+     -1,
+     1
+    ],
+    "fonte": "NHS inform, Knee rolls (\"raise the knees so that they are pointing towards the ceiling again\"); Mayo Clinic, Lower back rotational stretch (\"Slowly go back to the starting position (C)\")"
+   },
+   {
+    "nome": "joelhos apontando pro teto na parada do meio (2ª)",
+    "medida": "joelhos_tombam",
+    "t": [
+     0.73,
+     0.77
+    ],
+    "graus": [
+     -1,
+     1
+    ],
+    "fonte": "NHS inform, Knee rolls (\"raise the knees so that they are pointing towards the ceiling again\")"
+   },
+   {
+    "nome": "os joelhos não passam dos ~45°",
+    "medida": "joelhos_tombam",
+    "t": "todos",
+    "graus": [
+     -47,
+     47
+    ],
+    "fonte": "Mayo Clinic, Lower back rotational stretch (\"45°\" no desenho); ACSM 2021 (\"Stretch to the point of feeling tightness or slight discomfort\"); NHS inform, Knee rolls (\"you should be able to feel a gentle stretch. This shouldn't be sore or uncomfortable\")"
+   },
+   {
+    "nome": "a pelve gira junto com os joelhos (tombados pra direita: o tórax fica girado pra esquerda em relação a ela)",
+    "medida": "tronco_giro",
+    "t": [
+     0.0,
+     0.09
+    ],
+    "graus": [
+     19,
+     27
+    ],
+    "fonte": "ExRx, Lying Bent Leg Oblique Stretch (\"Bring both knees and hip to one side\"). ~Metade do tombo dos joelhos: o resto vem dos quadris (escolha minha: nenhuma fonte dá o giro da pelve)"
+   },
+   {
+    "nome": "a pelve gira junto com os joelhos (tombados pra esquerda)",
+    "medida": "tronco_giro",
+    "t": [
+     0.41,
+     0.59
+    ],
+    "graus": [
+     -27,
+     -19
+    ],
+    "fonte": "ExRx, Lying Bent Leg Oblique Stretch (\"Bring both knees and hip to one side\")"
+   },
+   {
+    "nome": "pelve × tórax dentro do giro do ciclo",
+    "medida": "tronco_giro",
+    "t": "todos",
+    "graus": [
+     -27,
+     27
+    ]
+   },
+   {
+    "nome": "o tórax fica de frente pro teto (os ombros no chão)",
+    "medida": "corpo_rolagem",
+    "lado": "E",
+    "t": "todos",
+    "graus": [
+     86,
+     92
+    ],
+    "fonte": "Mayo Clinic, Lower back rotational stretch (\"Keep your shoulders firmly on the floor\"); ExRx, Lying Bent Leg Oblique Stretch (\"Keep both shoulders on floor or mat\")"
+   },
+   {
+    "nome": "joelhos dobrados ~100°, parados",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     93,
+     105
+    ],
+    "fonte": "ExRx, Lying Bent Leg Oblique Stretch (\"Bend knees and place feet flat on floor\"); Mayo Clinic, Lower back rotational stretch (\"Lie on your back with your knees bent\"); no desenho da Mayo, ~105° (observação)"
+   },
+   {
+    "nome": "quadris dobrados",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     40,
+     60
+    ],
+    "fonte": "ExRx, Lying Bent Leg Oblique Stretch (\"Bend knees and place feet flat on floor\")"
+   },
+   {
+    "nome": "coxas: a de cima cruza pouco (aduz) e a de baixo abre pouco (abduz)",
+    "medida": "coxa_abducao",
+    "t": "todos",
+    "graus": [
+     -24,
+     24
+    ]
+   },
+   {
+    "nome": "pés juntos",
+    "medida": "pes_largura",
+    "t": "todos",
+    "faixa": [
+     0.3,
+     0.75
+    ],
+    "fonte": "Arthritis Research UK, Knee rolls (\"keeping your knees and feet together\"); desenhos da Mayo e da Arthritis Research UK (observação). O boneco musculoso: os pés ficam a ~2 cm um do outro, com as coxas encostando por dentro"
+   },
+   {
+    "nome": "um pé não fica à frente do outro",
+    "medida": "pes_alinhados",
+    "t": "todos",
+    "mm": [
+     0,
+     25
+    ]
+   },
+   {
+    "nome": "cotovelos quase esticados",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": "todos",
+    "graus": [
+     3,
+     25
+    ],
+    "fonte": "desenho da Arthritis Research UK, Knee rolls: braços retos (observação); ExRx, Lying Bent Leg Oblique Stretch (\"Arms can be extended to sides\")"
+   },
+   {
+    "nome": "braços abertos ~45° do corpo",
+    "medida": "braco_abertura",
+    "t": "todos",
+    "graus": [
+     38,
+     52
+    ],
+    "fonte": "desenho da Arthritis Research UK, Knee rolls (observação: ~45° do corpo); ExRx, Lying Bent Leg Oblique Stretch (\"Arms can be extended to sides\")"
+   },
+   {
+    "nome": "palmas pra baixo",
+    "medida": "palma_cima",
+    "t": "todos",
+    "graus": [
+     160,
+     180
+    ],
+    "fonte": "desenho da Arthritis Research UK, Knee rolls (palmas no chão; observação); ExRx, Lying Crossover Stretch (foto: palmas pra baixo; observação)"
+   },
+   {
+    "nome": "cabeça apoiada olhando pro teto, na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -5,
+     15
+    ],
+    "fonte": "desenhos da Mayo e da Arthritis Research UK (observação). O free-exercise-db vira a cabeça (\"turn your head to the left\"), mas no Knee Across The Body, de uma perna — outro exercício"
+   },
+   {
+    "nome": "a cabeça não inclina de lado",
+    "medida": "cabeca_inclinacao",
+    "t": "todos",
+    "graus": [
+     -4,
+     4
+    ]
+   },
+   {
+    "nome": "coluna sem dobrar pra frente nem arquear além do natural deitado",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     25
+    ]
+   }
+  ]
+ }
+}
