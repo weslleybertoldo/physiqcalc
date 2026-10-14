@@ -144,6 +144,32 @@ describe("Política de Privacidade × o app", () => {
     expect(tudo).toContain("as com mais de 12 meses são apagadas automaticamente, do aparelho e do banco");
     expect(tudo).toContain("30 dias na lixeira");
   });
+
+  // W-A P7 (Q2 "1"): as rotinas e lembretes e o que o aluno registra com a dieta liberada — os dados, os sensíveis, quem vê, o que sai ao
+  // excluir, o aparelho e os lembretes. Só no texto em revisão (o build de staging); a Política em vigor não muda.
+  it.each([
+    ["site e APK", false],
+    ["Google Play", true],
+  ] as const)("W-A: a Política cita as rotinas e a dieta liberada (%s)", (_versao, loja) => {
+    const tudo = textoVisivel(lerMarkdown(politicaDePrivacidade(loja))).join("\n");
+    expect(tudo).toContain(
+      "Alimentação | plano alimentar, refeições marcadas, metas, as fotos e comentários do diário alimentar e, quando o nutricionista libera a dieta, o que você muda no seu dia: os alimentos que você põe e tira, as refeições extras e os alimentos e receitas que você cria | acompanhar a dieta com o nutricionista",
+    );
+    expect(tudo).toContain(
+      "Rotinas e lembretes | nome, dose, tipo (suplemento, remédio, hábito ou outro), horário, dias da semana, quem criou, o que você marcou como feito e o histórico de mudanças, inclusive das rotinas apagadas | lembrar você no horário e mostrar as rotinas a você e aos seus profissionais",
+    );
+    expect(tudo).toContain("a alimentação e o diário, inclusive o que você muda na dieta do seu dia;");
+    expect(tudo).toContain("as rotinas, como remédios e suplementos, e o que você marcou como feito;");
+    expect(tudo).toContain(
+      "Os seus profissionais veem as rotinas que você cria e as que foram criadas na conta deles, inclusive as apagadas, o que você marcou como feito e o histórico de mudanças. A página das rotinas avisa isso.",
+    );
+    expect(tudo).toContain("O seu nutricionista vê o que você muda na dieta do seu dia. O seu personal também vê esse dia a dia, só para ler.");
+    expect(tudo).toContain(
+      "as rotinas (inclusive as criadas pelos seus profissionais, com o que você marcou e o histórico), os alimentos e receitas que você criou, o que você mudou na dieta do seu dia, a foto do perfil, os avisos, a cópia do treino guardada no aparelho e os lembretes das rotinas agendados nele;",
+    );
+    expect(tudo).toContain("os lembretes das suas rotinas, agendados no aparelho pelo app Android; saem quando você sai da conta;");
+    expect(tudo).toContain("Os lembretes das rotinas mostram o nome da rotina e a dose; o de remédio mostra só a hora, e o nome do remédio aparece ao abrir o app.");
+  });
 });
 
 describe("Termos de assinatura × o que o app cobra", () => {

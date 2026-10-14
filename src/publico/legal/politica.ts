@@ -94,7 +94,8 @@ Neste texto, "Physiq" e "nós" são quem oferece o aplicativo.
 | Cadastro e perfil | telefone, CPF, data de nascimento, sexo, peso, altura, objetivo e o que você ou o seu profissional preencherem | identificar você no atendimento e calcular as metas (gasto de energia, % de gordura, macronutrientes) |
 | Treino | exercícios, séries, cargas, repetições, tempos, distâncias, datas, comentários e a academia | montar e registrar o treino e mostrar a evolução |
 | Avaliações | dobras, medidas, composição corporal e fotos de avaliação (frente, costas e laterais) | acompanhar a evolução com o profissional |
-| Alimentação | plano alimentar, refeições marcadas, metas, e as fotos e comentários do diário alimentar | acompanhar a dieta com o nutricionista |
+| Alimentação | plano alimentar, refeições marcadas, metas, as fotos e comentários do diário alimentar e, quando o nutricionista libera a dieta, o que você muda no seu dia: os alimentos que você põe e tira, as refeições extras e os alimentos e receitas que você cria | acompanhar a dieta com o nutricionista |
+| Rotinas e lembretes | nome, dose, tipo (suplemento, remédio, hábito ou outro), horário, dias da semana, quem criou, o que você marcou como feito e o histórico de mudanças, inclusive das rotinas apagadas | lembrar você no horário e mostrar as rotinas a você e aos seus profissionais |
 | Prontuário e pré-consulta | anamnese, antropometria, exames, gestação, as anotações clínicas do nutricionista e as respostas da pré-consulta | o atendimento do nutricionista |
 | Agenda e pagamentos ao profissional | consultas, mensalidades, cobranças, comprovantes de Pix e recibos | o profissional organizar o atendimento e receber |
 | Pagamentos ao Physiq | plano, valor, situação, vencimento e o identificador do pagamento no Mercado Pago (o número do cartão não passa pelo Physiq) | cobrar o plano do profissional e o plano do app |
@@ -114,7 +115,8 @@ Estes são **dados pessoais sensíveis** (LGPD, art. 5º, II, e art. 11):
 - peso, medidas, dobras e composição corporal;
 - fotos de avaliação;
 - anamnese, prontuário, exames e gestação;
-- a alimentação e o diário;
+- a alimentação e o diário, inclusive o que você muda na dieta do seu dia;
+- as rotinas, como remédios e suplementos, e o que você marcou como feito;
 - as respostas de saúde da pré-consulta.
 
 Eles servem só ao seu acompanhamento e às funções do app que você usa. Nunca são usados para publicidade, nem compartilhados para
@@ -148,6 +150,9 @@ obter vantagem econômica (art. 11, § 4º).
 - Você vê os seus dados.
 - O seu personal vê o treino e as avaliações. O seu nutricionista vê a alimentação e o prontuário. As anotações clínicas ficam só
   com o nutricionista.
+- Os seus profissionais veem as rotinas que você cria e as que foram criadas na conta deles, inclusive as apagadas, o que você
+  marcou como feito e o histórico de mudanças. A página das rotinas avisa isso.
+- O seu nutricionista vê o que você muda na dieta do seu dia. O seu personal também vê esse dia a dia, só para ler.
 - O dono da conta do profissional vê os alunos da conta. O membro da equipe vê os alunos de que é responsável.
 - **Suporte do Physiq:** ${FRASE_SUPORTE} Quem tem esse acesso guarda sigilo sobre os dados.
 
@@ -209,8 +214,9 @@ Você pode pedir, a qualquer momento e sem custo:
 - **portabilidade:** no app, Perfil › Exportar meus dados baixa os seus dados num arquivo;
 - **exclusão:** pelo app ou pela página [Excluir conta](/excluir-conta). Antes de confirmar, o app mostra o que vai acontecer;
   - **aluno** (Perfil › Excluir minha conta):
-    - saem o seu login e os seus dados de treino, o diário, as refeições e metas marcadas, a foto do perfil, os avisos e a cópia
-      do treino guardada no aparelho;
+    - saem o seu login e os seus dados de treino, o diário, as refeições e metas marcadas, as rotinas (inclusive as criadas pelos
+      seus profissionais, com o que você marcou e o histórico), os alimentos e receitas que você criou, o que você mudou na dieta do
+      seu dia, a foto do perfil, os avisos, a cópia do treino guardada no aparelho e os lembretes das rotinas agendados nele;
     - no banco do treino fica só um registro técnico, sem e-mail, sem senha e sem sessão, para o histórico do profissional não
       perder a referência;
     - o que o profissional registrou no seu atendimento fica com ele, desligado do seu login;
@@ -249,6 +255,7 @@ nós o ajudamos a atender. Você também pode reclamar à ANPD (gov.br/anpd).
 Usamos só o necessário:
 - a sessão do login, guardada no navegador ou no app, para manter você conectado;
 - a cópia do treino no aparelho, para funcionar sem internet;
+- os lembretes das suas rotinas, agendados no aparelho pelo app Android; saem quando você sai da conta;
 - as preferências (como o tema) e os avisos que você já fechou.
 
 Não usamos cookies de publicidade nem de análise. O captcha da Cloudflare e o formulário de pagamento do Mercado Pago podem usar
@@ -263,7 +270,8 @@ recursos próprios do navegador.
 - O login tem captcha e limite de tentativas.
 - O acesso administrativo existe só pelo site.
 - Os registros do servidor e os avisos de erro não levam dado pessoal.
-- As notificações não mostram nome nem valor.
+- As notificações não mostram nome nem valor. Os lembretes das rotinas mostram o nome da rotina e a dose; o de remédio mostra só
+  a hora, e o nome do remédio aparece ao abrir o app.
 - Há uma cópia de segurança diária, cifrada.
 
 Nenhum sistema é infalível.
