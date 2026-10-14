@@ -24,6 +24,25 @@ export function ehMaster(appMetadata: Record<string, unknown> | null | undefined
   return (appMetadata?.role as string | undefined) === "master" || papelPerfil === "master";
 }
 
+/** hml-22 (H-22) — um fator do Auth como o GoTrue devolve em `user.factors` (o GET /auth/v1/user e o admin getUserById). */
+export interface FatorDoAuth {
+  status?: string | null;
+}
+
+/** hml-22 — tem fator verificado? Qualquer fator `verified` (hoje só o TOTP está ligado): o mesmo critério do GoTrue e do banco. */
+export function temFatorVerificado(fatores: unknown): boolean {
+  return Array.isArray(fatores) && fatores.some((f) => !!f && typeof f === "object" && (f as FatorDoAuth).status === "verified");
+}
+
+/**
+ * hml-22 (H-22) — a regra do master_aal_ok() do banco (migração 20261014200000_hml22_master_2fa.sql), na mesma ordem: o token aal2
+ * (o código do app autenticador) basta; fora do aal2, só quem NÃO tem fator verificado (hoje, todo mundo: o fator do master é o
+ * interruptor). Os fatores vêm do Auth (fresco), o aal vem do token.
+ */
+export function masterComAal(fatores: unknown, aal: unknown): boolean {
+  return aal === "aal2" || !temFatorVerificado(fatores);
+}
+
 /**
  * hml-08 (H-22): o painel master é só do site — o app (o WebView do Android serve em https://localhost; o do iOS, em
  * capacitor://localhost) recebe 403 "so_no_site". Serve para desligar o master dos APKs antigos (≤ 3.71), que ainda têm o código;
@@ -112,6 +131,7 @@ export function statusDoErro(erro: unknown): number {
       return 401;
     case "so_master":
     case "so_no_site":
+    case "precisa_2fa":
     case "nao_pode_a_si_mesmo":
       return 403;
     case "conta_inexistente":

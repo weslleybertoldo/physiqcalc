@@ -15,12 +15,17 @@ import {
   papelTreino,
   sexoTreino,
   statusDoPerfil,
+  temFatorVerificado,
   treinoVisivelPelaConta,
+  trocaPedeDoisFatores,
   type ContaResumo,
   type MatriculaResumo,
   type MembroResumo,
   type ResumoNucleo,
 } from "../../supabase/functions/_shared/espelho/regras";
+import { temFatorVerificado as temFatorVerificadoPrincipal } from "../../supabase-principal/functions/_shared/master-regras";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 // ---------- fábricas ----------
 const conta = (o: Partial<ContaResumo> = {}): ContaResumo => ({
@@ -304,5 +309,54 @@ describe("W5 — personal removido da equipe perde o acesso que o espelho tinha 
     expect(deveTirarAcessoDoEspelho(removido, "admin", linhaEspelho)).toBe(false);
     expect(deveTirarAcessoDoEspelho(removido, "professor", null)).toBe(false);
     expect(deveTirarAcessoDoEspelho(removido, null, { ...linhaEspelho, acesso_liberado_ate: null, nucleo_acesso_ate: null })).toBe(false);
+  });
+});
+
+describe("hml-22 (H-22) — a troca pede o código do app autenticador ao master/staff com fator", () => {
+  const verificado = [{ id: "f1", factor_type: "totp", status: "verified" }];
+  const pelaMetade = [{ id: "f2", factor_type: "totp", status: "unverified" }];
+
+  it("quem não é master nem staff: nunca (com fator, em aal1)", () => {
+    expect(trocaPedeDoisFatores(resumo(), null, verificado, "aal1")).toBe(false);
+    expect(trocaPedeDoisFatores(resumo(), "professor", verificado, "aal1")).toBe(false);
+    expect(trocaPedeDoisFatores(null, null, verificado, "aal1")).toBe(false);
+    expect(trocaPedeDoisFatores(undefined, undefined, verificado, undefined)).toBe(false);
+  });
+  it("master sem fator: não (como hoje)", () => {
+    expect(trocaPedeDoisFatores(resumo({ master: true }), null, [], "aal1")).toBe(false);
+    expect(trocaPedeDoisFatores(resumo({ master: true }), "master", undefined, "aal1")).toBe(false);
+  });
+  it("master com fator verificado: aal1 (ou sem aal) → pede; aal2 → não", () => {
+    expect(trocaPedeDoisFatores(resumo({ master: true }), null, verificado, "aal1")).toBe(true);
+    expect(trocaPedeDoisFatores(resumo({ master: true }), null, verificado, undefined)).toBe(true);
+    expect(trocaPedeDoisFatores(resumo({ master: true }), null, verificado, "aal2")).toBe(false);
+  });
+  it("staff do Treino (papel admin ou master, fixo) com fator: igual, mesmo sem o master no resumo", () => {
+    for (const papel of ["admin", "master"]) {
+      expect(trocaPedeDoisFatores(resumo(), papel, verificado, "aal1")).toBe(true);
+      expect(trocaPedeDoisFatores(resumo(), papel, verificado, "aal2")).toBe(false);
+      expect(trocaPedeDoisFatores(resumo(), papel, [], "aal1")).toBe(false);
+    }
+  });
+  it("fator não verificado (cadastro pela metade): não", () => {
+    expect(trocaPedeDoisFatores(resumo({ master: true }), "admin", pelaMetade, "aal1")).toBe(false);
+  });
+  it("as 2 cópias do temFatorVerificado (Treino e principal) concordam", () => {
+    const casos: unknown[] = [verificado, pelaMetade, [...pelaMetade, ...verificado], [], null, undefined, "verified", [null, "x"],
+      [{ status: "VERIFIED" }], { status: "verified" }];
+    for (const c of casos) expect(temFatorVerificado(c), JSON.stringify(c)).toBe(temFatorVerificadoPrincipal(c));
+  });
+  it("a trocar-token confere DEPOIS do resumo e ANTES do espelho e da sessão (403 precisa_2fa; nenhum papel gravado)", () => {
+    const fonte = readFileSync(resolve(__dirname, "../..", "supabase/functions/trocar-token/index.ts"), "utf-8");
+    const iResumo = fonte.indexOf("const resumo = await resumoDoPrincipal(");
+    const iRegra = fonte.indexOf("if (trocaPedeDoisFatores(resumo, papelAtual, principal.factors, claimsDoJwt(token)?.aal)) {");
+    const iEspelho = fonte.indexOf("await aplicarResumo(");
+    const iSessao = fonte.indexOf("await emitirSessao(");
+    expect(iResumo).toBeGreaterThan(-1);
+    expect(iRegra).toBeGreaterThan(iResumo);
+    expect(iEspelho).toBeGreaterThan(iRegra);
+    expect(iSessao).toBeGreaterThan(iEspelho);
+    expect(fonte.slice(iRegra, iEspelho)).toContain('return erro("precisa_2fa", 403, origin);');
+    expect(fonte.slice(iResumo, iRegra)).toContain('const papelAtual = typeof treinoUser.app_metadata?.role === "string"');
   });
 });

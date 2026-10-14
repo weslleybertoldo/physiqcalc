@@ -4,11 +4,13 @@
 // (auth.uid() de verdade: o banco confere o master de novo e grava quem fez cada coisa nos eventos).
 // hml-10 (H-24, H-26): o log de cada função nasce aqui (criarLog com o nome dela) e vai no contexto; o catch final avisa
 // (log.excecao) e a resposta não muda.
+// hml-22 (H-22): o master com fator verificado no Auth (o TOTP do app autenticador) só passa com o token aal2 — senão 403
+// precisa_2fa (a tela pede o código). A mesma regra do master_aal_ok() do banco; sem fator, como antes.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "./avisar-erro.ts";
 import { criarLog, type Log } from "./log.ts";
-import { origemPermitida } from "./login-regras.ts";
-import { ehMaster, origemDoApp, schemaDoPedido, statusDoErro, type Schema } from "./master-regras.ts";
+import { claimsDoJwt, origemPermitida } from "./login-regras.ts";
+import { ehMaster, masterComAal, origemDoApp, schemaDoPedido, statusDoErro, type Schema } from "./master-regras.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -93,6 +95,12 @@ export async function abrirPedido(req: Request, nome: string, log: Log): Promise
   if (!ehMaster((u?.user?.app_metadata as Record<string, unknown>) ?? null, (perfil as { role?: string } | null)?.role ?? null)) {
     log.aviso({ codigo: "nao_e_master", schema, ref: ud.user.id });
     return json({ ok: false, erro: "so_master" }, 403, origin);
+  }
+  // hml-22 (H-22): com fator verificado, só com o token aal2. O fator vem do Auth (o getUserById acima, fresco); o aal, do token —
+  // que já passou no getUser (assinatura, validade e sessão)
+  if (!masterComAal(u?.user?.factors, claimsDoJwt(token)?.aal)) {
+    log.aviso({ codigo: "precisa_2fa", schema, ref: ud.user.id });
+    return json({ ok: false, erro: "precisa_2fa" }, 403, origin);
   }
   if (!permitido(`${nome}:${schema}:${ud.user.id}`, 240, 60_000)) return json({ ok: false, erro: "muitas_acoes" }, 429, origin);
   return { schema, origin, corpo, userId: ud.user.id, comoPessoa, db, authAdmin, log };
