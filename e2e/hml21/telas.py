@@ -1283,8 +1283,8 @@ def rodar_21c(o, area: str, base: str, canal: str | None, casos: list[str], pref
                         P21C.entrar(o, t, pend, L, base, conta)
                         if "prints" in casos:
                             for tela in telas:
-                                # o sufixo do dono só onde a nutri também abre (a Mensagens só o dono abre: o print é o c_mensagens)
-                                caso = CASO_DA_TELA_21C[tela[0]] + ("_personal" if conta == P21C.PERSONAL and tela[0] != "mensagens" else "")
+                                # o sufixo do dono só onde a nutri também abre (a Mensagens, a Conta e a Equipe só o dono abre: o nome do contrato)
+                                caso = CASO_DA_TELA_21C[tela[0]] + ("_personal" if conta == P21C.PERSONAL and tela[0] in P21C.TELAS_DOS_DOIS else "")
                                 r = P21C.abrir_tela(t, pend, tela)
                                 o.ok(t.n(tela[2]) > 0 and r["t_pronto_s"] is not None, f"[{base}] {conta} · {caso}: a tela pronta em {r['t_pronto_s']} s ({tela[2][:60]})")
                                 B.print_reduzido(t.pg, prefixo or base, caso, o)

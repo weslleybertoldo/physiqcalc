@@ -2418,7 +2418,7 @@ def seco_decisoes_2326(o) -> None:  # noqa: PLR0915
          and [c for c, _t in an_igual.oks] == [True] and escritas_igual == 0
          and [c for c, _t in an_mudou.oks] == [False, True] and an_mudou.oks[0][1].startswith("## ACHADO") and len(escritas) == 1
          and all(x.count("P21C.conferir_instancia(") == 1 and x.count("P21C.estado_da_instancia(") == 1 for x in (ft, fr))
-         and 'tela[0] != "mensagens"' in ft,
+         and "tela[0] in P21C.TELAS_DOS_DOIS" in ft,
          f"[seco] DECISÃO 23:26 (1): a Mensagens também pelo dono (a nutri sem instância PULA; a produção não abre); a instância dele antes × depois "
          f"(igual → ok; mudou → \"## ACHADO\" e o estado de antes de volta por 1 escrita na forma fechada — {recusas}/4 fora dela recusadas); o print = "
          f"c_mensagens; o rede.py e o telas.py conferem")

@@ -654,7 +654,9 @@ PERFIL = ("config_perfil", ("rota", "/painel/configuracoes/perfil"), "[data-form
 CONTA = ("config_conta", ("rota", "/painel/configuracoes/conta"), '[data-form-conta], [data-config-aba="conta"][data-estado-aba="vazio"]', {"conta": 1})
 EQUIPE = ("config_equipe", ("rota", "/painel/configuracoes/equipe"), '[data-config-aba="equipe"][data-equipe-bloqueio]', {"conta": 1})
 CONVITE = ("config_convite", ("rota", "/painel/configuracoes/convite"), '[data-convite-link], [data-config-aba="convite"][data-estado-aba="vazio"]', {"conta": 1})
-EXCLUIR = ("config_excluir", ("rota", "/painel/configuracoes/excluir-conta"), '[data-config-aba="excluir-conta"] [data-exclusao-conta]', {"conta": 1})
+# o Excluir pronto = o passo "conferencia" (o dono vê o cartão da conta — data-exclusao-conta —; o MEMBRO, o "sai da equipe" — o F5: a w5p-nutri é
+# membro, o [data-exclusao-conta] nunca aparecia para ela)
+EXCLUIR = ("config_excluir", ("rota", "/painel/configuracoes/excluir-conta"), '[data-config-aba="excluir-conta"] [data-exclusao-passo="conferencia"]', {"conta": 1})
 MENSAGENS = ("mensagens", ("rota", "/painel/mensagens"), "[data-pagina-mensagens][data-whatsapp-situacao]", {"conta": 1})
 LIXEIRA = ("lixeira", ("rota", "/painel/lixeira"), '[data-pagina-lixeira][data-carregando="0"]', {"conta": 1})
 MODELOS = ("modelos", ("rota", "/painel/modelos"), '[data-pagina-modelos][data-carregando="0"]', {"nutricao": 2, "financeiro": 1})
@@ -673,7 +675,7 @@ SELETORES = {
     "src/painel/configuracoes/Equipe.tsx": ['data-config-aba="equipe" data-equipe-bloqueio={equipe.bloqueio ?? "nenhum"}'],
     "src/painel/configuracoes/Convite.tsx": ['data-config-aba="convite" data-estado-aba="vazio"', "data-convite-link"],
     "src/painel/configuracoes/ExcluirConta.tsx": ['data-config-aba="excluir-conta"'],
-    "src/painel/configuracoes/excluirConta/FluxoExclusao.tsx": ["data-exclusao-conta={c.nome}"],
+    "src/painel/configuracoes/excluirConta/FluxoExclusao.tsx": ['data-exclusao-passo="conferencia"', "data-exclusao-equipe-sai={e.conta_nome}"],
     "src/painel/paginas/Mensagens.tsx": ["data-pagina-mensagens data-whatsapp-situacao={a.situacao}"],
     "src/painel/paginas/Lixeira.tsx": ["data-pagina-lixeira", 'data-carregando={consulta.isLoading ? "1" : "0"}'],
     "src/painel/paginas/Modelos.tsx": ["data-pagina-modelos", 'data-carregando={consulta.isLoading || !pronto ? "1" : "0"}'],
@@ -690,9 +692,16 @@ def telas_da_conta(area: str, conta: str) -> list[tuple]:
     if conta == PROD_PAINEL:
         return {"configuracoes": [PERFIL, CONTA, EQUIPE, CONVITE], "lixeira": [LIXEIRA], "modelos": [MODELOS]}.get(area, [])
     if conta == PERSONAL:
-        # a Mensagens também pelo dono (DECISÃO 23:26: a w5p-nutri não tem instância — abrir a criaria —; a dele existe, desconectada)
-        return {"configuracoes": [PERFIL], "modelos": [MODELOS], "mensagens": [MENSAGENS]}.get(area, [])
+        # a Mensagens também pelo dono (DECISÃO 23:26: a w5p-nutri não tem instância — abrir a criaria —; a dele existe, desconectada); a Conta e a
+        # Equipe SÓ pelo dono (o F5: são abas soDono — src/painel/configuracoes/catalogoAbas.ts — e a w5p-nutri é membro: a rota não as mostra)
+        return {"configuracoes": [PERFIL, CONTA, EQUIPE], "modelos": [MODELOS], "mensagens": [MENSAGENS]}.get(area, [])
+    if area == "configuracoes":
+        return [PERFIL, CONVITE, EXCLUIR]  # a nutri (membro): o Perfil, o Convite e o Excluir (o cartão "sai da equipe")
     return list(TELAS_DA_AREA.get(area, ()))
+
+
+# as telas que a nutri E o dono abrem na MESMA área: o print do dono leva o sufixo _personal (as outras do dono têm o nome do contrato)
+TELAS_DOS_DOIS = frozenset({"config_perfil", "modelos"})
 
 
 def contas_da_area(area: str, base: str) -> list[str]:

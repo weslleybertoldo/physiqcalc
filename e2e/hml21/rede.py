@@ -796,13 +796,13 @@ def seco_21c(o, area: str) -> None:  # noqa: PLR0915
     o.ok({a: P21C.contas_da_area(a, "staging") for a in B.AREAS_DA_21C} == {"aluno": ["w5p-nutri"], "configuracoes": ["w5p-nutri", "w5p-personal"],
                                                                              "mensagens": ["w5p-nutri", "w5p-personal"], "lixeira": ["w5p-nutri"],
                                                                              "modelos": ["w5p-nutri", "w5p-personal"]}
-         and [x[0] for x in P21C.telas_da_conta("configuracoes", P21C.NUTRI)] == ["config_perfil", "config_conta", "config_equipe", "config_convite", "config_excluir"]
-         and [x[0] for x in P21C.telas_da_conta("configuracoes", P21C.PERSONAL)] == ["config_perfil"]
+         and [x[0] for x in P21C.telas_da_conta("configuracoes", P21C.NUTRI)] == ["config_perfil", "config_convite", "config_excluir"]
+         and [x[0] for x in P21C.telas_da_conta("configuracoes", P21C.PERSONAL)] == ["config_perfil", "config_conta", "config_equipe"]
          and [x[0] for x in P21C.telas_da_conta("modelos", P21C.PERSONAL)] == ["modelos"]
          and [x[0] for x in P21C.telas_da_conta("mensagens", P21C.PERSONAL)] == ["mensagens"]
          and [x[0] for x in P21C.telas_da_conta("aluno", P21C.NUTRI)] == ["aluno_acessos", "aluno_resumo"],
-         "as contas e as telas (a nutri: todas; o dono: o Perfil — o espelho no Treino —, os Modelos — a aba Treinos — e a Mensagens — DECISÃO 23:26: "
-         "a nutri sem instância PULA, a do dono existe)")
+         "as contas e as telas (a nutri: o Perfil, o Convite e o Excluir — membro; o dono: o Perfil — o espelho no Treino —, a Conta e a Equipe — abas "
+         "soDono —, os Modelos — a aba Treinos — e a Mensagens — DECISÃO 23:26: a nutri sem instância PULA, a do dono existe)")
     o.ok(not any(P21C.ENTRADA_PAINEL.startswith(x[1][1].split("{")[0].rstrip("/")) and x[1][1] != "/painel" for x in P21C.TODAS_AS_TELAS)
          and P21C.ENTRADA_PAINEL == "/painel", "a entrada é de fora da 21c (o Dashboard, da 21b — a carga fria fica fora da medida da 1ª tela)")
     o.ok(P21C.fase_do_codigo_21c("local", "x") == "depois" and P21C.fase_do_codigo_21c("staging", "c6e795b") == "antes"
@@ -830,7 +830,7 @@ def seco_21c(o, area: str) -> None:  # noqa: PLR0915
         com_aluno = [x[1][1] for x in P21C.telas_que_abrem(Calado(), "staging", "staging", "aluno", P21C.NUTRI, aluno=uid)]
     finally:
         P21.situacao_como, B.uid_da_conta, P21C.instancia = originais
-    o.ok(sem_cod == ["config_perfil", "config_conta", "config_equipe", "config_excluir"] and res == {"sem": [], "aguardando": [], "pronta": ["mensagens"]}
+    o.ok(sem_cod == ["config_perfil", "config_excluir"] and res == {"sem": [], "aguardando": [], "pronta": ["mensagens"]}
          and sem_aluno == [] and com_aluno == [f"/painel/alunos/{uid}/acessos", f"/painel/alunos/{uid}"],
          f"as pré-condições (em toda base): o Convite PULA sem o código (o garantir_meu_codigo grava ao abrir); a Mensagens só com a instância criada e fora do "
          f"aguardando_qr ({res}); o Resumo/a aba Acessos só com o aluno de teste (a rota com o id dele)")
