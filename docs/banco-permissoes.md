@@ -436,7 +436,7 @@ direto — o desvio 2); esta é a lista que a etapa 4 usa para revogar (spec hml
   `tb_grupos_exercicios_usuario`, `tb_semana_treinos` e `physiq_profiles` (a fila só grava o `foto_url`): o S/I/U/D do `authenticated` +
   a policy de dono (`auth.uid() = user_id`; `id` na `physiq_profiles`) — o treino feito sem internet sobe pela fila, como a pessoa. O RLS
   das 15 provado: o catálogo (RLS ligado sem FORCE, 0 SELECT do `anon`), um uuid falso vê 0 linha na produção (só leitura), a matriz de
-  leitura por perfil (spec §2.8) e, por efeito no staging, o D3 (`e2e/hml21/d3_powersync.py`: ‹D3›).
+  leitura por perfil (spec §2.8) e, por efeito no staging, o D3 (`e2e/hml21/d3_powersync.py`, 14/10/2026: 383/383 — as 14 tabelas × (a) ler, (b) PATCH/DELETE, (c) PUT com o `user_id` da outra e (c′) PUT com o id da linha da outra, nas 2 direções, e a `physiq_profiles` × (a)(b)(d); 0 alerta).
 - **Treino — a parte do Treino da Evolução do aluno** (desvio 23): o SELECT de `physiq_profiles`, `physiq_avaliacoes` e
   `physiq_registros_fotos` e a URL assinada do bucket `registros` (`src/evolucao/fontes.ts`).
 - **Treino (e 1 RPC do principal) — as leituras do Treino que o gate da 21d deixou no navegador** (desvio 24): o SELECT de
