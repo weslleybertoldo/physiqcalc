@@ -157,6 +157,38 @@ def mensagem_que_falhou(s: str, uid: str) -> str | None:
     return v if C.eh_uuid(v) else None
 
 
+def sql_remetentes_possiveis(s: str, aluno: str) -> str:
+    """Os profissionais que mandariam WhatsApp de VERDADE a este aluno se as mensagens dele ligarem — o enfileirador de hoje
+    (whatsapp_enfileirar, a última versão: 20261002090100_h5_agenda_cadastro_aviso_pix.sql) varre quem tem a instância CONECTADA e as
+    automáticas LIGADAS (o whatsapp_preferencias dele: sem a chave = desligado) e manda aos alunos de quem é a nutri OU o personal (o
+    aniversário), aos da conta de quem é o dono (a mensalidade) e a quem tem consulta/cobrança com ele. Só contagem (SQL só leitura)."""
+    a = C.txt(C.uuid_ok(aluno))
+    return (f"with pa as (select nutricionista_id, personal_id, conta_id from {s}.pacientes where id = {a}), "
+            f"quem as (select nutricionista_id as uid from pa union select personal_id from pa "
+            f"union select ct.dono_id from pa join {s}.contas ct on ct.id = pa.conta_id "
+            f"union select ag.nutricionista_id from {s}.agendamentos ag where ag.paciente_id = {a} and ag.deleted_at is null "
+            f"union select cb.nutricionista_id from {s}.cobrancas cb where cb.paciente_id = {a} and cb.deleted_at is null) "
+            f"select count(distinct p.id)::int as n from quem q join {s}.profiles p on p.id = q.uid "
+            f"join {s}.whatsapp_instancias w on w.nutricionista_id = p.id and w.status = 'conectado' "
+            f"where ({s}.whatsapp_preferencias(p.config) ->> 'ativo')::boolean")
+
+
+def sem_mensagem_de_verdade(s: str, aluno: str) -> tuple[bool, str]:
+    """🟡4 da revisão: ligar as "Mensagens automáticas" de um aluno de teste (o ajuste ou a faixa) só quando NENHUMA mensagem de verdade pode
+    entrar na fila: o aluno SEM destino (o whatsapp_destino(telefone) do enfileirador nulo) ou 0 remetente possível (a nutri, o personal, o
+    dono e quem tem consulta/cobrança com ele — nenhum com a instância conectada E as automáticas ligadas). → (seguro, motivo); SQL só leitura."""
+    r = B.ler_principal(f"select ({s}.whatsapp_destino(telefone) is null) as sem_destino from {s}.pacientes where id = {C.txt(C.uuid_ok(aluno))}")
+    if not r:
+        return False, "o aluno de teste não foi achado (SQL só leitura)"
+    if r[0].get("sem_destino") is True:
+        return True, "o aluno de teste sem telefone (sem destino: nada entra na fila)"
+    n = int((B.ler_principal(sql_remetentes_possiveis(s, aluno)) or [{}])[0].get("n") or 0)
+    if n == 0:
+        return True, ("o aluno com telefone e 0 remetente possível (a nutri, o personal, o dono e quem tem consulta/cobrança com ele: nenhum com a "
+                      "instância conectada E as automáticas ligadas)")
+    return False, f"{n} remetente(s) possível(eis) com a instância conectada e as automáticas ligadas (a nutri, o personal, o dono ou quem tem consulta/cobrança)"
+
+
 # ───────────────────────── a escrita no staging: SÓ as formas fechadas (decisão I) ─────────────────────────
 _U = r"'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'"
 _INST = r"'\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}(:\d{2})?)'"
@@ -314,34 +346,73 @@ def devolver_por_sql(o, estado, s: str) -> None:
 
 
 def devolver_pelas_acoes(o, estado, s: str, L) -> None:
-    """O que volta pela MESMA ação (com a sessão guardada da conta): os ajustes e o apelido do aluno, o perfil e o nome da conta."""
+    """O que volta pela MESMA ação (com a sessão guardada da conta): os ajustes e o apelido do aluno, o perfil e o nome da conta. 🟡1 da
+    revisão: toda ação com o x-schema = `s` (o schema GRAVADO no Estado — nunca o da linha de comando: um --limpar com outra base gravaria
+    no schema errado)."""
     dv = _massa(estado)["devolver"]
     if "ajustes" in dv:
         aluno, valor = dv["ajustes"]
         if msg_auto(s, aluno) != valor:
-            B.conta(L.token(NUTRI), "aluno_ajustes_salvar", {"aluno": aluno, "ajustes": {"mensagens_automaticas": bool(valor)}})
+            B.conta(L.token(NUTRI), "aluno_ajustes_salvar", {"aluno": aluno, "ajustes": {"mensagens_automaticas": bool(valor)}}, schema_=s)
         if o.ok(msg_auto(s, aluno) == valor, "limpeza (21c): as Mensagens automáticas do aluno de teste como antes (a MESMA ação)", parar=False):
             devolvido(estado, "ajustes")
     if "apelido" in dv:
         aluno, apelido = dv["apelido"]
         d = dados_do_aluno(s, aluno)
         if d.get("apelido") != apelido:
-            B.conta(L.token(NUTRI), "aluno_dados_salvar", {"aluno": aluno, "dados": {"nome": d.get("nome"), "apelido": apelido}})
+            B.conta(L.token(NUTRI), "aluno_dados_salvar", {"aluno": aluno, "dados": {"nome": d.get("nome"), "apelido": apelido}}, schema_=s)
         if o.ok(dados_do_aluno(s, aluno).get("apelido") == apelido, "limpeza (21c): o apelido do aluno de teste como antes (a MESMA ação)", parar=False):
             devolvido(estado, "apelido")
     if "perfil" in dv:
         conta_p, campo, valor = dv["perfil"]
         uid = L.uid(conta_p)
         if dado_do_perfil(s, uid, campo) != valor:
-            B.conta(L.token(conta_p), "perfil_salvar", corpo_do_perfil(s, uid, {campo: valor}))
+            B.conta(L.token(conta_p), "perfil_salvar", corpo_do_perfil(s, uid, {campo: valor}), schema_=s)
         if o.ok(dado_do_perfil(s, uid, campo) == valor, f"limpeza (21c): o perfil ({campo}) como antes (a MESMA ação)", parar=False):
             devolvido(estado, "perfil")
     if "conta_nome" in dv:
         conta_p, conta_id, nome = dv["conta_nome"]
         if nome_da_conta(s, conta_id) != nome:
-            B.conta(L.token(conta_p), "conta_salvar", {"conta": conta_id, "nome": nome})
+            B.conta(L.token(conta_p), "conta_salvar", {"conta": conta_id, "nome": nome}, schema_=s)
         if o.ok(nome_da_conta(s, conta_id) == nome, "limpeza (21c): o nome da conta de teste como antes (a MESMA ação)", parar=False):
             devolvido(estado, "conta_nome")
+
+
+PAROU_SENHA_W8B = ("## PAROU limpeza (21c): o w8b-aluno ficou com a senha provisória (o app pede \"crie a sua senha\" a ele) — o Estado fica com a "
+                   "pendência: a sessão principal decide (depois de resolver, o api.py --area <a da 21c> --limpar confere e solta o Estado)")
+
+
+def devolver_senha_w8b(o, estado, s: str, L) -> None:
+    """🟡2 da revisão: a marca de senha provisória do w8b-aluno (o P de verdade do acesso_redefinir_senha, anotada ANTES do redefinir) volta
+    pelo senha_definida da 21a com a sessão do PRÓPRIO aluno (a guardada caiu com o redefinir → 401 → o login de novo, contado no teto). Já
+    sem a marca (SQL só leitura) → nada a devolver. Não voltou → a falha com o "## PAROU" (o Estado fica com a pendência)."""
+    dv = _massa(estado)["devolver"]
+    if "senha_w8b" not in dv:
+        return
+    uid_r = dv["senha_w8b"]
+    if not C.eh_uuid(uid_r):
+        o.ok(False, PAROU_SENHA_W8B + " (o id anotado fora do formato)", parar=False)
+        return
+    if not senha_provisoria(s, uid_r):
+        o.linha("   (limpeza (21c): o w8b-aluno sem a marca de senha provisória — nada a devolver)")
+        devolvido(estado, "senha_w8b")
+        return
+    ok_par, st = registrar_par_w8b()
+    if ok_par:
+        for _vez in (1, 2):
+            try:
+                st, _r, _h, _ms = B.conta(L.token(W8B_ALUNO), "senha_definida", {}, schema_=s)
+            except (Exception, SystemExit) as e:  # noqa: BLE001 — o teto de logins, a rede: cai no PAROU
+                st = f"{type(e).__name__}: {str(e)[:120]}"
+                break
+            if st != 401:
+                break
+            L.d.pop(W8B_ALUNO, None)  # a sessão guardada caiu com o redefinir: o login de novo (contado)
+    if o.ok(not senha_provisoria(s, uid_r), f"limpeza (21c): o w8b-aluno sem a marca de senha provisória, como antes (o senha_definida dele; SQL só "
+                                            f"leitura) ({st})", parar=False):
+        devolvido(estado, "senha_w8b")
+    else:
+        o.ok(False, PAROU_SENHA_W8B, parar=False)
 
 
 def senha_provisoria(s: str, uid: str) -> bool:
@@ -366,7 +437,10 @@ def limpar_massa_21c(o, estado, s: str, L) -> None:
         estado.salvar()
         return
     try:
-        devolver_pelas_acoes(o, estado, s, L)
+        try:
+            devolver_pelas_acoes(o, estado, s, L)
+        finally:
+            devolver_senha_w8b(o, estado, s, L)  # 🟡2: a senha provisória do w8b-aluno (antes da conferência final do Estado)
     finally:
         devolver_por_sql(o, estado, s)
     por_destino: dict[str, list[str]] = {}
@@ -392,8 +466,9 @@ def limpar_massa_21c(o, estado, s: str, L) -> None:
 
 
 def fechar_rodada_21c(o, estado, s: str, L) -> None:
-    """O fim da rodada da 21c (no finally — o SIGTERM vira SystemExit e passa aqui): a foto do profissional (a 21a), a massa e o que volta;
-    o Estado só some com tudo desfeito (senão fica para o api.py --area <a da 21c> --limpar)."""
+    """O fim da rodada da 21c (no finally — o SIGTERM vira SystemExit e passa aqui): a foto do profissional (a 21a), a massa e o que volta
+    (inclusive a senha provisória do w8b-aluno — o devolver_senha_w8b, 🟡2; não voltou → "## PAROU"); o Estado só some com tudo desfeito
+    (senão fica para o api.py --area <a da 21c> --limpar). Só no staging (o schema GRAVADO no Estado; o --limpar recusa a produção — 🟡1)."""
     try:
         B.limpar_foto(o, estado, s, L, conta=NUTRI)
     finally:
@@ -429,6 +504,27 @@ def corpo_do_perfil(s: str, uid: str, mudar: dict) -> dict:
 
 def nome_da_conta(s: str, conta_id: str) -> str | None:
     return (B.ler_principal(f"select nome from {s}.contas where id = {C.txt(C.uuid_ok(conta_id))}") or [{}])[0].get("nome")
+
+
+def papel_na_conta(s: str, conta_id: str, uid: str) -> dict:
+    """O lugar de quem chama na conta de teste (SQL só leitura, só booleanos/contagem): {dona: contas.dono_id = o uid, papel_dono: 'dono' nos
+    papéis do membro ativo, membro: tem a linha ativa}; {} = a conta não existe."""
+    u = C.txt(C.uuid_ok(uid))
+    return (B.ler_principal(f"select (c.dono_id is not distinct from {u}::uuid) as dona, coalesce(bool_or('dono' = any(m.papeis)), false) as papel_dono, "
+                            f"count(m.id)::int as membro from {s}.contas c left join {s}.conta_membros m on m.conta_id = c.id and m.user_id = {u}::uuid "
+                            f"and m.status = 'ativo' where c.id = {C.txt(C.uuid_ok(conta_id))} group by c.dono_id") or [{}])[0]
+
+
+def nao_dona(s: str, conta_id: str, uid: str) -> tuple[bool, str]:
+    """🟡3 da revisão: os P que supõem a nutri SEM ser dona (o conta_salvar → 404 e o equipe_papeis → so_dono) só com a prova por SQL só
+    leitura — o contas.dono_id ≠ o uid dela e o 'dono' fora dos papéis dela; sendo dona, a "recusa" GRAVARIA (o nome com a marca; os papéis
+    dela — o que sai tira os alunos). → (pode, motivo)."""
+    p = papel_na_conta(s, conta_id, uid)
+    if not p:
+        return False, "a conta de teste não foi achada (SQL só leitura)"
+    if p.get("dona") or p.get("papel_dono"):
+        return False, "a nutri de teste é DONA da conta (o contas.dono_id ou o papel dono) — a recusa esperada gravaria"
+    return True, "a nutri não é dona (o contas.dono_id ≠ o uid dela e o papel dono fora dos papéis — SQL só leitura)"
 
 
 def sem_nulos(d: object) -> object:

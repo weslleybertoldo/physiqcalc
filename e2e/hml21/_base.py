@@ -991,7 +991,8 @@ def guardar_foto(o, estado, s: str, uid: str) -> None:
 
 def devolver_foto(o, estado, s: str, tok: str, uid: str) -> None:
     """No fim (ou no --limpar): a foto de antes volta pelo caminho novo (preparar → PUT no link → salvar; o caminho muda: anotado) ou,
-    se ela não tinha, perfil_foto_tirar (o arquivo de teste sai do bucket). Confere pela URL gravada (SQL só leitura) e pelo arquivo."""
+    se ela não tinha, perfil_foto_tirar (o arquivo de teste sai do bucket). Confere pela URL gravada (SQL só leitura) e pelo arquivo.
+    hml-21c (🟡1 da revisão): as ações com o x-schema = `s` (o schema de onde a rodada rodou), nunca o da linha de comando."""
     info = estado.d.get("hml21_foto")
     if not isinstance(info, dict):
         return
@@ -1001,9 +1002,9 @@ def devolver_foto(o, estado, s: str, tok: str, uid: str) -> None:
         o.linha("   (a foto da aluna não mudou: nada a devolver)")
     elif arq and arq.exists():
         conteudo, tipo = arq.read_bytes(), info.get("tipo") or "image/jpeg"
-        st, p, _h, _ms = conta(tok, "perfil_foto_preparar", {"tipo": tipo, "tamanho": len(conteudo)})
+        st, p, _h, _ms = conta(tok, "perfil_foto_preparar", {"tipo": tipo, "tamanho": len(conteudo)}, schema_=s)
         put = subir_no_link(p["bucket"], p["caminho"], p["token"], conteudo, tipo, tok) if st == 200 else 0
-        st2, r, _h, _ms = conta(tok, "perfil_foto_salvar", {"caminho": p.get("caminho")}) if put in (200, 201) else (0, {}, {}, 0)
+        st2, r, _h, _ms = conta(tok, "perfil_foto_salvar", {"caminho": p.get("caminho")}, schema_=s) if put in (200, 201) else (0, {}, {}, 0)
         url = r.get("url") if isinstance(r, dict) else None
         volta_ok = bool(url) and foto_da_conta(s, uid) == url and baixar_bytes(url)[1] == conteudo
         o.ok(volta_ok, f"a foto de antes devolvida (o mesmo arquivo, pelo caminho novo — o nome mudou: {str(p.get('caminho', '?')).split('/')[-1]}) "
@@ -1012,7 +1013,7 @@ def devolver_foto(o, estado, s: str, tok: str, uid: str) -> None:
         o.ok(False, "a foto de antes não tem cópia guardada (o arquivo do TMPDIR sumiu): devolva à mão pela tela da Conta", parar=False)
         return
     else:
-        st, _r, _h, _ms = conta(tok, "perfil_foto_tirar")
+        st, _r, _h, _ms = conta(tok, "perfil_foto_tirar", schema_=s)
         volta_ok = st == 200 and foto_da_conta(s, uid) is None
         o.ok(volta_ok, f"perfil_foto_tirar → a aluna sem foto, como antes ({st})", parar=False)
     if volta_ok:

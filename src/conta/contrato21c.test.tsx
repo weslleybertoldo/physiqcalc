@@ -10,15 +10,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lerPedidoDeLeitura, type CatalogoLeitura } from "../../supabase-principal/functions/_shared/leitura-lote";
 import { CATALOGO_CONTA } from "../../supabase-principal/functions/_shared/conta-leituras";
 import { CORPOS_DAS_ACOES, lerCorpoDaAcao, moduloDoPedido, type AcaoConta } from "../../supabase-principal/functions/_shared/conta-regras";
-import { ACOES, ACOES_DIETA } from "../../supabase-principal/functions/_shared/nutricao-regras";
-import { ACOES_FINANCEIRO } from "../../supabase-principal/functions/_shared/financeiro-gravar-regras";
+import { ACOES, ACOES_DIETA, montarGravacao, montarGravacaoDieta } from "../../supabase-principal/functions/_shared/nutricao-regras";
+import { ACOES_FINANCEIRO, montarGravacaoFinanceiro } from "../../supabase-principal/functions/_shared/financeiro-gravar-regras";
 
 const EU = "33333333-3333-4333-8333-333333333333";
 const CONTA = "c0c0c0c0-0000-4000-8000-000000000001";
 const A1 = "a1111111-1111-4111-8111-111111111111";
 const M1 = "b2222222-2222-4222-8222-222222222222";
 
-type Banco = { rpc?: (nome: string, args?: Record<string, unknown>) => unknown; from?: (t: string) => Record<string, unknown> };
+type Banco = {
+  rpc?: (nome: string, args?: Record<string, unknown>) => unknown;
+  from?: (t: string) => Record<string, unknown>;
+  storage?: { from: (b: string) => Record<string, unknown> };
+};
 const h = vi.hoisted(() => ({
   eu: "33333333-3333-4333-8333-333333333333",
   banco: {} as Record<string, unknown>,
@@ -27,6 +31,8 @@ const h = vi.hoisted(() => ({
   recusaDaAcao: null as string | null,
   /** a aluno-enviar não responde (a reserva entra) */
   enviarFalha: true,
+  /** 🟡5 da revisão: o `ler` da nutricao cai inteiro (a rede) — a financeiro segue respondendo */
+  nutricaoLerFalha: false,
 }));
 
 vi.mock("@/integrations/principal/client", async () => {
@@ -37,6 +43,7 @@ vi.mock("@/integrations/principal/client", async () => {
   const banco = {
     rpc: (...a: unknown[]) => (h.banco as Banco).rpc?.(...(a as [string, Record<string, unknown>])),
     from: (t: string) => (h.banco as Banco).from?.(t),
+    storage: { from: (b: string) => (h.banco as Banco).storage?.from(b) },
   };
   const conta = invocarContaPeloModulo(banco, { userId: h.eu });
   const nutricao = lerPeloMotor(CATALOGO_NUTRICAO, banco, { userId: h.eu });
@@ -54,6 +61,7 @@ vi.mock("@/integrations/principal/client", async () => {
         invoke: async (nome: string, o: { body: Record<string, unknown> }) => {
           h.corpos.push({ nome, corpo: o.body });
           if (nome === "conta") return conta(o.body);
+          if (nome === "nutricao" && o.body.acao === "ler" && h.nutricaoLerFalha) return { data: null, error: { name: "FunctionsFetchError", message: "Failed to fetch" } };
           if ((nome === "nutricao" || nome === "financeiro") && o.body.acao === "ler") return (nome === "nutricao" ? nutricao : financeiro)(o.body);
           if (nome === "nutricao" || nome === "financeiro") return h.recusaDaAcao ? recusa(h.recusaDaAcao) : { data: { ok: true, linha: { id: o.body.id } }, error: null };
           if (nome === "aluno-enviar" && h.enviarFalha) return { data: null, error: { name: "FunctionsFetchError", message: "Failed to fetch" } };
@@ -79,6 +87,8 @@ import * as mensagens from "@/painel/mensagens/api";
 import { CONFIG_PADRAO, paraGravar } from "@/painel/mensagens/disparosUtil";
 import * as lixeira from "@/ferramentas/lixeira/dados";
 import { desfavoritar, listarModelos } from "@/ferramentas/modelos/dados";
+import { MENSAGEM_ERRO_LEITURA } from "@/nutricao/leitura";
+import { ERRO_LER_MODELOS } from "@/nutricao/editor/lib/planos";
 import { listarAlunos } from "@/painel/alunos/api";
 import { FILTROS_PADRAO } from "@/painel/alunos/regras";
 
@@ -120,6 +130,7 @@ beforeEach(() => {
   h.corpos = [];
   h.recusaDaAcao = null;
   h.enviarFalha = true;
+  h.nutricaoLerFalha = false;
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
 });
 afterEach(() => vi.restoreAllMocks());
@@ -303,6 +314,39 @@ describe("hml-21c — as Configurações (perfil/api.ts novo, equipe/api.ts, o Z
     await expect(perfil.salvarNomeDaConta(CONTA, "Y")).rejects.toMatchObject({ codigo: "nao_encontrado" });
   });
 
+  it("a foto do profissional (⚪7 da revisão): o caminho que subiu → perfil_foto_salvar (a 21a) → a URL nova no dados_profissionais; a anterior sai do bucket", async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const removidos: unknown[] = [];
+    let dados: Record<string, unknown> = { crn: "1", foto_url: `https://api-principal.physiqcalc.com.br/storage/v1/object/public/fotos-perfil-staging/${EU}/foto-1.jpg` };
+    h.banco = {
+      from: () => ({
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { dados_profissionais: dados }, error: null }) }) }),
+        update: (v: Record<string, unknown>) => {
+          updates.push(v);
+          if (v.dados_profissionais) dados = v.dados_profissionais as Record<string, unknown>;
+          return { eq: () => ({ select: async () => ({ data: [{ id: EU }], error: null }) }) };
+        },
+      }),
+      storage: {
+        from: () => ({
+          list: async (_p: string, o: { search: string }) => ({ data: [{ name: o.search }], error: null }),
+          remove: async (c: string[]) => (removidos.push(...c), { data: c, error: null }),
+        }),
+      },
+    };
+    const caminho = `${EU}/foto-1760000000000.png`;
+    const url = `https://api-principal.physiqcalc.com.br/storage/v1/object/public/fotos-perfil-staging/${caminho}`;
+    expect(await perfil.gravarFotoDoPerfil(caminho)).toBe(url);
+    expect(daFuncao("conta")).toEqual([{ caminho, acao: "perfil_foto_salvar" }]);
+    expect(updates).toEqual([{ dados_profissionais: { crn: "1", foto_url: url } }]);
+    expect(removidos).toEqual([`${EU}/foto-1.jpg`]);
+    todosPassam();
+    // o caminho de OUTRA pessoa → a recusa do servidor (nada grava)
+    updates.length = 0;
+    await expect(perfil.gravarFotoDoPerfil(`${A1}/foto-1760000000000.png`)).rejects.toMatchObject({ codigo: "dados_invalidos" });
+    expect(updates).toEqual([]);
+  });
+
   it("a Equipe e o Convite: as MESMAS RPCs e args (os 2 do remover); o { ok: false } → ErroEquipe com o código; a função que falha → erro_interno", async () => {
     const r = rpcs((nome) => ok(nome === "garantir_meu_codigo" ? { ok: true, codigo: "XYZ" } : { ok: true, papeis: ["personal"], alunos_treino: 0 }));
     await equipe.alterarPapeisMembro(M1, ["personal"]);
@@ -434,6 +478,52 @@ describe("hml-21c — os Modelos (★): 1 `ler` da nutricao ∥ 1 da financeiro;
     expect(JSON.stringify([nutricao, financeiro])).not.toMatch(/nutricionista_id|"uid"/);
   });
 
+  // 🟡5 da revisão: o listarModelos com os 2 caminhos de erro (o `Promise.allSettled` por fonte: uma que falha não derruba a tela)
+  /** O banco falso dos ★: as linhas de cada tabela; `quebrada` responde o erro cru do Postgres (a mensagem não pode chegar à tela). */
+  function bancoDosModelos(linhas: Record<string, unknown[]>, quebrada?: string) {
+    return {
+      rpc: () => ok([]),
+      from: (t: string) => {
+        const c: Record<string, unknown> = {};
+        for (const op of ["select", "eq", "is", "limit", "in", "order"]) c[op] = () => c;
+        c.then = (ok2: (x: unknown) => unknown) =>
+          Promise.resolve(ok2(t === quebrada ? { data: null, error: { code: "XX000", message: "column modelos_meta.segredo does not exist" } } : { data: linhas[t] ?? [], error: null }));
+        return c;
+      },
+    };
+  }
+  const LINHAS_DOS_MODELOS = {
+    modelos_anamnese: [{ id: "m-an", updated_at: "2026-10-01", titulo: "Anamnese ★", perguntas: [] }],
+    modelos_meta: [{ id: "m-me", updated_at: "2026-10-04", titulo: "Meta ★", dias_semana: [] }],
+    modelos_recibo: [{ id: "m-re", updated_at: "2026-10-02", titulo: "Recibo ★", conteudo: "texto" }],
+  };
+
+  it("listarModelos: 1 tipo que falha (o item da consulta dele com erro no banco) → SÓ ele em `erros`, com a frase fixa do código (nunca a do banco); os outros listam", async () => {
+    h.banco = bancoDosModelos(LINHAS_DOS_MODELOS, "modelos_meta");
+    const r = await listarModelos({ uid: EU, contaId: CONTA, treinoId: null, fontes: new Set(TODOS) });
+    expect(r.erros).toEqual({ meta: MENSAGEM_ERRO_LEITURA.erro_interno });
+    expect(JSON.stringify(r)).not.toMatch(/segredo|does not exist/);
+    expect(r.itens.map((i) => i.id).sort()).toEqual(["m-an", "m-re"]);
+    // as MESMAS idas: o item com erro volta no MESMO lote dos 9 (os outros 8 do lote passam) ∥ os planos ★ ∥ o recibo ★
+    expect([daFuncao("nutricao").length, daFuncao("financeiro").length]).toEqual([2, 1]);
+    // controle: sem a tabela quebrada, a meta lista
+    h.banco = bancoDosModelos(LINHAS_DOS_MODELOS);
+    expect((await listarModelos({ uid: EU, contaId: CONTA, treinoId: null, fontes: new Set(TODOS) })).itens.map((i) => i.id).sort()).toEqual(["m-an", "m-me", "m-re"]);
+  });
+
+  it("listarModelos: o `ler` da nutricao que cai (a rede) → os 9 tipos da nutrição e os planos ★ em `erros` (as frases de hoje); o recibo ★ (a financeiro, em paralelo) lista", async () => {
+    h.banco = bancoDosModelos(LINHAS_DOS_MODELOS);
+    h.nutricaoLerFalha = true;
+    const r = await listarModelos({ uid: EU, contaId: CONTA, treinoId: null, fontes: new Set(TODOS) });
+    const daNutricao = ["anamnese", "orientacao", "documento", "meta", "manipulado", "exame", "questionario", "produto", "receita"];
+    expect(Object.keys(r.erros).sort()).toEqual([...daNutricao, "plano"].sort());
+    for (const tipo of daNutricao) expect(r.erros[tipo as keyof typeof r.erros], tipo).toBe(MENSAGEM_ERRO_LEITURA.rede);
+    expect(r.erros.plano).toBe(ERRO_LER_MODELOS);
+    expect(r.itens.map((i) => i.id)).toEqual(["m-re"]);
+    // a nutricao foi tentada (o lote dos 9 e o dos planos) e a financeiro respondeu sozinha — nenhuma espera a outra
+    expect([daFuncao("nutricao").length, daFuncao("financeiro").length]).toEqual([2, 1]);
+  });
+
   it("desfavoritar: a ação *_editar de cada tipo (o favorito — a receita, o favorita — = false; o recibo pela financeiro); 0 linha → a frase de hoje", async () => {
     const esperado: Record<string, [string, string, string]> = {
       anamnese: ["nutricao", "modelo_anamnese_editar", "favorito"], plano: ["nutricao", "plano_editar", "favorito"],
@@ -450,6 +540,14 @@ describe("hml-21c — os Modelos (★): 1 `ler` da nutricao ∥ 1 da financeiro;
       // a ação existe na função e aceita a coluna (a lista fechada de hoje)
       const mapa = (funcao === "financeiro" ? ACOES_FINANCEIRO : { ...ACOES, ...ACOES_DIETA }) as unknown as Record<string, { campos: Record<string, unknown> }>;
       expect(Object.keys(mapa[acao].campos), tipo).toContain(coluna);
+      // ⚪6 da revisão: o corpo passa nas regras REAIS de gravação da função (o montarGravacao* que o servidor roda) → a edição do id com SÓ a
+      // coluna da ★ = false (+ os fixos da ação, como o updated_at) — nenhuma outra coluna da tela vai junto
+      const corpo = h.corpos[0].corpo;
+      const g = (funcao === "financeiro" ? montarGravacaoFinanceiro(acao, corpo, EU) : acao in ACOES ? montarGravacao(acao, corpo, EU)
+        : montarGravacaoDieta(acao, corpo, EU)) as { ok: boolean; operacao?: string; id?: string; valores?: Record<string, unknown> };
+      expect(g, tipo).toMatchObject({ ok: true, operacao: "editar", id: A1 });
+      expect(g.valores?.[coluna], tipo).toBe(false);
+      expect(Object.keys(g.valores ?? {}).filter((k) => k !== coluna && k !== "updated_at"), tipo).toEqual([]);
     }
     h.recusaDaAcao = "nao_encontrado";
     await expect(desfavoritar("anamnese", A1)).rejects.toThrow("Só quem criou pode tirar a estrela.");

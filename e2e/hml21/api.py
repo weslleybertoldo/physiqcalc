@@ -2350,6 +2350,121 @@ def seco_21c(o, area: str) -> None:  # noqa: PLR0915
         seco_favoritos_21c(o, uid)
     # ── a produção (decisão N): as contas e as telas que abrem/PULAM
     seco_producao_21c(o)
+    # ── os 4 🟡 da revisão nos E2E (a limpeza no schema do Estado; a senha do w8b; a nutri não dona; nenhuma mensagem de verdade)
+    seco_revisao_21c(o)
+
+
+class _Anota:
+    """Um `o` que só anota (o --seco das funções de limpeza: nada imprime, nada para)."""
+
+    def __init__(self) -> None:
+        self.oks: list[tuple[bool, str]] = []
+
+    def ok(self, cond: object, texto: str, **_k) -> bool:
+        self.oks.append((bool(cond), texto))
+        return bool(cond)
+
+    def linha(self, *_a, **_k) -> None:
+        pass
+
+
+def seco_revisao_21c(o) -> None:  # noqa: PLR0915
+    """O --seco dos 4 🟡 da revisão independente (sem rede: as leituras e as ações ficam FALSAS aqui dentro)."""
+    uid = "33333333-3333-4333-8333-333333333333"
+    # 🟡1 — a limpeza com o x-schema do Estado e o --limpar recusando a produção (antes de tocar no schema global)
+    antes = B.schema()
+    try:
+        limpar_21c(_Anota(), "aluno", "prod")
+        recusou = False
+    except SystemExit:
+        recusou = True
+    chamadas = [x for f in (P21C.devolver_pelas_acoes, P21C.devolver_senha_w8b) for x in re.findall(r"B\.conta\([^\n]*", fonte_do(f))]
+    da_foto = re.findall(r"\bconta\([^\n]*", fonte_do(B.devolver_foto))
+    o.ok(recusou and B.schema() == antes and len(chamadas) == 5 and all("schema_=s" in x for x in chamadas) and len(da_foto) == 3
+         and all("schema_=s" in x for x in da_foto),
+         f"[seco] 🟡1: o --limpar da 21c recusa a produção ANTES de tudo (o schema global igual: {antes}); as {len(chamadas)} ações da limpeza (o "
+         f"devolver pela MESMA ação e a senha do w8b) e as {len(da_foto)} da foto vão com o x-schema do Estado (schema_=s)")
+    # 🟡2 — a senha provisória do w8b-aluno: devolvida no fechar (o senha_definida dele; 401 → o login de novo) ou "## PAROU" (o Estado fica)
+    originais = (P21C.senha_provisoria, P21C.registrar_par_w8b, B.conta)
+
+    class _L:
+        def __init__(self) -> None:
+            self.d = {P21C.W8B_ALUNO: {"x": 1}}
+
+        def token(self, conta: str) -> str:
+            return f"tok-{conta}-{len(self.d)}"
+
+    def cenario(marca: list[bool], respostas: list[int], par: bool = True) -> tuple[bool, int, bool, bool]:
+        est = B.Estado({"rodada": "x", "schema": "staging", "area": "hml21c", "linhas": [], "storage": [], "n8": None})
+        est.salvar = lambda: None
+        P21C.anotar_devolver(est, "senha_w8b", FALSO)
+        feitas: list[str] = []
+
+        def conta_falsa(_tok, acao, _corpo=None, **kw):
+            feitas.append(f"{acao}:{kw.get('schema_')}")
+            st = respostas.pop(0) if respostas else 200
+            if st == 200 and acao == "senha_definida":
+                marca[0] = False
+            return st, {}, {}, 1
+
+        P21C.senha_provisoria = lambda _s, _u: marca[0]  # type: ignore[assignment]
+        P21C.registrar_par_w8b = lambda: (par, "o par" if par else "sem a senha guardada do par")  # type: ignore[assignment]
+        B.conta = conta_falsa  # type: ignore[assignment]
+        an = _Anota()
+        P21C.devolver_senha_w8b(an, est, "staging", _L())
+        parou = any(not c and t.startswith("## PAROU") for c, t in an.oks)
+        return "senha_w8b" in est.d[B.CHAVE_21C]["devolver"], len(feitas), parou, all(x == "senha_definida:staging" for x in feitas)
+
+    try:
+        sem_marca = cenario([False], [])
+        com_401 = cenario([True], [401, 200])
+        nao_volta = cenario([True], [500, 500])
+        sem_par = cenario([True], [], par=False)
+    finally:
+        P21C.senha_provisoria, P21C.registrar_par_w8b, B.conta = originais
+    w8b = fonte_do(p_senha_w8b)
+    o.ok(sem_marca == (False, 0, False, True) and com_401 == (False, 2, False, True) and nao_volta[0] and nao_volta[2] and nao_volta[3]
+         and sem_par == (True, 0, True, True) and "devolver_senha_w8b(" in fonte_do(P21C.limpar_massa_21c)
+         and w8b.index('anotar_devolver(estado, "senha_w8b"') < w8b.index('"acesso_redefinir_senha"'),
+         f"[seco] 🟡2: a senha do w8b no fechar — sem a marca: nada ({sem_marca}); com a marca: o senha_definida dele, 401 → o login de novo "
+         f"({com_401}); não voltou ou sem a senha guardada → \"## PAROU\" e o Estado FICA ({nao_volta}, {sem_par}); anotada ANTES do redefinir")
+    # 🟡3 — a nutri não dona (SQL só leitura) antes do conta_salvar/equipe_papeis/equipe_remover dela
+    ler0 = B.ler_principal
+    res = []
+    try:
+        for linhas in ([{"dona": True, "papel_dono": True, "membro": 1}], [{"dona": False, "papel_dono": True, "membro": 1}],
+                       [{"dona": False, "papel_dono": False, "membro": 1}], []):
+            B.ler_principal = lambda _sql, _l=linhas: _l  # type: ignore[assignment]
+            res.append(P21C.nao_dona("staging", CONTA_X, uid)[0])
+    finally:
+        B.ler_principal = ler0
+    fc = fonte_do(p_configuracoes_21c)
+    da_nutri_ = [m.start() for m in re.finditer(r'B\.conta\(tok, "(conta_salvar|equipe_papeis|equipe_remover)"', fc)]
+    o.ok(res == [False, False, True, False] and len(da_nutri_) == 3 and all("pode_nutri" in fc[max(0, i - 260):i] for i in da_nutri_)
+         and 'papel_na_conta(s, conta, uid_d).get("dona") is True' in fc,
+         f"[seco] 🟡3: a nutri só pede o conta_salvar/equipe_papeis/equipe_remover dela (a recusa) com o SQL provando que NÃO é dona — o contas.dono_id "
+         f"e o papel dono ({res}); o P do dono só com o personal dono ({len(da_nutri_)} chamadas da nutri, todas atrás do pode_nutri)")
+    # 🟡4 — nenhuma mensagem de verdade: o aluno sem destino, ou 0 remetente (a nutri, o personal, o dono, consulta/cobrança) — conectado E ligado
+    sql_r = P21C.sql_remetentes_possiveis("staging", FALSO)
+    res4 = []
+    try:
+        for destino, n in ((True, 9), (False, 0), (False, 1), (None, 0)):
+            def falso(sql: str, _d=destino, _n=n) -> list[dict]:
+                if "whatsapp_destino(" in sql:
+                    return [] if _d is None else [{"sem_destino": _d}]
+                return [{"n": _n}]
+            B.ler_principal = falso  # type: ignore[assignment]
+            res4.append(P21C.sem_mensagem_de_verdade("staging", FALSO)[0])
+    finally:
+        B.ler_principal = ler0
+    fa, fm = fonte_do(p_aluno_21c), fonte_do(p_mensagens_21c)
+    i_faixa = fm.index('"faixa_ligar_para_todos"')
+    o.ok(res4 == [True, True, False, False] and all(x in sql_r for x in ("personal_id", "dono_id", "staging.agendamentos", "staging.cobrancas",
+                                                                          "status = 'conectado'", "staging.whatsapp_preferencias("))
+         and fa.index("sem_mensagem_de_verdade(") < fa.index('B.conta(tok, "aluno_ajustes_salvar"') and "instancia(s, uid).get(\"conectada\")" not in fa
+         and "and seguro:" in fm[max(0, i_faixa - 700):i_faixa] and fm.index("sem_mensagem_de_verdade(") < i_faixa,
+         f"[seco] 🟡4: o ajuste e a faixa só ligam as mensagens de um aluno SEM destino ou com 0 remetente possível — a nutri, o personal, o dono e "
+         f"quem tem consulta/cobrança com ele, com a instância conectada E as automáticas ligadas ({res4}); não só a instância da nutri")
 
 
 def seco_favoritos_21c(o, uid: str) -> None:
@@ -2532,19 +2647,25 @@ def p_aluno_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: 
         o.ok(erro_de(st, r) == "sem_conta" and st == 400, f"P acesso_redefinir_senha no aluno SEM login → sem_conta ({st})")
         o.ok(not (B.ler_principal(f"select (user_id is not null) as v from {s}.pacientes where id = {C.txt(sem['id'])}") or [{}])[0].get("v"),
              "o aluno sem login segue SEM login (SQL só leitura) — nenhum login novo no Auth")
-    # ── os ajustes (as Mensagens automáticas): só num aluno sem telefone ou com a instância NÃO conectada; volta pela MESMA ação
-    alvo = next((a for a in (sem, com) if a and (a.get("sem_telefone") or not P21C.instancia(s, uid).get("conectada"))), None)
+    # ── os ajustes (as Mensagens automáticas): só num aluno em que NENHUMA mensagem de verdade pode sair (🟡4 da revisão: sem telefone, ou 0
+    # remetente possível — a nutri, o personal, o dono e quem tem consulta/cobrança com ele; o sem_mensagem_de_verdade); volta pela MESMA ação
+    alvo, motivo_alvo = None, "sem aluno de teste"
+    for a in (x for x in (sem, com) if x):
+        seguro, motivo_alvo = P21C.sem_mensagem_de_verdade(s, a["id"])
+        if seguro:
+            alvo = a
+            break
     if alvo:
         antes = P21C.msg_auto(s, alvo["id"])
         P21C.anotar_devolver(estado, "ajustes", [alvo["id"], antes])
         st, r, _h, _ms = B.conta(tok, "aluno_ajustes_salvar", {"aluno": alvo["id"], "ajustes": {"mensagens_automaticas": not antes}})
         o.ok(st == 200 and (resultado(r) or {}).get("ok") is True and P21C.msg_auto(s, alvo["id"]) is (not antes),
-             f"P aluno_ajustes_salvar (aluno {'sem telefone' if alvo.get('sem_telefone') else 'com a instância desconectada'}) → o ajuste trocou (SQL) ({st})")
+             f"P aluno_ajustes_salvar ({motivo_alvo}) → o ajuste trocou (SQL) ({st})")
         st, r, _h, _ms = B.conta(tok, "aluno_ajustes_salvar", {"aluno": alvo["id"], "ajustes": {"mensagens_automaticas": antes}})
         if o.ok(st == 200 and P21C.msg_auto(s, alvo["id"]) is antes, f"P o ajuste de antes de volta pela MESMA ação ({st})"):
             P21C.devolvido(estado, "ajustes")
     else:
-        o.ok(True, "P aluno_ajustes_salvar PULADO — nenhum aluno de teste sem telefone e a instância conectada (uma mensagem poderia sair); fica o Vitest")
+        o.ok(True, f"P aluno_ajustes_salvar PULADO — {motivo_alvo} (uma mensagem de verdade poderia sair); fica o Vitest")
     # ── o apelido (com a marca) e de volta pela MESMA ação
     d0 = P21C.dados_do_aluno(s, tela)
     P21C.anotar_devolver(estado, "apelido", [tela, d0.get("apelido")])
@@ -2638,11 +2759,16 @@ def p_senha_w8b(o, L, s: str, estado) -> None:
     if not C.eh_uuid(pac) or P21C.senha_provisoria(s, uid_r):
         o.ok(True, "P acesso_redefinir_senha (de verdade) PULADO — sem a matrícula do aluno do W8b com o personal, ou ele já está com senha provisória")
         return
+    # 🟡2 da revisão: anotado ANTES do redefinir — o fechar_rodada_21c devolve pelo devolver_senha_w8b (ou "## PAROU") se o senha_definida falhar
     P21C.anotar_devolver(estado, "senha_w8b", uid_r)
     senha = B.B5.CONTAS[P21C.W8B_ALUNO][1]
     st, r, _h, _ms = B.conta(L.token(P21C.W8B_PERSONAL), "acesso_redefinir_senha", {"aluno": pac, "senha": senha})  # o par: a MESMA senha guardada
-    o.ok(st == 200 and P21C.senha_provisoria(s, uid_r), f"P acesso_redefinir_senha (o w8b-personal no aluno dele, a MESMA senha) → a marca de senha "
+    marcou = P21C.senha_provisoria(s, uid_r)
+    o.ok(st == 200 and marcou, f"P acesso_redefinir_senha (o w8b-personal no aluno dele, a MESMA senha) → a marca de senha "
          f"provisória (SQL) e as sessões dele caíram ({st})")
+    if not marcou:
+        P21C.devolvido(estado, "senha_w8b")  # a marca não entrou (SQL só leitura): nada a devolver — e nenhum login gasto
+        return
     L.d.pop(P21C.W8B_ALUNO, None)  # a sessão guardada caiu com o redefinir: o login de novo (contado)
     st, r, _h, _ms = B.conta(L.token(P21C.W8B_ALUNO), "senha_definida", {})
     if o.ok(st == 200 and not P21C.senha_provisoria(s, uid_r), f"P senha_definida (o próprio aluno, a 21a) → sem a marca, como antes (SQL só leitura) ({st})"):
@@ -2693,17 +2819,25 @@ def p_configuracoes_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  
         if o.ok(st == 200 and P21C.dado_do_perfil(s, u_, "cidade") == cid0 and P21C.sem_nulos(P21C.perfil(s, u_).get("dados_profissionais")) ==
                 P21C.sem_nulos(antes.get("dados_profissionais")), f"P o perfil de antes de volta pela MESMA ação ({c_}) ({st})"):
             P21C.devolvido(estado, "perfil")
-    # ── o nome da conta: o dono muda e volta; a nutri (membro, não dono) → 0 linha = nao_encontrado (o RLS de hoje)
+    # ── o nome da conta: o dono muda e volta; a nutri (membro, não dono) → 0 linha = nao_encontrado (o RLS de hoje). 🟡3 da revisão: quem é
+    # dono conferido ANTES por SQL só leitura — o P do dono só com o personal dono; a recusa da nutri só com ela NÃO dona (sendo, gravaria)
     nome0 = P21C.nome_da_conta(s, conta)
-    P21C.anotar_devolver(estado, "conta_nome", [P21C.PERSONAL, conta, nome0])
-    st, r, _h, _ms = B.conta(tok_d, "conta_salvar", {"conta": conta, "nome": P21C.marca(rodada), "dono_id": OUTRO})
-    o.ok(st == 200 and P21C.nome_da_conta(s, conta) == P21C.marca(rodada), f"P/N4 conta_salvar (o dono) → o nome mudou (SQL) ({st})")
-    st, r, _h, _ms = B.conta(tok_d, "conta_salvar", {"conta": conta, "nome": nome0})
-    if o.ok(st == 200 and P21C.nome_da_conta(s, conta) == nome0, f"P o nome de antes de volta pela MESMA ação ({st})"):
-        P21C.devolvido(estado, "conta_nome")
-    st, r, _h, _ms = B.conta(tok, "conta_salvar", {"conta": conta, "nome": P21C.marca(rodada)})
-    o.ok(st == 404 and r.get("erro") == "nao_encontrado" and P21C.nome_da_conta(s, conta) == nome0,
-         f"P conta_salvar pela nutri (membro, não dono) → 404 nao_encontrado (0 linha: o RLS); o nome igual ({st})")
+    pode_nutri, motivo_nutri = P21C.nao_dona(s, conta, uid)
+    if P21C.papel_na_conta(s, conta, uid_d).get("dona") is True:
+        P21C.anotar_devolver(estado, "conta_nome", [P21C.PERSONAL, conta, nome0])
+        st, r, _h, _ms = B.conta(tok_d, "conta_salvar", {"conta": conta, "nome": P21C.marca(rodada), "dono_id": OUTRO})
+        o.ok(st == 200 and P21C.nome_da_conta(s, conta) == P21C.marca(rodada), f"P/N4 conta_salvar (o dono) → o nome mudou (SQL) ({st})")
+        st, r, _h, _ms = B.conta(tok_d, "conta_salvar", {"conta": conta, "nome": nome0})
+        if o.ok(st == 200 and P21C.nome_da_conta(s, conta) == nome0, f"P o nome de antes de volta pela MESMA ação ({st})"):
+            P21C.devolvido(estado, "conta_nome")
+    else:
+        o.ok(True, "P conta_salvar (o dono) PULADO — o personal de teste não é o dono da conta (o contas.dono_id, SQL só leitura); fica o Vitest")
+    if pode_nutri:
+        st, r, _h, _ms = B.conta(tok, "conta_salvar", {"conta": conta, "nome": P21C.marca(rodada)})
+        o.ok(st == 404 and r.get("erro") == "nao_encontrado" and P21C.nome_da_conta(s, conta) == nome0,
+             f"P conta_salvar pela nutri (membro, não dono — {motivo_nutri}) → 404 nao_encontrado (0 linha: o RLS); o nome igual ({st})")
+    else:
+        o.ok(True, f"P conta_salvar pela nutri (a recusa) PULADO — {motivo_nutri}; fica o Vitest")
     # ── o código do convite: o caminho idempotente (a conta de teste que JÁ tem o código: o mesmo antes e depois)
     cod0 = (B.ler_principal(f"select codigo_convite from {s}.conta_membros where conta_id = {C.txt(conta)} and user_id = {C.txt(uid)} and status = 'ativo'") or [{}])[0].get("codigo_convite")
     if cod0:
@@ -2718,9 +2852,12 @@ def p_configuracoes_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  
     da_nutri = next((m["id"] for m in membros if m.get("user_id") == uid), None)
     do_dono = next((m["id"] for m in membros if m.get("user_id") == uid_d), None)
     res_eq = []
-    if da_nutri:
+    if da_nutri and pode_nutri:  # 🟡3: só com a nutri NÃO dona (SQL só leitura) — sendo dona, os papéis dela GRAVARIAM
         st, r, _h, _ms = B.conta(tok, "equipe_papeis", {"membro": da_nutri, "papeis": ["nutricionista"]})
         res_eq.append(("papeis (a nutri, não dona)", erro_de(st, r)))
+    elif da_nutri:
+        o.ok(True, f"P equipe_papeis pela nutri (a recusa so_dono) PULADO — {motivo_nutri}")
+    if da_nutri:
         st, r, _h, _ms = B.conta(tok_d, "equipe_papeis", {"membro": da_nutri, "papeis": ["x"]})
         res_eq.append(("papeis inválidos (o dono)", erro_de(st, r)))
         st, r, _h, _ms = B.conta(tok_d, "equipe_papeis", {"membro": da_nutri, "papeis": ["dono", "nutricionista"]})
@@ -2728,8 +2865,9 @@ def p_configuracoes_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  
         st, r, _h, _ms = B.conta(tok_d, "equipe_remover", corpo_remover(da_nutri))
         res_eq.append(("remover a nutri com responsável que não é membro (o dono)", erro_de(st, r)))
     if do_dono:
-        st, r, _h, _ms = B.conta(tok, "equipe_remover", corpo_remover(do_dono))
-        res_eq.append(("remover o dono (a nutri)", erro_de(st, r)))
+        if pode_nutri:
+            st, r, _h, _ms = B.conta(tok, "equipe_remover", corpo_remover(do_dono))
+            res_eq.append(("remover o dono (a nutri)", erro_de(st, r)))
         st, r, _h, _ms = B.conta(tok_d, "equipe_remover", corpo_remover(do_dono))
         res_eq.append(("remover o dono (ele mesmo)", erro_de(st, r)))
     st, r, _h, _ms = B.conta(tok_d, "equipe_papeis", {"membro": FALSO, "papeis": ["nutricionista"]})
@@ -2836,12 +2974,15 @@ def p_mensagens_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # no
     # ── a faixa: só com o aluno de teste com as mensagens desligadas e sem o aviso de antes; devolvida (os ajustes pela ação; a chave por SQL)
     al = next((a for a in (ctx["alunos"]["sem_login"], ctx["alunos"]["com_login"]) if a and not a.get("msg_auto")), None)
     ativo = bool((cfg0.get("whatsapp") or {}).get("ativo")) if isinstance(cfg0.get("whatsapp"), dict) else False
-    if s == "staging" and al and not cfg0.get("tem_aviso_w14") and not ativo:  # + as automáticas da nutri desligadas: nada é enfileirado
+    # 🟡4 da revisão: ligar as mensagens do aluno só sem mensagem de verdade possível — o enfileirador também manda pelo personal, pelo dono e
+    # por quem tem consulta/cobrança com ele (não só pela nutri): o aluno sem telefone ou 0 remetente possível (o sem_mensagem_de_verdade)
+    seguro, motivo_faixa = P21C.sem_mensagem_de_verdade(s, al["id"]) if al else (False, "sem aluno de teste com as mensagens desligadas")
+    if s == "staging" and al and not cfg0.get("tem_aviso_w14") and not ativo and seguro:  # + as automáticas da nutri desligadas: nada é enfileirado
         P21C.anotar_devolver(estado, "ajustes", [al["id"], False])
         P21C.anotar_devolver(estado, "aviso_w14", uid)
         st, r, _h, _ms = B.conta(tok, "faixa_ligar_para_todos", {"ids": [al["id"]]})
         o.ok(st == 200 and P21C.msg_auto(s, al["id"]) is True and P21C.config_do_perfil(s, uid).get("tem_aviso_w14"),
-             f"P faixa_ligar_para_todos (o aluno de teste) → as mensagens dele ligadas e o aviso da faixa no config (SQL) ({st})")
+             f"P faixa_ligar_para_todos (o aluno de teste — {motivo_faixa}) → as mensagens dele ligadas e o aviso da faixa no config (SQL) ({st})")
         P21C.devolver_pelas_acoes(o, estado, s, L)
         P21C.devolver_por_sql(o, estado, s)
         P21C.anotar_devolver(estado, "aviso_w14", uid)
@@ -2849,8 +2990,8 @@ def p_mensagens_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # no
         o.ok(st == 200 and P21C.config_do_perfil(s, uid).get("tem_aviso_w14"), f"P faixa_fechar → o aviso da faixa no config (SQL) ({st})")
         P21C.devolver_por_sql(o, estado, s)
     else:
-        o.ok(True, "P da faixa PULADO — sem aluno de teste com as mensagens desligadas, com o aviso da faixa já no config (devolver mudaria) ou com as "
-                   "automáticas da nutri LIGADAS (o enfileirador criaria mensagens); fica o Vitest")
+        o.ok(True, "P da faixa PULADO — sem aluno de teste com as mensagens desligadas, com o aviso da faixa já no config (devolver mudaria), com as "
+                   f"automáticas da nutri LIGADAS (o enfileirador criaria mensagens) ou com mensagem de verdade possível ({motivo_faixa}); fica o Vitest")
     if "N1" in casos:
         tok_o = L.token(P21C.OUTRA)
         if msg:
@@ -3021,7 +3162,10 @@ def rodar_21c(o, area: str, base: str, casos: set) -> None:
 def limpar_21c(o, area: str, base: str) -> None:
     """O --limpar da 21c: a rodada que caiu (o Estado — a chave hml21c: a massa, os avisos, o que volta por SQL e pela MESMA ação com a sessão
     guardada; a foto da nutri) — conferido por SQL só leitura, só contagem. Sem Estado: o que tem a marca nas 3 tabelas da massa (só contagem
-    — o DELETE só pelos ids anotados)."""
+    — o DELETE só pelos ids anotados). 🟡1 da revisão: NUNCA na produção (a massa da 21c só nasce no staging; um --limpar --base prod
+    com o Estado do staging mandaria as ações de volta com o x-schema public) — recusado antes de tudo."""
+    if base == "prod":
+        raise SystemExit("o --limpar da 21c não roda na produção (a massa só nasce no staging): use --base staging ou local")
     s = B.usar_base(base)
     B.usar_area(area)
     estado = B.Estado.ler()

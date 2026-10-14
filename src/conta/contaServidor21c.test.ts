@@ -506,6 +506,13 @@ describe("hml-21c — as Configurações: o Perfil, a Conta, a Equipe, o Convite
       tabela: (p) => (p.tipo === "select" ? { data: [{ dados_profissionais: ATUAL }], error: null } : { data: [{ id: EU }], error: null }),
     });
     expect(so.pedidos[1].valores).toEqual({ nome: "Pat", dados_profissionais: ATUAL });
+    // ⚪9 da revisão: a tela manda tipo_perfil null quando nenhum tipo está escolhido (o `form.tipo || null` do Perfil.tsx) e a área null →
+    // o update LIMPA os 2 (o MESMO efeito do update de hoje), sem recusa
+    const nulos = await acao("perfil_salvar", { nome: "Pat", tipo_perfil: null, area_outra: null, dados: {} }, {
+      tabela: (p) => (p.tipo === "select" ? { data: [{ dados_profissionais: ATUAL }], error: null } : { data: [{ id: EU }], error: null }),
+    });
+    expect(nulos.r).toEqual({ ok: true });
+    expect(nulos.pedidos[1].valores).toEqual({ nome: "Pat", dados_profissionais: ATUAL, tipo_perfil: null, area_outra: null });
   });
 
   it("perfil_salvar: sem o perfil ou 0 linha no update → nao_encontrado; o erro do banco vira o código (a mensagem nunca)", async () => {
