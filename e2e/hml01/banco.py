@@ -21,10 +21,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "w02"))
 from _comum import PRINCIPAL_REF, TREINO_REF, Placar, http, pat  # noqa: E402
 
 UUID_FALSO = "00000000-0000-4000-8000-00000000abcd"
+# hml-22b (H-147, 14/10/2026): + alunos_como (o repasse do APK antigo; só a função `alunos` chama, com a chave de serviço)
 INTERNAS = ["w27_conta_linha", "w27_nome", "w13_foto_do_aluno", "w13_conta_do_personal", "conta_alunos_ativos", "conta_limite_alunos",
             "conta_pode_adicionar_aluno", "conta_tem_modulo", "equipe_motivo_bloqueio", "papeis_do_plano", "w13_conta_travada",
             "preconsulta_autor_nutri", "w13_dono_do_codigo", "w13_erro_limite", "w13_modulos_do_aluno", "w14_matricula_da_rota",
-            "whatsapp_enfileirar", "whatsapp_destravar_fila", "papeis_permitidos"]
+            "whatsapp_enfileirar", "whatsapp_destravar_fila", "papeis_permitidos", "alunos_como"]
 
 
 def ler(ref: str, sql: str) -> tuple[int, object]:
