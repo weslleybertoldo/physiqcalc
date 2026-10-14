@@ -19,22 +19,28 @@ Casos (contrato hml-22 §4 — rodam em sequência, numa invocação só; o C3�
   C5  código certo (janela nova) → /master abre (print); o token do navegador é aal2 → a master-contas 200, a RPC ok, o REST vê as
       linhas de teste, a troca do Treino 200
   C6  app (o JS do `npm run build:apk` servido local + a ponte Android): o w27-master com fator → "Conta master: use o site", sem a
-      tela do código (print). Só com --base-app.
+      tela do código (print). Só com --base-app, numa origem que as funções aceitam (o dev local: http://localhost:8080 ou :5173 —
+      login-regras.ts › origemPermitida; noutra porta o CORS barra a função conta e o app não sabe que a conta é master).
   C7  desfazer: DELETE /auth/v1/factors/{id} com o token aal2 → SQL 0 fator → login novo → /master sem código (print)
+--casos: o C1/C2 roda sempre (o fator do C2 serve a todos os outros; só o C1 sozinho fica sem ele); o C3–C5 só quando um deles é
+pedido (o mesmo login; até o maior pedido) ou com o C7 (que desfaz com o token aal2 do C5); o C6 e o C7 só quando pedidos.
 
 Limpeza GARANTIDA (o --limpar): no finally de toda rodada, no SIGTERM/SIGINT (corte_vira_saida) e à mão. Idempotente: confere que o
 uid é o da conta de teste (senão aborta); lista e apaga TODOS os fatores dela pelo admin (não só os do Estado); tira o master
 (tirar_master: o claim nulo, o perfil "pessoa" nos 2 schemas e o papel do Treino nulo); fecha as sessões que a rodada abriu (logout
-local; sem o token, o DELETE das sessões anotadas — só as do uid de teste); confere por SQL (0 fator; não master no staging, no public
-e no claim; o papel do Treino nulo) e SÓ ENTÃO tira a chave `hml22` do Estado (o e2e_estado.json de sempre: hml19/agente/). Morte sem
-finally (SIGKILL, o PC reiniciou): rodar --limpar à mão; o próximo --preparar limpa antes; e o Estado pendente bloqueia outra rodada.
+local; sem o token, o DELETE das sessões anotadas — só as do uid de teste) e as do TREINO da conta de teste abertas desde o --preparar
+(a troca forçada depois do código abre uma sessão nova que a página pode não guardar: o DELETE só do usuário do Treino ligado ao uid
+de teste, desde o início gravado no Estado); confere por SQL (0 fator; não master no staging, no public e no claim; o papel do Treino
+nulo; 0 sessão viva) e SÓ ENTÃO tira a chave `hml22` do Estado (o e2e_estado.json de sempre: hml19/agente/). Morte sem finally
+(SIGKILL, o PC reiniciou): rodar --limpar à mão; o próximo --preparar limpa antes; e o Estado pendente bloqueia outra rodada.
 
-Logins: o registro hml22/agente/logins_f7_22.txt, no máximo 10 (o login com a troca do Treino conta 2).
+Logins: o registro hml22/agente/logins_f7_22.txt, no máximo 20 (o login com a troca do Treino conta 2; uma rodada C1–C7 usa 9 — a
+DECISÃO da F7: cabe repetir o necessário depois de uma queda que não é do app).
 
 Uso (F7, staging; 1 E2E por vez, /health antes de cada caso):
   python3 e2e/hml22/dois_fatores.py --seco                                   (sem rede: as travas e o TOTP — a prova da etapa 1)
   python3 e2e/hml22/dois_fatores.py --preparar                               (limpa antes, grava o Estado e dá o master de teste)
-  python3 e2e/hml22/dois_fatores.py --base staging --canal msedge [--base-app http://localhost:4173] [--casos C1,C2,…]
+  python3 e2e/hml22/dois_fatores.py --base staging --canal msedge [--base-app http://localhost:8080] [--casos C1,C2,…]
   python3 e2e/hml22/dois_fatores.py --limpar                                 (à mão: a rodada caiu no meio)
 Sem segredo nem dado pessoal na saída: só status, códigos, contagens e tempos.
 """
@@ -42,6 +48,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import datetime as dt
 import hashlib
 import hmac
 import importlib.util
@@ -60,7 +67,7 @@ ESTADO_ARQ = HML / "hml19" / "agente" / "e2e_estado.json"  # o e2e_estado.json d
 REG_LOGINS = HML / "hml22" / "agente" / "logins_f7_22.txt"
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml22"
 CHAVE = "hml22"
-MAX_LOGINS = 10
+MAX_LOGINS = 20
 CONTA = "w27-master"
 EMAIL_CONTA = "w27.master.teste.claude@physiqnutri.app"
 BASES = {"local": "http://localhost:8080", "staging": "https://physiqcalc-staging.vercel.app"}
@@ -73,6 +80,10 @@ UA_WEBVIEW = ("Mozilla/5.0 (Linux; Android 14; 21121210G Build/UKQ1.231003.002; 
               "Version/4.0 Chrome/129.0.0.0 Mobile Safari/537.36")
 SELETORES_SEGREDO = ("[data-2fa-qr]", "[data-2fa-segredo]")
 CSS_BORRAR = "[data-2fa-qr], [data-2fa-segredo] { filter: blur(14px) !important; }"
+# as origens que as funções aceitam (supabase-principal/functions/_shared/login-regras.ts › origemPermitida; a trocar-token do Treino
+# igual): o JS do app servido local (o C6) só funciona numa delas — noutra, o CORS barra a função conta
+ORIGENS_ACEITAS = re.compile(r"^(https://(www\.)?physiqcalc\.com\.br|https://physiqcalc-staging\.vercel\.app|https://localhost|"
+                             r"capacitor://localhost|http://localhost:(5173|8080))$")
 
 
 # ───────────────────────── as regras puras (o --seco confere todas, sem rede) ─────────────────────────
@@ -91,6 +102,29 @@ def exigir_conta_de_teste(email: str | None) -> None:
 
 def eh_uuid(v: object) -> bool:
     return isinstance(v, str) and re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", v) is not None
+
+
+def eh_inicio(v: object) -> bool:
+    """O início da rodada no Estado (ISO 8601 com o fuso, como o --preparar grava): só esse formato entra no SQL."""
+    return isinstance(v, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}", v) is not None
+
+
+def origem_aceita(url: str | None) -> bool:
+    """A origem do --base-app (esquema + host + porta) está entre as que as funções aceitam (ORIGENS_ACEITAS)?"""
+    m = re.match(r"^([a-z]+://[^/?#]+)", (url or "").strip())
+    return bool(m) and ORIGENS_ACEITAS.match(m.group(1)) is not None
+
+
+def blocos_dos_casos(casos: list[str]) -> list[str]:
+    """O que roda, em ordem, para o --casos: "C1" (só o C1) ou "C1C2" (o fator do C2 serve a todos os outros); o maior de C3/C4/C5
+    pedido (o mesmo login; o C7 puxa o C5, porque desfaz com o token aal2 dele); "C6" e "C7" só quando pedidos."""
+    ate = max(casos, key=CASOS_ORDEM.index)
+    blocos = ["C1" if ate == "C1" else "C1C2"]
+    meio = [x for x in casos if x in ("C3", "C4", "C5")] + (["C5"] if "C7" in casos else [])
+    if meio:
+        blocos.append(max(meio, key=CASOS_ORDEM.index))
+    blocos += [x for x in ("C6", "C7") if x in casos]
+    return blocos
 
 
 def totp(segredo_b32: str, agora: float, passo: int = 30, digitos: int = 6) -> str:
@@ -165,6 +199,8 @@ def plano_limpeza(uid: str) -> dict:
     """O que o --limpar faz, montado SÓ com o uid do w27-master (puro: o --seco confere que nada mira outro uid)."""
     if not eh_uuid(uid):
         raise SystemExit("hml-22: uid inválido — nada é feito")
+    treino = (f"(select treino_user_id from public.physiq_identidades where principal_user_id = '{uid}' "
+              f"union select treino_user_id from staging.physiq_identidades where principal_user_id = '{uid}')")
     return {
         "listar_fatores": ("GET", f"/auth/v1/admin/users/{uid}/factors"),
         "apagar_fator": ("DELETE", f"/auth/v1/admin/users/{uid}/factors/{{fator}}"),
@@ -174,6 +210,9 @@ def plano_limpeza(uid: str) -> dict:
                      f"(select role from public.profiles where id = '{uid}') as public, "
                      f"(select raw_app_meta_data->>'role' from auth.users where id = '{uid}') as claim"),
         "sessoes": f"delete from auth.sessions where user_id = '{uid}' and id = any(array[{{ids}}]::uuid[])",
+        # o Treino (a troca abre sessões lá): só o usuário do Treino ligado ao uid de teste, só as criadas desde o --preparar
+        "sessoes_treino": f"delete from auth.sessions where user_id in {treino} and created_at >= '{{inicio}}'::timestamptz",
+        "sessoes_treino_vivas": f"select count(*) as n from auth.sessions where user_id in {treino} and created_at >= '{{inicio}}'::timestamptz",
     }
 
 
@@ -228,7 +267,7 @@ class Estado:
 
 
 class Logins:
-    """O registro dos logins da W (no máximo 10; o login com a troca do Treino conta 2)."""
+    """O registro dos logins da W (no máximo MAX_LOGINS = 20; o login com a troca do Treino conta 2)."""
 
     def __init__(self, arquivo: Path = REG_LOGINS, memoria: list | None = None) -> None:
         self.arquivo = arquivo
@@ -614,6 +653,14 @@ def limpar(r: Rodada) -> bool:
     anotadas = [s for s in (r.estado.ler() or {}).get("sessoes", []) if eh_uuid(s)]
     if anotadas:
         b.sql_principal(plano["sessoes"].replace("{ids}", ", ".join(f"'{s}'" for s in anotadas)))
+    # as do TREINO que a rodada abriu (a troca forçada depois do código abre uma nova que a página pode não guardar — o fechar() do
+    # caso só vê a guardada): só o usuário do Treino ligado ao uid de teste, só as criadas desde o --preparar (o início no Estado)
+    inicio = (r.estado.ler() or {}).get("inicio")
+    treino_vivas: int | str = "sem o início no Estado: não varridas"
+    if eh_inicio(inicio):
+        b.B5.exec_treino(plano["sessoes_treino"].replace("{inicio}", inicio))
+        tv = b.sql_treino(plano["sessoes_treino_vivas"].replace("{inicio}", inicio))
+        treino_vivas = int(tv[0]["n"]) if tv else -1
     conf = (b.sql_principal(plano["conferir"]) or [{}])[0]
     papel_treino = b.sql_treino(
         "select count(*) as n from auth.users u join (select treino_user_id from public.physiq_identidades where principal_user_id = "
@@ -623,10 +670,11 @@ def limpar(r: Rodada) -> bool:
     vivas = b.sql_principal(f"select count(*) as n from auth.sessions where user_id = '{uid}' and id = any(array[{', '.join(repr(s) for s in anotadas) or 'null'}]::uuid[])") \
         if anotadas else [{"n": 0}]
     ok = (int(conf.get("fatores", -1)) == 0 and conf.get("staging") != "master" and conf.get("public") != "master" and not conf.get("claim")
-          and sem_papel and int(vivas[0]["n"]) == 0)
+          and sem_papel and int(vivas[0]["n"]) == 0 and treino_vivas in (0, "sem o início no Estado: não varridas"))
     p.check(ok, f"[limpar] fatores {len(ids)} → apagados {apagados}; sessões da rodada fechadas {fechadas} (+ {len(anotadas)} anotadas); "
                 f"SQL: {conf.get('fatores')} fator, master staging/public/claim = {conf.get('staging') == 'master'}/"
-                f"{conf.get('public') == 'master'}/{bool(conf.get('claim'))}, papel do Treino nulo = {sem_papel}, sessões vivas {vivas[0]['n']}")
+                f"{conf.get('public') == 'master'}/{bool(conf.get('claim'))}, papel do Treino nulo = {sem_papel}, sessões vivas {vivas[0]['n']}, "
+                f"sessões do Treino desde o --preparar vivas {treino_vivas}")
     if ok:
         r.estado.tirar()
     return ok
@@ -640,6 +688,7 @@ def preparar(r: Rodada) -> None:
         raise SystemExit("hml-22: a limpeza da rodada anterior não fechou — confira à mão antes")
     uid = r.uid()
     r.estado.gravar({"uid": uid, "master_dado": True, "rodada": time.strftime("%m%d%H%M"), "em_andamento": False,
+                     "inicio": dt.datetime.now().astimezone().isoformat(timespec="seconds"),  # a limpeza varre o Treino desde aqui
                      "fatores": [], "sessoes": [], "janelas": []})
     b.B5.garantir_usuario(EMAIL_CONTA, b.CONTAS[CONTA][1], b.NOMES[CONTA])  # o login já existe: só a senha do arquivo
     b.dar_master(CONTA)
@@ -695,6 +744,10 @@ class BaseFalsa:
             @staticmethod
             def zerar_limite_troca(conta):
                 falsa.chamadas.append(f"zerar_limite_troca {conta}")
+
+            @staticmethod
+            def exec_treino(comando):
+                falsa.chamadas.append(f"exec_treino {comando}")
 
         self.B5 = _B5
 
@@ -797,11 +850,17 @@ def seco() -> int:
     falso = "00000000-0000-4000-8000-0000000000aa"
     plano = plano_limpeza(falso)
     textos = json.dumps(plano)
-    p.check(textos.count(falso) == 8 and len(set(re.findall(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", textos))) == 1,
-            "[seco] o plano do --limpar só tem o uid do w27-master (8 lugares, nenhum outro uid)")
+    p.check(textos.count(falso) == 12 and len(set(re.findall(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", textos))) == 1,
+            "[seco] o plano do --limpar só tem o uid do w27-master (12 lugares, nenhum outro uid)")
     p.check(plano["listar_fatores"][1].endswith(f"/admin/users/{falso}/factors") and "{fator}" in plano["apagar_fator"][1],
             "[seco] o --limpar lista TODOS os fatores da conta pelo admin (não só os do Estado) e apaga um a um")
     p.check(" and id = any(" in plano["sessoes"] and f"user_id = '{falso}'" in plano["sessoes"], "[seco] as sessões: só as anotadas E do uid de teste")
+    p.check(all(x.startswith(("delete from auth.sessions where user_id in (select treino_user_id ", "select count(*) as n from auth.sessions where user_id in (select treino_user_id "))
+                and x.count(f"principal_user_id = '{falso}'") == 2 and x.endswith("and created_at >= '{inicio}'::timestamptz")
+                for x in (plano["sessoes_treino"], plano["sessoes_treino_vivas"])),
+            "[seco] as sessões do Treino: só as do usuário do Treino ligado ao uid de teste E criadas desde o --preparar")
+    p.check(eh_inicio("2026-10-14T20:26:04-03:00") and not eh_inicio("2026-10-14T20:26:04") and not eh_inicio("2026-10-14T20:26:04-03:00'; drop table x; --")
+            and not eh_inicio(None), "[seco] o início da rodada no SQL: só o ISO com o fuso (nada mais entra)")
     try:
         plano_limpeza("'; delete from auth.users; --")
         p.check(False, "[seco] uid fora do formato → aborta")
@@ -817,17 +876,29 @@ def seco() -> int:
     est.tirar()
     p.check(CHAVE not in mem and mem["outra"] == 1, "[seco] a limpeza tira só a chave hml22")
     p.check(ESTADO_ARQ.parts[-3:] == ("hml19", "agente", "e2e_estado.json"), "[seco] o Estado é o e2e_estado.json de sempre (hml19/agente)")
-    # 7. os logins: no máximo 10, o login com a troca conta 2
+    # 7. os logins: no máximo 20 (a DECISÃO da F7), o login com a troca conta 2
     lg = Logins(memoria=[])
-    for i in range(5):
+    for i in range(10):
         lg.contar(f"teste {i}", 2)
     try:
-        lg.contar("o 11º", 1)
-        p.check(False, "[seco] o 11º login é recusado")
+        lg.contar("o 21º", 1)
+        p.check(False, "[seco] o 21º login é recusado")
     except SystemExit:
-        p.check(lg.feitos() == 10, "[seco] o teto de 10 logins (5 logins com a troca = 10) recusa o 11º")
-    # 8. os casos e a ordem; o --seco não carrega a base da rede
+        p.check(lg.feitos() == 20 and MAX_LOGINS == 20, "[seco] o teto de 20 logins (10 logins com a troca = 20) recusa o 21º")
+    # 8. os casos e a ordem; o --casos roda só o necessário; o --seco não carrega a base da rede
     p.check(CASOS_ORDEM == ("C1", "C2", "C3", "C4", "C5", "C6", "C7"), "[seco] os 7 casos do contrato, na ordem")
+    esperado = {"C1,C2,C3,C4,C5,C6,C7": ["C1C2", "C5", "C6", "C7"], "C2,C6": ["C1C2", "C6"], "C6": ["C1C2", "C6"], "C1": ["C1"],
+                "C2": ["C1C2"], "C4": ["C1C2", "C4"], "C3,C5": ["C1C2", "C5"], "C7": ["C1C2", "C5", "C7"], "C6,C7": ["C1C2", "C5", "C6", "C7"]}
+    erros_blocos = [k for k, v in esperado.items() if blocos_dos_casos(k.split(",")) != v]
+    p.check(not erros_blocos, f"[seco] o --casos: o C1/C2 sempre; o C3–C5 só pedido ou com o C7; o C6 e o C7 só pedidos ({len(esperado)} combinações; erradas: {erros_blocos})")
+    regras_login = (REPO / "supabase-principal" / "functions" / "_shared" / "login-regras.ts").read_text(encoding="utf-8")
+    p.check("return /^http:\\/\\/localhost:(5173|8080)$/.test(origin);" in regras_login
+            and "https:\\/\\/localhost|capacitor:\\/\\/localhost)$/.test(origin)" in regras_login,
+            "[seco] as origens do C6 = as da função (login-regras.ts › origemPermitida: o dev local só :5173 e :8080)")
+    p.check(origem_aceita("http://localhost:8080") and origem_aceita("http://localhost:5173/") and origem_aceita("https://physiqcalc-staging.vercel.app")
+            and not origem_aceita("http://localhost:4323") and not origem_aceita("http://localhost:4173") and not origem_aceita("http://127.0.0.1:8080")
+            and not origem_aceita("http://localhost:80801") and not origem_aceita(None),
+            "[seco] o C6 recusa antes do login a origem que o CORS das funções barra (4323, 4173, 127.0.0.1) e aceita a :8080 e a :5173")
     p.check(_B is None and "_base_w27" not in sys.modules, "[seco] sem rede: a base da W27 (SQL, admin, login) nem foi carregada")
     p.check(claims("cab." + base64.urlsafe_b64encode(json.dumps({"aal": "aal2"}).encode()).decode().rstrip("=") + ".ass").get("aal") == "aal2"
             and claims("quebrado") == {}, "[seco] o aal sai do token do navegador")
@@ -835,7 +906,8 @@ def seco() -> int:
     f1, f2, s1 = "00000000-0000-4000-8000-0000000000f1", "00000000-0000-4000-8000-0000000000f2", "00000000-0000-4000-8000-0000000000e1"
     placar_falso = comum.Placar()
     falsa = BaseFalsa(falso, placar_falso, [{"id": f1, "status": "verified"}, {"id": f2, "status": "unverified"}])
-    mem2: dict = {CHAVE: {"uid": falso, "master_dado": True, "em_andamento": True, "fatores": [f1], "sessoes": [s1], "janelas": []}}
+    mem2: dict = {CHAVE: {"uid": falso, "master_dado": True, "em_andamento": True, "inicio": "2026-10-14T20:26:04-03:00", "fatores": [f1],
+                          "sessoes": [s1], "janelas": []}}
     _B = falsa
     try:
         rodada = Rodada(Estado(memoria=mem2), Logins(memoria=[]))
@@ -852,10 +924,14 @@ def seco() -> int:
     p.check(ok_limpar and chave_saiu, "[seco] limpar (base de mentira): conferido por SQL e só então a chave hml22 saiu do Estado")
     p.check(sum(1 for x in chamadas_limpar if x.startswith("admin DELETE")) == 2 and not falsa.fatores,
             "[seco] limpar: apaga TODOS os fatores da conta (o do Estado e o que não estava nele)")
-    p.check(all(falso in x for x in chamadas_limpar if x.startswith(("admin", "sql "))) and not outros,
-            "[seco] limpar: todo admin e todo SQL miram só o uid do w27-master (nenhum outro uid)")
+    p.check(all(falso in x for x in chamadas_limpar if x.startswith(("admin", "sql ", "sql_treino", "exec_treino"))) and not outros,
+            "[seco] limpar: todo admin e todo SQL (principal e Treino) miram só o uid do w27-master (nenhum outro uid)")
     p.check("tirar_master w27-master" in chamadas_limpar and any("delete from auth.sessions" in x and s1 in x for x in chamadas_limpar),
             "[seco] limpar: tira o master e fecha a sessão anotada (só a do uid de teste)")
+    p.check(sum(1 for x in chamadas_limpar if x.startswith("exec_treino delete from auth.sessions where user_id in (select treino_user_id ")
+                and "created_at >= '2026-10-14T20:26:04-03:00'::timestamptz" in x) == 1
+            and any(x.startswith("sql_treino select count(*) as n from auth.sessions") for x in chamadas_limpar),
+            "[seco] limpar: fecha as sessões do Treino da conta de teste abertas desde o --preparar e confere a contagem")
     i_estado = next((i for i, x in enumerate(chamadas_preparar) if x.startswith("garantir_usuario")), -1)
     p.check(mem2.get(CHAVE, {}).get("master_dado") is True and chamadas_preparar.index("dar_master w27-master") > i_estado >= 0,
             "[seco] preparar: o Estado (uid e master dado) é gravado ANTES de dar o master")
@@ -871,6 +947,8 @@ def seco() -> int:
     i_apaga = next((i for i, x in enumerate(sobra.chamadas) if x.startswith("admin DELETE") and f1 in x), -1)
     p.check(i_apaga >= 0 and not sobra.fatores and i_apaga < sobra.chamadas.index("dar_master w27-master") and mem3.get(CHAVE, {}).get("master_dado"),
             "[seco] preparar sem Estado: limpa antes (o fator que sobrou sai) e só depois dá o master")
+    p.check(not any(x.startswith("exec_treino") for x in sobra.chamadas) and eh_inicio(mem3.get(CHAVE, {}).get("inicio")),
+            "[seco] sem o início no Estado a limpeza não varre o Treino (não sabe desde quando); o --preparar grava o início")
     p.check(_B is None, "[seco] a base de mentira saiu (a de verdade nunca carregou)")
     return p.fim()
 
@@ -892,7 +970,11 @@ def rodar(a) -> int:
     for x in casos:
         if x not in CASOS_ORDEM:
             raise SystemExit(f"caso desconhecido: {x}")
-    ate = max(casos, key=CASOS_ORDEM.index)
+    blocos = blocos_dos_casos(casos)
+    if "C6" in blocos and a.base_app and not origem_aceita(a.base_app):
+        # antes de qualquer login: noutra origem o CORS das funções barra a função conta e o C6 cai sem provar nada (F7, 1ª rodada)
+        raise SystemExit("hml-22: o --base-app do C6 tem de estar numa origem que as funções aceitam (o dev local: http://localhost:8080 "
+                         "ou :5173 — login-regras.ts › origemPermitida) — nada rodou")
     ctx = {"base": BASES.get(a.base, a.base).rstrip("/"), "prefixo": a.prefixo or a.base}
     uid = r.uid()
     pendente["em_andamento"] = True
@@ -903,14 +985,15 @@ def rodar(a) -> int:
             nav = pw.chromium.launch(channel=None if a.canal == "chromium" else a.canal, args=["--no-sandbox"])
             try:
                 saude_ok("o C1/C2")
-                caso_c1_c2(nav, r, ctx, uid, so_c1=(ate == "C1"))
-                if CASOS_ORDEM.index(ate) >= CASOS_ORDEM.index("C3"):
+                caso_c1_c2(nav, r, ctx, uid, so_c1=(blocos[0] == "C1"))
+                ate_c5 = next((x for x in blocos if x in ("C3", "C4", "C5")), None)
+                if ate_c5:
                     saude_ok("o C3–C5")
-                    caso_c3_c4_c5(nav, r, ctx, uid, ate if ate in ("C3", "C4") else "C5")
-                if "C6" in casos:
+                    caso_c3_c4_c5(nav, r, ctx, uid, ate_c5)
+                if "C6" in blocos:
                     saude_ok("o C6")
                     caso_c6(nav, r, ctx, a.base_app)
-                if ate == "C7":
+                if "C7" in blocos:
                     saude_ok("o C7")
                     caso_c7(nav, r, ctx, uid)
             finally:
@@ -929,7 +1012,7 @@ def main() -> int:
     ap.add_argument("--preparar", action="store_true")
     ap.add_argument("--limpar", action="store_true")
     ap.add_argument("--base", default="staging", help="staging | local | URL")
-    ap.add_argument("--base-app", default=None, help="C6: a URL do JS do npm run build:apk servido local")
+    ap.add_argument("--base-app", default=None, help="C6: a URL do JS do npm run build:apk servido local (http://localhost:8080 ou :5173)")
     ap.add_argument("--prefixo", default=None)
     ap.add_argument("--casos", default=",".join(CASOS_ORDEM))
     ap.add_argument("--canal", default="msedge", choices=("msedge", "chromium", "chrome"))
