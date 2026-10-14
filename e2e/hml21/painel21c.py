@@ -108,14 +108,36 @@ def sql_alunos_de_teste(s: str, conta: str, uid_nutri: str, uid_aluna: str | Non
             f"order by (p.user_id is not distinct from {a}::uuid), p.created_at limit 20")
 
 
+def sql_aluno_sem_login_restrito(s: str, conta: str, uid_nutri: str) -> str:
+    """DECISÃO 23:26 da sessão principal (o ACHADO das pré-condições do F5): sem aluno de teste SEM login pelo e-mail, vale 1 aluno da conta de
+    TESTE da w5p-nutri SEM e-mail, SEM login e SEM telefone (o whatsapp_destino do enfileirador nulo) — o 1º por criação (o MESMO em toda a
+    rodada). Só leitura; só o id e os booleanos saem daqui (NUNCA impressos)."""
+    return (f"select p.id::text as id, null::text as user_id, false as com_login, true as sem_telefone, "
+            f"coalesce((p.config->>'mensagens_automaticas')::boolean, false) as msg_auto, false as da_aluna, true as restrito "
+            f"from {s}.pacientes p where p.conta_id = {C.txt(C.uuid_ok(conta))} and p.nutricionista_id = {C.txt(C.uuid_ok(uid_nutri))} "
+            f"and p.deleted_at is null and p.ativo and p.email is null and p.user_id is null and {s}.whatsapp_destino(p.telefone) is null "
+            f"order by p.created_at, p.id limit 1")
+
+
 def alunos_de_teste(s: str, conta: str, uid_nutri: str, uid_aluna: str | None) -> dict:
     """{com_login, sem_login, tela}: o aluno de teste COM login (o card mostra o login; o sino do aviso), o SEM login (as recusas do criar e o
     sem_conta) e o da tela (o com login; senão o sem) — de preferência NÃO a matrícula da w5p-aluna; cada um {id, user_id, sem_telefone,
-    msg_auto, da_aluna} ou None."""
+    msg_auto, da_aluna} ou None. Sem o SEM login pelo e-mail de teste: o RESTRITO da DECISÃO 23:26 (sem e-mail, sem login, sem telefone;
+    `restrito: True`) — SÓ para as recusas do acesso_criar/sem_conta e o link novo: nunca é o da tela, do ajuste, da faixa, do N1, do aviso,
+    do acesso_ler, do ZIP nem da Lixeira."""
     linhas = [x for x in B.ler_principal(sql_alunos_de_teste(s, conta, uid_nutri, uid_aluna)) if C.eh_uuid(x.get("id"))]
     com = next((x for x in linhas if x.get("com_login")), None)
     sem = next((x for x in linhas if not x.get("com_login")), None)
-    return {"com_login": com, "sem_login": sem, "tela": com or sem, "n": len(linhas)}
+    tela = com or sem
+    if sem is None:
+        r = [x for x in B.ler_principal(sql_aluno_sem_login_restrito(s, conta, uid_nutri)) if C.eh_uuid(x.get("id"))]
+        sem = r[0] if r else None
+    return {"com_login": com, "sem_login": sem, "tela": tela, "n": len(linhas), "restrito": bool(sem and sem.get("restrito"))}
+
+
+def nao_restrito(a: dict | None) -> dict | None:
+    """O aluno, se NÃO for o restrito da DECISÃO 23:26 (esse só serve às recusas do criar/sem_conta e ao link novo)."""
+    return a if a and not a.get("restrito") else None
 
 
 def dados_do_aluno(s: str, aluno: str) -> dict:
@@ -166,6 +188,62 @@ def mensagem_que_falhou(s: str, uid: str) -> str | None:
     return v if C.eh_uuid(v) else None
 
 
+def estado_da_instancia(s: str, uid: str) -> dict:
+    """DECISÃO 23:26 (a Mensagens pelo dono): o estado da instância de WhatsApp — SÓ o estado, o conectado e os instantes (sem o número, sem o
+    QR — só "tem" —, sem token). SQL só leitura."""
+    return (B.ler_principal(f"select count(*)::int as n, max(status) as status, coalesce(bool_or(status = 'conectado'), false) as conectado, "
+                            f"max(pedido_em)::text as pedido_em, max(qr_atualizado_em)::text as qr_atualizado_em, "
+                            f"coalesce(bool_or(qr_code is not null), false) as tem_qr, max(conectado_em)::text as conectado_em, "
+                            f"max(updated_at)::text as updated_at from {s}.whatsapp_instancias where nutricionista_id = {C.txt(C.uuid_ok(uid))}") or [{}])[0]
+
+
+def _sem_atualizado(e: dict) -> dict:
+    return {k: v for k, v in e.items() if k != "updated_at"}
+
+
+def resumo_instancia(e: dict) -> str:
+    return (f"n {e.get('n')}, status {e.get('status') or '—'}, conectado {e.get('conectado')}, QR {'sim' if e.get('tem_qr') else 'não'}, "
+            f"pedido {e.get('pedido_em') or '—'}, atualizado {e.get('updated_at') or '—'}")
+
+
+def sql_devolver_instancia(s: str, uid: str, antes: dict) -> str:
+    """O estado de antes da instância do dono (só se o abrir da Mensagens a mudou): só o staging, só a linha dele, só o status (desconectado
+    ou erro), o QR fora e os 2 instantes de antes — a forma fechada (FORMAS_DA_ESCRITA_21C)."""
+    if s != "staging" or antes.get("status") not in ("desconectado", "erro") or antes.get("tem_qr"):
+        raise SystemExit("a instância só volta no staging, a um estado desconectado/erro sem QR")
+    for v in (antes.get("pedido_em"), antes.get("qr_atualizado_em")):
+        if v is not None and not re.fullmatch(_INST.strip("'"), v):
+            raise SystemExit("um instante de antes da instância fora do formato")
+    tx = lambda v: f"{C.txt(v)}::timestamptz" if v else "null"  # noqa: E731
+    return (f"update staging.whatsapp_instancias set status = {C.txt(antes['status'])}, qr_code = null, qr_atualizado_em = "
+            f"{tx(antes.get('qr_atualizado_em'))}, pedido_em = {tx(antes.get('pedido_em'))} where nutricionista_id = {C.txt(C.uuid_ok(uid))};")
+
+
+def conferir_instancia(o, s: str, uid: str, antes: dict, rotulo: str) -> None:
+    """DECISÃO 23:26: a instância do dono antes × depois de abrir a Mensagens (SQL só leitura). Mudou → "## ACHADO" com o antes × depois (só o
+    estado e os instantes) e o estado de antes devolvido pela escrita com trava de formato (só o staging, só a linha dele, só estas colunas)."""
+    depois = estado_da_instancia(s, uid)
+    # o updated_at fica de FORA da comparação (só no resumo): o agente do celular bate o ultimo_ping de TODAS as instâncias do staging a cada
+    # ~1 min (medido 23:29–23:30: as 5 com updated_at novo, a do dono desconectada) — a tela não é quem muda isso
+    if _sem_atualizado(depois) == _sem_atualizado(antes):
+        o.ok(True, f"{rotulo}: a instância de WhatsApp do dono IGUAL antes × depois de abrir a Mensagens (SQL só leitura: {resumo_instancia(depois)}; o "
+                   f"updated_at anda com a batida do agente)")
+        return
+    o.ok(False, f"## ACHADO {rotulo}: abrir a Mensagens MUDOU a instância do dono — antes {resumo_instancia(antes)} × depois {resumo_instancia(depois)}",
+         parar=False)
+    if int(antes.get("n") or 0) != 1 or int(depois.get("n") or 0) != 1:
+        o.ok(False, f"{rotulo}: a linha da instância nasceu ou sumiu — nada devolvido (confira à mão)", parar=False)
+        return
+    try:
+        sql_escrever_staging_21c(sql_devolver_instancia(s, uid, antes))
+    except (Exception, SystemExit) as e:  # noqa: BLE001
+        o.ok(False, f"{rotulo}: a instância NÃO voltou ({type(e).__name__}) — confira à mão", parar=False)
+        return
+    agora = estado_da_instancia(s, uid)
+    o.ok(_sem_atualizado(agora) == _sem_atualizado(antes),
+         f"{rotulo}: o estado de antes da instância devolvido (SQL com trava de formato; conferido só leitura: {resumo_instancia(agora)})", parar=False)
+
+
 def sql_remetentes_possiveis(s: str, aluno: str) -> str:
     """Os profissionais que mandariam WhatsApp de VERDADE a este aluno se as mensagens dele ligarem — o enfileirador de hoje
     (whatsapp_enfileirar, a última versão: 20261002090100_h5_agenda_cadastro_aviso_pix.sql) varre quem tem a instância CONECTADA e as
@@ -212,6 +290,10 @@ FORMAS_DA_ESCRITA_21C = (
     # a massa da rodada (os modelos ★ e a anamnese da Lixeira): só os ids anotados, só o dono de teste, só a marca
     re.compile(rf"delete from staging\.(modelos_anamnese|modelos_recibo|anamneses) where nutricionista_id = {_U} and id = any\(array\[{_U}(, {_U})*\]::uuid\[\]\) "
                rf"and (titulo) like '%hml21 e2e%';"),
+    # DECISÃO 23:26: a instância do dono de volta ao estado de antes (só se o abrir da Mensagens a mudou) — só o status desconectado/erro, o QR
+    # fora e os 2 instantes de antes; só a linha dele
+    re.compile(rf"update staging\.whatsapp_instancias set status = '(desconectado|erro)', qr_code = null, qr_atualizado_em = (null|{_INST}::timestamptz), "
+               rf"pedido_em = (null|{_INST}::timestamptz) where nutricionista_id = {_U};"),
 )
 TABELAS_DA_MASSA_21C = {"modelos_anamnese": "titulo", "modelos_recibo": "titulo", "anamneses": "titulo"}
 
@@ -599,15 +681,17 @@ def telas_da_conta(area: str, conta: str) -> list[tuple]:
     if conta == PROD_PAINEL:
         return {"configuracoes": [PERFIL, CONTA, EQUIPE, CONVITE], "lixeira": [LIXEIRA], "modelos": [MODELOS]}.get(area, [])
     if conta == PERSONAL:
-        return {"configuracoes": [PERFIL], "modelos": [MODELOS]}.get(area, [])
+        # a Mensagens também pelo dono (DECISÃO 23:26: a w5p-nutri não tem instância — abrir a criaria —; a dele existe, desconectada)
+        return {"configuracoes": [PERFIL], "modelos": [MODELOS], "mensagens": [MENSAGENS]}.get(area, [])
     return list(TELAS_DA_AREA.get(area, ()))
 
 
 def contas_da_area(area: str, base: str) -> list[str]:
-    """As contas de cada área (a produção, decisão N: a nutri-legado — NUNCA as do staging; a Mensagens e o Aluno não abrem na produção)."""
+    """As contas de cada área (a produção, decisão N: a nutri-legado — NUNCA as do staging; a Mensagens e o Aluno não abrem na produção).
+    A Mensagens: a nutri (PULA sem a instância) e o dono (DECISÃO 23:26 — com a trava da instância antes × depois)."""
     if base == "prod":
         return [PROD_PAINEL] if area in ("configuracoes", "lixeira", "modelos") else []
-    return [NUTRI, PERSONAL] if area in ("configuracoes", "modelos") else [NUTRI]
+    return [NUTRI, PERSONAL] if area in ("configuracoes", "modelos", "mensagens") else [NUTRI]
 
 
 PULAM_NA_PRODUCAO = {

@@ -688,6 +688,9 @@ def rodar_21c(o, area: str, base: str, canal: str | None) -> None:
                     telas = P21C.telas_que_abrem(o, s, base, area, conta, aluno=aluno)
                     if not telas:
                         continue
+                    # DECISÃO 23:26: a Mensagens pelo dono — a instância dele antes × depois (SQL só leitura; mudou → ## ACHADO e volta)
+                    uid_c = B.uid_da_conta(conta) if any(x[0] == "mensagens" for x in telas) else None
+                    inst0 = P21C.estado_da_instancia(s, uid_c) if uid_c else None
                     guarda = B.guarda_da_w() if base == "prod" else None
                     t, pend = P21C.abrir_conta(nav, base, conta, f"rede_{area}_{conta}", guarda)
                     try:
@@ -704,6 +707,8 @@ def rodar_21c(o, area: str, base: str, canal: str | None) -> None:
                             o.ok(not guarda.bloqueadas, f"[prod] {conta}: a Guarda não barrou nada (as telas só leram): {guarda.bloqueadas or '—'}")
                     finally:
                         P21C.sair_da_conta(o, t, L, base, conta, f"rede {area}")
+                        if inst0 is not None:
+                            P21C.conferir_instancia(o, s, uid_c, inst0, f"[{base}] {conta} · rede mensagens")
             finally:
                 nav.close()
     finally:
@@ -789,12 +794,15 @@ def seco_21c(o, area: str) -> None:  # noqa: PLR0915
          "a lista da Guarda do repo (o RPC_SO_LEITURA do repeticao.ts) já não tem as 7 (saíram do front na 21c) — só a guarda_da_w() as soma")
     # as contas e as telas de cada base (decisão N)
     o.ok({a: P21C.contas_da_area(a, "staging") for a in B.AREAS_DA_21C} == {"aluno": ["w5p-nutri"], "configuracoes": ["w5p-nutri", "w5p-personal"],
-                                                                             "mensagens": ["w5p-nutri"], "lixeira": ["w5p-nutri"], "modelos": ["w5p-nutri", "w5p-personal"]}
+                                                                             "mensagens": ["w5p-nutri", "w5p-personal"], "lixeira": ["w5p-nutri"],
+                                                                             "modelos": ["w5p-nutri", "w5p-personal"]}
          and [x[0] for x in P21C.telas_da_conta("configuracoes", P21C.NUTRI)] == ["config_perfil", "config_conta", "config_equipe", "config_convite", "config_excluir"]
          and [x[0] for x in P21C.telas_da_conta("configuracoes", P21C.PERSONAL)] == ["config_perfil"]
          and [x[0] for x in P21C.telas_da_conta("modelos", P21C.PERSONAL)] == ["modelos"]
+         and [x[0] for x in P21C.telas_da_conta("mensagens", P21C.PERSONAL)] == ["mensagens"]
          and [x[0] for x in P21C.telas_da_conta("aluno", P21C.NUTRI)] == ["aluno_acessos", "aluno_resumo"],
-         "as contas e as telas (a nutri: todas; o dono: o Perfil — o espelho no Treino — e os Modelos — a aba Treinos)")
+         "as contas e as telas (a nutri: todas; o dono: o Perfil — o espelho no Treino —, os Modelos — a aba Treinos — e a Mensagens — DECISÃO 23:26: "
+         "a nutri sem instância PULA, a do dono existe)")
     o.ok(not any(P21C.ENTRADA_PAINEL.startswith(x[1][1].split("{")[0].rstrip("/")) and x[1][1] != "/painel" for x in P21C.TODAS_AS_TELAS)
          and P21C.ENTRADA_PAINEL == "/painel", "a entrada é de fora da 21c (o Dashboard, da 21b — a carga fria fica fora da medida da 1ª tela)")
     o.ok(P21C.fase_do_codigo_21c("local", "x") == "depois" and P21C.fase_do_codigo_21c("staging", "c6e795b") == "antes"

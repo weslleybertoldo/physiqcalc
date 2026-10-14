@@ -1275,12 +1275,16 @@ def rodar_21c(o, area: str, base: str, canal: str | None, casos: list[str], pref
                     telas = P21C.telas_que_abrem(o, s, base, area, conta, aluno=aluno)
                     if not telas:
                         continue
+                    # DECISÃO 23:26: a Mensagens pelo dono — a instância dele antes × depois (SQL só leitura; mudou → ## ACHADO e volta)
+                    uid_c = B.uid_da_conta(conta) if any(x[0] == "mensagens" for x in telas) else None
+                    inst0 = P21C.estado_da_instancia(s, uid_c) if uid_c else None
                     t, pend = P21C.abrir_conta(nav, base, conta, f"telas_{area}_{conta}")
                     try:
                         P21C.entrar(o, t, pend, L, base, conta)
                         if "prints" in casos:
                             for tela in telas:
-                                caso = CASO_DA_TELA_21C[tela[0]] + ("_personal" if conta == P21C.PERSONAL else "")
+                                # o sufixo do dono só onde a nutri também abre (a Mensagens só o dono abre: o print é o c_mensagens)
+                                caso = CASO_DA_TELA_21C[tela[0]] + ("_personal" if conta == P21C.PERSONAL and tela[0] != "mensagens" else "")
                                 r = P21C.abrir_tela(t, pend, tela)
                                 o.ok(t.n(tela[2]) > 0 and r["t_pronto_s"] is not None, f"[{base}] {conta} · {caso}: a tela pronta em {r['t_pronto_s']} s ({tela[2][:60]})")
                                 B.print_reduzido(t.pg, prefixo or base, caso, o)
@@ -1290,6 +1294,8 @@ def rodar_21c(o, area: str, base: str, canal: str | None, casos: list[str], pref
                             tempo_21c(o, t, pend, base, commit, fase, area, conta, telas)
                     finally:
                         P21C.sair_da_conta(o, t, L, base, conta, f"telas {area}")
+                        if inst0 is not None:
+                            P21C.conferir_instancia(o, s, uid_c, inst0, f"[{base}] {conta} · telas mensagens")
             finally:
                 nav.close()
     finally:

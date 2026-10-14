@@ -2352,6 +2352,76 @@ def seco_21c(o, area: str) -> None:  # noqa: PLR0915
     seco_producao_21c(o)
     # ── os 4 🟡 da revisão nos E2E (a limpeza no schema do Estado; a senha do w8b; a nutri não dona; nenhuma mensagem de verdade)
     seco_revisao_21c(o)
+    # ── as DECISÕES 23:26 do F5 (o aluno restrito sem login; a Mensagens pelo dono com a trava da instância)
+    seco_decisoes_2326(o)
+
+
+def seco_decisoes_2326(o) -> None:  # noqa: PLR0915
+    """O --seco das DECISÕES 23:26 da sessão principal (sem rede: as leituras e a escrita ficam FALSAS aqui dentro)."""
+    uid = "33333333-3333-4333-8333-333333333333"
+    ler0, esc0 = B.ler_principal, P21C.sql_escrever_staging_21c
+    # (2) o aluno RESTRITO (sem e-mail, sem login, sem telefone): só quando o e-mail de teste não dá um sem login; nunca o da tela
+    COM = {"id": FALSO, "user_id": OUTRO, "com_login": True, "sem_telefone": True, "msg_auto": False, "da_aluna": True}
+    RES = {"id": CONTA_X, "user_id": None, "com_login": False, "sem_telefone": True, "msg_auto": False, "da_aluna": False, "restrito": True}
+    pedidos: list[str] = []
+    try:
+        def falso(sql: str, _estrito=None) -> list[dict]:
+            pedidos.append("restrito" if "p.email is null and p.user_id is null" in sql else "estrito")
+            return [RES] if "p.email is null and p.user_id is null" in sql else list(falso.estrito)
+        falso.estrito = [COM]  # type: ignore[attr-defined]
+        B.ler_principal = falso  # type: ignore[assignment]
+        a1 = P21C.alunos_de_teste("staging", CONTA_X, uid, OUTRO)
+        falso.estrito = []  # type: ignore[attr-defined]
+        a2 = P21C.alunos_de_teste("staging", CONTA_X, uid, OUTRO)
+    finally:
+        B.ler_principal = ler0
+    sql_r = P21C.sql_aluno_sem_login_restrito("staging", CONTA_X, uid)
+    fa, fm = fonte_do(p_aluno_21c), fonte_do(p_mensagens_21c)
+    o.ok(a1["tela"] == COM and a1["sem_login"] == RES and a1["restrito"] and a2["tela"] is None and a2["sem_login"] == RES
+         and P21C.nao_restrito(RES) is None and P21C.nao_restrito(COM) == COM
+         and all(x in sql_r for x in ("p.email is null", "p.user_id is null", "staging.whatsapp_destino(p.telefone) is null", "order by p.created_at, p.id limit 1"))
+         and "for a in (x for x in (com, P21C.nao_restrito(sem)) if x):" in fa and "for a in (x for x in (P21C.nao_restrito(sem), com) if x):" in fa
+         and "alvo_n1 = (com or P21C.nao_restrito(sem) or {}).get(\"id\") or tela" in fa and "P21C.nao_restrito(ctx[\"alunos\"][\"sem_login\"])" in fm,
+         "[seco] DECISÃO 23:26 (2): o aluno RESTRITO (da conta de teste da w5p-nutri, sem e-mail, sem login, sem telefone; o 1º por criação — o mesmo "
+         "em toda a rodada) só entra quando o e-mail de teste não dá um sem login; NUNCA é o da tela, do acesso_ler, do ajuste, da faixa nem do N1 — só "
+         "as recusas do acesso_criar/sem_conta e o link novo")
+    # (1) a Mensagens pelo dono, com a trava da instância antes × depois (mudou → ## ACHADO e o estado de antes de volta pela forma fechada)
+    ANTES = {"n": 1, "status": "desconectado", "conectado": False, "pedido_em": "2026-10-12 20:00:00.123456+00", "qr_atualizado_em": None,
+             "tem_qr": False, "conectado_em": None, "updated_at": "2026-10-12 20:00:00.123456+00"}
+    feito = P21C.sql_devolver_instancia("staging", uid, ANTES)
+    recusas = 0
+    for s_, e_ in (("public", ANTES), ("staging", {**ANTES, "status": "aguardando_qr"}), ("staging", {**ANTES, "tem_qr": True}),
+                   ("staging", {**ANTES, "pedido_em": "ontem"})):
+        try:
+            P21C.sql_devolver_instancia(s_, uid, e_)
+        except SystemExit:
+            recusas += 1
+    escritas: list[str] = []
+    estados = [dict(ANTES), {**ANTES, "status": "aguardando_qr", "pedido_em": "2026-10-13 23:30:00+00"}, dict(ANTES)]
+    try:
+        P21C.sql_escrever_staging_21c = lambda sql: escritas.append(sql)  # type: ignore[assignment]
+        fila = [{**ANTES, "updated_at": "2026-10-13 23:31:00.5+00"}]  # só a batida do agente (o ultimo_ping/updated_at) andou = IGUAL
+        B.ler_principal = lambda _sql: [fila.pop(0)] if fila else [dict(ANTES)]  # type: ignore[assignment]
+        an_igual = _Anota()
+        P21C.conferir_instancia(an_igual, "staging", uid, ANTES, "seco")
+        escritas_igual = len(escritas)
+        fila = estados[1:]
+        B.ler_principal = lambda _sql: [fila.pop(0)] if fila else [dict(ANTES)]  # type: ignore[assignment]
+        an_mudou = _Anota()
+        P21C.conferir_instancia(an_mudou, "staging", uid, ANTES, "seco")
+    finally:
+        B.ler_principal, P21C.sql_escrever_staging_21c = ler0, esc0
+    ft, fr = (B.REPO / "e2e" / "hml21" / "telas.py").read_text(encoding="utf-8"), (B.REPO / "e2e" / "hml21" / "rede.py").read_text(encoding="utf-8")
+    o.ok(P21C.contas_da_area("mensagens", "staging") == [P21C.NUTRI, P21C.PERSONAL] and P21C.contas_da_area("mensagens", "prod") == []
+         and [x[0] for x in P21C.telas_da_conta("mensagens", P21C.PERSONAL)] == ["mensagens"]
+         and any(f.fullmatch(feito) for f in P21C.FORMAS_DA_ESCRITA_21C) and recusas == 4
+         and [c for c, _t in an_igual.oks] == [True] and escritas_igual == 0
+         and [c for c, _t in an_mudou.oks] == [False, True] and an_mudou.oks[0][1].startswith("## ACHADO") and len(escritas) == 1
+         and all(x.count("P21C.conferir_instancia(") == 1 and x.count("P21C.estado_da_instancia(") == 1 for x in (ft, fr))
+         and 'tela[0] != "mensagens"' in ft,
+         f"[seco] DECISÃO 23:26 (1): a Mensagens também pelo dono (a nutri sem instância PULA; a produção não abre); a instância dele antes × depois "
+         f"(igual → ok; mudou → \"## ACHADO\" e o estado de antes de volta por 1 escrita na forma fechada — {recusas}/4 fora dela recusadas); o print = "
+         f"c_mensagens; o rede.py e o telas.py conferem")
 
 
 class _Anota:
@@ -2547,7 +2617,8 @@ def contexto_21c(o, L, s: str, area: str, casos: set) -> dict:
     ctx["alunos"] = P21C.alunos_de_teste(s, conta["id"], uid_n, uid_a)
     al = ctx["alunos"]
     o.linha(f"   os alunos de teste da conta ativa da nutri (SQL só leitura): {al['n']} — com login {'sim' if al['com_login'] else 'não'}"
-            f"{' (a matrícula da w5p-aluna)' if (al['com_login'] or {}).get('da_aluna') else ''}; sem login {'sim' if al['sem_login'] else 'não'}")
+            f"{' (a matrícula da w5p-aluna)' if (al['com_login'] or {}).get('da_aluna') else ''}; sem login {'sim' if al['sem_login'] else 'não'}"
+            f"{' (o RESTRITO da DECISÃO 23:26: sem e-mail, sem login, sem telefone — só as recusas do criar/sem_conta e o link novo)' if al.get('restrito') else ''}")
     return ctx
 
 
@@ -2620,16 +2691,18 @@ def p_aluno_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: 
     tok, uid, conta = L.token(P21C.NUTRI), ctx["uid_n"], ctx["conta"]["id"]
     al = ctx["alunos"]
     com, sem = al["com_login"], al["sem_login"]
-    if not (com or sem):
-        o.ok(True, "P do Aluno PULADO — a conta ativa da nutri sem aluno de TESTE (SQL só leitura); fica o Vitest")
+    if not al["tela"]:
+        o.ok(True, "P do Aluno PULADO — a conta ativa da nutri sem aluno de TESTE para a tela (SQL só leitura); fica o Vitest")
         return
     tela = al["tela"]["id"]
+    # DECISÃO 23:26: o "sem login" pode ser o RESTRITO (sem e-mail, sem login, sem telefone — da conta de teste da w5p-nutri): SÓ as recusas do
+    # acesso_criar/sem_conta e o link novo; nunca o acesso_ler, o ajuste, a faixa, o N1, o aviso, o ZIP nem a Lixeira (o nao_restrito)
     # ── as leituras: o dado livre (o e-mail do próprio aluno, como a pré-checagem do Editar dados), o responsável
     email_al = (B.ler_principal(f"select lower(email) as e from {s}.pacientes where id = {C.txt(tela)}") or [{}])[0].get("e")
     p_ler_21c(o, L, P21C.NUTRI, s, [("dado_livre", {"email": email_al, "cpf": None, "paciente": tela}, {"email": email_al, "cpf": None, "paciente": tela}),
                                     ("aluno_responsavel", {"aluno": tela}, {"aluno": tela})], "a nutri")
     # ── o acesso_ler (a aluno_acesso só lê — decisão 13) = a RPC como a nutri; o dono no corpo cai (N4)
-    for a in (x for x in (com, sem) if x):
+    for a in (x for x in (com, P21C.nao_restrito(sem)) if x):
         st, r, _h, _ms = B.conta(tok, "acesso_ler", {"aluno": a["id"], "nutricionista_id": ctx.get("uid_o") or FALSO})
         igual_21c(o, f"P/N4 acesso_ler (aluno {'com' if a.get('com_login') else 'sem'} login) = a aluno_acesso como a nutri ({st}; o dono no corpo cai)",
                   resultado(r) if st == 200 else {"st": st}, como(P21C.NUTRI, uid, B.sql_da_lib("aluno_acesso", s, aluno=a["id"])))
@@ -2642,7 +2715,8 @@ def p_aluno_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: 
     if sem:
         for email, esperado in ((P21C.EMAIL_INVALIDO, "email_invalido"), (P21C.EMAIL_DE_FORA, "conta_real_no_staging"), (P21C.EMAIL_DE_TESTE_NOVO, "senha_curta")):
             st, r = acao_travada(o, s, tok, "acesso_criar", sem["id"], P21C.SENHA_CURTA, email)
-            o.ok(erro_de(st, r) == esperado and st == 400, f"P acesso_criar (aluno SEM login, 3 caracteres) → {esperado} ({st}: {erro_de(st, r)})")
+            o.ok(erro_de(st, r) == esperado and st == 400, f"P acesso_criar (aluno SEM login{' — o restrito' if sem.get('restrito') else ''}, 3 caracteres) → "
+                                                           f"{esperado} ({st}: {erro_de(st, r)})")
         st, r = acao_travada(o, s, tok, "acesso_redefinir_senha", sem["id"], P21C.SENHA_CURTA)
         o.ok(erro_de(st, r) == "sem_conta" and st == 400, f"P acesso_redefinir_senha no aluno SEM login → sem_conta ({st})")
         o.ok(not (B.ler_principal(f"select (user_id is not null) as v from {s}.pacientes where id = {C.txt(sem['id'])}") or [{}])[0].get("v"),
@@ -2650,7 +2724,7 @@ def p_aluno_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: 
     # ── os ajustes (as Mensagens automáticas): só num aluno em que NENHUMA mensagem de verdade pode sair (🟡4 da revisão: sem telefone, ou 0
     # remetente possível — a nutri, o personal, o dono e quem tem consulta/cobrança com ele; o sem_mensagem_de_verdade); volta pela MESMA ação
     alvo, motivo_alvo = None, "sem aluno de teste"
-    for a in (x for x in (sem, com) if x):
+    for a in (x for x in (P21C.nao_restrito(sem), com) if x):
         seguro, motivo_alvo = P21C.sem_mensagem_de_verdade(s, a["id"])
         if seguro:
             alvo = a
@@ -2715,7 +2789,7 @@ def p_aluno_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: 
              f"apagado no fim ({st})")
     if "N1" in casos:
         tok_o = L.token(P21C.OUTRA)
-        alvo_n1 = (com or sem)["id"]
+        alvo_n1 = (com or P21C.nao_restrito(sem) or {}).get("id") or tela  # o N1 nunca no restrito (DECISÃO 23:26)
         dados_antes = P21C.dados_do_aluno(s, alvo_n1)
         res_n1 = []
         for a, c in (("acesso_ler", {"aluno": alvo_n1}), ("aluno_ajustes_salvar", {"aluno": alvo_n1, "ajustes": {"mensagens_automaticas": True}}),
@@ -2972,7 +3046,7 @@ def p_mensagens_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # no
         o.ok(st == 200 and depois.get("tem_falhas") and depois.get("falhas_vistas") != antes, f"P whatsapp_limpar_falhas → o whatsapp_falhas_vistas_em novo (SQL) ({st})")
         P21C.devolver_por_sql(o, estado, s)
     # ── a faixa: só com o aluno de teste com as mensagens desligadas e sem o aviso de antes; devolvida (os ajustes pela ação; a chave por SQL)
-    al = next((a for a in (ctx["alunos"]["sem_login"], ctx["alunos"]["com_login"]) if a and not a.get("msg_auto")), None)
+    al = next((a for a in (P21C.nao_restrito(ctx["alunos"]["sem_login"]), ctx["alunos"]["com_login"]) if a and not a.get("msg_auto")), None)
     ativo = bool((cfg0.get("whatsapp") or {}).get("ativo")) if isinstance(cfg0.get("whatsapp"), dict) else False
     # 🟡4 da revisão: ligar as mensagens do aluno só sem mensagem de verdade possível — o enfileirador também manda pelo personal, pelo dono e
     # por quem tem consulta/cobrança com ele (não só pela nutri): o aluno sem telefone ou 0 remetente possível (o sem_mensagem_de_verdade)
