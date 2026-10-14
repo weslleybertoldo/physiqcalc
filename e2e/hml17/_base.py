@@ -249,8 +249,11 @@ FUNCOES_CONHECIDAS = {
 # hml-21a (decisão F): a conta (jeito 2 do resto do principal: a casca e o app do aluno) grava em TODA ação, como a nutricao e a financeiro.
 # W-A P2 (LINUX 3, 13/10): as 3 da W-A — acessos e aluno-dia (principal) e treino-acessos (Treino) — gravam em TODA ação, menos o ler pelo corpo.
 # hml-21d (decisão F): a treinos (Treino — o jeito 2 do cadastro do professor, do Master e dos treinos prontos) grava em TODA ação, menos o ler.
+# hml-21c (decisão 23 da spec hml-21 — o "pode ir" da LINUX 3 em 12/10 ~20:30; o achado 7): a whatsapp-conectar grava em TODA ação — o
+# `status` CRIA a instância na 1ª visita e renova o pedido_em no aguardando_qr (whatsapp-conectar/index.ts:96-115), o conectar/desconectar
+# gravam e o teste MANDA mensagem. Ela segue nas "conhecidas" (existia em 11/10); esta lista vem antes na regra (funcao_grava).
 FUNCOES_QUE_SEMPRE_GRAVAM = {"nutricao", "automaticas-fila", "infinitepay-webhook-aluno", "financeiro", "mp-conectar-retorno",
-                             "mp-contas-renovar", "conta", "acessos", "aluno-dia", "treino-acessos", "treinos"}
+                             "mp-contas-renovar", "conta", "acessos", "aluno-dia", "treino-acessos", "treinos", "whatsapp-conectar"}
 # hml-20a (decisão I da hml-20a, H-42): as LEITURAS do jeito 2 passam pelo CORPO — { "acao": "ler" } na nutricao e na financeiro e
 # { "action": "minha_evolucao" } na admin-avaliacoes. O campo é o que a FUNÇÃO lê (um { "action": "ler", "acao": "<gravação>" } na
 # nutricao grava → barrado); corpo ilegível, sem a ação ou com outra ação = gravação, como antes. Sem o corpo (quem só tem a ação), a

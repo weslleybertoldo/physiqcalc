@@ -253,6 +253,34 @@ def casos_hml17(b) -> list[tuple]:
           for h, n in ((T, "modelos_da_lista"), (T, "exercicios_da_lista"), (P, "aluno_treino"))],
         ("hml-21d: RPC treino_pronto_salvar (nova; só a treinos chama: direta = grava)", g.escrita(Pedido("POST", f"{T}/rest/v1/rpc/treino_pronto_salvar", {})), True),
         ("hml-21d: RPC modelo_ordenar (nova; só a treinos chama: direta = grava)", g.escrita(Pedido("POST", f"{T}/rest/v1/rpc/modelo_ordenar", {})), True),
+        # hml-21c (decisão F): o Resumo, as Configurações, a Mensagens, a Lixeira e a faixa pela conta — o `ler` com as consultas novas passa;
+        # TODA ação nova é gravação (o login do aluno — o acesso_ler inclusive: a aluno_acesso é AÇÃO, decisão 13 —, os dados, o perfil, a
+        # equipe, o ZIP, o WhatsApp, a faixa e a Lixeira)
+        ("hml-21c: conta › ler (o Resumo, o Perfil, a Mensagens, a faixa e a Lixeira)", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"acao": "ler", "itens": [
+            {"email": "a@b.co", "q": "dado_livre"}, {"aluno": "x", "q": "aluno_responsavel"}, {"q": "perfil_profissional"}, {"q": "perfil_mensagens"},
+            {"conta": "x", "q": "whatsapp_resumo"}, {"escopo": "meus", "q": "whatsapp_fila"}, {"q": "mensagens_desligadas"},
+            {"conta": "x", "offset": 0, "limite": 20, "q": "lixeira"}]})), False),
+        *[(f"hml-21c: conta › {a} (grava)", fn("conta", a), True) for a in (
+            "acesso_ler", "acesso_criar", "acesso_redefinir_senha", "aluno_ajustes_salvar", "aluno_dados_salvar", "aluno_link_novo",
+            "aluno_responsavel_registrar", "aluno_avisar_plano", "perfil_salvar", "conta_salvar", "equipe_papeis", "equipe_remover",
+            "meu_codigo_garantir", "prontuarios_para_baixar", "whatsapp_config_salvar", "whatsapp_reenviar", "whatsapp_limpar_falhas",
+            "faixa_ligar_para_todos", "faixa_fechar", "lixeira_restaurar", "lixeira_apagar")],
+        ("hml-21c: conta › disfarçado {action: ler, acao: acesso_criar}", g.escrita(Pedido("POST", f"{P}/functions/v1/conta", {"action": "ler", "acao": "acesso_criar"})), True),
+        # os ★ dos Modelos pela nutricao/financeiro: o `ler` passa; o "tirar a ★" (as *_editar que já existem) é gravação
+        ("hml-21c: nutricao › ler (os 9 ★ dos Modelos)", g.escrita(Pedido("POST", f"{P}/functions/v1/nutricao", {"acao": "ler", "itens": [
+            {"q": "modelos_favoritos_anamnese"}, {"q": "modelos_favoritos_receita"}, {"q": "modelos_favoritos_exame"}, {"conta": "x", "q": "planos_favoritos"}]})), False),
+        ("hml-21c: financeiro › ler (os ★ de recibo)", g.escrita(Pedido("POST", f"{P}/functions/v1/financeiro", {"acao": "ler", "itens": [{"q": "fin_modelos_recibo_favoritos"}]})), False),
+        ("hml-21c: nutricao › modelo_anamnese_editar (tirar a ★: grava)", fn("nutricao", "modelo_anamnese_editar"), True),
+        ("hml-21c: financeiro › modelo_recibo_editar (tirar a ★: grava)", fn("financeiro", "modelo_recibo_editar"), True),
+        # decisão 23 (o "pode ir" da LINUX 3): a whatsapp-conectar grava em TODA ação (o status cria a instância na 1ª visita)
+        *[(f"hml-21c: whatsapp-conectar › {a} (grava — decisão 23)", fn("whatsapp-conectar", a), True) for a in ("status", "conectar", "desconectar", "teste")],
+        ("hml-21c: whatsapp-conectar › sem ação (grava)", fn("whatsapp-conectar"), True),
+        ("hml-21c: whatsapp-conectar › OPTIONS (preflight)", fn("whatsapp-conectar", "status", "OPTIONS"), False),
+        ("hml-21c: whatsapp-conectar › {acao: ler} (ela não tem leitura: grava)", g.escrita(Pedido("POST", f"{P}/functions/v1/whatsapp-conectar", {"acao": "ler"})), True),
+        # as 25 RPCs que saíram do front (a conta as chama no servidor): direta = gravação na Guarda de base (o RPC_SO_LEITURA ficou sem as
+        # 7 de leitura — o front ANTIGO, até a release, passa pelo guarda_da_w do e2e/hml21 com elas)
+        *[(f"hml-21c: RPC {r} direta (saiu do front: a Guarda de base barra)", g.escrita(Pedido("POST", f"{P}/rest/v1/rpc/{r}", {})), True)
+          for r in ("whatsapp_resumo", "mensagens_desligadas", "lixeira_da_conta", "aluno_acesso", "whatsapp_salvar_config", "lixeira_apagar")],
         ("hml-21d: o PUT da foto do exercício no link assinado (Storage do Treino: grava)", g.escrita(Pedido("PUT", f"{T}/storage/v1/object/upload/sign/exercicios/x.gif?token=t", {})), True),
     ]
     # toda função das pastas do repo está decidida (conhecida ou "sempre grava"): função nova sem decisão falha aqui
@@ -273,6 +301,8 @@ def casos_hml17(b) -> list[tuple]:
         for f in ("acessos", "aluno-dia", "treino-acessos")), True, ("sim", "não")))
     saida.append(("hml-21d: a treinos fora das 'conhecidas', nas que gravam sempre e com o `ler` pelo corpo", "treinos" not in b.FUNCOES_CONHECIDAS
                   and "treinos" in b.FUNCOES_QUE_SEMPRE_GRAVAM and b.LEITURAS_PELO_CORPO.get("treinos") == ("acao", frozenset({"ler"})), True, ("sim", "não")))
+    saida.append(("hml-21c (decisão 23): a whatsapp-conectar nas que gravam sempre e SEM `ler` pelo corpo (segue nas 'conhecidas': existia em 11/10)",
+                  "whatsapp-conectar" in b.FUNCOES_QUE_SEMPRE_GRAVAM and "whatsapp-conectar" not in b.LEITURAS_PELO_CORPO, True, ("sim", "não")))
     return saida
 
 
@@ -350,6 +380,20 @@ def casos_w26(w) -> list[tuple]:
         ("w26 · hml-21d: POST conta {acao: ler, itens: [aluno_treino]}", e("POST", f"{P}/functions/v1/conta", json.dumps({"acao": "ler", "itens": [{"q": "aluno_treino"}]})), False),
         ("w26 · hml-21d: RPC modelo_ordenar direta (escrita)", e("POST", f"{T}/rest/v1/rpc/modelo_ordenar"), True),
         ("w26 · hml-21d: RPC treino_pronto_salvar direta (escrita)", e("POST", f"{T}/rest/v1/rpc/treino_pronto_salvar"), True),
+        # hml-21c: as ações do Resumo, das Configurações, da Mensagens e da Lixeira são escrita; o `ler` com as consultas novas passa pelo corpo
+        ("w26 · hml-21c: POST conta {acao: ler, itens: [perfil_profissional, whatsapp_resumo, mensagens_desligadas, lixeira]}",
+         e("POST", f"{P}/functions/v1/conta", json.dumps({"acao": "ler", "itens": [{"q": "perfil_profissional"}, {"q": "whatsapp_resumo"}, {"q": "mensagens_desligadas"}, {"q": "lixeira"}]})), False),
+        *[(f"w26 · hml-21c: POST conta {{acao: {a}}}", e("POST", f"{P}/functions/v1/conta", json.dumps({"acao": a})), True)
+          for a in ("acesso_ler", "acesso_criar", "aluno_dados_salvar", "perfil_salvar", "conta_salvar", "meu_codigo_garantir", "prontuarios_para_baixar",
+                    "whatsapp_config_salvar", "faixa_ligar_para_todos", "lixeira_apagar")],
+        ("w26 · hml-21c: POST nutricao {acao: ler, itens: [os ★]}", e("POST", f"{P}/functions/v1/nutricao", json.dumps({"acao": "ler", "itens": [{"q": "modelos_favoritos_meta"}]})), False),
+        ("w26 · hml-21c: POST financeiro {acao: ler, itens: [os ★ de recibo]}", e("POST", f"{P}/functions/v1/financeiro", json.dumps({"acao": "ler", "itens": [{"q": "fin_modelos_recibo_favoritos"}]})), False),
+        # decisão 23: a whatsapp-conectar é escrita (antes, função "desconhecida" = leitura aqui: o status criaria a instância)
+        *[(f"w26 · hml-21c: POST whatsapp-conectar {{acao: {a}}} (decisão 23)", e("POST", f"{P}/functions/v1/whatsapp-conectar", json.dumps({"acao": a})), True)
+          for a in ("status", "conectar", "desconectar", "teste")],
+        ("w26 · hml-21c: POST whatsapp-conectar {acao: ler} (ela não tem leitura)", e("POST", f"{P}/functions/v1/whatsapp-conectar", json.dumps({"acao": "ler"})), True),
+        ("w26 · hml-21c: OPTIONS whatsapp-conectar", e("OPTIONS", f"{P}/functions/v1/whatsapp-conectar"), False),
+        ("w26 · hml-21c: POST whatsapp-conectar-x (outra função)", e("POST", f"{P}/functions/v1/whatsapp-conectar-x"), False),
     ]
 
 

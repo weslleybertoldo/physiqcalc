@@ -41,6 +41,15 @@ que saíram do navegador e a aluno_treino do principal), o `ler` da treinos ≤ 
 aceita, DECISÃO 12:1x, + a contagem com GIF sozinha em paralelo, 89d8e30), 0
 gravação e 0 ação ao abrir; as de fora à parte; a planilha hml21/medicao/rede_hml21d.tsv (antes × depois). Na produção a nutri-legado (só com
 o Treino na conta ativa) e a aluno-calc (só sem profissional), só leitura, com a Guarda — o editor fica de fora (sem aluno de TESTE lá).
+hml-21c (decisões H, I, K e N do contrato da 21c): --area aluno|configuracoes|mensagens|lixeira|modelos (e2e/hml21/painel21c.py): a nutri (a aba
+Acessos e o Resumo de um aluno DE TESTE, as Configurações — Perfil, Conta, Equipe, Convite, Excluir —, a Mensagens, a Lixeira, os Modelos) e o
+dono (o Perfil e os Modelos com a aba Treinos); em cada tela 0 chamada direta da área (as RPCs, as tabelas e o bucket que saíram do navegador
+na 21c), o `ler` de cada função ≤ o teto (a conta 1; os Modelos: a nutricao 2 — os 9 ★ ∥ os planos ★ sozinhos — e a financeiro 1, EM
+PARALELO — a DECISÃO 21:06), 0 gravação e 0 ação ao abrir — à parte (contados, não é falha): o acesso_ler da aba Acessos (a AÇÃO da decisão 13)
+e a whatsapp-conectar(status) da Mensagens (a função que fica); as de outra área da 21c e as de fora à parte; a planilha
+hml21/medicao/rede_hml21c.tsv (antes × depois). A Mensagens só abre com a instância criada e fora do aguardando_qr e o Convite só com o
+codigo_convite (senão gravariam ao abrir — PULADAS com o motivo, em toda base). Na produção a nutri-legado, só leitura, com a Guarda da W (as 7
+RPCs de leitura da 21c): o Excluir, a Mensagens, o Resumo e a aba Acessos PULAM.
 """
 from __future__ import annotations
 
@@ -56,6 +65,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 import painel21b as P21  # noqa: E402  (hml-21b: as contas e as telas da Agenda e dos Alunos)
 import treinos21d as T21  # noqa: E402  (hml-21d: as contas e as telas do Treino)
+import painel21c as P21C  # noqa: E402  (hml-21c: as contas, o aluno de teste e as telas do Resumo, das Configurações, da Mensagens, da Lixeira e dos Modelos)
 
 C = B.C
 PLANILHA = B.MEDICAO / "rede_hml21a.tsv"
@@ -236,6 +246,9 @@ def conta_do_app(base: str) -> str:
 def rodar(o, area: str, base: str, canal: str | None) -> None:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
+    if area in B.AREAS_DA_21C:  # hml-21c
+        rodar_21c(o, area, base, canal)
+        return
     if area in B.AREAS_DA_21D:  # hml-21d
         rodar_21d(o, base, canal)
         return
@@ -641,9 +654,184 @@ def seco_21d(o) -> None:  # noqa: PLR0915
          "antes × depois vem do CÓDIGO medido (o 7c1a637 e o HEAD — o desvio do gate —: antes; o fd49b66: depois)")
 
 
+# ───────────────────────── hml-21c: a rede do Resumo, das Configurações, da Mensagens, da Lixeira e dos Modelos ─────────────────────────
+def rodar_21c(o, area: str, base: str, canal: str | None) -> None:
+    """A rede de cada tela da 21c, conta por conta (um navegador; um contexto por conta, a sessão reaproveitada): a nutri (todas as telas da
+    área) e o dono (o Perfil, os Modelos). Em cada tela: 0 chamada direta da área (depois), o `ler` de cada função ≤ o teto, 0 gravação e 0
+    ação ao abrir (à parte, contados: o acesso_ler da aba Acessos — a AÇÃO da decisão 13 — e a whatsapp-conectar(status) da Mensagens — a
+    função que fica) e, nos Modelos, os 3 pedidos EM PARALELO (a DECISÃO 21:06). Na produção (decisão N): só a nutri-legado, com a Guarda da
+    W (as 7 RPCs de leitura da 21c passam — o front antigo as chama, inclusive na casca), sem a marca local de aviso visto e o LegalDesligado;
+    o Convite só com o código; o Excluir, a Mensagens, o Resumo e a aba Acessos PULAM. Nada de massa: a rede só abre as telas."""
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    s = B.usar_base(base)
+    B.usar_area(area)
+    L = B.Sessoes(f"rede21 {area} {base}")  # na produção o motivo termina em "prod" (o registro: fora do teto do staging)
+    commit = B.commit_medido(base)
+    fase = P21C.fase_do_codigo_21c(base, commit)
+    try:
+        B.exigir_saude(o, f"o rede.py --area {area} da hml-21c")
+        o.linha(f"[{base}] {commit}: o {fase} · área {area} · contas {P21C.contas_da_area(area, base) or '— (PULA nesta base: decisão N)'}")
+        if not P21C.contas_da_area(area, base):
+            o.ok(True, f"[{base}] área {area}: PULADA — {P21C.PULAM_NA_PRODUCAO.get(area, 'sem conta nesta base')}")
+            return
+        aluno = None
+        if area == "aluno":
+            uid_n = B.uid_da_conta(P21C.NUTRI)
+            c = P21.conta_ativa(P21.situacao_como(s, uid_n, P21C.NUTRI)) if uid_n else None
+            al = P21C.alunos_de_teste(s, c["id"], uid_n, B.uid_da_conta(P21C.ALUNA)) if c else {"tela": None}
+            aluno = (al.get("tela") or {}).get("id")
+        with sync_playwright() as pw:
+            nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
+            try:
+                for conta in P21C.contas_da_area(area, base):
+                    telas = P21C.telas_que_abrem(o, s, base, area, conta, aluno=aluno)
+                    if not telas:
+                        continue
+                    guarda = B.guarda_da_w() if base == "prod" else None
+                    t, pend = P21C.abrir_conta(nav, base, conta, f"rede_{area}_{conta}", guarda)
+                    try:
+                        P21C.entrar(o, t, pend, L, base, conta)
+                        for tela in telas:
+                            nome, _como, marca, teto = tela
+                            pronta = P21C.abrir_tela(t, pend, tela)
+                            o.ok(t.n(marca) > 0, f"[{base}] {conta} · {nome}: a tela abriu ({marca[:70]}; marca em {pronta['t_marca_s']} s)")
+                            cont = P21C.contar_tela(pronta["pedidos"], area, nome)
+                            P21C.conferir_tela(o, base, fase, area, conta, nome, teto, cont, pronta)
+                            P21C.anotar_rede(base, commit, fase, area, conta, nome, cont, pronta)
+                        P21.fechar_janelas(t)
+                        if guarda:
+                            o.ok(not guarda.bloqueadas, f"[prod] {conta}: a Guarda não barrou nada (as telas só leram): {guarda.bloqueadas or '—'}")
+                    finally:
+                        P21C.sair_da_conta(o, t, L, base, conta, f"rede {area}")
+            finally:
+                nav.close()
+    finally:
+        L.fechar(o)
+
+
+def seco_21c(o, area: str) -> None:  # noqa: PLR0915
+    """O --seco da 21c (sem rede, sem navegador): os seletores no código, a guarda da área em pedidos de exemplo (antes e depois — o
+    acesso_ler e a whatsapp-conectar à parte; os Modelos em paralelo), a Guarda da W na produção e as contas/telas de cada base (decisão N)."""
+    faltam = [f"{arq}: {sel}" for arq, sels in P21C.SELETORES.items() for sel in sels if sel not in (B.REPO / arq).read_text(encoding="utf-8")]
+    o.ok(not faltam, f"os {sum(len(v) for v in P21C.SELETORES.values())} seletores e rotas das telas da 21c existem no código" + (f" — faltam: {faltam}" if faltam else ""))
+    P = B.API_P
+    uid = "33333333-3333-4333-8333-333333333333"
+    rpc = lambda n: {"metodo": "POST", "tipo": "rpc", "nome": n, "url": f"{P}/rest/v1/rpc/{n}", "corpo": "{}", "t": 0.1}  # noqa: E731
+    tab = lambda n, m="GET": {"metodo": m, "tipo": "tab", "nome": n, "url": f"{P}/rest/v1/{n}?select=*", "corpo": "" if m == "GET" else "{}", "t": 0.1}  # noqa: E731
+    # (a anotação da Tela: o acao_do_corpo da hml-17 lê o `action` ou o `acao`)
+    fn = lambda nome, corpo, t=0.2: {"metodo": "POST", "tipo": "fn", "nome": nome, "acao": corpo.get("action") or corpo.get("acao"),  # noqa: E731
+                                     "url": f"{P}/functions/v1/{nome}", "corpo": json.dumps(corpo), "t": t}
+    # o ANTES de cada área (o código antigo lia direto)
+    antes = {"aluno": [rpc("aluno_acesso"), rpc("aluno_responsavel"), rpc("mensagens_desligadas"), rpc("aluno_compromissos")],
+             "configuracoes": [tab("profiles"), rpc("equipe_da_conta")],
+             "mensagens": [tab("profiles"), rpc("whatsapp_resumo"), rpc("whatsapp_fila"), fn("whatsapp-conectar", {"acao": "status"})],
+             "lixeira": [rpc("lixeira_da_conta")],
+             "modelos": [tab("modelos_anamnese"), tab("receitas"), tab("modelos_recibo"), tab("tb_pastas_treino")]}
+    c = P21C.contar_tela(antes["aluno"], "aluno", "aluno_resumo")
+    o.ok(c["diretas"] == {"rpc:aluno_acesso": 1, "rpc:aluno_responsavel": 1} and c["outra_area"] == {"rpc:mensagens_desligadas": 1} and not c["gravacoes"],
+         f"a guarda do ANTES (aluno): o acesso e o responsável diretos; a faixa (mensagens) em outra área da 21c; 0 gravação: {c['diretas']} / {c['outra_area']}")
+    c = P21C.contar_tela(antes["mensagens"], "mensagens", "mensagens")
+    o.ok(c["diretas"] == {"tab:profiles:GET": 1, "rpc:whatsapp_resumo": 1, "rpc:whatsapp_fila": 1} and c["a_parte"] == {"fn:whatsapp-conectar(status)": 1}
+         and not c["gravacoes"], f"a guarda do ANTES (mensagens): o perfil, o resumo e a fila diretos; a whatsapp-conectar(status) À PARTE (não é falha): {c}")
+    c = P21C.contar_tela(antes["modelos"], "modelos", "modelos")
+    o.ok(c["diretas"] == {"tab:modelos_anamnese:GET": 1, "tab:receitas:GET": 1, "tab:modelos_recibo:GET": 1} and not c["gravacoes"],
+         f"a guarda do ANTES (modelos): os ★ direto das tabelas; o Treino (a aba Treinos, direto — o desvio do gate da 21d) NÃO é da área: {c['diretas']}")
+    # o DEPOIS: o `ler` de cada função, o acesso_ler e a whatsapp-conectar À PARTE, os Modelos EM PARALELO
+    ler_conta = {"acao": "ler", "itens": [{"q": "aluno_responsavel", "aluno": uid}]}
+    depois_aluno = [fn("conta", ler_conta), fn("conta", {"aluno": uid, "acao": "acesso_ler"})]
+    c = P21C.contar_tela(depois_aluno, "aluno", "aluno_acessos")
+    o.ok(not c["diretas"] and c["ler"] == {"conta": 1} and c["a_parte"] == {"fn:conta(acesso_ler)": 1} and not c["gravacoes"],
+         f"a guarda do DEPOIS (aba Acessos): 0 direta, 1 `ler` da conta; o acesso_ler (AÇÃO, decisão 13) À PARTE — não é gravação da tela: {c}")
+    c2 = P21C.contar_tela(depois_aluno, "aluno", "aluno_resumo")
+    o.ok(c2["gravacoes"] == {"fn:conta(acesso_ler)": 1}, "… e no Resumo (onde o card de login NÃO mora mais) o mesmo acesso_ler seria gravação ao abrir (a falha certa)")
+    # o Resumo depois da W-A P6 (o card Rotinas: 1 `ler` da aluno-dia ao abrir) e os outros cards (a nutricao, a pagamentos-aluno, a treino-leitura):
+    # tudo "de fora" — nada entra no `ler` da área (a conta) nem nas ações
+    resumo = [fn("conta", {"acao": "ler", "itens": [{"q": "aluno_responsavel", "aluno": uid}, {"q": "aluno_compromissos", "aluno": uid}]}),
+              fn("aluno-dia", {"acao": "ler", "itens": [{"q": "rotinas_do_aluno", "aluno": uid}]}), fn("nutricao", {"acao": "ler", "itens": []}),
+              fn("pagamentos-aluno", {"action": "prof_aluno", "aluno": uid}), {**fn("treino-leitura", {"action": "get"}), "host": "T"}]
+    c3 = P21C.contar_tela(resumo, "aluno", "aluno_resumo")
+    o.ok(c3["ler"] == {"conta": 1} and not c3["acoes"] and not c3["gravacoes"] and c3["fora"].get("fn:aluno-dia(ler)") == 1
+         and c3["fora"].get("fn:nutricao(ler)") == 1 and c3["fora"].get("fn:pagamentos-aluno(prof_aluno)") == 1 and c3["fora"].get("fn:treino-leitura(get)") == 1,
+         f"o Resumo com a W-A P6: o `ler` da aluno-dia (o card Rotinas) e os dos outros cards (nutricao, pagamentos-aluno, treino-leitura) contam \"de fora\" — "
+         f"a área = 1 `ler` da conta, 0 ação, 0 gravação: {c3['ler']} · fora {c3['fora']}")
+    par = [fn("nutricao", {"acao": "ler", "itens": [{"q": q} for q in B.CONSULTAS_FAVORITOS_21C]}, 0.30),
+           fn("nutricao", {"acao": "ler", "itens": [{"q": "planos_favoritos", "conta": uid}]}, 0.31),
+           fn("financeiro", {"acao": "ler", "itens": [{"q": "fin_modelos_recibo_favoritos"}]}, 0.32), tab("tb_pastas_treino")]
+    serie_ = [*par[:2], {**par[2], "t": 1.9}]
+    c = P21C.contar_tela(par, "modelos", "modelos")
+    o.ok(not c["diretas"] and c["ler"] == {"nutricao": 2, "financeiro": 1} and not c["gravacoes"]
+         and P21C.em_paralelo({"pedidos": par}) and not P21C.em_paralelo({"pedidos": serie_}),
+         f"a guarda do DEPOIS (modelos): 0 direta; 2 `ler` da nutricao (os 9 ★ ∥ os planos ★ sozinhos) + 1 da financeiro; EM PARALELO passa e em série "
+         f"(a financeiro 1,6 s depois) reprova: {c['ler']}")
+    # a Guarda da W na produção (decisão F): as 7 RPCs de leitura do front antigo passam; as que gravam, as ações e a whatsapp-conectar barram
+    g = B.guarda_da_w()
+    Ped = type("Ped", (), {})
+
+    def pedido(metodo: str, url: str, corpo: dict | None = None):
+        x = Ped()
+        x.method, x.url, x.post_data = metodo, url, (json.dumps(corpo) if corpo is not None else None)
+        return x
+
+    passam = [pedido("POST", f"{P}/functions/v1/conta", ler_conta)] + [pedido("POST", f"{P}/rest/v1/rpc/{n}", {}) for n in sorted(B.RPCS_DE_LEITURA_DA_21C)] \
+        + [pedido("POST", f"{P}/functions/v1/nutricao", par[0] and json.loads(par[0]["corpo"])),
+           pedido("POST", f"{P}/functions/v1/financeiro", json.loads(par[2]["corpo"])), pedido("GET", f"{P}/rest/v1/profiles?select=nome")]
+    barram = [pedido("POST", f"{P}/functions/v1/conta", {"aluno": uid, "acao": "acesso_ler"}),
+              pedido("POST", f"{P}/functions/v1/conta", {"acao": "meu_codigo_garantir", "conta": uid}),
+              pedido("POST", f"{P}/functions/v1/whatsapp-conectar", {"acao": "status"}),
+              pedido("POST", f"{P}/functions/v1/nutricao", {"acao": "modelo_anamnese_editar", "id": uid, "favorito": False}),
+              pedido("POST", f"{P}/rest/v1/rpc/garantir_meu_codigo", {}), pedido("POST", f"{P}/rest/v1/rpc/aluno_acesso", {}),
+              pedido("POST", f"{P}/rest/v1/rpc/whatsapp_salvar_config", {}), pedido("PATCH", f"{P}/rest/v1/modelos_anamnese?id=eq.{uid}", {})]
+    o.ok(not any(g.escrita(x) for x in passam) and all(g.escrita(x) for x in barram),
+         f"a Guarda da W (produção): passam o `ler` da conta/nutricao/financeiro e as 7 RPCs de leitura do front antigo da 21c ({len(passam)}); barram o "
+         f"acesso_ler, o garantir do código, a whatsapp-conectar (decisão 23), a ★ tirada e as RPCs/tabelas que gravam ({len(barram)})")
+    o.ok(not B.B17.Guarda().leitura & B.RPCS_DE_LEITURA_DA_21C,
+         "a lista da Guarda do repo (o RPC_SO_LEITURA do repeticao.ts) já não tem as 7 (saíram do front na 21c) — só a guarda_da_w() as soma")
+    # as contas e as telas de cada base (decisão N)
+    o.ok({a: P21C.contas_da_area(a, "staging") for a in B.AREAS_DA_21C} == {"aluno": ["w5p-nutri"], "configuracoes": ["w5p-nutri", "w5p-personal"],
+                                                                             "mensagens": ["w5p-nutri"], "lixeira": ["w5p-nutri"], "modelos": ["w5p-nutri", "w5p-personal"]}
+         and [x[0] for x in P21C.telas_da_conta("configuracoes", P21C.NUTRI)] == ["config_perfil", "config_conta", "config_equipe", "config_convite", "config_excluir"]
+         and [x[0] for x in P21C.telas_da_conta("configuracoes", P21C.PERSONAL)] == ["config_perfil"]
+         and [x[0] for x in P21C.telas_da_conta("modelos", P21C.PERSONAL)] == ["modelos"]
+         and [x[0] for x in P21C.telas_da_conta("aluno", P21C.NUTRI)] == ["aluno_acessos", "aluno_resumo"],
+         "as contas e as telas (a nutri: todas; o dono: o Perfil — o espelho no Treino — e os Modelos — a aba Treinos)")
+    o.ok(not any(P21C.ENTRADA_PAINEL.startswith(x[1][1].split("{")[0].rstrip("/")) and x[1][1] != "/painel" for x in P21C.TODAS_AS_TELAS)
+         and P21C.ENTRADA_PAINEL == "/painel", "a entrada é de fora da 21c (o Dashboard, da 21b — a carga fria fica fora da medida da 1ª tela)")
+    o.ok(P21C.fase_do_codigo_21c("local", "x") == "depois" and P21C.fase_do_codigo_21c("staging", "c6e795b") == "antes"
+         and P21C.fase_do_codigo_21c("staging", "HEAD") == "depois" and P21C.fase_do_codigo_21c("staging", "0123abc") == "antes",
+         "antes × depois vem do CÓDIGO medido (o c6e795b lê a Lixeira direto: antes; o HEAD pela conta: depois; um commit que o repo não tem: antes)")
+    # as pré-condições de abrir sem gravar (em toda base): o Convite com o código; a Mensagens com a instância fora do aguardando_qr — FALSAS
+    originais = (P21.situacao_como, B.uid_da_conta, P21C.instancia)
+
+    class Calado:
+        def ok(self, c: object, _t: str, parar: object = None) -> bool:
+            return bool(c)
+
+        def linha(self, _t: str) -> None:
+            pass
+
+    try:
+        B.uid_da_conta = lambda _c: uid  # type: ignore[assignment]
+        P21.situacao_como = lambda _s, _u, _c: {"contas": [{"id": uid, "papeis": ["nutricionista"], "modulos": ["nutricao"], "codigo_convite": None}]}  # type: ignore[assignment]
+        sem_cod = [x[0] for x in P21C.telas_que_abrem(Calado(), "staging", "staging", "configuracoes", P21C.NUTRI)]
+        res = {}
+        for k, i in (("sem", {"n": 0}), ("aguardando", {"n": 1, "aguardando": 1}), ("pronta", {"n": 1, "aguardando": 0})):
+            P21C.instancia = lambda _s, _u, _i=i: _i  # type: ignore[assignment]
+            res[k] = [x[0] for x in P21C.telas_que_abrem(Calado(), "staging", "local", "mensagens", P21C.NUTRI)]
+        sem_aluno = P21C.telas_que_abrem(Calado(), "staging", "staging", "aluno", P21C.NUTRI, aluno=None)
+        com_aluno = [x[1][1] for x in P21C.telas_que_abrem(Calado(), "staging", "staging", "aluno", P21C.NUTRI, aluno=uid)]
+    finally:
+        P21.situacao_como, B.uid_da_conta, P21C.instancia = originais
+    o.ok(sem_cod == ["config_perfil", "config_conta", "config_equipe", "config_excluir"] and res == {"sem": [], "aguardando": [], "pronta": ["mensagens"]}
+         and sem_aluno == [] and com_aluno == [f"/painel/alunos/{uid}/acessos", f"/painel/alunos/{uid}"],
+         f"as pré-condições (em toda base): o Convite PULA sem o código (o garantir_meu_codigo grava ao abrir); a Mensagens só com a instância criada e fora do "
+         f"aguardando_qr ({res}); o Resumo/a aba Acessos só com o aluno de teste (a rota com o id dele)")
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-21a/21b/21d — a rede das telas (antes × depois): a casca e o app do aluno; a Agenda e os Alunos; o Treino")
-    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos", "treinos"))
+    ap = argparse.ArgumentParser(description="hml-21a/21b/21d/21c — a rede das telas (antes × depois): a casca e o app do aluno; a Agenda e os Alunos; o "
+                                             "Treino; o Resumo, as Configurações, a Mensagens, a Lixeira e os Modelos")
+    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos", "treinos", "aluno", "configuracoes", "mensagens", "lixeira", "modelos"))
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--seco", action="store_true")
@@ -652,7 +840,9 @@ def main() -> int:
     B.usar_area(a.area)
     if a.seco:
         o = C.Saida(f"rede21_{a.area}_seco")
-        if a.area in B.AREAS_DA_21D:
+        if a.area in B.AREAS_DA_21C:  # hml-21c
+            seco_21c(o, a.area)
+        elif a.area in B.AREAS_DA_21D:
             seco_21d(o)
         elif a.area in B.AREAS_DA_21B:
             seco_21b(o, a.area)

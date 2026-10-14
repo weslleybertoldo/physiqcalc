@@ -54,6 +54,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 import painel21b as P21  # noqa: E402  (hml-21b: as contas, as telas e a massa da Agenda e dos Alunos)
 import rede as R  # noqa: E402
+import painel21c as P21C  # noqa: E402  (hml-21c: as contas, o aluno de teste, as telas e a ociosa)
 import treinos21d as T21  # noqa: E402  (hml-21d: as contas, as telas e o gate do Treino)
 
 C = B.C
@@ -1145,10 +1146,303 @@ def seco_21d(o) -> None:
          "de 10) e a identidade no Treino conferida antes de cada conta abrir (⚪10)")
 
 
+# ───────────────────────── hml-21c: os prints c_*, o tempo e a OCIOSA (--area aluno|configuracoes|mensagens|lixeira|modelos) ─────────────────────────
+CASOS_21C = ("prints", "tempo")
+PLANILHA_21C = B.MEDICAO / "telas_hml21c.tsv"
+CAB_21C = ["quando", "base", "commit", "fase", "area", "conta", "medida", "n", "valores_s", "mediana_s", "referencia_s", "ok"]
+# os prints c_* (contrato da 21c, §1 item 5): o card de login (na aba Acessos), as Mensagens automáticas (o Resumo), as 5 abas das
+# Configurações, a Mensagens, a Lixeira, os Modelos (nutri e personal) e o erro (a Lixeira com a conta barrada)
+CASO_DA_TELA_21C = {"aluno_acessos": "c_resumo_login", "aluno_resumo": "c_mensagens_automaticas", "config_perfil": "c_config_perfil",
+                    "config_conta": "c_config_conta", "config_equipe": "c_config_equipe", "config_convite": "c_config_convite",
+                    "config_excluir": "c_config_excluir", "mensagens": "c_mensagens", "lixeira": "c_lixeira", "modelos": "c_modelos"}
+PRINTS_21C = (*CASO_DA_TELA_21C.values(), "c_modelos_personal", "c_erro")
+# c_erro: depois, a função conta barrada; antes (o código antigo), a lixeira_da_conta DIRETA barrada — a Lixeira mostra o erro (nunca a vazia)
+BARRA_ANTES_21C = re.compile(r"https://api-principal\.physiqcalc\.com\.br/rest/v1/rpc/lixeira_da_conta(\?|$)")
+ERRO_DA_LIXEIRA = '[data-pagina-lixeira] [data-estado="erro"]'
+OCIOSA_FOLGA_S = 0.3
+TELAS_HML20 = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "hml20" / "medicao"
+
+
+def referencia_21c(conta: str, medida: str) -> float | None:
+    """O ANTES desta medida: a última rodada do staging com o código antigo nesta planilha (a mesma conta); sem ela, o da spec."""
+    if PLANILHA_21C.exists():
+        linhas = PLANILHA_21C.read_text(encoding="utf-8").splitlines()
+        cab = linhas[0].split("\t") if linhas else []
+        antes = [dict(zip(cab, x.split("\t"))) for x in linhas[1:]]
+        antes = [x for x in antes if x.get("fase") == "antes" and x.get("conta") == conta and x.get("medida") == medida and x.get("mediana_s") not in ("", "None")]
+        if antes:
+            return float(antes[-1]["mediana_s"])
+    return P21C.antes_da_spec(conta).get(P21C.ROTA_DA_SPEC.get(medida.split(":", 1)[-1], "?"))
+
+
+def ultima_mediana(arq: Path, medida: str, conta: str | None = None) -> float | None:
+    """A mediana mais recente de uma medida numa planilha de tempo (a da hml-20 para o Dieta do app e o Financeiro — a régua do JWKS)."""
+    if not arq.exists():
+        return None
+    linhas = arq.read_text(encoding="utf-8").splitlines()
+    cab = linhas[0].split("\t") if linhas else []
+    achadas = [dict(zip(cab, x.split("\t"))) for x in linhas[1:]]
+    achadas = [x for x in achadas if x.get("medida") == medida and (conta is None or x.get("conta") == conta) and x.get("mediana_s") not in ("", "None", None)]
+    return float(achadas[-1]["mediana_s"]) if achadas else None
+
+
+def referencia_ociosa(tela: str) -> float | None:
+    """O antes de cada tela da ociosa (decisão K): a Lixeira e os Modelos — o antes da 21c; o Dieta do app e o Painel › Financeiro — a medida
+    mais recente da hml-20 (a régua do JWKS, D1)."""
+    if tela in ("lixeira", "modelos"):
+        return referencia_21c(P21C.NUTRI, f"tempo:{tela}")
+    if tela == "dieta_app":
+        return ultima_mediana(TELAS_HML20 / "telas_hml20a.tsv", "tempo:dieta")
+    return ultima_mediana(TELAS_HML20 / "telas_hml20d.tsv", "tempo:financeiro_resumo", P21C.PERSONAL)
+
+
+def tempo_21c(o, t, pend, base: str, commit: str, fase: str, area: str, conta: str, telas: list[tuple]) -> None:
+    """Decisão K: cada tela 3 vezes pela navegação do app (aquecido: a tela já foi aberta; a entrada FORA da medida), a mediana do "pronto"
+    ≤ o antes + 0,3 s; pior → a linha TEMPO (o ## TEMPO no progresso; a decisão é da sessão principal)."""
+    for tela in telas:
+        nome = tela[0]
+        valores: list[float | None] = []
+        for _ in range(ABERTURAS_TEMPO):
+            P21.fechar_janelas(t)
+            B.navegar(t, P21C.ENTRADA_PAINEL)
+            t.pg.wait_for_timeout(600)
+            valores.append(P21C.abrir_tela(t, pend, tela)["t_pronto_s"])
+        med = B.mediana(valores)
+        chave = f"tempo:{nome}"
+        ref = referencia_21c(conta, chave)
+        ok = None if fase == "antes" or ref is None or med is None else med <= ref + FOLGA_S
+        B.anotar_planilha(PLANILHA_21C, CAB_21C, [time.strftime("%Y-%m-%d %H:%M"), base, commit, fase, area, conta, chave, len(valores),
+                                                 ",".join(str(v) for v in valores), med, ref, ok])
+        if fase == "antes":
+            o.linha(f"   [antes] {conta} · {nome}: {valores} → mediana {med} s (a referência do depois)")
+            continue
+        if not o.ok(ok is not False, f"[depois] {conta} · {nome}: mediana {med} s ≤ antes {ref} + {FOLGA_S} s ({valores})" + (" — sem o antes medido" if ref is None else "")):
+            o.linha(f"TEMPO {nome} {ref} × {med} (valores {valores}) — o ## TEMPO no progresso; a decisão é da sessão principal")
+
+
+def print_erro_21c(o, t, pend, base: str, fase: str, prefixo: str | None) -> None:
+    """c_erro: a Lixeira RECARREGADA com a conta barrada (depois) / com a lixeira_da_conta direta barrada (antes): o aviso de erro da Lixeira
+    ("Não foi possível abrir a lixeira…"), nunca a lista vazia."""
+    barra = BARRA_DEPOIS if fase == "depois" else BARRA_ANTES_21C
+    barrados: list[str] = []
+
+    def barrar(route, req) -> None:
+        barrados.append(req.method)
+        route.abort()
+
+    t.ctx.route(barra, barrar)
+    try:
+        t.ir("/painel/lixeira")
+        ok = t.esperar(lambda: t.n(ERRO_DA_LIXEIRA) > 0, 60)
+        o.ok(ok and bool(barrados), f"[{base}] c_erro: {'a conta barrada' if fase == 'depois' else 'a lixeira_da_conta direta barrada'} ({len(barrados)} "
+             f"pedido(s)) → o aviso de erro da Lixeira (\"{t.texto(ERRO_DA_LIXEIRA)[:60]}\")")
+        B.print_reduzido(t.pg, prefixo or base, "c_erro", o)
+    finally:
+        t.ctx.unroute(barra)
+    t.ir("/painel/lixeira")
+    t.esperar(lambda: t.n(P21C.LIXEIRA[2]) > 0, 60)
+    B.esperar_pronto(t, pend, max_s=40)
+
+
+def aluno_da_tela(s: str) -> str | None:
+    """O aluno de TESTE das telas do Resumo/da aba Acessos (SQL só leitura, como o api.py: a conta ativa da nutri, o e-mail de teste)."""
+    uid_n = B.uid_da_conta(P21C.NUTRI)
+    c = P21.conta_ativa(P21.situacao_como(s, uid_n, P21C.NUTRI)) if uid_n else None
+    al = P21C.alunos_de_teste(s, c["id"], uid_n, B.uid_da_conta(P21C.ALUNA)) if c else {"tela": None}
+    return (al.get("tela") or {}).get("id")
+
+
+def rodar_21c(o, area: str, base: str, canal: str | None, casos: list[str], prefixo: str | None = None) -> None:
+    """As telas da 21c, conta por conta: os prints c_* (conferir cada um: tela certa, sem login nem "carregando", nomes de teste) e o tempo
+    (decisão K). Nada grava: as telas só abrem (as pré-condições do painel21c — PULA com o motivo)."""
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    if base == "prod":
+        raise SystemExit("telas.py é local e staging (a produção é o F8 da sessão principal: rede.py --base prod)")
+    s = B.usar_base(base)
+    B.usar_area(area)
+    L = B.Sessoes(f"telas21 {area} {base}")
+    commit = B.commit_medido(base)
+    fase = P21C.fase_do_codigo_21c(base, commit)
+    try:
+        B.exigir_saude(o, f"o telas.py --area {area} da hml-21c")
+        o.linha(f"[{base}] {commit}: o {fase} · área {area}")
+        aluno = aluno_da_tela(s) if area == "aluno" else None
+        with sync_playwright() as pw:
+            nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
+            try:
+                for conta in P21C.contas_da_area(area, base):
+                    telas = P21C.telas_que_abrem(o, s, base, area, conta, aluno=aluno)
+                    if not telas:
+                        continue
+                    t, pend = P21C.abrir_conta(nav, base, conta, f"telas_{area}_{conta}")
+                    try:
+                        P21C.entrar(o, t, pend, L, base, conta)
+                        if "prints" in casos:
+                            for tela in telas:
+                                caso = CASO_DA_TELA_21C[tela[0]] + ("_personal" if conta == P21C.PERSONAL else "")
+                                r = P21C.abrir_tela(t, pend, tela)
+                                o.ok(t.n(tela[2]) > 0 and r["t_pronto_s"] is not None, f"[{base}] {conta} · {caso}: a tela pronta em {r['t_pronto_s']} s ({tela[2][:60]})")
+                                B.print_reduzido(t.pg, prefixo or base, caso, o)
+                            if area == "lixeira" and conta == P21C.NUTRI:
+                                print_erro_21c(o, t, pend, base, fase, prefixo)
+                        if "tempo" in casos:
+                            tempo_21c(o, t, pend, base, commit, fase, area, conta, telas)
+                    finally:
+                        P21C.sair_da_conta(o, t, L, base, conta, f"telas {area}")
+            finally:
+                nav.close()
+    finally:
+        L.fechar(o)
+
+
+def ociosa_21c(o, base: str, canal: str | None) -> None:  # noqa: PLR0915
+    """A OCIOSA (decisão K — roda SÓ no F7, pela sessão principal, um por vez, com o /health): as 4 telas críticas (a Lixeira — a conta; os
+    Modelos — a nutricao e a financeiro; o Dieta do app do aluno — a nutricao; o Painel › Financeiro — a financeiro), cada uma no seu
+    contexto, paradas na entrada; a espera de ≥ 10 min sem NENHUM pedido às funções (a escuta deste processo E os logs de FUNÇÃO da Management
+    API — qualquer quem chama; NUNCA a borda: H-135), com o teto de 30 min (quente pelo tráfego da produção → "não ficou ociosa", com a
+    contagem dos logs — não é falha); então as 4 RECARREGADAS juntas (o cliente do React Query nasce vazio: a busca é de verdade) — "a 1ª
+    abertura depois de ≥ 10 min" — e a análise pelos logs de FUNÇÃO (o instante em UTC; o booted = a função fria; o ms de cada `ler`).
+    Ociosa > antes + 0,3 s → a linha TEMPO ociosa (o ## TEMPO no progresso; a decisão é da sessão principal)."""
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    if base == "prod":
+        raise SystemExit("a ociosa é do staging (o F7)")
+    s = B.usar_base(base)
+    B.usar_area("lixeira")
+    L = B.Sessoes(f"telas21 ociosa {base}")
+    commit = B.commit_medido(base)
+    ultimo = {"t": 0.0}
+
+    def ouvir(req) -> None:
+        if "/functions/v1/" in req.url and req.method == "POST":
+            ultimo["t"] = time.time()
+
+    abertos: list[tuple] = []
+    try:
+        B.exigir_saude(o, f"o telas.py --ociosa da hml-21c ({base})")
+        with sync_playwright() as pw:
+            nav = pw.chromium.launch(channel=canal, args=["--no-sandbox"]) if canal else pw.chromium.launch(args=["--no-sandbox"])
+            try:
+                for nome, funcoes, conta, rota, sel in P21C.TELAS_OCIOSA:
+                    app = conta == P21C.ALUNA
+                    t = B.Tela(nav, B.BASES[base], f"hml21c_{base}", f"ociosa_{nome}", desktop=not app)
+                    B.LegalDesligado().instalar(t.ctx)
+                    pend = B.Pendentes(t.pg)
+                    t.ctx.on("request", ouvir)
+                    abertos.append((nome, funcoes, conta, rota, sel, t, pend))
+                    t.entrar(L, conta, "/perfil" if app else P21C.ENTRADA_PAINEL)
+                    t.esperar(lambda: t.n("[data-aba-perfil]" if app else "[data-casca]") > 0, 60)
+                    B.esperar_pronto(t, pend, max_s=40)
+                todas = tuple(sorted({f for _n, fs, *_r in P21C.TELAS_OCIOSA for f in fs}))
+                inicio = time.time()
+                while True:
+                    ociosa, parada, nota = P21C.ociosa_agora(todas, ultimo["t"])
+                    if ociosa or time.time() - inicio > P21C.TETO_OCIOSA_S:
+                        break
+                    abertos[0][5].pg.wait_for_timeout(15000)
+                if not ociosa:
+                    agora = time.time()
+                    contagem = {f: sum(1 for x in P21C.logs_da_funcao(f, agora - P21C.TETO_OCIOSA_S, agora)[0] if "runtime" not in x) for f in todas}
+                    o.ok(True, f"ociosa: as funções não ficaram {P21C.OCIOSA_S} s paradas em {P21C.TETO_OCIOSA_S // 60} min ({nota}) — quentes pelo tráfego: "
+                               f"NÃO é falha; os pedidos nos logs de função na janela (UTC até {time.strftime('%H:%M:%S', time.gmtime(agora))}): {contagem}")
+                    return
+                with LockPesado():
+                    t0 = time.time()
+                    for _n, _f, _c, rota, _s, t, _p in abertos:
+                        t.ir(rota)  # a página RECARREGADA: o React Query nasce vazio (a lição 14:18 da 21d — o cache mede 0,11 s)
+                    rs = esperar_prontos([(t, p, sel) for _n, _f, _c, _r, sel, t, p in abertos])
+                    t1 = time.time()
+                analise = P21C.analisar_ociosa(todas, t0, t1)
+                o.linha(f"   ociosa — a abertura às {time.strftime('%H:%M:%S', time.gmtime(t0))} UTC (as funções paradas há {parada} s; {nota}); os logs de "
+                        f"FUNÇÃO na janela: {analise}")
+                for (nome, funcoes, conta, _r, _s, _t, _p), r in zip(abertos, rs):
+                    ref = referencia_ociosa(nome)
+                    v = r["t_pronto_s"]
+                    ok = None if ref is None or v is None else v <= ref + OCIOSA_FOLGA_S
+                    B.anotar_planilha(PLANILHA_21C, CAB_21C, [time.strftime("%Y-%m-%d %H:%M"), base, commit, "ociosa", "ociosa", conta, f"ociosa:{nome}", 1,
+                                                             str(v), v, ref, ok])
+                    if not o.ok(ok is not False, f"ociosa {nome} ({'/'.join(funcoes)}): {v} s ≤ antes {ref} + {OCIOSA_FOLGA_S} s"
+                                + (" — sem o antes medido" if ref is None else "")):
+                        o.linha(f"TEMPO ociosa {nome} {ref} × {v} — o ms do servidor de cada `ler` (os logs de função): "
+                                f"{ {f: analise.get(f, {}).get('ler_ms') for f in funcoes} }; o runtime: { {f: analise.get(f, {}).get('runtime') for f in funcoes} }")
+            finally:
+                nav.close()
+    finally:
+        for _n, _f, conta, _r, _s, t, _p in abertos:
+            try:
+                P21C.sair_da_conta(o, t, L, base, conta, "ociosa")
+            except Exception:  # noqa: BLE001
+                pass
+        L.fechar(o)
+
+
+def seco_21c(o, area: str) -> None:
+    """O --seco da 21c: os seletores das telas e do erro, os prints c_* (na pasta da 21c), as telas do tempo (decisão K), o antes da spec, a
+    barra do c_erro e a OCIOSA (decisão K: o critério, os logs de FUNÇÃO — nunca a borda —, o instante em UTC, o teto de 30 min, a página
+    recarregada) — sem rede (os logs FALSOS)."""
+    B.usar_area(area)
+    sel = {"src/painel/paginas/Lixeira.tsx": ["Não foi possível abrir a lixeira", "<EstadoErro"], "src/ui/premium/Estados.tsx": ["data-estado={estado}", 'estado="erro"'],
+           "src/app-aluno/abas/Dieta.tsx": ["data-aba-dieta"], "src/painel/financeiro/Resumo.tsx": ['data-aba-financeiro-conteudo="resumo"', "data-kpis-financeiro"]}
+    faltam = [f"{arq}: {x}" for arq, xs in {**P21C.SELETORES, **sel}.items() for x in xs if x not in (B.REPO / arq).read_text(encoding="utf-8")]
+    o.ok(not faltam, "os seletores das telas, do erro e das telas da ociosa existem no código" + (f" — faltam: {faltam}" if faltam else ""))
+    o.ok(B.PRINTS == Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "c" and B.AREA_ESTADO == "hml21c",
+         f"a 21c grava os prints em prints/hml21/c e a rodada na área hml21c ({B.PRINTS})")
+    o.ok(set(PRINTS_21C) == {"c_resumo_login", "c_mensagens_automaticas", "c_config_perfil", "c_config_conta", "c_config_equipe", "c_config_convite",
+                             "c_config_excluir", "c_mensagens", "c_lixeira", "c_modelos", "c_modelos_personal", "c_erro"}
+         and set(CASO_DA_TELA_21C) == {x[0] for x in P21C.TODAS_AS_TELAS},
+         "os prints c_* do contrato (o card de login na aba Acessos, as Mensagens automáticas, as 5 abas das Configurações, a Mensagens, a Lixeira, os "
+         "Modelos — nutri e personal — e o erro) — cada tela da área com o seu")
+    spec_n, spec_p = P21C.antes_da_spec(P21C.NUTRI), P21C.antes_da_spec(P21C.PERSONAL)
+    o.ok(spec_n.get("/painel/lixeira") == 0.22 and spec_n.get("/painel/modelos") == 0.5 and spec_p.get("/painel/modelos") == 0.82
+         and spec_n.get("/painel/mensagens") == 0.31 and spec_n.get("/painel/alunos/:id") == 3.45 and spec_n.get("/painel/configuracoes/perfil") == 0.28,
+         f"o antes da spec (rede_por_tela.tsv, aquecido): a Lixeira {spec_n.get('/painel/lixeira')} s, os Modelos {spec_n.get('/painel/modelos')}/"
+         f"{spec_p.get('/painel/modelos')} s, a Mensagens {spec_n.get('/painel/mensagens')} s, o Resumo {spec_n.get('/painel/alunos/:id')} s (de ANTES da P4: o card de "
+         f"login estava nele — o antes de verdade é o staging desta W), o Perfil {spec_n.get('/painel/configuracoes/perfil')} s")
+    Pu = "https://api-principal.physiqcalc.com.br"
+    o.ok(BARRA_ANTES_21C.match(f"{Pu}/rest/v1/rpc/lixeira_da_conta") and not BARRA_ANTES_21C.match(f"{Pu}/rest/v1/rpc/lixeira_apagar")
+         and not BARRA_ANTES_21C.match(f"{Pu}/functions/v1/conta") and BARRA_DEPOIS.match(f"{Pu}/functions/v1/conta"),
+         "o c_erro barra SÓ a área: depois a função conta; antes a lixeira_da_conta direta")
+    o.ok(CASOS_21C == ("prints", "tempo") and (FOLGA_S, ABERTURAS_TEMPO, OCIOSA_FOLGA_S) == (0.3, 3, 0.3),
+         "o tempo: 3 aberturas aquecidas (a entrada fora da medida), ≤ antes + 0,3 s (decisão K); a ociosa: ≤ antes + 0,3 s")
+    # a OCIOSA: o critério (≥ 10 min, o mesmo da medição), o teto (30 min), as 4 telas, os logs de FUNÇÃO (nunca a borda) e o UTC — sem rede
+    fonte = Path(__file__).read_text(encoding="utf-8")
+    oc = fonte[fonte.index("def ociosa_21c"):fonte.index("def seco_21c")]
+    fonte_p = (B.REPO / "e2e" / "hml21" / "painel21c.py").read_text(encoding="utf-8")
+    o.ok(P21C.OCIOSA_S == 600 and P21C.TETO_OCIOSA_S == 1800 and criterio_ociosa()
+         and [x[0] for x in P21C.TELAS_OCIOSA] == ["lixeira", "modelos", "dieta_app", "financeiro_painel"]
+         and [x[1] for x in P21C.TELAS_OCIOSA] == [("conta",), ("nutricao", "financeiro"), ("nutricao",), ("financeiro",)]
+         and "source = 'function_logs'" in fonte_p and "function_edge_logs" not in fonte_p and "t.ir(rota)" in oc and "with LockPesado():" in oc,
+         "a ociosa (decisão K): ≥ 10 min sem pedido (o critério da medição logs_borda_*), teto de 30 min, as 4 telas críticas (a Lixeira, os Modelos, o Dieta "
+         "do app, o Financeiro), pelos logs de FUNÇÃO (function_logs — nunca a borda), a página RECARREGADA, o pesado.lock só na medida")
+    import calendar  # noqa: PLC0415
+    o.ok(P21C.instante_utc("2026-10-13T17:24:03") == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0))
+         and P21C.instante_utc("2026-10-13 17:24:03.250") == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0)) + 0.25
+         and P21C.instante_utc(1760376243000000) == 1760376243.0 and P21C.instante_utc("x") is None,
+         "o instante dos logs de função: o ISO SEM fuso é UTC (a lição 14:23 da 21d), os microssegundos, o ilegível → None")
+    original = P21C.ultimo_pedido
+    res = []
+    try:
+        for logs, ultimo_local in ((((None, None), (None, None)), time.time() - 30), (((None, None), (None, None)), time.time() - 700),
+                                   (((time.time() - 60, None), (None, None)), time.time() - 700), (((time.time() - 900, None), (time.time() - 800, None)), time.time() - 700),
+                                   (((None, "HTTP 500"), (None, None)), time.time() - 700)):
+            fila = list(logs)
+            P21C.ultimo_pedido = lambda _f, _a=None, _q=fila: _q.pop(0) if _q else (None, None)  # type: ignore[assignment]
+            res.append(P21C.ociosa_agora(("nutricao", "financeiro"), ultimo_local)[0])
+    finally:
+        P21C.ultimo_pedido = original
+    o.ok(res == [False, True, False, True, False],
+         f"a ociosa: parada há < 10 min aqui → espera; parada aqui e nos logs de função → mede; um pedido de OUTRO processo nos logs → a espera segue; "
+         f"os logs fora do ar → NÃO mede (sem a conferência pelos logs de função, não vale) {res}")
+    o.ok(referencia_ociosa("dieta_app") is not None or not (TELAS_HML20 / "telas_hml20a.tsv").exists(),
+         f"o antes da ociosa do Dieta do app e do Financeiro: a medida mais recente da hml-20 (a régua do JWKS, D1) — hoje {referencia_ociosa('dieta_app')} s / "
+         f"{referencia_ociosa('financeiro_painel')} s")
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-21a/21b/21d — as telas: os prints a_*/b_*/d_* e o tempo antes × depois (a casca e o app do aluno; a Agenda "
-                                             "e os Alunos; o Treino e o gate)")
-    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos", "treinos"))
+    ap = argparse.ArgumentParser(description="hml-21a/21b/21d/21c — as telas: os prints a_*/b_*/d_*/c_* e o tempo antes × depois (a casca e o app do aluno; a "
+                                             "Agenda e os Alunos; o Treino e o gate; o Resumo, as Configurações, a Mensagens, a Lixeira, os Modelos e a ociosa)")
+    ap.add_argument("--area", required=True, choices=("casca", "app", "agenda", "alunos", "treinos", "aluno", "configuracoes", "mensagens", "lixeira", "modelos"))
     ap.add_argument("--base", default="local", choices=("local", "staging"))
     ap.add_argument("--canal", default=None, help="msedge (o Edge — sempre nos E2E de tela)")
     ap.add_argument("--casos", default=None, help="prints,tempo (21a) · prints,tempo,fluxo (21b)")
@@ -1157,29 +1451,40 @@ def main() -> int:
     ap.add_argument("--seco", action="store_true")
     ap.add_argument("--gate", action="store_true", help="hml-21d: SÓ o gate de latência (decisão K) — no fim da etapa 2, um por vez")
     ap.add_argument("--gate-ate", default=None, help="hml-21d: HH:MM — o prazo do gate (a janela do BANCO): nenhuma espera nova que não acabe até lá")
+    ap.add_argument("--ociosa", action="store_true", help="hml-21c: SÓ a abertura OCIOSA das 4 telas críticas (decisão K) — no F7, pela sessão principal")
     a = ap.parse_args()
     B.corte_vira_saida()
     B.usar_area(a.area)
     da_21b = a.area in B.AREAS_DA_21B
     da_21d = a.area in B.AREAS_DA_21D
+    da_21c = a.area in B.AREAS_DA_21C  # hml-21c
     if a.gate and not da_21d:
         raise SystemExit("o --gate é da 21d (--area treinos)")
-    validos = CASOS_21D if da_21d else CASOS_21B if da_21b else CASOS
+    if a.ociosa and not da_21c:
+        raise SystemExit("o --ociosa é da 21c (--area aluno|configuracoes|mensagens|lixeira|modelos)")
+    validos = CASOS_21C if da_21c else CASOS_21D if da_21d else CASOS_21B if da_21b else CASOS
     casos = [c.strip() for c in (a.casos or ",".join(validos)).split(",") if c.strip()]
     if any(c not in validos for c in casos):
         raise SystemExit(f"caso desconhecido (os casos: {', '.join(validos)})")
     if a.seco:
         o = C.Saida(f"telas21_{a.area}_seco")
-        if da_21d:
+        if da_21c:
+            seco_21c(o, a.area)
+        elif da_21d:
             seco_21d(o)
         elif da_21b:
             seco_21b(o, a.area)
         else:
             seco(o)
         return o.fim()
-    o = C.Saida(f"telas21_{a.area}_{a.base}" + ("_gate" if a.gate else ""))
+    o = C.Saida(f"telas21_{a.area}_{a.base}" + ("_gate" if a.gate else "") + ("_ociosa" if a.ociosa else ""))
     try:
-        if da_21d:
+        if da_21c:
+            if a.ociosa:
+                ociosa_21c(o, a.base, a.canal)
+            else:
+                rodar_21c(o, a.area, a.base, a.canal, casos, a.prefixo)
+        elif da_21d:
             ate = None
             if a.gate_ate:
                 hh, mm = (int(x) for x in a.gate_ate.split(":"))

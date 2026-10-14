@@ -69,12 +69,29 @@ da lib como a pessoa no Treino, a massa e a limpeza):
   --so-leitura  a treinos (OPTIONS, 401, 400 de schema, a q desconhecida e 1 `ler` P — treinos_prontos) e a conta v4 (o `ler` novo:
                 aluno_treino) com a MESMA conta das áreas da 21a (a aluno-calc na produção; a w5p-aluna no staging) — 1 login por base
                 (o principal reaproveitado + a troca do Treino)
+hml-21c (13/10/2026 — contrato da 21c, decisões F, I, K e N), --area aluno|configuracoes|mensagens|lixeira|modelos (e2e/hml21/painel21c.py: as
+contas, o aluno de TESTE, a massa, as travas e a limpeza):
+  P   cada consulta da 21c (o dado livre, o responsável, o perfil, a Mensagens, a Lixeira) e os 10 ★ dos Modelos (a nutricao/financeiro, no
+      motor comum) = o SQL FIXO da lib do c6e795b COMO A PESSOA (os ★ como conjunto: a lib não ordenava); o acesso_ler = a aluno_acesso como a
+      nutri; cada ação faz o MESMO de hoje no que volta (decisão I): os ajustes e o apelido do aluno, o perfil e o nome da conta pela MESMA ação;
+      o link, o whatsapp_falhas_vistas_em e a faixa por SQL com trava de formato; o login do aluno SÓ pelas recusas (o criar com o aluno COM login
+      ou 3 caracteres; o redefinir no SEM login ou 3 caracteres — o P de verdade só no par do W8b, com a MESMA senha e o senha_definida); a Equipe
+      e o responsável SÓ pelas recusas (os mesmos papéis GRAVAM — PADRÃO); a config do WhatsApp SÓ a MESMA (desligada) e o reenviar SÓ com a
+      instância NÃO conectada; a Lixeira SÓ no item que a rodada mandou para lá; a ★ tirada SÓ dos modelos de teste da rodada; o ZIP só lido
+  N1  a OUTRA conta (w13-dono) não lê nem grava nada da nutri (as 8 ações do aluno → sem_acesso; o nome da conta → 404; o código → nao_membro;
+      remover → so_dono; o reenviar → nao_encontrada; restaurar → sem_acesso; tirar a ★ → nao_encontrado) · N2 · N3 (a aluno_acesso como q →
+      consulta_invalida: é AÇÃO) · N4/N5 · N6 · N7 · N8 (a foto do profissional pelas ações da 21a) · N9 · N11 (a aluna: nada de outra pessoa;
+      o perfil_profissional/perfil_mensagens = os DELA)
+  --limpar  a rodada da 21c (a chave hml21c: a massa, os avisos, o que volta; a foto da nutri) — conferido por SQL só leitura, só contagem
+  --so-leitura  o smoke da conta v5 (decisão G): o da 21a + o `ler` novo (perfil_profissional); --area mensagens: o `ler` da Mensagens pela
+                conta do painel da base (D2 — a nutri-legado na produção)
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
 import json
+import re
 import sys
 import time
 import uuid
@@ -85,6 +102,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _base as B  # noqa: E402
 import painel21b as P21  # noqa: E402  (hml-21b: as contas, a massa e a limpeza da Agenda e dos Alunos)
 import treinos21d as T21  # noqa: E402  (hml-21d: a função treinos, o SQL da lib no Treino, a massa e a limpeza)
+import painel21c as P21C  # noqa: E402  (hml-21c: as contas, o aluno de teste, as telas, a massa, as travas e a limpeza)
 
 C = B.C
 CASOS = ("P", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N11")
@@ -109,12 +127,14 @@ ACOES = {
                "trava_excluir", "regras_salvar", "agenda_confirmar", "agenda_desistir", "agenda_reagendar", "agenda_marcar"),
     "alunos": ("pacote_definir",),
 }
-AREAS = ("casca", "app", "agenda", "alunos", "treinos")  # hml-21d: + o Treino
+AREAS = ("casca", "app", "agenda", "alunos", "treinos", "aluno", "configuracoes", "mensagens", "lixeira", "modelos")  # hml-21d: + o Treino; hml-21c: + 5
 # as consultas do PAINEL de OUTRAS funções (a nutricao, a financeiro): pela conta, consulta_invalida (N11 da 21a). hml-21b (PADRÃO, regra da
 # sessão principal 03:25 — o esperado da 21a não muda: consulta de fora do catálogo → consulta_invalida): saíram daqui as 2 que a 21b pôs
 # no catálogo da conta (alunos_da_conta, agenda_agendamentos — o N11 da 21b: a aluna as pede e o RLS não deixa nada) e entraram 2 de
-# outras funções (fin_lancamentos da financeiro, planos_do_aluno da nutricao)
-DO_PAINEL = ("fin_lancamentos", "planos_do_aluno", "fin_categorias", "aluno_dieta", "perfil_profissional")
+# outras funções (fin_lancamentos da financeiro, planos_do_aluno da nutricao). hml-21c (decisão I, o precedente da DECISÃO 06:05 da 21b): o
+# perfil_profissional ENTROU no catálogo da conta (as Configurações › Perfil) — sai daqui e entra uma de fora do catálogo da conta (os ★ de
+# recibo da financeiro, nova nesta W); o esperado (consulta de fora → consulta_invalida) não muda
+DO_PAINEL = ("fin_lancamentos", "planos_do_aluno", "fin_categorias", "aluno_dieta", "fin_modelos_recibo_favoritos")
 VERSAO_ERRADA = "hml21-versao-que-nao-existe"
 
 
@@ -1201,6 +1221,9 @@ def rodar_21b(o, area: str, base: str, casos: set) -> None:
 
 
 def rodar(o, area: str, base: str, casos: set) -> None:
+    if area in B.AREAS_DA_21C:  # hml-21c
+        rodar_21c(o, area, base, casos)
+        return
     if area in B.AREAS_DA_21D:  # hml-21d
         rodar_21d(o, base, casos)
         return
@@ -2007,9 +2030,1051 @@ def so_leitura_21d(o, base: str) -> None:
         L.fechar(o)
 
 
+# ───────────────────────── hml-21c: o Resumo do aluno, as Configurações, a Mensagens, a Lixeira e os Modelos ─────────────────────────
+# (--area aluno|configuracoes|mensagens|lixeira|modelos — e2e/hml21/painel21c.py: as contas, o aluno de teste, as telas, a massa, as travas
+# e a limpeza; contrato da 21c, decisões F, I, K e N)
+CONSULTAS_21C = {"aluno": ("dado_livre", "aluno_responsavel"), "configuracoes": ("perfil_profissional",),
+                 "mensagens": ("perfil_mensagens", "whatsapp_resumo", "whatsapp_fila", "mensagens_desligadas"), "lixeira": ("lixeira",), "modelos": ()}
+ACOES_21C = {
+    "aluno": ("acesso_ler", "acesso_criar", "acesso_redefinir_senha", "aluno_ajustes_salvar", "aluno_dados_salvar", "aluno_link_novo",
+              "aluno_responsavel_registrar", "aluno_avisar_plano"),
+    "configuracoes": ("perfil_salvar", "conta_salvar", "equipe_papeis", "equipe_remover", "meu_codigo_garantir", "prontuarios_para_baixar"),
+    "mensagens": ("whatsapp_config_salvar", "whatsapp_reenviar", "whatsapp_limpar_falhas", "faixa_ligar_para_todos", "faixa_fechar"),
+    "lixeira": ("lixeira_restaurar", "lixeira_apagar"),
+    "modelos": (),
+}
+EMAIL_X = "aluno.x.teste.claude@physiqnutri.app"  # um e-mail de exemplo (só o --seco)
+# as recusas que a RPC dá ANTES de gravar (a varredura dos raise da decisão B — progresso F1): o E2E só aceita estas nas chamadas travadas
+RECUSAS_DO_CRIAR = {"ja_tem_acesso", "email_invalido", "conta_real_no_staging", "senha_curta"}
+RECUSAS_DO_REGISTRAR = {"nao_e_16_17", "nome_invalido", "vinculo_invalido", "forma_invalida", "falta_confirmar", "textos_desligados", "conta_real_no_staging"}
+# (as da alterar_papeis_membro/remover_membro ANTES de qualquer update — conferido no corpo: hml21/medicao/rpcs_21c_defs.txt; e os motivos do
+# equipe_motivo_bloqueio). O "nada mudou" é o que prova: os membros, os papéis, os códigos e os eventos da conta iguais por SQL.
+RECUSAS_DA_EQUIPE = {"papeis_invalidos", "papel_dono", "so_dono", "membro_inexistente", "nao_remove_dono", "novo_responsavel_invalido", "conta_legada",
+                     "conta_inexistente", "conta_travada", "papel_sem_modulo", "tem_alunos"}
+
+
+def pedidos_ler_21c(area: str) -> list[dict]:
+    """Os corpos `ler` da CONTA na rodada da 21c (P e os N) — o --seco passa cada um pelo leitor do servidor (o catálogo inteiro). Os Modelos
+    não leem pela conta (os ★: a nutricao/financeiro — pedidos_favoritos)."""
+    ok = {
+        "aluno": [B.item("dado_livre", email=EMAIL_X, cpf=None, paciente=FALSO), B.item("aluno_responsavel", aluno=FALSO)],
+        "configuracoes": [B.item("perfil_profissional")],
+        "mensagens": [B.item("perfil_mensagens"), B.item("whatsapp_resumo", conta=CONTA_X),
+                      B.item("whatsapp_fila", conta=CONTA_X, escopo="meus", filtro="todas", limite=P21C.LIMITE_FILA, antes=None, antes_id=None),
+                      B.item("mensagens_desligadas")],
+        "lixeira": [B.item("lixeira", conta=CONTA_X, tipo=None, busca=None, offset=0, limite=P21C.POR_PAGINA_LIXEIRA)],
+        "modelos": [B.item("perfil_profissional")],
+    }[area]
+    n45 = [B.item("perfil_profissional", id=OUTRO, select="*", colunas="email,senha", nutricionista_id=OUTRO),
+           B.item("aluno_responsavel", aluno=FALSO, nutricionista_id=OUTRO, p_aluno=OUTRO),
+           B.item("lixeira", conta=CONTA_X, offset=0, limite=20, nutricionista_id=OUTRO, p_conta=OUTRO, sql="x"),
+           B.item("whatsapp_fila", conta=CONTA_X, escopo="meus", filtro="todas", limite=30, destino_e164="x", user_id=OUTRO)]
+    ruins = [B.item("lixeira", conta=CONTA_X, offset=-1, limite=20), B.item("lixeira", conta=CONTA_X, offset=0, limite=101),
+             B.item("lixeira", offset=0, limite=20), B.item("whatsapp_fila", escopo="todos"), B.item("whatsapp_fila", filtro="tudo"),
+             B.item("whatsapp_fila", antes="ontem"), B.item("aluno_responsavel"), B.item("aluno_responsavel", aluno="nao-uuid"),
+             B.item("dado_livre", paciente="nao-uuid")]
+    return [
+        {"acao": "ler", "itens": ok},
+        {"acao": "ler", "itens": [ok[0], B.item("conta_inteira"), B.item("aluno_acesso", aluno=FALSO), B.item("prontuarios_para_baixar")]},  # N3
+        {"acao": "ler", "itens": n45},  # N4/N5
+        {"acao": "ler", "itens": ruins},  # o param fora da forma
+        {"acao": "ler", "itens": [ok[0]] * 17},  # N9
+        {"acao": "ler", "itens": [B.item(q) for q in DO_PAINEL]},  # as de OUTRAS funções: consulta_invalida (o mesmo da 21a)
+    ]
+
+
+def corpo_responsavel(acao: str) -> dict:
+    """O p_dados do consentimento como a tela manda — o "registrar" SEMPRE com confirmo false (a trava: nenhum caminho grava)."""
+    if acao == "registrar":
+        return {"acao": "registrar", "nome": "Responsável de Teste", "vinculo": "mae", "forma": "presencial", "confirmo": False, "origem": "site"}
+    return {"acao": "retirar", "origem": "site"}
+
+
+def pedidos_acoes_21c(area: str, uid: str, rodada: str) -> list[tuple[str, dict, bool]]:
+    """As ações da rodada da 21c: (ação, corpo, o servidor aceita?) — o --seco confere cada uma no lerCorpoDaAcao do servidor (os mesmos corpos
+    que o rodar manda, com os ids de exemplo)."""
+    mk = P21C.marca(rodada)
+    if area == "aluno":
+        return [
+            ("acesso_ler", {"aluno": FALSO, "nutricionista_id": OUTRO, "user_id": OUTRO}, True),  # N4/N5
+            ("acesso_ler", {}, False),
+            ("acesso_criar", {"aluno": FALSO, "email": EMAIL_DE_TESTE_X, "senha": P21C.SENHA_CURTA}, True),
+            ("acesso_criar", {"aluno": FALSO, "email": P21C.EMAIL_INVALIDO, "senha": P21C.SENHA_CURTA}, True),
+            ("acesso_criar", {"aluno": FALSO, "email": P21C.EMAIL_DE_FORA, "senha": P21C.SENHA_CURTA}, True),
+            ("acesso_criar", {"aluno": FALSO, "email": P21C.EMAIL_DE_TESTE_NOVO, "senha": P21C.SENHA_CURTA, "nutricionista_id": OUTRO}, True),
+            ("acesso_criar", {"aluno": FALSO, "email": EMAIL_X}, False),  # sem a senha
+            ("acesso_redefinir_senha", {"aluno": FALSO, "senha": P21C.SENHA_CURTA}, True),
+            ("acesso_redefinir_senha", {"aluno": FALSO}, False),
+            ("aluno_ajustes_salvar", {"aluno": FALSO, "ajustes": {"mensagens_automaticas": True}}, True),
+            ("aluno_ajustes_salvar", {"aluno": FALSO, "ajustes": {"mensagens_automaticas": False, "acesso_app": True}}, False),  # a chave da W-A: recusa
+            ("aluno_ajustes_salvar", {"aluno": FALSO, "ajustes": {"diario_alimentar": True}}, False),
+            ("aluno_ajustes_salvar", {"aluno": FALSO, "ajustes": {"acesso_link": False}}, False),
+            ("aluno_dados_salvar", {"aluno": FALSO, "dados": {"apelido": mk[:40]}}, True),
+            ("aluno_dados_salvar", {"aluno": FALSO, "dados": {"apelido": None}}, True),  # a volta (o apelido de antes: null)
+            ("aluno_dados_salvar", {"aluno": FALSO, "dados": {"apelido": "x", "nutricionista_id": OUTRO}}, False),  # objeto fechado: recusa
+            ("aluno_link_novo", {"aluno": FALSO, "link_codigo": "x"}, True),
+            ("aluno_responsavel_registrar", {"aluno": FALSO, "dados": corpo_responsavel("registrar")}, True),
+            ("aluno_responsavel_registrar", {"aluno": FALSO, "dados": corpo_responsavel("retirar")}, True),
+            ("aluno_responsavel_registrar", {"aluno": FALSO, "dados": {**corpo_responsavel("registrar"), "versao": "1"}}, False),
+            ("aluno_avisar_plano", {"aluno": FALSO, "modulos": P21C.MODULOS_DO_AVISO, "destino_user_id": OUTRO}, True),
+        ]
+    if area == "configuracoes":
+        return [
+            ("perfil_salvar", {"nome": "Nutri de Teste", "tipo_perfil": "nutricionista", "area_outra": None, "dados": {"cidade": mk}, "id": OUTRO,
+                               "email": "x@y", "foto_url": "x"}, True),  # N4/N5: o id/o e-mail/a foto CAEM
+            ("perfil_salvar", {"nome": "Nutri", "tipo_perfil": None, "area_outra": None, "dados": {"foto_url": "https://x/y.png"}}, False),  # a foto: só a 21a
+            ("perfil_salvar", {"nome": "Nutri", "tipo_perfil": "astronauta", "area_outra": None, "dados": {}}, False),
+            ("conta_salvar", {"conta": CONTA_X, "nome": mk, "dono_id": OUTRO}, True),
+            ("conta_salvar", {"conta": CONTA_X}, False),
+            ("equipe_papeis", {"membro": FALSO, "papeis": ["x"]}, True),
+            ("equipe_papeis", {"membro": FALSO, "papeis": ["dono", "nutricionista"]}, True),
+            ("equipe_remover", {"membro": FALSO, "novo_personal": P21C.NAO_MEMBRO, "novo_nutri": P21C.NAO_MEMBRO}, True),
+            ("equipe_remover", {"membro": "nao-uuid", "novo_personal": P21C.NAO_MEMBRO, "novo_nutri": P21C.NAO_MEMBRO}, False),
+            ("meu_codigo_garantir", {"conta": CONTA_X, "user_id": OUTRO}, True),
+            ("prontuarios_para_baixar", {"conta": CONTA_X, "pacientes": [FALSO]}, True),
+            ("prontuarios_para_baixar", {"conta": CONTA_X, "pacientes": [FALSO] * 26}, False),
+            ("perfil_foto_salvar", {"caminho": f"{OUTRO}/foto-1.png"}, True),  # N8: aceito na forma; o servidor recusa a pasta (dados_invalidos)
+        ]
+    if area == "mensagens":
+        cfg = {"ativo": False, "horario": "09:00", "momentos": {m: False for m in ("aniversario", "lembrete_vespera")}, "textos": {}}
+        return [
+            ("whatsapp_config_salvar", {"whatsapp": cfg, "nutricionista_id": OUTRO}, True),
+            ("whatsapp_config_salvar", {"whatsapp": {**cfg, "instancia": "x"}}, False),  # objeto fechado: recusa
+            ("whatsapp_config_salvar", {"whatsapp": {**cfg, "momentos": {"pix": True}}}, False),
+            ("whatsapp_reenviar", {"id": FALSO}, True),
+            ("whatsapp_reenviar", {"id": "nao-uuid"}, False),
+            ("whatsapp_limpar_falhas", {"user_id": OUTRO}, True),
+            ("faixa_ligar_para_todos", {"ids": [FALSO]}, True),
+            ("faixa_ligar_para_todos", {"ids": []}, False),
+            ("faixa_ligar_para_todos", {"ids": [FALSO] * 501}, False),
+            ("faixa_fechar", {}, True),
+        ]
+    if area == "lixeira":
+        return [
+            ("lixeira_restaurar", {"tipo": "anamnese", "id": FALSO, "nutricionista_id": OUTRO}, True),
+            ("lixeira_restaurar", {"tipo": "anamnese"}, False),
+            ("lixeira_apagar", {"tipo": "anamnese", "id": FALSO}, True),
+            ("lixeira_apagar", {"tipo": "tipo_que_nao_existe", "id": FALSO}, True),  # a forma passa; a RPC: tipo_invalido
+        ]
+    return []
+
+
+EMAIL_DE_TESTE_X = "aluno.y.teste.claude@physiqnutri.app"  # um e-mail de teste de exemplo (só o --seco)
+
+
+def pedidos_favoritos(rodada: str) -> tuple[list[tuple[str, dict]], list[tuple[str, dict, bool]], list[tuple[str, dict, bool]]]:
+    """Os Modelos (os ★ pela nutricao/financeiro, no motor comum): os `ler` (função, corpo), as ações da nutricao e as da financeiro da
+    rodada — (ação, corpo, o servidor aceita?)."""
+    mk = P21C.marca(rodada)
+    lers = [("nutricao", {"acao": "ler", "itens": [B.item(q) for q in B.CONSULTAS_FAVORITOS_21C]}),
+            ("financeiro", {"acao": "ler", "itens": [B.item("fin_modelos_recibo_favoritos")]}),
+            ("nutricao", {"acao": "ler", "itens": [B.item("modelos_favoritos_anamnese", nutricionista_id=OUTRO, favorito=False, select="*")]}),  # N4/N5
+            ("nutricao", {"acao": "ler", "itens": [B.item("modelos_favoritos_anamnese")] * 17})]  # N9
+    nut = [("modelo_anamnese_criar", {"titulo": f"{mk} ★", "perguntas": ["Pergunta de teste"], "favorito": True}, True),
+           ("modelo_anamnese_editar", {"id": FALSO, "favorito": False}, True),
+           ("modelo_anamnese_excluir", {"id": FALSO}, True),
+           ("anamnese_criar", {"paciente_id": FALSO, "modelo_id": None, "titulo": f"{mk} lixeira", "data": agora_iso(), "conteudo": P21C.CONTEUDO_ANAMNESE,
+                               "texto_livre": None}, True),
+           ("anamnese_excluir", {"id": FALSO}, True)]
+    fin = [("modelo_recibo_criar", {"titulo": f"{mk} ★", "conteudo": "Recibo de teste", "favorito": True}, True),
+           ("modelo_recibo_editar", {"id": FALSO, "favorito": False}, True),
+           ("modelo_recibo_excluir", {"id": FALSO}, True)]
+    return lers, nut, fin
+
+
+def fonte_do(fn) -> str:
+    import inspect  # noqa: PLC0415
+    return inspect.getsource(fn)
+
+
+def seco_21c(o, area: str) -> None:  # noqa: PLR0915
+    """O --seco da 21c (sem rede): os corpos pelo leitor REAL do servidor (a conta; os ★ e as ações da nutricao/financeiro), o SQL FIXO da
+    lib do c6e795b de cada consulta, as áreas da guarda e a Guarda da W (as 7), as travas (o login do aluno, a equipe, o responsável, a
+    Lixeira, a escrita no staging), a produção (decisão N) e o Estado."""
+    uid = "33333333-3333-4333-8333-333333333333"
+    rodada = "seco"
+    B.usar_area(area)
+    o.ok(B.PRINTS == B.PRINTS_C and B.AREA_ESTADO == B.CHAVE_21C, f"[seco] a 21c grava os prints em prints/hml21/c e a rodada na área hml21c ({B.PRINTS})")
+    lers = pedidos_ler_21c(area)
+    acoes = pedidos_acoes_21c(area, uid, rodada)
+    r = B.regras_conta(lers + [{**c, "acao": a} for a, c, _ok in acoes])
+    cons = r["consultas"]
+    todas_21c = set(r["consultas_21c"])
+    o.ok(todas_21c == {q for v in CONSULTAS_21C.values() for q in v} and len(todas_21c) == 8 and not todas_21c & (set(r["consultas_21a"]) | set(r["consultas_21b"])),
+         f"[seco] as 8 consultas da 21c no catálogo do servidor (nenhuma da 21a/21b): {sorted(todas_21c)}")
+    o.ok(all(tuple(r[m]) == ACOES_21C[m] for m in ("aluno", "configuracoes", "mensagens", "lixeira")),
+         "[seco] as 21 ações da 21c = as listas do servidor, na ordem (aluno 8, configurações 6, mensagens 5, lixeira 2)")
+    o.ok(all(q in B.SQL_DA_LIB and "(c6e795b" in B.SQL_DA_LIB[q][0] and B.SQL_DA_LIB[q][0].startswith("src/") for q in todas_21c | {"aluno_acesso"}),
+         "[seco] cada consulta da 21c (e a RPC do acesso_ler) tem o SQL FIXO da lib do c6e795b (com a origem arquivo:linha) para o P")
+    pl = r["pedidos"][: len(lers)]
+    o.ok(pl[0].get("ok") is True and all(i.get("ok") for i in pl[0]["itens"]), f"[seco] P: o lote da área passa no leitor do servidor ({[i.get('q') for i in pl[0].get('itens') or []]})")
+    o.ok([i.get("erro") for i in pl[1]["itens"]] == [None, "consulta_invalida", "consulta_invalida", "consulta_invalida"],
+         "[seco] N3: a q desconhecida → consulta_invalida; a aluno_acesso (AÇÃO, decisão 13) e o ZIP (ação) como q → consulta_invalida")
+    declarados = {q: set(cons[q]["params"]) for q in cons}
+    o.ok(all(i.get("ok") and set(i["params"]) <= declarados[i["q"]] for i in pl[2]["itens"]),
+         f"[seco] N4/N5: o dono/as colunas/o sql de fora no corpo do `ler` CAEM (só os params declarados chegam): {[sorted(i.get('params', {})) for i in pl[2]['itens']]}")
+    o.ok(all(i.get("erro") == "dados_invalidos" for i in pl[3]["itens"]), f"[seco] o param fora da forma → dados_invalidos ({[i.get('erro') for i in pl[3]['itens']]})")
+    o.ok(pl[4] == {"modulo": "leitura", "ok": False, "erro": "lote_grande"}, "[seco] N9: 17 itens → lote_grande")
+    o.ok(all(i.get("erro") == "consulta_invalida" for i in pl[5]["itens"]) and "perfil_profissional" not in DO_PAINEL,
+         f"[seco] N11: as de OUTRAS funções pela conta → consulta_invalida ({', '.join(DO_PAINEL)}) — o perfil_profissional saiu da lista (entrou no catálogo)")
+    pa = r["pedidos"][len(lers):]
+    certos = [(a, esperado, x) for (a, _c, esperado), x in zip(acoes, pa)]
+    modulo = {"aluno": "aluno", "configuracoes": "configuracoes", "mensagens": "mensagens", "lixeira": "lixeira"}
+    o.ok(all(x.get("acao") == a and (x.get("modulo") == modulo.get(area) or (a.startswith("perfil_foto") and x.get("modulo") == "app")) for a, _e, x in certos),
+         f"[seco] cada ação vai ao módulo {area} do servidor (a foto do profissional: as ações da 21a, no módulo app)")
+    o.ok(all(bool(x.get("ok")) == esperado for _a, esperado, x in certos),
+         f"[seco] os corpos: os aceitos passam, os ruins → dados_invalidos ({[(a, x.get('campo')) for a, e, x in certos if not e]})")
+    o.ok(all(set((x.get("valores") or {})) <= set(r["corpos"][a]) for a, e, x in certos if e)
+         and not any(k in (x.get("valores") or {}) for _a, e, x in certos if e for k in (*CHAVES_DE_DONO, "destino_user_id", "foto_url", "link_codigo")),
+         "[seco] N4/N5: as chaves fora da lista da ação CAEM — nenhuma chave de dono chega ao banco (o dono é o token; as RPCs, o auth.uid())")
+    if area == "aluno":
+        vals = {a: x.get("valores") for a, e, x in certos if e}
+        o.ok(vals.get("aluno_link_novo") == {"aluno": FALSO} and vals.get("aluno_avisar_plano") == {"aluno": FALSO, "modulos": ["dieta"]},
+             f"[seco] o link e o aviso: só o aluno (e os módulos) chegam — o link_codigo e o destino do corpo CAEM ({vals.get('aluno_link_novo')})")
+    # ── as travas do login do aluno (decisão I): TODA chamada do acesso_criar leva uma das 2 travas; o redefinir, só o sem_conta/3 caracteres
+    fonte = fonte_do(p_aluno_21c)
+    criar = [m.start() for m in re.finditer(r'"acesso_criar"', fonte)]
+    redefinir = [m.start() for m in re.finditer(r'"acesso_redefinir_senha"', fonte)]
+    o.ok(not re.search(r'B\.conta\([^\n]*"acesso_(criar|redefinir_senha)"', fonte) and criar and redefinir
+         and all("acao_travada(" in fonte[max(0, i - 40):i] for i in criar + redefinir),
+         f"[seco] o acesso_criar ({len(criar)}) e o acesso_redefinir_senha ({len(redefinir)}) do P do aluno SÓ pela acao_travada (nenhuma chamada direta)")
+    todo = Path(__file__).read_text(encoding="utf-8")
+    diretas = re.findall(r'B\.conta\([^\n]*"acesso_(criar|redefinir_senha)"', todo)
+    w8b = fonte_do(p_senha_w8b)
+    o.ok(diretas == ["redefinir_senha"] and re.search(r'B\.conta\(L\.token\(P21C\.W8B_PERSONAL\), "acesso_redefinir_senha"', w8b)
+         and "registrar_par_w8b()" in w8b and "logins_feitos()" in w8b and "P21C.ALUNA" in w8b,
+         "[seco] no api.py inteiro, a ÚNICA chamada direta do login do aluno é o P de verdade da senha nova — SÓ o par do W8b (o w8b-personal no "
+         "aluno dele; a senha guardada; o teto de logins conferido antes; nunca a w5p-aluna); o acesso_criar NUNCA sai sem a trava")
+    rec: list[str] = []
+    for aluno_tem_login, senha in ((False, "abcdefgh12"), (None, P21C.SENHA_CURTA), (True, "abcdefgh12")):
+        try:
+            trava_do_login("acesso_criar", aluno_tem_login, senha)
+            rec.append("passa")
+        except SystemExit:
+            rec.append("recusa")
+    rec2: list[str] = []
+    for aluno_tem_login, senha in ((True, "abcdefgh12"), (False, "abcdefgh12"), (True, P21C.SENHA_CURTA)):
+        try:
+            trava_do_login("acesso_redefinir_senha", aluno_tem_login, senha)
+            rec2.append("passa")
+        except SystemExit:
+            rec2.append("recusa")
+    o.ok(rec == ["recusa", "passa", "passa"] and rec2 == ["recusa", "passa", "passa"] and len(P21C.SENHA_CURTA) == 3,
+         f"[seco] a trava do login do aluno: o criar só com o aluno COM login (ja_tem_acesso) ou a senha de 3 caracteres ({rec}); o redefinir só no "
+         f"aluno SEM login (sem_conta) ou com 3 caracteres ({rec2}) — fora delas, a chamada nem sai")
+    # ── a Equipe e o responsável (decisão I): o remover SEMPRE com os 2 responsáveis = não membro; o registrar SEMPRE com confirmo false
+    fc = fonte_do(p_configuracoes_21c)
+    rem = [m.start() for m in re.finditer(r'"equipe_remover"', fc)]
+    o.ok(rem and all("corpo_remover(" in fc[i:i + 80] for i in rem) and corpo_remover(FALSO) == {"membro": FALSO, "novo_personal": P21C.NAO_MEMBRO,
+                                                                                                   "novo_nutri": P21C.NAO_MEMBRO},
+         f"[seco] a trava do equipe_remover: as {len(rem)} chamadas pelo corpo_remover (os 2 responsáveis novos = um uuid que NÃO é membro: a RPC recusa "
+         "novo_responsavel_invalido antes de qualquer update)")
+    fa = fonte_do(p_aluno_21c)
+    cw = r["corpos"].get("whatsapp_config_salvar", {}).get("whatsapp", {}).get("campos", {})
+    o.ok(tuple((cw.get("momentos") or {}).get("campos", {})) == P21C.MOMENTOS_WHATSAPP and tuple((cw.get("textos") or {}).get("campos", {})) == P21C.MOMENTOS_WHATSAPP,
+         f"[seco] os 6 momentos do WhatsApp do E2E = os do servidor (a config de hoje só volta igual com eles: {P21C.MOMENTOS_WHATSAPP})")
+    o.ok(corpo_responsavel("registrar")["confirmo"] is False and fa.count('"aluno_responsavel_registrar"') == fa.count("corpo_responsavel(")
+         and "responsavel_vigente" in fa and 'r0.get("atual") is not None' in fa,
+         "[seco] a trava do responsável: todo registrar com confirmo false (o falta_confirmar vem antes do insert); o retirar só sem registro vigente")
+    o.ok(all('"tipo": "paciente"' not in fonte_do(f) for f in (p_lixeira_21c, p_aluno_21c)) and '"paciente"' not in fonte_do(p_lixeira_21c),
+         "[seco] a Lixeira NUNCA com o tipo paciente (nem a recusa: restaurar um aluno não é desta W)")
+    # ── a Guarda da W (decisão F): as 7 de leitura da 21c passam; as ações da conta e a whatsapp-conectar gravam
+    g = B.guarda_da_w()
+    o.ok(B.RPCS_DE_LEITURA_DA_21C <= set(g.leitura) and len(B.RPCS_DE_LEITURA_DA_21C) == 7
+         and not ({"paciente_criar_acesso", "aluno_salvar_ajustes", "lixeira_apagar", "whatsapp_salvar_config"} & set(g.leitura))
+         and B.B17.funcao_grava("whatsapp-conectar", "status", json.dumps({"acao": "status"}))
+         and B.B17.funcao_grava("conta", "acesso_ler", json.dumps({"aluno": FALSO, "acao": "acesso_ler"}))
+         and B.B17.funcao_grava("conta", "ler", json.dumps({"acao": "ler", "itens": [{"q": "lixeira"}]})) is False,
+         "[seco] a Guarda da W: as 7 RPCs de leitura da 21c passam (o front antigo as chama); as 18 que gravam, a whatsapp-conectar (decisão 23) e "
+         "o acesso_ler (AÇÃO) barram; o `ler` da conta passa")
+    # ── a área que a guarda conta: as 25 RPCs que saíram do front nesta W (nenhuma segue no repeticao.ts — decisão L) e as da área
+    rpcs_da_w = set().union(*(B.AREAS[a]["rpcs"] for a in ("aluno", "configuracoes", "mensagens", "lixeira")))
+    rep_ts = (B.REPO / "src" / "integrations" / "repeticao.ts").read_text(encoding="utf-8")
+    ficou = sorted(x for x in rpcs_da_w if f'"{x}"' in rep_ts)
+    o.ok(len(rpcs_da_w) == 25 and B.RPCS_DE_LEITURA_DA_21C <= rpcs_da_w and not ficou,
+         f"[seco] a guarda conta as 25 RPCs da W (nenhuma no repeticao.ts: {ficou or '—'}); a área {area}: tabelas {sorted(B.AREAS[area]['tabelas']) or '—'}, "
+         f"RPCs {len(B.AREAS[area]['rpcs'])}, buckets {sorted(B.AREAS[area]['buckets']) or '—'}")
+    # ── o SQL da lib: monta com o schema e os valores conferidos; recusa o que não é do formato
+    s1 = B.sql_da_lib("whatsapp_fila", "staging", conta=CONTA_X, escopo="meus", filtro="todas", limite=30, antes=None, antes_id=None)
+    s2 = B.sql_da_lib("lixeira", "staging", conta=CONTA_X, tipo=None, busca=P21C.marca("10130455-ab12"), offset=0, limite=20)
+    s3 = B.sql_da_lib("modelos_favoritos_receita", "staging", uid=uid)
+    recusas = 0
+    for k, v in (("email", "X@Y"), ("cpf", "123"), ("busca", "a'; drop"), ("escopo", "todos"), ("filtro", "x"), ("antes", "ontem"), ("tipo", "Ab-1"),
+                 ("antes_id", "x")):
+        try:
+            B.sql_da_lib("dado_livre", "staging", **{k: v})
+        except (SystemExit, Exception):  # noqa: BLE001
+            recusas += 1
+    o.ok("staging.whatsapp_fila(" in s1 and "null::timestamptz" in s1 and "staging.lixeira_da_conta(" in s2 and "staging.ingredientes_receita" in s3
+         and "limit 500" in s3 and recusas == 8,
+         f"[seco] o SQL da lib da 21c monta com o schema e os valores conferidos (o e-mail, o CPF, a busca, o escopo, o filtro, o cursor); {recusas}/8 fora "
+         "do formato recusados")
+    o.ok(set(B.FAVORITOS_DA_21C) | {"modelos_favoritos_receita"} <= B.SEM_ORDEM_TOTAL and B.SEM_ORDEM_TOTAL <= set(B.LISTAS_DA_LIB),
+         "[seco] os ★ comparam como CONJUNTO (a lib não ordenava: .limit(500) sem .order) — a receita, em todo nível (os ingredientes)")
+    # ── a escrita no staging: só as formas fechadas (nada sai: a recusa é antes do subprocesso)
+    recusas = 0
+    for sql in ("update staging.pacientes set link_codigo = 'abc' where true;", "update public.pacientes set link_codigo = 'abcdefgh' where id = '" + uid + "';",
+                "update staging.pacientes set nome = 'x' where id = '" + uid + "';", "update staging.profiles set config = '{}' where id = '" + uid + "';",
+                "update staging.profiles set config = config - 'whatsapp' where id = '" + uid + "';",
+                "delete from staging.pacientes where nutricionista_id = '" + uid + "' and id = any(array['" + uid + "']::uuid[]) and nome like '%hml21 e2e%';",
+                "delete from staging.modelos_anamnese where nutricionista_id = '" + uid + "' and id = any(array['" + uid + "']::uuid[]) and titulo like '%x%';",
+                "update staging.pacientes set link_codigo = 'abcdefgh' where id = '" + uid + "'; delete from staging.avisos;"):
+        try:
+            P21C.sql_escrever_staging_21c(sql)
+        except SystemExit:
+            recusas += 1
+    for f, args in ((P21C.sql_devolver_link, ("public", uid, "abcdefgh")), (P21C.sql_devolver_link, ("staging", uid, "a b")),
+                    (P21C.sql_devolver_falhas_vistas, ("staging", uid, "ontem")), (P21C.sql_tirar_aviso_w14, ("public", uid)),
+                    (P21C.sql_apagar_massa_21c, ("staging", "pacientes", uid, [uid]))):
+        try:
+            f(*args)
+        except SystemExit:
+            recusas += 1
+    feitos = [P21C.sql_devolver_link("staging", uid, "Ab12Cd34Ef56Gh78"), P21C.sql_devolver_falhas_vistas("staging", uid, None),
+              P21C.sql_devolver_falhas_vistas("staging", uid, "2026-10-13T21:00:00.123+00:00"), P21C.sql_tirar_aviso_w14("staging", uid),
+              *[P21C.sql_apagar_massa_21c("staging", t, uid, [FALSO, "x"]) for t in P21C.TABELAS_DA_MASSA_21C]]
+    o.ok(recusas == 13 and all(any(f.fullmatch(x) for f in P21C.FORMAS_DA_ESCRITA_21C) for x in feitos),
+         f"[seco] a escrita da 21c no staging: só as formas fechadas (o link, o whatsapp_falhas_vistas_em, o aviso_mensagens_w14 — só o id de teste, só "
+         f"a coluna/a chave — e o DELETE da massa: só os ids, o dono de teste, a marca), 1 instrução ({recusas}/13 recusadas)")
+    # ── o Estado: a chave hml21c (a 21a/21b/21d não abrem por cima; a 21c não abre por cima delas)
+    est = B.Estado({"rodada": "x", "schema": "staging", "area": "hml21c", "linhas": [], "storage": [], "n8": None})
+    est.salvar = lambda: None
+    P21C.anotar_linha(est, "modelos_anamnese", FALSO, uid)
+    P21C.anotar_linha(est, "pacientes", FALSO, uid)  # fora da massa: não anota
+    P21C.anotar_devolver(est, "link", [FALSO, "Ab12Cd34Ef56Gh78"])
+    o.ok(B.tem_massa_21c(est) and est.d[B.CHAVE_21C]["linhas"] == [["modelos_anamnese", FALSO, uid]] and "link" in est.d[B.CHAVE_21C]["devolver"]
+         and "tem_massa_21c(pendente)" in fonte_do(B.abrir_rodada),
+         "[seco] o Estado: a rodada da 21c na chave hml21c (a massa, os avisos e o que devolver) — nenhuma rodada abre por cima dela, nem ela por cima")
+    # ── os Modelos: os ★ no motor comum (os catálogos exportados) e as ações da nutricao/financeiro
+    if area == "modelos":
+        seco_favoritos_21c(o, uid)
+    # ── a produção (decisão N): as contas e as telas que abrem/PULAM
+    seco_producao_21c(o)
+
+
+def seco_favoritos_21c(o, uid: str) -> None:
+    """O --seco dos Modelos: as 10 consultas dos ★ (os catálogos EXPORTADOS — os das funções) = o select da lib (as colunas, o ★, o dono, as
+    vivas, o teto 500); os `ler` da rodada pelo motor; as ações da nutricao/financeiro (criar com a ★, tirar a ★ pela *_editar, excluir)."""
+    lers, nut, fin = pedidos_favoritos("seco")
+    rf = P21C.regras_favoritos(lers)
+    fav = {**rf["nutricao"], **rf["financeiro"]}
+    esperado = {q: (t, [c.strip() for c in cols.split(",")], col) for q, (t, cols, col) in B.FAVORITOS_DA_21C.items()}
+    esperado["modelos_favoritos_receita"] = ("receitas", ["id", "nome", "updated_at", "porcoes", "rendimento_g"], "favorita")
+    ok = set(fav) == set(esperado) and all(fav[q]["tabela"] == t and fav[q]["colunas"] == cols and fav[q]["fixos"] == [{"coluna": col, "valor": True}]
+                                           and fav[q]["vivas"] and fav[q]["dono"] == "nutricionista_id" and fav[q]["teto"] == 500 and not fav[q]["params"]
+                                           for q, (t, cols, col) in esperado.items())
+    ingr = (fav.get("modelos_favoritos_receita") or {}).get("embutidos") or []
+    o.ok(ok and len(ingr) == 1 and ingr[0].get("tabela") == "ingredientes_receita" and "planos_favoritos" in rf["sozinhas"],
+         f"[seco] os 10 ★ nos catálogos EXPORTADOS (9 na nutricao, 1 na financeiro) = o select da lib do c6e795b (a tabela, as colunas, o ★ pelo fixos, o "
+         f"dono = quem chama, as vivas, o teto 500; a receita com os ingredientes) — os planos ★ seguem no lote só deles (sozinha, a 20c)")
+    pd = rf["pedidos"]
+    o.ok(pd[0].get("ok") and len(pd[0]["itens"]) == 9 and all(i.get("ok") for i in pd[0]["itens"]) and pd[1].get("ok") and pd[1]["itens"][0].get("ok")
+         and pd[2].get("ok") and pd[2]["itens"][0].get("params") == {} and pd[3] == {"ok": False, "erro": "lote_grande"},
+         "[seco] os `ler` dos Modelos pelo motor: os 9 ★ num lote da nutricao + o recibo ★ na financeiro passam; o dono/o ★/o select no corpo CAEM "
+         "(N4/N5); 17 itens → lote_grande (N9)")
+    rn = B.B19.regras([(a, c) for a, c, _e in nut], user_id=uid)
+    rfin = B.B19.regras_fin([(a, c) for a, c, _e in fin], user_id=uid)
+    o.ok([x["ok"] for x in rn["conferidos"]] == [e for _a, _c, e in nut] and [x["ok"] for x in rfin["conferidos"]] == [e for _a, _c, e in fin]
+         and (rn["conferidos"][1].get("valores") or {}).get("favorito") is False and (rfin["conferidos"][1].get("valores") or {}).get("favorito") is False,
+         "[seco] as ações dos Modelos na nutricao/financeiro (criar com a ★, tirar a ★ pela *_editar da tela dona, excluir) passam nas regras REAIS")
+    o.ok(set(TABELAS_DOS_FAVORITOS.values()) <= set(B.AREAS["modelos"]["tabelas"]) and "planos_alimentares" in B.AREAS["modelos"]["tabelas"],
+         "[seco] a área modelos da guarda: as 10 tabelas dos ★ + a dos planos (o \"tirar a ★\" ia direto nelas)")
+
+
+TABELAS_DOS_FAVORITOS = {q: t for q, (t, _c, _k) in B.FAVORITOS_DA_21C.items()} | {"modelos_favoritos_receita": "receitas"}
+
+
+def seco_producao_21c(o) -> None:
+    """A trava da produção (decisão N), sem login: a nutri-legado (nunca as do staging); abrem o Perfil, a Conta, a Equipe, a Lixeira e os
+    Modelos — o Convite só com o código; PULAM o Excluir, a Mensagens, o Resumo e a aba Acessos; a Guarda da W em toda tela."""
+    class Calado:
+        def ok(self, *_a, **_k) -> bool:
+            return True
+
+        def linha(self, *_a, **_k) -> None:
+            pass
+
+    staging = {P21C.NUTRI, P21C.PERSONAL, P21C.ALUNA, P21C.OUTRA}
+    prod = {a: P21C.contas_da_area(a, "prod") for a in B.AREAS_DA_21C}
+    o.ok(prod == {"aluno": [], "configuracoes": ["nutri-legado"], "mensagens": [], "lixeira": ["nutri-legado"], "modelos": ["nutri-legado"]}
+         and not staging & {c for v in prod.values() for c in v},
+         f"[seco] a produção (decisão N): só a nutri-legado; o Aluno e a Mensagens não abrem ({prod})")
+    originais = (P21.situacao_como, B.uid_da_conta)
+    try:
+        B.uid_da_conta = lambda _c: "33333333-3333-4333-8333-333333333333"  # type: ignore[assignment]
+        P21.situacao_como = lambda _s, _u, _c: {"contas": [{"id": CONTA_X, "papeis": ["dono", "nutricionista"], "modulos": ["nutricao"], "codigo_convite": None}]}  # type: ignore[assignment]
+        sem = [x[0] for x in P21C.telas_que_abrem(Calado(), "public", "prod", "configuracoes", "nutri-legado")]
+        P21.situacao_como = lambda _s, _u, _c: {"contas": [{"id": CONTA_X, "papeis": ["dono", "nutricionista"], "modulos": ["nutricao"], "codigo_convite": "abc"}]}  # type: ignore[assignment]
+        com = [x[0] for x in P21C.telas_que_abrem(Calado(), "public", "prod", "configuracoes", "nutri-legado")]
+        outras = {a: [x[0] for x in P21C.telas_que_abrem(Calado(), "public", "prod", a, "nutri-legado")] for a in ("aluno", "mensagens", "lixeira", "modelos")}
+        recusou = 0
+        for args in (("public", "prod", "configuracoes", P21C.NUTRI), ("staging", "staging", "configuracoes", "nutri-legado")):
+            try:
+                P21C.telas_que_abrem(Calado(), *args)
+            except SystemExit:
+                recusou += 1
+    finally:
+        P21.situacao_como, B.uid_da_conta = originais
+    o.ok(sem == ["config_perfil", "config_conta", "config_equipe"] and com == ["config_perfil", "config_conta", "config_equipe", "config_convite"]
+         and outras == {"aluno": [], "mensagens": [], "lixeira": ["lixeira"], "modelos": ["modelos"]} and recusou == 2,
+         f"[seco] a produção: abrem o Perfil, a Conta e a Equipe ({sem}), o Convite SÓ com o código ({com}), a Lixeira e os Modelos; PULAM o Excluir, "
+         f"a Mensagens, o Resumo e a aba Acessos ({outras}); conta do staging na produção (ou ao contrário) → recusado ({recusou}/2)")
+
+
+def contexto_21c(o, L, s: str, area: str, casos: set) -> dict:
+    """As contas de teste da rodada: os uids, a conta ativa da nutri (como o app escolhe — SQL só leitura como ela) e os alunos de teste."""
+    uid_n = L.uid(P21C.NUTRI)
+    conta = P21.conta_ativa(P21.situacao_como(s, uid_n, P21C.NUTRI))
+    o.ok(conta is not None, f"a conta ativa da nutri de teste (a 1ª da minha_situacao, como o app; SQL só leitura como ela): papéis {(conta or {}).get('papeis')}",
+         parar=True)
+    ctx = {"uid_n": uid_n, "conta": conta, "email_n": B.B5.CONTAS[P21C.NUTRI][0], "casos": casos}
+    uid_a = B.uid_da_conta(P21C.ALUNA)
+    ctx["alunos"] = P21C.alunos_de_teste(s, conta["id"], uid_n, uid_a)
+    al = ctx["alunos"]
+    o.linha(f"   os alunos de teste da conta ativa da nutri (SQL só leitura): {al['n']} — com login {'sim' if al['com_login'] else 'não'}"
+            f"{' (a matrícula da w5p-aluna)' if (al['com_login'] or {}).get('da_aluna') else ''}; sem login {'sim' if al['sem_login'] else 'não'}")
+    return ctx
+
+
+def igual_21c(o, rotulo: str, obtido: object, esperado: object, conjunto: bool = False) -> bool:
+    a, b = B.sem_relogio(obtido), B.sem_relogio(esperado)
+    if conjunto:
+        a, b = P21C.conjunto_fundo(a), P21C.conjunto_fundo(b)
+    return o.ok(B.canonico(a) == B.canonico(b), rotulo)
+
+
+def como(conta: str, uid: str, sql: str) -> object:
+    """O SQL (o SQL_DA_LIB já montado) COMO A PESSOA — só leitura; o valor da última instrução."""
+    return (B.B20.ler_como(B.PRINCIPAL_REF, uid, sql, B.B5.CONTAS[conta][0]) or [{}])[-1].get("v")
+
+
+def p_ler_21c(o, L, conta: str, s: str, itens: list[tuple[str, dict, dict]], rotulo: str) -> list[dict]:
+    """P: um lote da conta (as consultas da área) e cada item = o SQL FIXO da lib COMO A PESSOA (as listas da lib sem ordem total, como
+    conjunto). → os itens da resposta."""
+    uid = L.uid(conta)
+    st, r, _h, ms = B.ler(L.token(conta), [B.item(q, **params) for q, params, _v in itens])
+    its = B.itens_de(r)
+    o.ok(st == 200 and len(its) == len(itens) and all(i.get("ok") for i in its), f"P: o lote ({len(itens)} consultas) pela conta como {rotulo} → 200, cada item ok ({ms} ms)")
+    for (q, _p, valores), resp in zip(itens, its):
+        v = como(conta, uid, B.sql_da_lib(q, s, **valores))
+        obtido = resp.get("linhas") if q in B.LISTAS_DA_LIB else resp.get("valor")
+        n = len(v) if isinstance(v, list) else "—"
+        igual_21c(o, f"P {q} = o SQL da lib ({B.SQL_DA_LIB[q][0][:60]}…) como {rotulo} ({n} linha(s))", obtido, v, conjunto=q in B.SEM_ORDEM_TOTAL)
+    return its
+
+
+def resultado(r: dict) -> object:
+    return r.get("resultado") if isinstance(r, dict) else None
+
+
+def erro_de(st: int, r: dict) -> str | None:
+    """O código da recusa: o erro da função (o raise de propósito volta como o código) ou o { ok: false, erro } da RPC no resultado."""
+    if not isinstance(r, dict):
+        return None
+    if r.get("erro"):
+        return str(r["erro"])
+    res = r.get("resultado")
+    return str(res.get("erro")) if isinstance(res, dict) and res.get("ok") is False and res.get("erro") else None
+
+
+def trava_do_login(acao: str, aluno_tem_login: bool | None, senha: str) -> None:
+    """A trava do login do aluno (decisão I) — ANTES de sair: o acesso_criar só com o aluno COM login (a RPC recusa ja_tem_acesso — o login
+    conferido por SQL na hora) ou com a senha de 3 caracteres (senha_curta/email_invalido/conta_real_no_staging antes do insert); o
+    acesso_redefinir_senha só no aluno SEM login (sem_conta) ou com 3 caracteres (senha_curta antes do update). Fora delas: SystemExit."""
+    curta = isinstance(senha, str) and len(senha) == 3
+    if acao == "acesso_criar" and not (curta or aluno_tem_login is True):
+        raise SystemExit("acesso_criar sem trava (nem aluno com login, nem senha de 3 caracteres) — recusado antes de sair")
+    if acao == "acesso_redefinir_senha" and not (curta or aluno_tem_login is False):
+        raise SystemExit("acesso_redefinir_senha sem trava (nem aluno sem login, nem senha de 3 caracteres) — recusado antes de sair")
+
+
+def acao_travada(o, s: str, tok: str, acao: str, aluno: str, senha: str, email: str | None = None) -> tuple[int, dict]:
+    """O acesso_criar/acesso_redefinir_senha do E2E: o login do aluno conferido por SQL NA HORA e a trava (trava_do_login) antes de sair."""
+    tem = bool((B.ler_principal(f"select (user_id is not null) as v from {s}.pacientes where id = {C.txt(C.uuid_ok(aluno))}") or [{}])[0].get("v"))
+    trava_do_login(acao, tem, senha)
+    corpo = {"aluno": aluno, "senha": senha} if acao == "acesso_redefinir_senha" else {"aluno": aluno, "email": email, "senha": senha}
+    st, r, _h, _ms = B.conta(tok, acao, corpo)
+    return st, r
+
+
+def p_aluno_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: PLR0915
+    """P/N1/N4 do Aluno › Resumo (decisão I): o acesso_ler (= a RPC como a nutri), as recusas do criar/redefinir (travadas), os ajustes e o
+    apelido (mudam e voltam pela MESMA ação), o link (o código antigo de volta por SQL com trava de formato), o responsável (só as recusas) e o
+    aviso do plano (o id no Estado, apagado no fim)."""
+    casos = ctx["casos"]
+    tok, uid, conta = L.token(P21C.NUTRI), ctx["uid_n"], ctx["conta"]["id"]
+    al = ctx["alunos"]
+    com, sem = al["com_login"], al["sem_login"]
+    if not (com or sem):
+        o.ok(True, "P do Aluno PULADO — a conta ativa da nutri sem aluno de TESTE (SQL só leitura); fica o Vitest")
+        return
+    tela = al["tela"]["id"]
+    # ── as leituras: o dado livre (o e-mail do próprio aluno, como a pré-checagem do Editar dados), o responsável
+    email_al = (B.ler_principal(f"select lower(email) as e from {s}.pacientes where id = {C.txt(tela)}") or [{}])[0].get("e")
+    p_ler_21c(o, L, P21C.NUTRI, s, [("dado_livre", {"email": email_al, "cpf": None, "paciente": tela}, {"email": email_al, "cpf": None, "paciente": tela}),
+                                    ("aluno_responsavel", {"aluno": tela}, {"aluno": tela})], "a nutri")
+    # ── o acesso_ler (a aluno_acesso só lê — decisão 13) = a RPC como a nutri; o dono no corpo cai (N4)
+    for a in (x for x in (com, sem) if x):
+        st, r, _h, _ms = B.conta(tok, "acesso_ler", {"aluno": a["id"], "nutricionista_id": ctx.get("uid_o") or FALSO})
+        igual_21c(o, f"P/N4 acesso_ler (aluno {'com' if a.get('com_login') else 'sem'} login) = a aluno_acesso como a nutri ({st}; o dono no corpo cai)",
+                  resultado(r) if st == 200 else {"st": st}, como(P21C.NUTRI, uid, B.sql_da_lib("aluno_acesso", s, aluno=a["id"])))
+    # ── o login do aluno: SÓ as recusas da RPC antes do insert/update (decisão I) — cada chamada pela acao_travada
+    if com:
+        st, r = acao_travada(o, s, tok, "acesso_criar", com["id"], P21C.SENHA_CURTA, P21C.EMAIL_DE_TESTE_NOVO)
+        o.ok(erro_de(st, r) == "ja_tem_acesso" and st == 400, f"P acesso_criar no aluno COM login → ja_tem_acesso (a recusa da RPC, antes do insert) ({st})")
+        st, r = acao_travada(o, s, tok, "acesso_redefinir_senha", com["id"], P21C.SENHA_CURTA)
+        o.ok(erro_de(st, r) == "senha_curta" and st == 400, f"P acesso_redefinir_senha com 3 caracteres → senha_curta (antes do update: nada muda) ({st})")
+    if sem:
+        for email, esperado in ((P21C.EMAIL_INVALIDO, "email_invalido"), (P21C.EMAIL_DE_FORA, "conta_real_no_staging"), (P21C.EMAIL_DE_TESTE_NOVO, "senha_curta")):
+            st, r = acao_travada(o, s, tok, "acesso_criar", sem["id"], P21C.SENHA_CURTA, email)
+            o.ok(erro_de(st, r) == esperado and st == 400, f"P acesso_criar (aluno SEM login, 3 caracteres) → {esperado} ({st}: {erro_de(st, r)})")
+        st, r = acao_travada(o, s, tok, "acesso_redefinir_senha", sem["id"], P21C.SENHA_CURTA)
+        o.ok(erro_de(st, r) == "sem_conta" and st == 400, f"P acesso_redefinir_senha no aluno SEM login → sem_conta ({st})")
+        o.ok(not (B.ler_principal(f"select (user_id is not null) as v from {s}.pacientes where id = {C.txt(sem['id'])}") or [{}])[0].get("v"),
+             "o aluno sem login segue SEM login (SQL só leitura) — nenhum login novo no Auth")
+    # ── os ajustes (as Mensagens automáticas): só num aluno sem telefone ou com a instância NÃO conectada; volta pela MESMA ação
+    alvo = next((a for a in (sem, com) if a and (a.get("sem_telefone") or not P21C.instancia(s, uid).get("conectada"))), None)
+    if alvo:
+        antes = P21C.msg_auto(s, alvo["id"])
+        P21C.anotar_devolver(estado, "ajustes", [alvo["id"], antes])
+        st, r, _h, _ms = B.conta(tok, "aluno_ajustes_salvar", {"aluno": alvo["id"], "ajustes": {"mensagens_automaticas": not antes}})
+        o.ok(st == 200 and (resultado(r) or {}).get("ok") is True and P21C.msg_auto(s, alvo["id"]) is (not antes),
+             f"P aluno_ajustes_salvar (aluno {'sem telefone' if alvo.get('sem_telefone') else 'com a instância desconectada'}) → o ajuste trocou (SQL) ({st})")
+        st, r, _h, _ms = B.conta(tok, "aluno_ajustes_salvar", {"aluno": alvo["id"], "ajustes": {"mensagens_automaticas": antes}})
+        if o.ok(st == 200 and P21C.msg_auto(s, alvo["id"]) is antes, f"P o ajuste de antes de volta pela MESMA ação ({st})"):
+            P21C.devolvido(estado, "ajustes")
+    else:
+        o.ok(True, "P aluno_ajustes_salvar PULADO — nenhum aluno de teste sem telefone e a instância conectada (uma mensagem poderia sair); fica o Vitest")
+    # ── o apelido (com a marca) e de volta pela MESMA ação
+    d0 = P21C.dados_do_aluno(s, tela)
+    P21C.anotar_devolver(estado, "apelido", [tela, d0.get("apelido")])
+    st, r, _h, _ms = B.conta(tok, "aluno_dados_salvar", {"aluno": tela, "dados": {"apelido": P21C.marca(rodada)[:40]}, "nutricionista_id": FALSO})
+    d1 = P21C.dados_do_aluno(s, tela)
+    o.ok(st == 200 and (resultado(r) or {}).get("ok") is True and d1.get("apelido") == P21C.marca(rodada)[:40] and d1.get("nome") == d0.get("nome"),
+         f"P/N4 aluno_dados_salvar (só o apelido, com a marca) → o apelido mudou e o resto não (SQL) ({st})")
+    st, r, _h, _ms = B.conta(tok, "aluno_dados_salvar", {"aluno": tela, "dados": {"apelido": d0.get("apelido")}})
+    if o.ok(st == 200 and P21C.dados_do_aluno(s, tela).get("apelido") == d0.get("apelido"), f"P o apelido de antes de volta pela MESMA ação ({st})"):
+        P21C.devolvido(estado, "apelido")
+    # ── o link novo: só num aluno de teste que não é a matrícula da w5p-aluna (os E2E da W-A usam o link dela); o código antigo volta por SQL
+    al_link = next((a for a in (sem, com) if a and not a.get("da_aluna")), None)
+    if al_link and s == "staging":
+        cod0 = P21C.dados_do_aluno(s, al_link["id"]).get("link_codigo")
+        if isinstance(cod0, str) and re.fullmatch(r"[A-Za-z0-9_-]{6,64}", cod0):
+            P21C.anotar_devolver(estado, "link", [al_link["id"], cod0])
+            st, r, _h, _ms = B.conta(tok, "aluno_link_novo", {"aluno": al_link["id"]})
+            novo = P21C.dados_do_aluno(s, al_link["id"]).get("link_codigo")
+            o.ok(st == 200 and (resultado(r) or {}).get("ok") is True and novo and novo != cod0 and (resultado(r) or {}).get("link_codigo") == novo,
+                 f"P aluno_link_novo → um código novo gravado (SQL; o código não sai) ({st})")
+            P21C.devolver_por_sql(o, estado, s)
+        else:
+            o.ok(True, "P aluno_link_novo PULADO — o aluno de teste sem link (devolver seria criar um); fica o N + Vitest")
+    else:
+        o.ok(True, "P aluno_link_novo PULADO — sem aluno de teste fora da matrícula da w5p-aluna (a W-A usa o link dela); fica o N + Vitest")
+    # ── o responsável: SÓ as recusas da RPC ({ ok: false } — nada grava; o consentimento é registro legal)
+    r0 = como(P21C.NUTRI, uid, B.sql_da_lib("aluno_responsavel", s, aluno=tela))
+    st, r, _h, _ms = B.conta(tok, "aluno_responsavel_registrar", {"aluno": tela, "dados": corpo_responsavel("registrar")})
+    o.ok(st == 200 and erro_de(st, r) in RECUSAS_DO_REGISTRAR, f"P aluno_responsavel_registrar (confirmo false) → a recusa da RPC {erro_de(st, r)} ({st})")
+    # o retirar SÓ sem registro vigente: o "atual" da aluno_responsavel nulo E a responsavel_vigente() do banco false (SQL só leitura) — com um
+    # registro vigente, o retirar REVOGARIA o consentimento (um registro legal): nunca
+    responsavel_vigente = (isinstance(r0, dict) and r0.get("atual") is not None) or bool(
+        (B.ler_principal(f"select {s}.responsavel_vigente({C.txt(tela)}::uuid) as v") or [{}])[0].get("v"))
+    if not responsavel_vigente:
+        st, r, _h, _ms = B.conta(tok, "aluno_responsavel_registrar", {"aluno": tela, "dados": corpo_responsavel("retirar")})
+        o.ok(st == 200 and erro_de(st, r) == "sem_registro_vigente", f"P aluno_responsavel_registrar (retirar, sem registro vigente) → sem_registro_vigente ({st})")
+    igual_21c(o, "P o responsável igual ao de antes (a aluno_responsavel como a nutri) — nada gravado", como(P21C.NUTRI, uid, B.sql_da_lib("aluno_responsavel", s, aluno=tela)), r0)
+    # ── o aviso do plano (a reserva do "Salvar e enviar"): só num aluno de teste COM login; o aviso no Estado e apagado no fim
+    if com:
+        t0 = P21.agora_db()
+        st, r, _h, _ms = B.conta(tok, "aluno_avisar_plano", {"aluno": com["id"], "modulos": P21C.MODULOS_DO_AVISO, "destino_user_id": FALSO})
+        ids = [x["id"] for x in B.ler_principal(P21C.sql_avisos_do_plano(s, com["user_id"], t0, P21.agora_db())) if C.eh_uuid(x.get("id"))]
+        P21C.anotar_avisos(estado, com["user_id"], ids)
+        res = resultado(r) or {}
+        o.ok(st == 200 and (res.get("ok") is True or res.get("erro") == "ja_avisado") and len(ids) <= 1,
+             f"P/N4 aluno_avisar_plano ['dieta'] → {len(ids)} aviso no sino do aluno de teste (a trava de 10 min por título: 0 se já havia) — anotado e "
+             f"apagado no fim ({st})")
+    if "N1" in casos:
+        tok_o = L.token(P21C.OUTRA)
+        alvo_n1 = (com or sem)["id"]
+        dados_antes = P21C.dados_do_aluno(s, alvo_n1)
+        res_n1 = []
+        for a, c in (("acesso_ler", {"aluno": alvo_n1}), ("aluno_ajustes_salvar", {"aluno": alvo_n1, "ajustes": {"mensagens_automaticas": True}}),
+                     ("aluno_dados_salvar", {"aluno": alvo_n1, "dados": {"apelido": "N1"}}), ("aluno_link_novo", {"aluno": alvo_n1}),
+                     ("aluno_responsavel_registrar", {"aluno": alvo_n1, "dados": corpo_responsavel("registrar")}),
+                     ("aluno_avisar_plano", {"aluno": alvo_n1, "modulos": P21C.MODULOS_DO_AVISO})):
+            st, r, _h, _ms = B.conta(tok_o, a, c)
+            res_n1.append((a, st, erro_de(st, r)))
+        st, r = acao_travada(o, s, tok_o, "acesso_criar", alvo_n1, P21C.SENHA_CURTA, P21C.EMAIL_DE_TESTE_NOVO)
+        res_n1.append(("criar (travado)", st, erro_de(st, r)))
+        st, r = acao_travada(o, s, tok_o, "acesso_redefinir_senha", alvo_n1, P21C.SENHA_CURTA)
+        res_n1.append(("redefinir (travado)", st, erro_de(st, r)))
+        o.ok(all(e == "sem_acesso" for _a, _st, e in res_n1) and P21C.dados_do_aluno(s, alvo_n1) == dados_antes,
+             f"N1 OUTRA conta (w13-dono) no aluno da nutri: as 8 ações → sem_acesso (a recusa de hoje); o aluno igual (SQL) ({res_n1})")
+        st, r, _h, _ms = B.ler(tok_o, [B.item("aluno_responsavel", aluno=alvo_n1)])
+        its = B.itens_de(r)
+        v = its[0].get("valor") if its else None
+        o.ok(st == 200 and bool(its) and (its[0].get("ok") is not True or (isinstance(v, dict) and v.get("ok") is False)),
+             f"N1 OUTRA conta lê o responsável do aluno da nutri → a recusa, nunca os dados ({st}: {its[0].get('erro') if its else '?'})")
+    p_senha_w8b(o, L, s, estado)
+
+
+def p_senha_w8b(o, L, s: str, estado) -> None:
+    """O P de VERDADE do acesso_redefinir_senha (decisão I): SÓ o par do W8b — o w8b-personal redefine a senha do aluno dele (o w8b-aluno)
+    com a MESMA senha guardada (nunca impressa; as sessões dele caem); o próprio aluno entra de novo e tira a marca de senha provisória pelo
+    senha_definida da 21a (o estado de antes — SQL só leitura). 2 logins: só se couberem no teto; senão PULA. NUNCA na w5p-aluna."""
+    ok_par, motivo = P21C.registrar_par_w8b()
+    if not ok_par:
+        o.ok(True, f"P acesso_redefinir_senha (de verdade) PULADO — {motivo}; ficam os N e o Vitest")
+        return
+    precisa = 2 - (1 if L.d.get(P21C.W8B_PERSONAL) else 0)
+    if B.B19.Sessoes.logins_feitos() + precisa > B.B19.MAX_LOGINS:
+        o.ok(True, f"P acesso_redefinir_senha (de verdade) PULADO — não cabe no teto ({B.B19.Sessoes.logins_feitos()} de {B.B19.MAX_LOGINS} logins; precisa {precisa})")
+        return
+    uid_p, uid_r = B.uid_da_conta(P21C.W8B_PERSONAL), B.uid_da_conta(P21C.W8B_ALUNO)
+    if not (uid_p and uid_r) or uid_r == B.uid_da_conta(P21C.ALUNA):
+        o.ok(True, "P acesso_redefinir_senha (de verdade) PULADO — o par do W8b não existe nesta base")
+        return
+    pac = (B.ler_principal(f"select id::text as id from {s}.pacientes where user_id = {C.txt(uid_r)} and deleted_at is null and "
+                           f"(nutricionista_id = {C.txt(uid_p)} or personal_id = {C.txt(uid_p)}) order by created_at limit 1") or [{}])[0].get("id")
+    if not C.eh_uuid(pac) or P21C.senha_provisoria(s, uid_r):
+        o.ok(True, "P acesso_redefinir_senha (de verdade) PULADO — sem a matrícula do aluno do W8b com o personal, ou ele já está com senha provisória")
+        return
+    P21C.anotar_devolver(estado, "senha_w8b", uid_r)
+    senha = B.B5.CONTAS[P21C.W8B_ALUNO][1]
+    st, r, _h, _ms = B.conta(L.token(P21C.W8B_PERSONAL), "acesso_redefinir_senha", {"aluno": pac, "senha": senha})  # o par: a MESMA senha guardada
+    o.ok(st == 200 and P21C.senha_provisoria(s, uid_r), f"P acesso_redefinir_senha (o w8b-personal no aluno dele, a MESMA senha) → a marca de senha "
+         f"provisória (SQL) e as sessões dele caíram ({st})")
+    L.d.pop(P21C.W8B_ALUNO, None)  # a sessão guardada caiu com o redefinir: o login de novo (contado)
+    st, r, _h, _ms = B.conta(L.token(P21C.W8B_ALUNO), "senha_definida", {})
+    if o.ok(st == 200 and not P21C.senha_provisoria(s, uid_r), f"P senha_definida (o próprio aluno, a 21a) → sem a marca, como antes (SQL só leitura) ({st})"):
+        P21C.devolvido(estado, "senha_w8b")
+
+
+def corpo_remover(membro: str) -> dict:
+    """O corpo de TODA remoção do E2E: os 2 responsáveis novos = um uuid que NÃO é membro (a RPC recusa novo_responsavel_invalido antes de
+    qualquer update — a trava da decisão I)."""
+    return {"membro": membro, "novo_personal": P21C.NAO_MEMBRO, "novo_nutri": P21C.NAO_MEMBRO}
+
+
+def membros_da_conta(s: str, conta: str) -> list[dict]:
+    """Os membros ativos da conta de teste (SQL só leitura: o id, o user, os papéis — só ids)."""
+    return B.ler_principal(f"select id::text as id, user_id::text as user_id, papeis from {s}.conta_membros where conta_id = {C.txt(C.uuid_ok(conta))} "
+                           f"and status = 'ativo' order by criado_em")
+
+
+def estado_da_equipe(s: str, conta: str) -> dict:
+    """Só contagem/estado: os membros (id → papéis, status) e os eventos da conta — o "nada mudou" das recusas."""
+    m = B.ler_principal(f"select id::text as id, papeis, status, codigo_convite is not null as tem_codigo from {s}.conta_membros where conta_id = {C.txt(C.uuid_ok(conta))} order by id")
+    e = B.ler_principal(f"select count(*)::int as n from {s}.conta_eventos where conta_id = {C.txt(C.uuid_ok(conta))}")[0]["n"]
+    return {"membros": m, "eventos": e}
+
+
+def p_configuracoes_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: PLR0915
+    """P/N1/N4/N8 das Configurações (decisão I): o perfil (a nutri e o dono — muda 1 chave e volta pela MESMA ação), o nome da conta (o dono:
+    muda e volta), o código do convite (o caminho idempotente), a Equipe (SÓ as recusas — os mesmos papéis GRAVAM: o PADRÃO do progresso), o ZIP
+    (só a leitura: o tamanho e o nº de pacientes) e a foto do profissional (a 21a: N8 e a troca de teste)."""
+    casos = ctx["casos"]
+    tok, uid, conta = L.token(P21C.NUTRI), ctx["uid_n"], ctx["conta"]["id"]
+    tok_d, uid_d = L.token(P21C.PERSONAL), L.uid(P21C.PERSONAL)
+    for c_, u_ in ((P21C.NUTRI, uid), (P21C.PERSONAL, uid_d)):
+        p_ler_21c(o, L, c_, s, [("perfil_profissional", {}, {"uid": u_})], c_)
+    # ── o perfil: 1 chave do form (a cidade) com a marca e de volta (a MESMA ação; o servidor põe as chaves do form por cima do JSON atual)
+    for c_, t_, u_ in ((P21C.NUTRI, tok, uid), (P21C.PERSONAL, tok_d, uid_d)):
+        antes = P21C.perfil(s, u_)
+        cid0 = P21C.dado_do_perfil(s, u_, "cidade")
+        P21C.anotar_devolver(estado, "perfil", [c_, "cidade", cid0])
+        st, r, _h, _ms = B.conta(t_, "perfil_salvar", {**P21C.corpo_do_perfil(s, u_, {"cidade": P21C.marca(rodada)}), "id": OUTRO, "email": "x@y"})
+        depois = P21C.perfil(s, u_)
+        resto = {k: v for k, v in (depois.get("dados_profissionais") or {}).items() if k != "cidade"}
+        resto0 = {k: v for k, v in (antes.get("dados_profissionais") or {}).items() if k != "cidade"}
+        o.ok(st == 200 and P21C.dado_do_perfil(s, u_, "cidade") == P21C.marca(rodada) and P21C.sem_nulos(resto) == P21C.sem_nulos(resto0)
+             and depois.get("nome") == antes.get("nome"),
+             f"P/N4 perfil_salvar ({c_}: a cidade com a marca; o id/o e-mail no corpo CAEM) → só a cidade mudou; o resto do JSON igual (SQL) ({st})")
+        st, r, _h, _ms = B.conta(t_, "perfil_salvar", P21C.corpo_do_perfil(s, u_, {"cidade": cid0}))
+        if o.ok(st == 200 and P21C.dado_do_perfil(s, u_, "cidade") == cid0 and P21C.sem_nulos(P21C.perfil(s, u_).get("dados_profissionais")) ==
+                P21C.sem_nulos(antes.get("dados_profissionais")), f"P o perfil de antes de volta pela MESMA ação ({c_}) ({st})"):
+            P21C.devolvido(estado, "perfil")
+    # ── o nome da conta: o dono muda e volta; a nutri (membro, não dono) → 0 linha = nao_encontrado (o RLS de hoje)
+    nome0 = P21C.nome_da_conta(s, conta)
+    P21C.anotar_devolver(estado, "conta_nome", [P21C.PERSONAL, conta, nome0])
+    st, r, _h, _ms = B.conta(tok_d, "conta_salvar", {"conta": conta, "nome": P21C.marca(rodada), "dono_id": OUTRO})
+    o.ok(st == 200 and P21C.nome_da_conta(s, conta) == P21C.marca(rodada), f"P/N4 conta_salvar (o dono) → o nome mudou (SQL) ({st})")
+    st, r, _h, _ms = B.conta(tok_d, "conta_salvar", {"conta": conta, "nome": nome0})
+    if o.ok(st == 200 and P21C.nome_da_conta(s, conta) == nome0, f"P o nome de antes de volta pela MESMA ação ({st})"):
+        P21C.devolvido(estado, "conta_nome")
+    st, r, _h, _ms = B.conta(tok, "conta_salvar", {"conta": conta, "nome": P21C.marca(rodada)})
+    o.ok(st == 404 and r.get("erro") == "nao_encontrado" and P21C.nome_da_conta(s, conta) == nome0,
+         f"P conta_salvar pela nutri (membro, não dono) → 404 nao_encontrado (0 linha: o RLS); o nome igual ({st})")
+    # ── o código do convite: o caminho idempotente (a conta de teste que JÁ tem o código: o mesmo antes e depois)
+    cod0 = (B.ler_principal(f"select codigo_convite from {s}.conta_membros where conta_id = {C.txt(conta)} and user_id = {C.txt(uid)} and status = 'ativo'") or [{}])[0].get("codigo_convite")
+    if cod0:
+        st, r, _h, _ms = B.conta(tok, "meu_codigo_garantir", {"conta": conta, "user_id": OUTRO})
+        cod1 = (B.ler_principal(f"select codigo_convite from {s}.conta_membros where conta_id = {C.txt(conta)} and user_id = {C.txt(uid)} and status = 'ativo'") or [{}])[0].get("codigo_convite")
+        o.ok(st == 200 and (resultado(r) or {}).get("codigo") == cod0 and cod1 == cod0, f"P meu_codigo_garantir (já tem o código: idempotente) → o MESMO código; nada gravado ({st})")
+    else:
+        o.ok(True, "P meu_codigo_garantir PULADO — a nutri sem código na conta de teste (garantir CRIARIA um); fica o Vitest")
+    # ── a Equipe: SÓ as recusas (os mesmos papéis GRAVAM — conta_eventos + o espelho: o PADRÃO); o remover SEMPRE com o corpo_remover
+    eq0 = estado_da_equipe(s, conta)
+    membros = membros_da_conta(s, conta)
+    da_nutri = next((m["id"] for m in membros if m.get("user_id") == uid), None)
+    do_dono = next((m["id"] for m in membros if m.get("user_id") == uid_d), None)
+    res_eq = []
+    if da_nutri:
+        st, r, _h, _ms = B.conta(tok, "equipe_papeis", {"membro": da_nutri, "papeis": ["nutricionista"]})
+        res_eq.append(("papeis (a nutri, não dona)", erro_de(st, r)))
+        st, r, _h, _ms = B.conta(tok_d, "equipe_papeis", {"membro": da_nutri, "papeis": ["x"]})
+        res_eq.append(("papeis inválidos (o dono)", erro_de(st, r)))
+        st, r, _h, _ms = B.conta(tok_d, "equipe_papeis", {"membro": da_nutri, "papeis": ["dono", "nutricionista"]})
+        res_eq.append(("papel dono a outro (o dono)", erro_de(st, r)))
+        st, r, _h, _ms = B.conta(tok_d, "equipe_remover", corpo_remover(da_nutri))
+        res_eq.append(("remover a nutri com responsável que não é membro (o dono)", erro_de(st, r)))
+    if do_dono:
+        st, r, _h, _ms = B.conta(tok, "equipe_remover", corpo_remover(do_dono))
+        res_eq.append(("remover o dono (a nutri)", erro_de(st, r)))
+        st, r, _h, _ms = B.conta(tok_d, "equipe_remover", corpo_remover(do_dono))
+        res_eq.append(("remover o dono (ele mesmo)", erro_de(st, r)))
+    st, r, _h, _ms = B.conta(tok_d, "equipe_papeis", {"membro": FALSO, "papeis": ["nutricionista"]})
+    res_eq.append(("papeis de um membro que não existe", erro_de(st, r)))
+    st, r, _h, _ms = B.conta(tok_d, "equipe_remover", corpo_remover(FALSO))
+    res_eq.append(("remover um membro que não existe", erro_de(st, r)))
+    o.ok(all(e in RECUSAS_DA_EQUIPE for _x, e in res_eq) and estado_da_equipe(s, conta) == eq0,
+         f"P a Equipe SÓ pelas recusas da RPC ({res_eq}) — os membros, os papéis, os códigos e os eventos da conta iguais (SQL só leitura)")
+    # ── o ZIP da exclusão: só a leitura (a conta de teste, o aluno de teste) — da saída, só o tamanho e o nº de pacientes
+    al = ctx["alunos"]["tela"]
+    if al:
+        st, r, _h, _ms = B.conta(tok, "prontuarios_para_baixar", {"conta": conta, "pacientes": [al["id"]]})
+        v = como(P21C.NUTRI, uid, f"select to_jsonb({s}.w2l_prontuarios_para_baixar({C.txt(conta)}::uuid, array[{C.txt(al['id'])}]::uuid[])) as v")
+        igual_21c(o, f"P prontuarios_para_baixar (o ZIP: 1 aluno de teste) = a RPC de hoje como a nutri ({st}; {len(json.dumps(resultado(r) or {}))} bytes; nunca o Excluir)",
+                  resultado(r), v)
+    # ── a foto do profissional (as ações da 21a): o N8 e a troca de teste (a conta SEM foto própria / da pasta dela — senão PULA)
+    p_foto_profissional(o, L, s, estado, casos)
+    if "N1" in casos:
+        tok_o = L.token(P21C.OUTRA)
+        st, r, _h, _ms = B.conta(tok_o, "conta_salvar", {"conta": conta, "nome": "N1"})
+        st2, r2, _h, _ms = B.conta(tok_o, "meu_codigo_garantir", {"conta": conta})
+        st3, r3, _h, _ms = B.conta(tok_o, "equipe_remover", corpo_remover(da_nutri or FALSO))
+        st4, r4, _h, _ms = B.conta(tok_o, "prontuarios_para_baixar", {"conta": conta, "pacientes": [al["id"]] if al else [FALSO]})
+        zip_n1 = resultado(r4)
+        o.ok(st == 404 and erro_de(st2, r2) == "nao_membro" and erro_de(st3, r3) == "so_dono" and P21C.nome_da_conta(s, conta) == nome0
+             and estado_da_equipe(s, conta) == eq0 and (st4 != 200 or not json.dumps(zip_n1 or {}).count(al["id"] if al else FALSO)),
+             f"N1 OUTRA conta: o nome da conta da nutri → 404; o código → nao_membro; remover → so_dono; o ZIP do aluno da nutri → nada dele ({st}, "
+             f"{erro_de(st2, r2)}, {erro_de(st3, r3)}, {st4})")
+        p_ler_21c(o, L, P21C.OUTRA, s, [("perfil_profissional", {}, {"uid": L.uid(P21C.OUTRA)})], "a OUTRA (o perfil DELA)")
+
+
+def p_foto_profissional(o, L, s: str, estado, casos: set) -> None:
+    """A foto do profissional pelas ações da 21a (decisão I, o N8 do contrato): o caminho fora da pasta → dados_invalidos (nada gravado); a
+    troca de teste numa conta SEM foto própria (ou com a da pasta dela — a cópia volta), com o perfil_foto_tirar/a de antes no fim (o
+    fechar_rodada: B.limpar_foto da nutri); com foto de fora da pasta → PULA a troca."""
+    tok, uid = L.token(P21C.NUTRI), L.uid(P21C.NUTRI)
+    antes = B.foto_da_conta(s, uid)
+    if "N8" in casos or "N1" in casos:
+        for ruim in (f"{uid}/../{OUTRO}/foto-1.png", f"{uid}/sub/foto-1.png", f"{OUTRO}/foto-1.png", f"{uid}/foto-1.gif"):
+            st, r, _h, _ms = B.conta(tok, "perfil_foto_salvar", {"caminho": ruim})
+            o.ok(st == 400 and r.get("erro") == "dados_invalidos" and B.foto_da_conta(s, uid) == antes,
+                 f"N8 a foto do profissional com o caminho fora da pasta/do formato → 400 dados_invalidos; nada gravado ({st})")
+        st, r, _h, _ms = B.conta(L.token(P21C.OUTRA), "perfil_foto_salvar", {"caminho": f"{uid}/foto-1760000000000.png"})
+        o.ok(st == 400 and r.get("erro") == "dados_invalidos" and B.foto_da_conta(s, uid) == antes,
+             f"N1/N8 OUTRA conta salva a foto na pasta da nutri → 400 dados_invalidos ({st})")
+    troca, motivo = B.foto_pode_trocar(s, uid)
+    o.linha(f"   a foto da nutri: {motivo}")
+    if not troca:
+        o.ok(True, f"P a troca de teste da foto do profissional PULADA — {motivo}")
+        return
+    B.guardar_foto(o, estado, s, uid)
+    png = B.png_sintetico(16)
+    st, p, _h, _ms = B.conta(tok, "perfil_foto_preparar", {"tipo": "image/png", "tamanho": len(png)})
+    bucket = B.bucket_das_fotos(s)
+    o.ok(st == 200 and str(p.get("caminho", "")).startswith(f"{uid}/foto-") and p.get("bucket") == bucket, f"P perfil_foto_preparar (a nutri) → o link na pasta dela ({st})",
+         parar=True)
+    put = B.subir_no_link(p["bucket"], p["caminho"], p["token"], png, "image/png", tok)
+    estado.objeto(p["bucket"], p["caminho"])
+    st, r, _h, _ms = B.conta(tok, "perfil_foto_salvar", {"caminho": p["caminho"]})
+    url = r.get("url")
+    o.ok(put in (200, 201) and st == 200 and url == f"{B.URL_API_PROPRIA}/storage/v1/object/public/{bucket}/{p['caminho']}" and B.foto_da_conta(s, uid) == url,
+         f"P a foto do profissional pelo link que o servidor assina (PUT {put}; salvar {st}) → a URL pública gravada no perfil — no fim, a de antes volta")
+
+
+def p_mensagens_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: PLR0915
+    """P/N1 da Mensagens e da faixa (decisão I — nenhuma mensagem a número de verdade): as leituras = o SQL da lib; a config SÓ a MESMA de hoje
+    (e nunca com o ativo ligado); o reenviar SÓ com a instância NÃO conectada (a recusa nao_conectado/nao_encontrada prova o caminho); o
+    limpar falhas com o whatsapp_falhas_vistas_em de antes de volta (SQL com trava); a faixa só com o aluno de teste e devolvida."""
+    casos = ctx["casos"]
+    tok, uid, conta = L.token(P21C.NUTRI), ctx["uid_n"], ctx["conta"]["id"]
+    p_ler_21c(o, L, P21C.NUTRI, s, [("perfil_mensagens", {}, {"uid": uid}), ("whatsapp_resumo", {"conta": conta}, {"conta": conta}),
+                                    ("whatsapp_fila", {"conta": conta, "escopo": "meus", "filtro": "todas", "limite": P21C.LIMITE_FILA, "antes": None, "antes_id": None},
+                                     {"conta": conta, "escopo": "meus", "filtro": "todas", "limite": P21C.LIMITE_FILA, "antes": None, "antes_id": None}),
+                                    ("mensagens_desligadas", {}, {})], "a nutri")
+    inst = P21C.instancia(s, uid)
+    if int(inst.get("conectada") or 0):
+        o.ok(True, "P das gravações da Mensagens PULADO — a instância de WhatsApp da nutri de teste está CONECTADA (o agente do celular mandaria); ficam as leituras, os N e o Vitest")
+        return
+    # ── a config: SÓ a MESMA de hoje, e nunca com o ativo ligado
+    cfg0 = P21C.config_do_perfil(s, uid)
+    w = cfg0.get("whatsapp") if isinstance(cfg0.get("whatsapp"), dict) else None
+    if (w and w.get("ativo") is False and set(w) <= {"ativo", "horario", "momentos", "textos"} and set(w.get("momentos") or {}) <= set(P21C.MOMENTOS_WHATSAPP)
+            and set(w.get("textos") or {}) <= set(P21C.MOMENTOS_WHATSAPP)):
+        corpo = {"whatsapp": {k: w[k] for k in ("ativo", "horario", "momentos", "textos") if k in w}, "nutricionista_id": FALSO}
+        st, r, _h, _ms = B.conta(tok, "whatsapp_config_salvar", corpo)
+        o.ok(st == 200 and (resultado(r) or {}).get("ok") is not False and P21C.config_do_perfil(s, uid).get("whatsapp") == w,
+             f"P/N4 whatsapp_config_salvar com a MESMA config de hoje (desligada) → o config.whatsapp igual (SQL) ({st})")
+    else:
+        o.ok(True, "P whatsapp_config_salvar PULADO — sem config de hoje, com o ativo ligado ou com chaves de fora (salvar mudaria algo); fica o Vitest")
+    # ── o reenviar: a instância NÃO conectada → nao_conectado (com uma que falhou) ou nao_encontrada (o id que não existe) — nada muda
+    msg = P21C.mensagem_que_falhou(s, uid)
+    st, r, _h, _ms = B.conta(tok, "whatsapp_reenviar", {"id": msg or FALSO})
+    o.ok(st == 200 and erro_de(st, r) in (("nao_conectado", "aluno_inativo", "mensagens_desligadas", "sem_telefone", "sem_numero", "consulta_passou",
+                                           "cobranca_resolvida", "fora_do_dia") if msg else ("nao_encontrada",)),
+         f"P whatsapp_reenviar (a instância NÃO conectada) → a recusa da RPC antes de mexer ({erro_de(st, r)}) ({st})")
+    # ── o limpar falhas: o whatsapp_falhas_vistas_em de antes guardado e devolvido por SQL com trava de formato
+    if s == "staging":
+        antes = cfg0.get("falhas_vistas") if cfg0.get("tem_falhas") else None
+        P21C.anotar_devolver(estado, "falhas_vistas", [uid, antes])
+        st, r, _h, _ms = B.conta(tok, "whatsapp_limpar_falhas", {"user_id": FALSO})
+        depois = P21C.config_do_perfil(s, uid)
+        o.ok(st == 200 and depois.get("tem_falhas") and depois.get("falhas_vistas") != antes, f"P whatsapp_limpar_falhas → o whatsapp_falhas_vistas_em novo (SQL) ({st})")
+        P21C.devolver_por_sql(o, estado, s)
+    # ── a faixa: só com o aluno de teste com as mensagens desligadas e sem o aviso de antes; devolvida (os ajustes pela ação; a chave por SQL)
+    al = next((a for a in (ctx["alunos"]["sem_login"], ctx["alunos"]["com_login"]) if a and not a.get("msg_auto")), None)
+    ativo = bool((cfg0.get("whatsapp") or {}).get("ativo")) if isinstance(cfg0.get("whatsapp"), dict) else False
+    if s == "staging" and al and not cfg0.get("tem_aviso_w14") and not ativo:  # + as automáticas da nutri desligadas: nada é enfileirado
+        P21C.anotar_devolver(estado, "ajustes", [al["id"], False])
+        P21C.anotar_devolver(estado, "aviso_w14", uid)
+        st, r, _h, _ms = B.conta(tok, "faixa_ligar_para_todos", {"ids": [al["id"]]})
+        o.ok(st == 200 and P21C.msg_auto(s, al["id"]) is True and P21C.config_do_perfil(s, uid).get("tem_aviso_w14"),
+             f"P faixa_ligar_para_todos (o aluno de teste) → as mensagens dele ligadas e o aviso da faixa no config (SQL) ({st})")
+        P21C.devolver_pelas_acoes(o, estado, s, L)
+        P21C.devolver_por_sql(o, estado, s)
+        P21C.anotar_devolver(estado, "aviso_w14", uid)
+        st, r, _h, _ms = B.conta(tok, "faixa_fechar", {})
+        o.ok(st == 200 and P21C.config_do_perfil(s, uid).get("tem_aviso_w14"), f"P faixa_fechar → o aviso da faixa no config (SQL) ({st})")
+        P21C.devolver_por_sql(o, estado, s)
+    else:
+        o.ok(True, "P da faixa PULADO — sem aluno de teste com as mensagens desligadas, com o aviso da faixa já no config (devolver mudaria) ou com as "
+                   "automáticas da nutri LIGADAS (o enfileirador criaria mensagens); fica o Vitest")
+    if "N1" in casos:
+        tok_o = L.token(P21C.OUTRA)
+        if msg:
+            st, r, _h, _ms = B.conta(tok_o, "whatsapp_reenviar", {"id": msg})
+            o.ok(erro_de(st, r) == "nao_encontrada", f"N1 OUTRA conta reenvia a mensagem da nutri → nao_encontrada ({st})")
+        st, r, _h, _ms = B.ler(tok_o, [B.item("whatsapp_resumo", conta=conta), B.item("whatsapp_fila", conta=conta, escopo="conta", filtro="todas", limite=30)])
+        texto = json.dumps(r)
+        o.ok(st == 200 and uid not in texto and (msg or "-") not in texto, f"N1 OUTRA conta lê o resumo e a fila da conta da nutri → nada da nutri ({st})")
+
+
+def p_lixeira_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:
+    """P/N1 da Lixeira (decisão I): SÓ o item de teste que a própria rodada mandou para a Lixeira (uma anamnese do aluno de teste criada e
+    excluída pela nutricao, com a marca) — a leitura = o SQL da lib; restaurar, excluir de novo e apagar de vez; NUNCA um aluno."""
+    casos = ctx["casos"]
+    tok, uid, conta = L.token(P21C.NUTRI), ctx["uid_n"], ctx["conta"]["id"]
+    al = ctx["alunos"]["tela"]
+    item_ = None
+    if al:
+        st, r, _h, _ms = B.B19.funcao(tok, "anamnese_criar", {"paciente_id": al["id"], "modelo_id": None, "titulo": f"{P21C.marca(rodada)} lixeira",
+                                                              "data": agora_iso(), "conteudo": P21C.CONTEUDO_ANAMNESE, "texto_livre": None})
+        item_ = (r.get("linha") or {}).get("id")
+        P21C.anotar_linha(estado, "anamneses", item_, uid)
+        st2, _r2, _h, _ms = B.B19.funcao(tok, "anamnese_excluir", {"id": item_}) if C.eh_uuid(item_) else (0, {}, {}, 0)
+        o.ok(st == 200 and C.eh_uuid(item_) and st2 == 200, f"massa: a anamnese de teste criada e mandada à Lixeira pela nutricao ({st}, {st2})")
+    p_ler_21c(o, L, P21C.NUTRI, s, [("lixeira", {"conta": conta, "tipo": None, "busca": None, "offset": 0, "limite": P21C.POR_PAGINA_LIXEIRA},
+                                     {"conta": conta, "tipo": None, "busca": None, "offset": 0, "limite": P21C.POR_PAGINA_LIXEIRA}),
+                                    ("lixeira", {"conta": conta, "tipo": "anamnese", "busca": P21C.marca(rodada), "offset": 0, "limite": P21C.POR_PAGINA_LIXEIRA},
+                                     {"conta": conta, "tipo": "anamnese", "busca": P21C.marca(rodada), "offset": 0, "limite": P21C.POR_PAGINA_LIXEIRA})], "a nutri")
+    if not C.eh_uuid(item_):
+        o.ok(True, "P restaurar/apagar PULADO — sem o item de teste na Lixeira (sem aluno de teste); fica o Vitest")
+        return
+    viva = lambda: (B.ler_principal(f"select deleted_at is null as v from {s}.anamneses where id = {C.txt(item_)}") or [{}])[0].get("v")  # noqa: E731
+    if "N1" in casos:
+        st, r, _h, _ms = B.conta(L.token(P21C.OUTRA), "lixeira_restaurar", {"tipo": "anamnese", "id": item_})
+        o.ok(erro_de(st, r) == "sem_acesso" and viva() is False, f"N1 OUTRA conta restaura o item da nutri → sem_acesso; segue na Lixeira ({st})")
+    st, r, _h, _ms = B.conta(tok, "lixeira_restaurar", {"tipo": "anamnese", "id": item_, "nutricionista_id": FALSO})
+    o.ok(st == 200 and (resultado(r) or {}).get("ok") is True and viva() is True, f"P/N4 lixeira_restaurar (o item de teste) → vivo de novo (SQL) ({st})")
+    B.B19.funcao(tok, "anamnese_excluir", {"id": item_})
+    st, r, _h, _ms = B.conta(tok, "lixeira_apagar", {"tipo": "anamnese", "id": FALSO})
+    o.ok(erro_de(st, r) == "nao_esta_na_lixeira", f"P lixeira_apagar de um id que não está na Lixeira → nao_esta_na_lixeira ({st})")
+    st, r, _h, _ms = B.conta(tok, "lixeira_apagar", {"tipo": "tipo_que_nao_existe", "id": item_})
+    o.ok(erro_de(st, r) == "tipo_invalido" and viva() is False, f"P lixeira_apagar com o tipo errado → tipo_invalido; o item segue ({st})")
+    st, r, _h, _ms = B.conta(tok, "lixeira_apagar", {"tipo": "anamnese", "id": item_})
+    o.ok(st == 200 and (resultado(r) or {}).get("apagado") is True and not B.ler_principal(f"select 1 from {s}.anamneses where id = {C.txt(item_)}"),
+         f"P lixeira_apagar (o item de teste) → apagado de vez (SQL: 0 linha) ({st})")
+
+
+def p_modelos_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:
+    """P/N1/N4 dos Modelos (decisão I): os ★ pela nutricao (9 num `ler`) e pela financeiro (o recibo) = o SQL da lib como a pessoa (a nutri e o
+    dono); a ★ tirada SÓ de modelos de teste criados pela rodada (com a marca e a ★) pela *_editar da tela dona — limpos no fim."""
+    casos = ctx["casos"]
+    tok, uid = L.token(P21C.NUTRI), ctx["uid_n"]
+    mk = P21C.marca(rodada)
+    st, r, _h, _ms = B.B19.funcao(tok, "modelo_anamnese_criar", {"titulo": f"{mk} ★", "perguntas": ["Pergunta de teste"], "favorito": True})
+    m_nut = (r.get("linha") or {}).get("id")
+    P21C.anotar_linha(estado, "modelos_anamnese", m_nut, uid)
+    st2, r2, _h, _ms = B.B19.funcao_fin(tok, "modelo_recibo_criar", {"titulo": f"{mk} ★", "conteudo": "Recibo de teste", "favorito": True})
+    m_fin = (r2.get("linha") or {}).get("id")
+    P21C.anotar_linha(estado, "modelos_recibo", m_fin, uid)
+    o.ok(st == 200 and st2 == 200 and C.eh_uuid(m_nut) and C.eh_uuid(m_fin), f"massa: os 2 modelos de teste com a ★ (nutricao e financeiro, com a marca) ({st}, {st2})")
+    for conta_, rot in ((P21C.NUTRI, "a nutri"), (P21C.PERSONAL, "o dono")):
+        t_, u_ = L.token(conta_), L.uid(conta_)
+        st, rn, _h, ms = P21C.ler_nutricao(t_, [B.item(q) for q in B.CONSULTAS_FAVORITOS_21C])
+        st2, rf, _h, ms2 = P21C.ler_financeiro(t_, [B.item("fin_modelos_recibo_favoritos")])
+        o.ok(st == 200 and st2 == 200 and all(i.get("ok") for i in B.itens_de(rn)) and all(i.get("ok") for i in B.itens_de(rf)),
+             f"P os ★ como {rot}: 9 num `ler` da nutricao ({ms} ms) + o recibo num `ler` da financeiro ({ms2} ms) → 200, cada item ok")
+        for q, resp in [*zip(B.CONSULTAS_FAVORITOS_21C, B.itens_de(rn)), ("fin_modelos_recibo_favoritos", (B.itens_de(rf) or [{}])[0])]:
+            v = como(conta_, u_, B.sql_da_lib(q, s, uid=u_))
+            igual_21c(o, f"P {q} = o SQL da lib (o favoritosDe do c6e795b) como {rot} ({len(v) if isinstance(v, list) else '—'} linha(s), como conjunto)",
+                      resp.get("linhas"), v, conjunto=True)
+        if conta_ == P21C.NUTRI:
+            ids = json.dumps(rn) + json.dumps(rf)
+            o.ok(m_nut in ids and m_fin in ids, "P os 2 modelos de teste aparecem nos ★ da nutri (a ★ da rodada)")
+    st, r, _h, _ms = B.B19.funcao(tok, "modelo_anamnese_editar", {"id": FALSO, "favorito": False})
+    o.ok(r.get("erro") == "nao_encontrado", f"P tirar a ★ de um modelo que não é seu/não existe → nao_encontrado (a frase \"Só quem criou\") ({st})")
+    if "N1" in casos:
+        tok_o = L.token(P21C.OUTRA)
+        st, r, _h, _ms = B.B19.funcao(tok_o, "modelo_anamnese_editar", {"id": m_nut, "favorito": False})
+        st2, r2, _h, _ms = B.B19.funcao_fin(tok_o, "modelo_recibo_editar", {"id": m_fin, "favorito": False})
+        fav = lambda t, i: (B.ler_principal(f"select favorito from {s}.{t} where id = {C.txt(i)}") or [{}])[0].get("favorito")  # noqa: E731
+        o.ok(r.get("erro") == "nao_encontrado" and r2.get("erro") == "nao_encontrado" and fav("modelos_anamnese", m_nut) is True
+             and fav("modelos_recibo", m_fin) is True,
+             f"N1 OUTRA conta tira a ★ dos modelos da nutri → 404 (0 linha: o RLS); a ★ segue (SQL) ({st}, {st2})")
+        st, rn, _h, _ms = P21C.ler_nutricao(tok_o, [B.item("modelos_favoritos_anamnese")])
+        o.ok(st == 200 and m_nut not in json.dumps(rn), f"N1 OUTRA conta lê os ★ → nada da nutri ({st})")
+    st, r, _h, _ms = B.B19.funcao(tok, "modelo_anamnese_editar", {"id": m_nut, "favorito": False, "nutricionista_id": FALSO})
+    st2, r2, _h, _ms = B.B19.funcao_fin(tok, "modelo_recibo_editar", {"id": m_fin, "favorito": False})
+    o.ok(st == 200 and st2 == 200 and not B.ler_principal(f"select 1 from {s}.modelos_anamnese where id = {C.txt(m_nut)} and favorito")
+         and not B.ler_principal(f"select 1 from {s}.modelos_recibo where id = {C.txt(m_fin)} and favorito"),
+         f"P/N4 tirar a ★ (a *_editar da tela dona: o mesmo UPDATE) dos 2 modelos de teste → sem a ★ (SQL) ({st}, {st2})")
+
+
+def n_gerais_21c(o, L, area: str, casos: set, ctx: dict) -> None:
+    """N2, N3, N6, N7, N9 e N11 (a aluna pede o painel da 21c pela conta → nada de outra pessoa; o perfil_profissional/perfil_mensagens = o
+    DELA)."""
+    tok = L.token(P21C.NUTRI)
+    conta = ctx["conta"]["id"]
+    q0 = {"aluno": B.item("mensagens_desligadas"), "configuracoes": B.item("perfil_profissional"), "mensagens": B.item("perfil_mensagens"),
+          "lixeira": B.item("lixeira", conta=conta, offset=0, limite=20), "modelos": B.item("perfil_profissional")}[area]
+    a0 = (ACOES_21C.get(area) or ("faixa_fechar",))[0]
+    if "N2" in casos:
+        st, _r, _h, _ms = B.ler(None, [q0], sem_auth=True)
+        st2, _r2, _h, _ms = B.conta(None, a0, {}, sem_auth=True)
+        st3, _r3, _h, _ms = P21C.ler_nutricao(None, [B.item("modelos_favoritos_anamnese")], sem_auth=True) if area == "modelos" else (401, {}, {}, 0)
+        o.ok(st == 401 and st2 == 401 and st3 == 401, f"N2 sem login → 401 (o `ler` {st}, a ação {st2}; os ★ {st3})")
+    if "N3" in casos:
+        st, r, _h, _ms = B.ler(tok, [q0, B.item("conta_inteira"), B.item("aluno_acesso", aluno=FALSO)])
+        st2, r2, _h, _ms = B.conta(tok, "lixeira_esvaziar_tudo")
+        o.ok(st == 200 and [i.get("erro") for i in B.itens_de(r)] == [None, "consulta_invalida", "consulta_invalida"] and st2 == 400 and r2.get("erro") == "acao_invalida",
+             f"N3 q desconhecida (e a aluno_acesso como q — é AÇÃO) → consulta_invalida; ação desconhecida → 400 acao_invalida ({st}, {st2})")
+    if "N6" in casos:
+        st, r, _h, _ms = B.ler(tok, [q0], schema_="outro")
+        o.ok(st == 400 and r.get("erro") == "schema_invalido", f"N6 x-schema inválido → 400 schema_invalido ({st})")
+    if "N7" in casos:
+        st, h = B.preflight_conta(B.ORIGEM_FORA)
+        st2, h2 = B.preflight_conta(B.BASES["staging"])
+        o.ok(B.cors(h) == B.ORIGEM_PADRAO and B.cors(h2) == B.BASES["staging"], f"N7 origem fora → o CORS padrão ({st}); a do site volta ela mesma ({st2})")
+    if "N9" in casos:
+        st, r, _h, _ms = B.ler(tok, [q0] * 17)
+        st2, r2, _h, _ms = P21C.ler_nutricao(tok, [B.item("modelos_favoritos_anamnese")] * 17) if area == "modelos" else (400, {"erro": "lote_grande"}, {}, 0)
+        o.ok(st == 400 and r.get("erro") == "lote_grande" and st2 == 400 and r2.get("erro") == "lote_grande", f"N9 lote de 17 → 400 lote_grande ({st}, {st2})")
+    if "N11" in casos:
+        s = B.schema()
+        tok_a, uid_a = L.token(P21C.ALUNA), L.uid(P21C.ALUNA)
+        al = ctx["alunos"]["tela"]
+        painel = [B.item("whatsapp_resumo", conta=conta), B.item("whatsapp_fila", conta=conta, escopo="conta", filtro="todas", limite=30),
+                  B.item("lixeira", conta=conta, offset=0, limite=20), B.item("mensagens_desligadas"), B.item("perfil_profissional"), B.item("perfil_mensagens")]
+        if al:
+            painel.append(B.item("aluno_responsavel", aluno=al["id"]))
+        st, r, _h, _ms = B.ler(tok_a, painel)
+        its = B.itens_de(r)
+        texto = json.dumps([i for i, it in zip(its, painel) if it["q"] not in ("perfil_profissional", "perfil_mensagens")])
+        proibidos = [x for x in (ctx["uid_n"], conta, (al or {}).get("id")) if x and x in texto]
+        meus = {it["q"]: i.get("linhas") for i, it in zip(its, painel) if it["q"] in ("perfil_profissional", "perfil_mensagens")}
+        dela = {q: como(P21C.ALUNA, uid_a, B.sql_da_lib(q, s, uid=uid_a)) for q in meus}
+        o.ok(st == 200 and not proibidos and B.canonico(meus) == B.canonico(dela),
+             f"N11 a aluna pede o painel da 21c pela conta (com a conta da nutri) → nada de outra pessoa (vazou: {len(proibidos)}); o perfil_profissional e o "
+             f"perfil_mensagens = os DELA (o SQL da lib como ela) ({st})")
+
+
+def rodar_21c(o, area: str, base: str, casos: set) -> None:
+    """A rodada da 21c (--area aluno|configuracoes|mensagens|lixeira|modelos): o P das leituras (a função = o SQL da lib como a pessoa) e das
+    gravações (na massa de teste / pelo caminho que volta — decisão I), os N — e a limpeza no finally (a massa, o que volta, a foto; o
+    Estado)."""
+    s = B.usar_base(base)
+    if base == "prod":
+        raise SystemExit("na produção só o --so-leitura (nada grava)")
+    B.usar_area(area)
+    B.exigir_saude(o, f"o api.py --area {area} da hml-21c")
+    L = B.Sessoes(f"api21 {area} {base}")
+    estado = P21C.abrir_rodada_21c(o, s, area)
+    rodada = estado.d["rodada"]
+    try:
+        ctx = contexto_21c(o, L, s, area, casos)
+        if "N1" in casos:
+            ctx["uid_o"] = L.uid(P21C.OUTRA)
+        if "P" in casos or "N1" in casos or "N8" in casos:
+            {"aluno": p_aluno_21c, "configuracoes": p_configuracoes_21c, "mensagens": p_mensagens_21c, "lixeira": p_lixeira_21c,
+             "modelos": p_modelos_21c}[area](o, L, s, estado, rodada, ctx)
+        n_gerais_21c(o, L, area, casos, ctx)
+    finally:
+        try:
+            P21C.fechar_rodada_21c(o, estado, s, L)
+        finally:
+            L.fechar(o)
+
+
+def limpar_21c(o, area: str, base: str) -> None:
+    """O --limpar da 21c: a rodada que caiu (o Estado — a chave hml21c: a massa, os avisos, o que volta por SQL e pela MESMA ação com a sessão
+    guardada; a foto da nutri) — conferido por SQL só leitura, só contagem. Sem Estado: o que tem a marca nas 3 tabelas da massa (só contagem
+    — o DELETE só pelos ids anotados)."""
+    s = B.usar_base(base)
+    B.usar_area(area)
+    estado = B.Estado.ler()
+    if estado.d.get("area") not in (None, B.CHAVE_21C):
+        o.ok(False, f"a rodada pendente é de outra área ({estado.d.get('area')}): rode o --limpar dela", parar=True)
+    s = estado.d.get("schema") or s
+    L = B.Sessoes(f"api21 {area} --limpar")
+    try:
+        P21C.fechar_rodada_21c(o, estado, s, L)
+    finally:
+        L.fechar(o)
+    if s == "staging":
+        sobra = B.ler_principal(P21C.sql_contar_massa_21c(s))[0]
+        o.ok(not any(int(v or 0) for v in sobra.values()), f"--limpar (21c) conferido (SQL só leitura): 0 linha com a marca da hml-21 nas 3 tabelas ({sobra})")
+
+
+def so_leitura_21c(o, base: str, area: str) -> None:
+    """O smoke só leitura da conta v5 (a produção no F8, ou o staging logo depois de publicar — decisão G: "+ 1 `ler` das consultas novas"):
+    OPTIONS, 401, 400 de schema, a q desconhecida e o `ler` NOVO (o perfil_profissional: o perfil de quem chama → o item ok — a v4 responderia
+    consulta_invalida). --area mensagens (D2: a Mensagens PULA na produção — o `ler` dela fica provado aqui): a conta do PAINEL da base (a
+    nutri-legado na produção — a sessão do w26/prod.py pelo f7_21c.py; a w5p-nutri no staging) lê o perfil_mensagens, o whatsapp_resumo e a
+    whatsapp_fila da conta ativa e a mensagens_desligadas → os itens ok; da resposta só sai o ok, a contagem e o tempo."""
+    so_leitura(o, base, "casca")
+    origem = B.BASES[base]
+    L = B.Sessoes(f"api21 so-leitura {area} {base}")
+    try:
+        tok = L.token(B.PROD_CONTA if base == "prod" else B.ALUNA)
+        st, r, _h, ms = B.ler(tok, [B.item("perfil_profissional")], origem=origem)
+        its = B.itens_de(r)
+        o.ok(st == 200 and len(its) == 1 and its[0].get("ok") is True and len(its[0].get("linhas") or []) <= 1,
+             f"[{base}] o `ler` novo: perfil_profissional (21c) → o item ok, só o perfil de quem chama ({len(its[0].get('linhas') or []) if its else 0} linha) — a "
+             f"conta v5 publicada ({st}; {ms} ms)")
+        if area == "mensagens":
+            painel = P21C.PROD_PAINEL if base == "prod" else P21C.NUTRI
+            tp = L.token(painel)
+            st, r, _h, _ms = B.ler(tp, [B.item("situacao")], origem=origem)
+            contas = ((B.itens_de(r) or [{}])[0].get("valor") or {}).get("contas") or []
+            conta = (contas[0] or {}).get("id") if contas and isinstance(contas[0], dict) else None
+            itens = [B.item("perfil_mensagens"), B.item("mensagens_desligadas")]
+            if C.eh_uuid(conta):
+                itens += [B.item("whatsapp_resumo", conta=conta), B.item("whatsapp_fila", conta=conta, escopo="meus", filtro="todas", limite=P21C.LIMITE_FILA)]
+            st, r, _h, ms = B.ler(tp, itens, origem=origem)
+            its = B.itens_de(r)
+            o.ok(st == 200 and len(its) == len(itens) and all(i.get("ok") is True for i in its),
+                 f"[{base}] D2 o `ler` da Mensagens pela conta ({painel}: {', '.join(i['q'] for i in itens)}) → cada item ok ({st}; {ms} ms) — a tela fica como "
+                 f"prova viva na produção")
+    finally:
+        L.fechar(o)
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="hml-21a/21b/21d — os casos de servidor da função conta (a casca e o app do aluno; a Agenda e os Alunos) "
-                                             "e da função treinos (o Treino)")
+    ap = argparse.ArgumentParser(description="hml-21a/21b/21d/21c — os casos de servidor da função conta (a casca e o app do aluno; a Agenda e os Alunos; "
+                                             "o Resumo, as Configurações, a Mensagens, a Lixeira e os Modelos) e da função treinos (o Treino)")
     ap.add_argument("--area", default="casca", choices=AREAS)
     ap.add_argument("--base", default="local", choices=tuple(B.BASES))
     ap.add_argument("--casos", default=None, help="padrão: " + ",".join(CASOS) + " (a 21d: " + ",".join(CASOS_21D) + ")")
@@ -2033,14 +3098,18 @@ def main() -> int:
     o = C.Saida(nome)
     try:
         if a.seco:
-            if da_21d:
+            if a.area in B.AREAS_DA_21C:  # hml-21c
+                seco_21c(o, a.area)
+            elif da_21d:
                 seco_21d(o)
             elif a.area in B.AREAS_DA_21B:
                 seco_21b(o, a.area)
             else:
                 seco(o, a.area)
         elif a.limpar:
-            if da_21d:
+            if a.area in B.AREAS_DA_21C:  # hml-21c
+                limpar_21c(o, a.area, a.base)
+            elif da_21d:
                 limpar_21d(o, a.base)
             elif a.area in B.AREAS_DA_21B:
                 limpar_21b(o, a.base)
@@ -2049,7 +3118,9 @@ def main() -> int:
         elif a.sair:
             sair(o)
         elif a.so_leitura:
-            if da_21d:
+            if a.area in B.AREAS_DA_21C:  # hml-21c
+                so_leitura_21c(o, a.base, a.area)
+            elif da_21d:
                 so_leitura_21d(o, a.base)
             else:
                 so_leitura(o, a.base, a.area)

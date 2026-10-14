@@ -67,6 +67,7 @@ MEDICAO = SCRATCH / "medicao"
 PRINTS_A = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "a"
 PRINTS_B = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "b"
 PRINTS_D = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "d"  # hml-21d
+PRINTS_C = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml21" / "c"  # hml-21c
 PRINTS = PRINTS_A
 MARCA = "hml21 e2e"
 AREA_ESTADO = "hml21a"  # a área no Estado (o --limpar desta W só desfaz a rodada dela)
@@ -76,6 +77,10 @@ CHAVE_21B = "hml21b"  # a chave da massa da 21b no Estado (o vazio() da hml-19 n
 # hml-21d (decisão I do contrato da 21d): a área do Treino grava os prints em prints/hml21/d e a rodada na área "hml21d"
 AREAS_DA_21D = ("treinos",)
 CHAVE_21D = "hml21d"  # a chave da massa da 21d no Estado (como a da 21b: o abrir/fechar_rodada daqui conferem)
+# hml-21c (decisão I do contrato da 21c): o Resumo, as Configurações, a Mensagens, a Lixeira e os Modelos gravam os prints em prints/hml21/c
+# e a rodada na área "hml21c" (o --limpar desta W só desfaz a rodada dela)
+AREAS_DA_21C = ("aluno", "configuracoes", "mensagens", "lixeira", "modelos")
+CHAVE_21C = "hml21c"
 
 
 def usar_area(area: str) -> None:
@@ -84,6 +89,9 @@ def usar_area(area: str) -> None:
     global PRINTS, AREA_ESTADO
     if area in AREAS_DA_21D:  # hml-21d: o Treino em prints/hml21/d e "hml21d"
         PRINTS, AREA_ESTADO = PRINTS_D, CHAVE_21D
+        return
+    if area in AREAS_DA_21C:  # hml-21c: o Resumo, as Configurações, a Mensagens, a Lixeira e os Modelos em prints/hml21/c e "hml21c"
+        PRINTS, AREA_ESTADO = PRINTS_C, CHAVE_21C
         return
     da_21b = area in AREAS_DA_21B
     PRINTS = PRINTS_B if da_21b else PRINTS_A
@@ -271,6 +279,9 @@ console.log(JSON.stringify({
   consultas, consultas_21a: [...cat.CONSULTAS_DA_CONTA], consultas_21b: [...cat.CONSULTAS_DA_21B],
   lote_max: motor.LOTE_MAX, avisos_max: cat.AVISOS_MAX, tipo_membro: cat.TIPO_MEMBRO_REMOVIDO,
   casca: [...reg.ACOES_DA_CASCA], app: [...reg.ACOES_DO_APP], agenda: [...reg.ACOES_DA_AGENDA], alunos: [...reg.ACOES_DOS_ALUNOS],
+  // hml-21c (por acréscimo): as consultas da 21c e as ações dos 4 módulos novos (o Resumo do aluno, as Configurações, a Mensagens, a Lixeira)
+  consultas_21c: [...(cat.CONSULTAS_DA_21C ?? [])], aluno: [...(reg.ACOES_DO_ALUNO ?? [])], configuracoes: [...(reg.ACOES_DAS_CONFIGURACOES ?? [])],
+  mensagens: [...(reg.ACOES_DAS_MENSAGENS ?? [])], lixeira: [...(reg.ACOES_DA_LIXEIRA ?? [])],
   corpos: reg.CORPOS_DAS_ACOES, status: reg.STATUS_DO_ERRO_CONTA,
   colunas_agenda: cat.COLUNAS_DA_AGENDA, colunas_alunos: cat.COLUNAS_DOS_ALUNOS, filtros_alunos: [...cat.FILTROS_DOS_ALUNOS],
   foto: { max: reg.FOTO_MAX_BYTES, tipos: reg.TIPOS_DE_FOTO, url_propria: reg.URL_API_PROPRIA,
@@ -380,17 +391,81 @@ LISTAS_DA_LIB = ("avisos", "aviso_membro_removido", "perfil_foto", "agenda_calen
                  "agenda_bloqueios_futuros", "agenda_travas", "agenda_regras", "agenda_alunos", "agenda_aluno", "aluno_do_seletor")
 # as listas da lib SEM ordem total (empate na ordem: o banco pode devolver os empatados em outra ordem a cada vez) — o P compara como conjunto
 SEM_ORDEM_TOTAL = frozenset({"agenda_tags", "agenda_bloqueios", "agenda_bloqueios_futuros", "agenda_travas", "agenda_alunos"})
+# hml-21c: o SQL FIXO das libs da 21c no c6e795b (o "antes" da 21c: a lib lia direto) — a MESMA forma (as listas com a ordem da lib; as RPCs, o
+# valor). Os ★ dos Modelos (a nutricao e a financeiro): a lib não ordenava (o .limit(500) sem .order) → SEM ordem total (conjunto); a receita
+# com os ingredientes, o alimento (as 10 colunas) e as medidas — os embutidos de hoje viram o subselect com o RLS de quem lê (como o PostgREST)
+_FAV = "select {cols}, 1 as ordem_da_lib from {{s}}.{tab} where {col} = true and nutricionista_id = {{uid}} and deleted_at is null limit 500"
+_ORIGEM_FAV = "src/ferramentas/modelos/dados.ts:30 favoritosDe (c6e795b: .eq(★, true).eq(nutricionista_id, uid).is(deleted_at, null).limit(500), sem ordem)"
+FAVORITOS_DA_21C = {
+    "modelos_favoritos_anamnese": ("modelos_anamnese", "id, updated_at, titulo, perguntas", "favorito"),
+    "modelos_favoritos_orientacao": ("modelos_orientacao", "id, updated_at, titulo, conteudo", "favorito"),
+    "modelos_favoritos_documento": ("modelos_documento", "id, updated_at, titulo, tipo", "favorito"),
+    "modelos_favoritos_meta": ("modelos_meta", "id, updated_at, titulo, dias_semana", "favorito"),
+    "modelos_favoritos_manipulado": ("modelos_formula", "id, updated_at, titulo, ativos", "favorito"),
+    "modelos_favoritos_exame": ("exames_catalogo", "id, updated_at, nome, unidade, ref_min, ref_max, referencia_texto", "favorito"),
+    "modelos_favoritos_questionario": ("questionarios", "id, updated_at, titulo, perguntas", "favorito"),
+    "modelos_favoritos_produto": ("produtos", "id, updated_at, nome, marca, categoria", "favorito"),
+    "fin_modelos_recibo_favoritos": ("modelos_recibo", "id, updated_at, titulo, conteudo", "favorito"),
+}
+SQL_DA_LIB.update({
+    "dado_livre": ("src/nucleo/dadoLivre.ts:22 dadoLivre (c6e795b)", "select to_jsonb({s}.paciente_dado_livre({email}::text, {cpf}::text, {paciente}::uuid)) as v"),
+    "aluno_responsavel": ("src/publico/legal/responsavel/api.ts:30 buscarResponsavel (c6e795b)", "select to_jsonb({s}.aluno_responsavel({aluno}::uuid)) as v"),
+    "perfil_profissional": ("src/painel/configuracoes/Perfil.tsx:52 buscarPerfil (c6e795b: o profiles de quem está logado, maybeSingle)",
+                            "select nome, email, tipo_perfil, area_outra, dados_profissionais, 1 as ordem_da_lib from {s}.profiles where id = {uid}"),
+    "perfil_mensagens": ("src/painel/mensagens/api.ts:137 lerPerfilWhatsapp (c6e795b: o profiles de quem está logado, maybeSingle)",
+                         "select nome, dados_profissionais, config, 1 as ordem_da_lib from {s}.profiles where id = {uid}"),
+    "whatsapp_resumo": ("src/painel/mensagens/api.ts:91 buscarResumo (c6e795b)", "select to_jsonb({s}.whatsapp_resumo({conta}::uuid)) as v"),
+    "whatsapp_fila": ("src/painel/mensagens/api.ts:105-108 buscarFila (c6e795b)",
+                      "select to_jsonb({s}.whatsapp_fila({conta}::uuid, {escopo}::text, {filtro}::text, {limite}::integer, {antes}::timestamptz, "
+                      "{antes_id}::uuid)) as v"),
+    "mensagens_desligadas": ("src/painel/aluno/dados/api.ts:78 buscarMensagensDesligadas (c6e795b)", "select to_jsonb({s}.mensagens_desligadas()) as v"),
+    "lixeira": ("src/ferramentas/lixeira/dados.ts:34-40 listarLixeira (c6e795b)",
+                "select to_jsonb({s}.lixeira_da_conta({conta}::uuid, {tipo}::text, {busca}::text, {offset}::integer, {limite}::integer)) as v"),
+    # a AÇÃO acesso_ler (decisão 13: a aluno_acesso só lê) — o P compara o resultado com a RPC de hoje rodada como a pessoa
+    "aluno_acesso": ("src/painel/aluno/resumo/acesso/api.ts aluno_acesso (c6e795b: a RPC direta)", "select to_jsonb({s}.aluno_acesso({aluno}::uuid)) as v"),
+    **{q: (_ORIGEM_FAV, _FAV.format(cols=c, tab=t, col=k)) for q, (t, c, k) in FAVORITOS_DA_21C.items()},
+    "modelos_favoritos_receita": (
+        _ORIGEM_FAV.replace("favoritosDe", "favoritosDe da receita (:104 — favorita; os ingredientes:ingredientes_receita(…) com o alimento(10) e as "
+                                           "medidas_caseiras(*))"),
+        "select r.id, r.nome, r.updated_at, r.porcoes, r.rendimento_g, (select coalesce(jsonb_agg(jsonb_build_object('quantidade_g', i.quantidade_g, "
+        "'medida_caseira_id', i.medida_caseira_id, 'quantidade_medida', i.quantidade_medida, 'alimento', (select to_jsonb(a) || jsonb_build_object("
+        "'medidas_caseiras', (select coalesce(jsonb_agg(to_jsonb(m)), '[]'::jsonb) from {s}.medidas_caseiras m where m.alimento_id = a.id)) from (select "
+        "al.id, al.nome, al.fonte, al.grupo, al.energia_kcal, al.proteina_g, al.carboidrato_g, al.lipidio_g, al.fibra_g, al.sodio_mg from {s}.alimentos al "
+        "where al.id = i.alimento_id) a))), '[]'::jsonb) from {s}.ingredientes_receita i where i.receita_id = r.id) as ingredientes, 1 as ordem_da_lib "
+        "from {s}.receitas r where r.favorita = true and r.nutricionista_id = {uid} and r.deleted_at is null limit 500"),
+})
+CONSULTAS_FAVORITOS_21C = (*[q for q in FAVORITOS_DA_21C if q.startswith("modelos_")], "modelos_favoritos_receita")  # as 9 da nutricao
+LISTAS_DA_LIB = LISTAS_DA_LIB + ("perfil_profissional", "perfil_mensagens", *FAVORITOS_DA_21C, "modelos_favoritos_receita")
+SEM_ORDEM_TOTAL = SEM_ORDEM_TOTAL | set(FAVORITOS_DA_21C) | {"modelos_favoritos_receita"}
 # as chaves que a RPC devolve com o relógio do banco (comparar fora delas: o 20b PADRÃO do 'agora'; a minha_situacao devolve o gerado_em)
 CHAVES_DO_RELOGIO = {"agora", "agora_em", "servidor_agora", "hoje", "gerado_em"}
 # os valores que o SQL da lib aceita (cada um conferido: nada do corpo de ninguém entra no SQL sem passar por aqui)
-_V_UUID = frozenset({"uid", "conta", "id", "profissional", "aluno", "calendario", "agendamento", "ignorar"})
+_V_UUID = frozenset({"uid", "conta", "id", "profissional", "aluno", "calendario", "agendamento", "ignorar", "paciente", "antes_id"})  # 21c: + 2
 _V_INSTANTE = frozenset({"desde", "de", "ate", "agora"})
+# hml-21c: o cursor da fila (pode ser null) e os textos dos params da 21c (o e-mail, o CPF, a busca da Lixeira, a aba, o escopo e o filtro da
+# fila) — cada um conferido por uma forma FECHADA (nada do corpo de ninguém entra no SQL sem passar por aqui)
+_V_INSTANTE_NULO = frozenset({"antes"})
+_V_TEXTO = {"email": re.compile(r"[a-z0-9._+-]{1,64}@[a-z0-9.-]{1,190}\.[a-z]{2,24}"), "cpf": re.compile(r"\d{11}"),
+            "busca": re.compile(r"[\w .-]{1,80}"), "tipo": re.compile(r"[a-z_]{1,30}"), "escopo": re.compile(r"meus|conta"),
+            "filtro": re.compile(r"todas|fila|enviadas|falhas")}
 _V_DATA = frozenset({"dia", "de_data", "ate_data"})
 _V_INTEIRO = frozenset({"duracao", "meses", "offset", "limite"})
 _INSTANTE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z")
 
 
 def _valor_sql(k: str, x: object) -> str:
+    if k in _V_INSTANTE_NULO:  # hml-21c
+        if x is None:
+            return "null"
+        if not (isinstance(x, str) and _INSTANTE.fullmatch(x)):
+            raise SystemExit("instante fora do formato no SQL da lib")
+        return C.txt(x)
+    if k in _V_TEXTO:  # hml-21c
+        if x is None:
+            return "null"
+        if not (isinstance(x, str) and _V_TEXTO[k].fullmatch(x)):
+            raise SystemExit(f"texto fora do formato no SQL da lib ({k})")
+        return C.txt(x)
     if k in _V_UUID:
         return "null" if x is None else C.txt(C.uuid_ok(str(x)))
     if k in _V_INSTANTE:
@@ -504,11 +579,49 @@ AREAS["treinos"] = {
 }
 
 
+# hml-21c (decisão F do contrato da 21c): as 7 RPCs de LEITURA que saíram do front na 21c (o RPC_SO_LEITURA do repeticao.ts: 30 → 23; STABLE no
+# catálogo vivo — hml21/medicao/rpcs_21c_defs.txt) — o front ANTIGO (a produção até a release da 21c) ainda as chama direto, INCLUSIVE na casca
+# de TODA página do painel (o número da Mensagens e a faixa): a Guarda da produção as deixa passar (só leem). As 18 que gravam seguem barradas.
+RPCS_DE_LEITURA_DA_21C = frozenset({"aluno_responsavel", "lixeira_da_conta", "mensagens_desligadas", "paciente_dado_livre", "w2l_prontuarios_para_baixar",
+                                    "whatsapp_fila", "whatsapp_resumo"})
+# hml-21c — o que sai do navegador na 21c (as leituras e as gravações de cada área; a whatsapp-conectar fica — é função, gravação na Guarda):
+AREAS["aluno"] = {
+    # o Aluno › Resumo (o card de login — na aba Acessos —, as "Mensagens automáticas", os dados, o link, o responsável, o envio) e a pré-checagem
+    "tabelas": set(),
+    "rpcs": {"aluno_acesso", "paciente_criar_acesso", "paciente_redefinir_senha", "aluno_salvar_ajustes", "aluno_salvar_dados", "aluno_novo_link",
+             "aluno_responsavel", "aluno_responsavel_registrar", "aluno_avisar_plano", "paciente_dado_livre"},
+    "buckets": set(),
+}
+AREAS["configuracoes"] = {
+    # o Perfil (o profiles próprio e a foto), a Conta (contas), a Equipe e o Convite (as 3 RPCs), o ZIP da exclusão
+    "tabelas": {"profiles", "contas"},
+    "rpcs": {"alterar_papeis_membro", "remover_membro", "garantir_meu_codigo", "w2l_prontuarios_para_baixar"},
+    "buckets": {"fotos-perfil", "fotos-perfil-staging"},
+}
+AREAS["mensagens"] = {
+    # a Mensagens (o perfil, o resumo, a fila, as gravações) e a faixa da casca
+    "tabelas": {"profiles"},
+    "rpcs": {"whatsapp_resumo", "whatsapp_fila", "whatsapp_salvar_config", "whatsapp_reenviar", "whatsapp_limpar_falhas", "mensagens_desligadas",
+             "mensagens_ligar_para_todos", "mensagens_aviso_fechar"},
+    "buckets": set(),
+}
+AREAS["lixeira"] = {"tabelas": set(), "rpcs": {"lixeira_da_conta", "lixeira_restaurar", "lixeira_apagar"}, "buckets": set()}
+AREAS["modelos"] = {
+    # os ★ das 10 tabelas da Ferramentas › Modelos (o "tirar a ★" é o PATCH nelas); os planos ★ já iam pela nutricao (a aba Treinos: o Treino
+    # direto — o desvio do gate da 21d — fica de fora, listada à parte)
+    "tabelas": {"modelos_anamnese", "modelos_orientacao", "modelos_recibo", "modelos_documento", "modelos_meta", "modelos_formula", "exames_catalogo",
+                "questionarios", "produtos", "receitas", "planos_alimentares"},
+    "rpcs": set(),
+    "buckets": set(),
+}
+
+
 def guarda_da_w():
     """A Guarda da produção (e2e/hml17: toda escrita barrada; a conta: só o `ler` passa) + as RPCs de leitura que saíram do front na 21a e
     na 21b (o front antigo ainda as chama: só leem)."""
     g = Guarda()
     g.leitura = set(g.leitura) | set(RPCS_DE_LEITURA_DA_21A) | set(RPCS_DE_LEITURA_DA_21B) | set(RPCS_DE_LEITURA_DA_21D)  # hml-21d: + as 3
+    g.leitura = set(g.leitura) | set(RPCS_DE_LEITURA_DA_21C)  # hml-21c (decisão F): + as 7 (a casca de toda página do painel antigo as chama)
     return g
 
 
@@ -757,10 +870,17 @@ def tem_massa_21d(estado) -> bool:
     return isinstance(m, dict) and any(bool(m.get(k)) for k in ("linhas", "storage", "donos"))
 
 
+def tem_massa_21c(estado) -> bool:
+    """hml-21c: o Estado ainda tem a rodada da 21c (a chave "hml21c": as linhas da massa, os avisos do plano e o que falta devolver)."""
+    m = estado.d.get(CHAVE_21C)
+    return isinstance(m, dict) and any(bool(m.get(k)) for k in ("linhas", "avisos", "devolver"))
+
+
 def abrir_rodada(o, s: str):
     """A rodada nova: recusa se há outra pendente (de qualquer W: o vazio() da hml-19 + a foto desta) e grava o Estado com a área desta W."""
     pendente = Estado.ler()
-    if not pendente.vazio() or pendente.d.get("hml21_foto") or pendente.d.get("hml21_destino") or tem_massa_21b(pendente) or tem_massa_21d(pendente):
+    if not pendente.vazio() or pendente.d.get("hml21_foto") or pendente.d.get("hml21_destino") or tem_massa_21b(pendente) or tem_massa_21d(pendente) \
+            or tem_massa_21c(pendente):  # hml-21c
         o.ok(False, f"há uma rodada que caiu no meio (área {pendente.d.get('area') or '?'}): rode o --limpar dela antes", parar=True)
     estado = Estado({"rodada": nova_rodada(), "schema": s, "area": AREA_ESTADO, "linhas": [], "storage": [], "n8": None})
     estado.salvar()
@@ -778,7 +898,8 @@ def fechar_rodada(o, estado, s: str, L) -> None:
             limpar_push(o, estado, s, L)
         finally:
             limpar_foto(o, estado, s, L)
-    if estado.vazio() and not estado.d.get("hml21_foto") and not estado.d.get("hml21_push") and not tem_massa_21b(estado) and not tem_massa_21d(estado):
+    if estado.vazio() and not estado.d.get("hml21_foto") and not estado.d.get("hml21_push") and not tem_massa_21b(estado) and not tem_massa_21d(estado) \
+            and not tem_massa_21c(estado):  # hml-21c
         estado.apagar()
     else:
         o.ok(False, "o Estado ficou com pendência (a massa, o push ou a foto): rode o api.py --limpar", parar=False)
@@ -901,14 +1022,14 @@ def devolver_foto(o, estado, s: str, tok: str, uid: str) -> None:
         estado.salvar()
 
 
-def limpar_foto(o, estado, s: str, L) -> None:
+def limpar_foto(o, estado, s: str, L, conta: str = ALUNA) -> None:
     """A foto no fim da rodada (ou no --limpar): a de antes volta (devolver_foto) e os arquivos de TESTE que a rodada subiu (a chave
     "storage" do Estado, anotados logo depois do PUT) não ficam no bucket — o que ainda existir e não for a foto de agora sai como a
     aluna (a pasta é dela: a policy de apagar da pasta própria); conferido por SQL só leitura, só contagem."""
     fotos = [[b, c] for b, c in (estado.d.get("storage") or []) if b in ("fotos-perfil", "fotos-perfil-staging")]
     if not (isinstance(estado.d.get("hml21_foto"), dict) or fotos):
         return
-    tok, uid = L.token(ALUNA), L.uid(ALUNA)
+    tok, uid = L.token(conta), L.uid(conta)  # hml-21c: a foto do PROFISSIONAL (a nutri) pelo mesmo caminho — a conta vem de quem chama
     info = estado.d.get("hml21_foto") if isinstance(estado.d.get("hml21_foto"), dict) else {}
     pasta_antes = info.get("pasta_antes")
     devolver_foto(o, estado, s, tok, uid)
