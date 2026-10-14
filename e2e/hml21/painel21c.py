@@ -88,15 +88,24 @@ EMAIL_DE_TESTE_SQL = ("(lower(coalesce(p.email, '')) like '%.teste.claude@physiq
                       "or lower(coalesce(p.email, '')) = 'teste@teste.com')")
 
 
+# F5 da 21c: o e-mail de teste também pelo LOGIN do aluno (o auth.users do user_id) — a matrícula com o pacientes.email nulo e o login de
+# teste (os 9 alunos da conta de teste da w5p-nutri têm o e-mail do cadastro nulo; o contrato prevê a da w5p-aluna: "se for ela, só fora das
+# janelas de E2E da W-A"). Só os 2 domínios de teste (o teste@teste.com do cadastro não vale para um login do Auth, que é o da produção).
+EMAIL_DE_TESTE_LOGIN_SQL = ("(lower(coalesce(u.email, '')) like '%.teste.claude@physiqnutri.app' "
+                            "or lower(coalesce(u.email, '')) like '%teste.claude@physiqcalc.app')")
+
+
 def sql_alunos_de_teste(s: str, conta: str, uid_nutri: str, uid_aluna: str | None) -> str:
-    """Os alunos DE TESTE da conta ativa da nutri (vivos, ativos, o e-mail de teste) — os da w5p-aluna por último (a massa da W-A). Só
-    leitura; das linhas só saem os ids e os booleanos."""
+    """Os alunos DE TESTE da conta ativa da nutri (vivos, ativos, o e-mail de teste — o do cadastro ou o do login) — os da w5p-aluna por
+    último (a massa da W-A). Só leitura; das linhas só saem os ids e os booleanos."""
     a = C.txt(C.uuid_ok(uid_aluna)) if uid_aluna else "null"
     return (f"select p.id::text as id, p.user_id::text as user_id, (p.user_id is not null) as com_login, "
             f"(nullif(regexp_replace(coalesce(p.telefone, ''), '\\D', '', 'g'), '') is null) as sem_telefone, "
             f"coalesce((p.config->>'mensagens_automaticas')::boolean, false) as msg_auto, (p.user_id is not distinct from {a}::uuid) as da_aluna "
-            f"from {s}.pacientes p where p.conta_id = {C.txt(C.uuid_ok(conta))} and p.nutricionista_id = {C.txt(C.uuid_ok(uid_nutri))} "
-            f"and p.deleted_at is null and p.ativo and {EMAIL_DE_TESTE_SQL} order by (p.user_id is not distinct from {a}::uuid), p.created_at limit 20")
+            f"from {s}.pacientes p left join auth.users u on u.id = p.user_id "
+            f"where p.conta_id = {C.txt(C.uuid_ok(conta))} and p.nutricionista_id = {C.txt(C.uuid_ok(uid_nutri))} "
+            f"and p.deleted_at is null and p.ativo and ({EMAIL_DE_TESTE_SQL} or {EMAIL_DE_TESTE_LOGIN_SQL}) "
+            f"order by (p.user_id is not distinct from {a}::uuid), p.created_at limit 20")
 
 
 def alunos_de_teste(s: str, conta: str, uid_nutri: str, uid_aluna: str | None) -> dict:
