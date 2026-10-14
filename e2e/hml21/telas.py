@@ -1394,13 +1394,16 @@ def ociosa_21c(o, base: str, canal: str | None) -> None:  # noqa: PLR0915
                         o.linha(f"TEMPO ociosa {nome} {ref} × {v} — o ms do servidor de cada `ler` (os logs de função): "
                                 f"{ {f: analise.get(f, {}).get('ler_ms') for f in funcoes} }; o runtime: { {f: analise.get(f, {}).get('runtime') for f in funcoes} }")
             finally:
+                # o fim de cada contexto COM o navegador vivo (o F7: aqui fora, depois do nav.close(), o evaluate caía e a sessão do Treino que
+                # o app abriu ficava aberta — "nenhuma sessão do Treino no navegador para fechar")
+                for _n, _f, conta, _r, _s, t, _p in abertos:
+                    try:
+                        P21C.sair_da_conta(o, t, L, base, conta, "ociosa")
+                    except Exception:  # noqa: BLE001
+                        pass
+                abertos.clear()
                 nav.close()
     finally:
-        for _n, _f, conta, _r, _s, t, _p in abertos:
-            try:
-                P21C.sair_da_conta(o, t, L, base, conta, "ociosa")
-            except Exception:  # noqa: BLE001
-                pass
         L.fechar(o)
 
 
@@ -1447,11 +1450,13 @@ def seco_21c(o, area: str) -> None:
          and not BARRA_OCIOSA.match(f"{Pu}/rest/v1/rpc/conta")
          and P21C.LIMITE_DA_API_DE_LOGS == 1000 and P21C.FUNCOES_DOS_LOGS == {"conta", "nutricao", "financeiro"}
          and P21C.filtro_da_funcao("conta") == "event_message LIKE '%\"funcao\":\"conta\"%'" and "ORDER BY t DESC LIMIT 1" in fonte_p
-         and "LIMIT 5000" not in fonte_p,
+         and "LIMIT 5000" not in fonte_p
+         and oc.index('P21C.sair_da_conta(o, t, L, base, conta, "ociosa")') < oc.rindex("nav.close()"),
          "a ociosa (decisão K): ≥ 10 min sem pedido (o critério da medição logs_borda_*), teto de 30 min, as 4 telas críticas (a Lixeira, os Modelos, o Dieta "
          "do app, o Financeiro), pelos logs de FUNÇÃO (function_logs — nunca a borda), a página RECARREGADA, o pesado.lock só na medida; na espera, os "
          "números do menu (5 min) barrados no navegador SÓ nas 3 funções — a barra sai antes da medida; o último pedido de cada função pelo filtro NO "
-         "SQL e o mais novo primeiro (a API de logs corta em 1000 linhas — o F7)")
+         "SQL e o mais novo primeiro (a API de logs corta em 1000 linhas — o F7); o fim de cada contexto (o Treino que o app abriu) ANTES de fechar "
+         "o navegador")
     import calendar  # noqa: PLC0415
     o.ok(P21C.instante_utc("2026-10-13T17:24:03") == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0))
          and P21C.instante_utc("2026-10-13 17:24:03.250") == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0)) + 0.25
