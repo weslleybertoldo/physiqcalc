@@ -635,7 +635,8 @@ def limpar(r: Rodada) -> bool:
 def preparar(r: Rodada) -> None:
     """Limpa antes (o que sobrou de uma rodada que caiu), grava o Estado (o uid e "master dado") e SÓ ENTÃO dá o master de teste."""
     b = base()
-    if r.estado.ler() and not limpar(r):
+    # limpa SEMPRE antes (é idempotente e confere a conta): a sobra de uma rodada que caiu, com OU sem o Estado (revisão ⚪7)
+    if not limpar(r):
         raise SystemExit("hml-22: a limpeza da rodada anterior não fechou — confira à mão antes")
     uid = r.uid()
     r.estado.gravar({"uid": uid, "master_dado": True, "rodada": time.strftime("%m%d%H%M"), "em_andamento": False,
@@ -859,6 +860,17 @@ def seco() -> int:
     p.check(mem2.get(CHAVE, {}).get("master_dado") is True and chamadas_preparar.index("dar_master w27-master") > i_estado >= 0,
             "[seco] preparar: o Estado (uid e master dado) é gravado ANTES de dar o master")
     p.check(all(ok for ok, _t in placar_falso.itens), f"[seco] limpar e preparar sem falha na base de mentira ({len(placar_falso.itens)} conferências)")
+    # revisão ⚪7: o --preparar limpa SEMPRE — sem Estado nenhum e com 1 fator que sobrou (o Estado se perdeu), o fator sai antes do master
+    sobra = BaseFalsa(falso, comum.Placar(), [{"id": f1, "status": "verified"}])
+    mem3: dict = {}
+    _B = sobra
+    try:
+        preparar(Rodada(Estado(memoria=mem3), Logins(memoria=[])))
+    finally:
+        _B = None
+    i_apaga = next((i for i, x in enumerate(sobra.chamadas) if x.startswith("admin DELETE") and f1 in x), -1)
+    p.check(i_apaga >= 0 and not sobra.fatores and i_apaga < sobra.chamadas.index("dar_master w27-master") and mem3.get(CHAVE, {}).get("master_dado"),
+            "[seco] preparar sem Estado: limpa antes (o fator que sobrou sai) e só depois dá o master")
     p.check(_B is None, "[seco] a base de mentira saiu (a de verdade nunca carregou)")
     return p.fim()
 

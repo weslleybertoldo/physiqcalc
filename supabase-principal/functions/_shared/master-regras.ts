@@ -44,6 +44,26 @@ export function masterComAal(fatores: unknown, aal: unknown): boolean {
 }
 
 /**
+ * hml-22 (revisão 🟡1) — o que a porta das master-* decide depois do login, NA ORDEM, falhando FECHADA: sem a leitura do Auth (erro ou
+ * resposta sem o usuário) não dá para saber nem o papel nem o fator → "auth_indisponivel" (503), antes de qualquer ação com a chave de
+ * serviço. "Sem a chave factors" só conta como "sem fator" quando a leitura DEU CERTO (o GoTrue omite a chave de quem não tem fator).
+ * Depois: não é master → "so_master"; master com fator e sem aal2 → "precisa_2fa".
+ */
+export type DecisaoPorta = "ok" | "auth_indisponivel" | "so_master" | "precisa_2fa";
+
+export function decidirPorta(p: {
+  authErro: unknown;
+  usuario: { app_metadata?: Record<string, unknown> | null; factors?: unknown } | null | undefined;
+  papelPerfil: string | null | undefined;
+  aal: unknown;
+}): DecisaoPorta {
+  if (p.authErro || !p.usuario) return "auth_indisponivel";
+  if (!ehMaster(p.usuario.app_metadata ?? null, p.papelPerfil)) return "so_master";
+  if (!masterComAal(p.usuario.factors, p.aal)) return "precisa_2fa";
+  return "ok";
+}
+
+/**
  * hml-08 (H-22): o painel master é só do site — o app (o WebView do Android serve em https://localhost; o do iOS, em
  * capacitor://localhost) recebe 403 "so_no_site". Serve para desligar o master dos APKs antigos (≤ 3.71), que ainda têm o código;
  * quem põe o Origin é o navegador (um curl manda qualquer um), então a barreira de verdade é o 2FA do master.
@@ -142,6 +162,8 @@ export function statusDoErro(erro: unknown): number {
       return 404;
     case "muitas_acoes":
       return 429;
+    case "auth_indisponivel":
+      return 503;
     case "erro_interno":
       return 500;
     case "mp_error":

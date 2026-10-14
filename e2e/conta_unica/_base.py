@@ -100,8 +100,10 @@ def como(user_id: str, schema_: str, fn_sql: str) -> object:
     u = sql_principal(f"select email, coalesce(raw_app_meta_data, '{{}}'::jsonb) as app from auth.users where id = {q(user_id)}::uuid")
     if not u:
         raise RuntimeError(f"login {user_id} não existe")
-    # as claims do JWT de verdade (o papel de master mora em app_metadata.role — eh_master() lê dali)
-    claims = json.dumps({"sub": user_id, "role": "authenticated", "aud": "authenticated", "email": u[0]["email"], "app_metadata": u[0]["app"]})
+    # as claims do JWT de verdade (o papel de master mora em app_metadata.role — eh_master() lê dali). hml-22 (H-22): + "aal": "aal2" —
+    # a sessão completa; sem o aal, o master com o 2FA ligado seria pessoa comum (para quem não é master, o aal não muda nada)
+    claims = json.dumps({"sub": user_id, "role": "authenticated", "aud": "authenticated", "email": u[0]["email"], "app_metadata": u[0]["app"],
+                         "aal": "aal2"})
     sql = f"""do $w1c$ declare r jsonb; begin
       perform set_config('request.jwt.claims', {q(claims)}, true);
       perform set_config('request.jwt.claim.sub', {q(user_id)}, true);

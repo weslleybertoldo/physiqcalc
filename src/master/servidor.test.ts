@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  ehAcaoConta, ehMaster, emailDeTeste, idsDe, lerPedidoCriarConta, masterComAal, origemDoApp, schemaDoPedido, statusDoErro,
+  decidirPorta, ehAcaoConta, ehMaster, emailDeTeste, idsDe, lerPedidoCriarConta, masterComAal, origemDoApp, schemaDoPedido, statusDoErro,
   temFatorVerificado, textoDoAvisoDePlano,
 } from "../../supabase-principal/functions/_shared/master-regras";
 
@@ -108,16 +108,46 @@ describe("hml-22 (H-22) — o 2FA do master no servidor (a regra do master_aal_o
     expect(statusDoErro("precisa_2fa")).toBe(403);
   });
 
-  it("a porta das 3 master-* confere o 2FA DEPOIS do master e ANTES do freio e da ação (o fator do Auth, o aal do token)", () => {
+  it("a porta das 3 master-* decide na ordem — o Auth fora (503), o master, o 2FA — ANTES do freio e da ação (o fator do Auth, o aal do token)", () => {
     const porta = ler("supabase-principal/functions/_shared/master-porta.ts");
-    const iMaster = porta.indexOf('erro: "so_master" }, 403');
-    const i2fa = porta.indexOf("if (!masterComAal(u?.user?.factors, claimsDoJwt(token)?.aal)) {");
+    // o erro do getUserById é lido (antes era ignorado: os fatores vinham vazios e o 2FA passava — revisão 🟡1)
+    expect(porta).toContain("const [{ data: u, error: eAuth }, { data: perfil }] = await Promise.all([");
+    expect(porta).toMatch(/decidirPorta\(\{\s*authErro: eAuth,\s*usuario: u\?\.user \?\? null,[\s\S]*?aal: claimsDoJwt\(token\)\?\.aal,\s*\}\)/);
+    const iAuth = porta.indexOf('return json({ ok: false, erro: "auth_indisponivel" }, 503, origin);');
+    const iMaster = porta.indexOf('return json({ ok: false, erro: "so_master" }, 403, origin);');
+    const i2fa = porta.indexOf('return json({ ok: false, erro: "precisa_2fa" }, 403, origin);');
     const iFreio = porta.indexOf("if (!permitido(");
-    expect(iMaster).toBeGreaterThan(-1);
+    expect(iAuth).toBeGreaterThan(porta.indexOf("decidirPorta({"));
+    expect(iMaster).toBeGreaterThan(iAuth);
     expect(i2fa).toBeGreaterThan(iMaster);
     expect(iFreio).toBeGreaterThan(i2fa);
-    expect(porta.slice(i2fa, iFreio)).toContain('log.aviso({ codigo: "precisa_2fa", schema, ref: ud.user.id });');
-    expect(porta.slice(i2fa, iFreio)).toContain('return json({ ok: false, erro: "precisa_2fa" }, 403, origin);');
+    expect(porta.slice(iAuth - 260, iAuth)).toContain('log.erro({ codigo: "auth_indisponivel", schema, ref: ud.user.id,');
+    expect(porta.slice(iMaster, iFreio)).toContain('log.aviso({ codigo: "precisa_2fa", schema, ref: ud.user.id });');
+    // a porta não decide mais "na mão" (só pela regra pura testada abaixo)
+    expect(porta).not.toMatch(/\bif \(!ehMaster\(|\bif \(!masterComAal\(/);
+  });
+
+  it("decidirPorta (revisão 🟡1): o Auth fora → auth_indisponivel, falha FECHADA — antes do master e do 2FA", () => {
+    const master = { app_metadata: { role: "master" } };
+    // o Auth com erro: nem o claim master nem o perfil master passam (os fatores não foram lidos)
+    expect(decidirPorta({ authErro: { status: 500, message: "x" }, usuario: null, papelPerfil: "master", aal: "aal1" })).toBe("auth_indisponivel");
+    expect(decidirPorta({ authErro: new Error("rede"), usuario: master, papelPerfil: "master", aal: "aal2" })).toBe("auth_indisponivel");
+    // a resposta sem o usuário (sem erro) também
+    expect(decidirPorta({ authErro: null, usuario: null, papelPerfil: "master", aal: "aal1" })).toBe("auth_indisponivel");
+    expect(decidirPorta({ authErro: null, usuario: undefined, papelPerfil: null, aal: "aal1" })).toBe("auth_indisponivel");
+    expect(statusDoErro("auth_indisponivel")).toBe(503);
+  });
+
+  it("decidirPorta: com o Auth lido — não master → so_master; master sem fator (a chave factors omitida) → ok; com fator → só aal2", () => {
+    const comFator = { app_metadata: { role: "master" }, factors: [verificado] };
+    expect(decidirPorta({ authErro: null, usuario: { app_metadata: {} }, papelPerfil: "pessoa", aal: "aal2" })).toBe("so_master");
+    expect(decidirPorta({ authErro: null, usuario: { app_metadata: { role: "master" } }, papelPerfil: null, aal: "aal1" })).toBe("ok");
+    expect(decidirPorta({ authErro: null, usuario: { app_metadata: {} }, papelPerfil: "master", aal: "aal1" })).toBe("ok");
+    expect(decidirPorta({ authErro: null, usuario: comFator, papelPerfil: null, aal: "aal1" })).toBe("precisa_2fa");
+    expect(decidirPorta({ authErro: null, usuario: comFator, papelPerfil: null, aal: undefined })).toBe("precisa_2fa");
+    expect(decidirPorta({ authErro: null, usuario: comFator, papelPerfil: null, aal: "aal2" })).toBe("ok");
+    expect(decidirPorta({ authErro: null, usuario: { app_metadata: {}, factors: [verificado] }, papelPerfil: "master", aal: "aal1" })).toBe("precisa_2fa");
+    expect(decidirPorta({ authErro: null, usuario: { app_metadata: {}, factors: [pelaMetade] }, papelPerfil: "master", aal: "aal1" })).toBe("ok");
   });
 
   it("pagamentos-aluno: o poder de master segue a mesma regra (em aal1 com fator, a pessoa comum — sem recusa)", () => {

@@ -6,7 +6,7 @@ Homologação, achado H-22 (hml-22, 14/10/2026). O master vê os dados de todas 
 
 ## Como funciona
 
-- **Desligada** (nenhum fator cadastrado): tudo igual a antes da hml-22. Esse é o estado até o dono ativar.
+- **Desligada** (nenhum fator verificado): tudo igual a antes da hml-22. Esse é o estado até o dono ativar.
 - **Ligada** (um fator verificado na conta): o login com a senha ou o Google vale como "1ª etapa" (`aal1`). Antes de qualquer área
   logada do site (o app do aluno no site, o painel e o master), aparece a tela **"Digite o código do app autenticador"**. Os 6
   números certos deixam a sessão em `aal2` e o site abre.
@@ -27,7 +27,8 @@ Homologação, achado H-22 (hml-22, 14/10/2026). O master vê os dados de todas 
 5. Efeito: as outras sessões abertas desta conta (as que entraram só com a senha ou o Google) são encerradas na hora — é a regra do
    Supabase Auth. Os outros navegadores e aparelhos pedem o login de novo.
 
-Conferir (só leitura, sem mostrar dado): a contagem de fatores verificados da conta master é 1.
+Conferir (só leitura, sem mostrar dado): a contagem de fatores verificados da conta master é 1. **Mais de 1, ou "Ligada" sem o
+dono ter ativado = alguém cadastrou um fator na conta: siga a recuperação abaixo, na ordem.**
 
 ## Entrar com a verificação ligada
 
@@ -40,22 +41,34 @@ O relógio do celular precisa estar certo (o código muda a cada 30 segundos).
 
 ## Perdeu ou trocou o celular (recuperação)
 
-Desligar pela tela não existe (decisão da hml-22: tirar o fator é pelo suporte). O caminho:
+Desligar pela tela não existe (decisão da hml-22: tirar o fator é pelo suporte). **A ordem importa**: apagar o fator não derruba
+sessão nenhuma, e sem o fator TODA sessão viva da conta volta a ser master, até a que entrou só com a senha (inclusive um navegador
+logado no celular perdido). Por isso, primeiro as sessões e a senha; o fator por último. As chaves vêm do cofre (o PAT da Management
+API e a chave de serviço do projeto principal) — nunca no repositório nem no chat.
 
 1. Confirmar que quem pede é o próprio dono.
-2. Com a chave de serviço do projeto principal (do cofre; nunca no repositório nem no chat), apagar o fator da conta:
+2. **Encerrar todas as sessões da conta.** Pela Management API (SQL): `delete from auth.sessions where user_id = '<id da conta>';`
+   (as renovações saem junto). Anotar a hora. Outro jeito: com uma sessão da própria conta aberta, o `POST /auth/v1/logout?scope=global`
+   com o token dela encerra todas (é o que o "Sair" de sempre do site faz).
+3. **Trocar a senha da conta.** Pelo admin do Auth: `PUT /auth/v1/admin/users/<id da conta>` com a senha nova (cabeçalhos `apikey` e
+   `Authorization: Bearer` com a chave de serviço). A senha nova vai ao dono por um canal seguro. Se ele entra com o Google e o Google
+   estava no celular perdido, trocar também a senha do Google.
+4. **Se há risco** (o celular está com outra pessoa), **esperar 1 hora** depois do passo 2: o token de acesso já emitido vale até 1 hora
+   (o `jwt_exp` do projeto) mesmo com a sessão encerrada, e sem o fator ele voltaria a ser master.
+5. **Só então apagar o fator.** Com a chave de serviço:
    - pelo supabase-js: `auth.admin.mfa.listFactors({ userId })` e `auth.admin.mfa.deleteFactor({ userId, id })`;
-   - ou pelo HTTP do Auth: `GET /auth/v1/admin/users/<id da conta>/factors` e `DELETE /auth/v1/admin/users/<id da conta>/factors/<id do fator>`
-     (cabeçalhos `apikey` e `Authorization: Bearer` com a chave de serviço);
+   - ou pelo HTTP do Auth: `GET /auth/v1/admin/users/<id da conta>/factors` e `DELETE /auth/v1/admin/users/<id da conta>/factors/<id do fator>`;
    - reserva, pela Management API (SQL): `delete from auth.mfa_factors where user_id = '<id da conta>';`
-3. Conferir: `select count(*) from auth.mfa_factors where user_id = '<id da conta>'` → 0.
-4. O dono entra (sem fator, o master volta a ser como antes) e ativa de novo no celular novo.
+6. **Conferir (só contagem):** 0 fator — `select count(*) from auth.mfa_factors where user_id = '<id da conta>'` — e 0 sessão antiga —
+   `select count(*) from auth.sessions where user_id = '<id da conta>' and created_at < '<a hora do passo 2>'`.
+7. O dono entra com a senha nova (ou o Google) e ativa de novo no celular novo.
 
-Sem o fator, a sessão que já estava aberta e guardada no navegador relê os fatores sozinha ao abrir a tela do código e segue.
+Trocar de celular sem risco (o antigo está com ele, só vai sair de uso) é o mesmo caminho; aí o passo 4 pode ser pulado.
 
 ## A volta de cada peça (do mais rápido ao mais lento)
 
-1. **Apagar o fator do master** (o passo 2 acima): tudo volta ao comportamento de antes na hora, sem publicar nada.
+1. **Apagar o fator do master** (o passo 5 da recuperação; num incidente, os passos 2 a 4 antes): tudo volta ao comportamento de antes
+   na hora, sem publicar nada.
 2. **O banco**: a reversa `supabase-principal/reversas/20261014200000_hml22_master_2fa_reversa.sql`
    (`python3 scripts/apply_migration_principal.py <reversa> --so public`; e `--so staging`). Volta o `eh_master()` e o `sou_master()`
    de antes, letra por letra, e só depois apaga as 2 funções novas.

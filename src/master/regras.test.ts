@@ -70,6 +70,7 @@ describe("painel master — textos", () => {
     expect(textoErro("xyz")).toBe("Não deu certo agora. Tente de novo.");
     // hml-22 (H-22): a função do master pediu o código do app autenticador
     expect(textoErro("precisa_2fa")).toBe("Digite o código do app autenticador para continuar.");
+    expect(textoErro("auth_indisponivel")).toBe("O login não respondeu agora. Tente de novo em instantes.");
   });
   it("W1: o rótulo da InfinitePay", () => {
     expect(ROTULO_RECEBIMENTO.infinitepay).toBe("InfinitePay");

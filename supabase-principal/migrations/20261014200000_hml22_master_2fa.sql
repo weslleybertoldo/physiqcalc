@@ -113,7 +113,7 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- ============================================================================================================
--- 4. Conferência (desfaz tudo se algo sair diferente) — sem login e sem ler tabela: a matriz A, os atributos e os grants
+-- 4. Conferência (desfaz tudo se algo sair diferente) — sem login e sem ler tabela: a matriz A, os atributos, o dono e os grants
 -- ============================================================================================================
 do $$
 declare
@@ -141,6 +141,14 @@ begin
   if (select p.prosecdef or p.provolatile <> 'i' from pg_catalog.pg_proc p
       where p.oid = '{schema}.master_aal_regra(boolean, text)'::regprocedure) then
     raise exception 'hml-22: master_aal_regra tem de ser INVOKER e IMMUTABLE';
+  end if;
+
+  -- o dono das 3 definer é o postgres, com BYPASSRLS: o auth.mfa_factors (e os profiles) têm RLS — com um dono sem BYPASSRLS, o exists
+  -- do fator daria sempre falso e o master passaria sem o código, calado (com 0 fator, tudo pareceria certo; revisão ⚪4)
+  if (select count(*) from pg_catalog.pg_proc p join pg_catalog.pg_roles r on r.oid = p.proowner
+      where p.oid in ('{schema}.master_aal_ok()'::regprocedure, '{schema}.eh_master()'::regprocedure, '{schema}.sou_master()'::regprocedure)
+        and r.rolname = 'postgres' and r.rolbypassrls) <> 3 then
+    raise exception 'hml-22: as 3 definer têm de ser do postgres, com BYPASSRLS (o auth.mfa_factors tem RLS)';
   end if;
 
   -- o eh_master e o sou_master passam pela regra nova
