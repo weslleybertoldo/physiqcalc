@@ -1444,10 +1444,14 @@ def seco_21c(o, area: str) -> None:
          and oc.index("t.ctx.unroute(BARRA_OCIOSA, barrar)") < oc.index("with LockPesado():") < oc.index("t.ir(rota)")
          and all(BARRA_OCIOSA.match(f"{Pu}/functions/v1/{f}") for f in ("conta", "nutricao", "financeiro"))
          and not any(BARRA_OCIOSA.match(f"{Pu}/functions/v1/{f}") for f in ("whatsapp-conectar", "aluno-dia", "contas", "conta-x"))
-         and not BARRA_OCIOSA.match(f"{Pu}/rest/v1/rpc/conta"),
+         and not BARRA_OCIOSA.match(f"{Pu}/rest/v1/rpc/conta")
+         and P21C.LIMITE_DA_API_DE_LOGS == 1000 and P21C.FUNCOES_DOS_LOGS == {"conta", "nutricao", "financeiro"}
+         and P21C.filtro_da_funcao("conta") == "event_message LIKE '%\"funcao\":\"conta\"%'" and "ORDER BY t DESC LIMIT 1" in fonte_p
+         and "LIMIT 5000" not in fonte_p,
          "a ociosa (decisão K): ≥ 10 min sem pedido (o critério da medição logs_borda_*), teto de 30 min, as 4 telas críticas (a Lixeira, os Modelos, o Dieta "
          "do app, o Financeiro), pelos logs de FUNÇÃO (function_logs — nunca a borda), a página RECARREGADA, o pesado.lock só na medida; na espera, os "
-         "números do menu (5 min) barrados no navegador SÓ nas 3 funções — a barra sai antes da medida (o F7)")
+         "números do menu (5 min) barrados no navegador SÓ nas 3 funções — a barra sai antes da medida; o último pedido de cada função pelo filtro NO "
+         "SQL e o mais novo primeiro (a API de logs corta em 1000 linhas — o F7)")
     import calendar  # noqa: PLC0415
     o.ok(P21C.instante_utc("2026-10-13T17:24:03") == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0))
          and P21C.instante_utc("2026-10-13 17:24:03.250") == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0)) + 0.25

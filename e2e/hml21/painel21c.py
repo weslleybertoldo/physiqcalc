@@ -948,21 +948,46 @@ def instante_utc(v: object) -> float | None:
     return None
 
 
-def logs_da_funcao(funcao: str, ini_utc: float, fim_utc: float, ref: str | None = None) -> tuple[list[dict], str | None]:
-    """Os LOGS DE FUNÇÃO (source function_logs do analytics da Management API — NUNCA a borda: H-135) de UMA função numa janela [ini, fim]
-    (UTC): só os campos FIXOS do log da porta (+ o instante). As linhas do runtime (booted/shutdown) saem como {"runtime": a 1ª palavra}.
-    → (linhas, erro)."""
+# F7 da 21c (medido 14/10 02:31): a API de logs da Management API devolve no MÁXIMO 1000 linhas por consulta (o teto de 5000 pedido não vale) — a
+# consulta de antes (todas as funções, da mais velha para a mais nova) parava no começo da janela: na de 40 min do ultimo_pedido, as 1000
+# linhas acabavam 05:09 UTC com pedidos à conta até 05:26 — o "último pedido" saía VELHO e a espera fechava só pela escuta deste processo.
+# Agora: o filtro da função NO SQL, o mais novo primeiro no ultimo_pedido (LIMIT 1) e a janela cortada vira erro (não passa por inteira).
+LIMITE_DA_API_DE_LOGS = 1000
+FUNCOES_DOS_LOGS = frozenset({"conta", "nutricao", "financeiro"})
+
+
+def _consultar_logs(sql: str, ini_utc: float, fim_utc: float, ref: str | None = None) -> tuple[list[dict], str | None]:
+    """Uma consulta ao analytics da Management API (os logs do projeto) numa janela [ini, fim] em UTC → (as linhas cruas, erro)."""
     import urllib.parse  # noqa: PLC0415
     ref = ref or B.PRINCIPAL_REF
     fmt = lambda t: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t))  # noqa: E731
-    sql = "SELECT timestamp AS t, event_message AS m FROM logs WHERE source = 'function_logs' ORDER BY t LIMIT 5000"
     q = urllib.parse.urlencode({"sql": sql, "iso_timestamp_start": fmt(ini_utc), "iso_timestamp_end": fmt(fim_utc)})
     st, r, _h = B.B5.http("GET", f"https://api.supabase.com/v1/projects/{ref}/analytics/endpoints/logs?{q}", None,
                           {"Authorization": f"Bearer {C.C2.pat()}", "User-Agent": "physiq-hml21c/1.0"}, timeout=90)
     if st != 200 or not isinstance(r, dict) or r.get("error"):
         return [], f"HTTP {st}"
+    return list(r.get("result") or []), None
+
+
+def filtro_da_funcao(funcao: str) -> str:
+    """O filtro NO SQL das linhas do log da porta de UMA função (o JSON do log: "funcao":"<nome>", sem espaço) — só as 3 da ociosa."""
+    if funcao not in FUNCOES_DOS_LOGS:
+        raise SystemExit(f"função fora da ociosa: {funcao}")
+    return "event_message LIKE '%\"funcao\":\"" + funcao + "\"%'"
+
+
+def logs_da_funcao(funcao: str, ini_utc: float, fim_utc: float, ref: str | None = None) -> tuple[list[dict], str | None]:
+    """Os LOGS DE FUNÇÃO (source function_logs do analytics da Management API — NUNCA a borda: H-135) de UMA função numa janela [ini, fim]
+    (UTC): só os campos FIXOS do log da porta (+ o instante). As linhas do runtime (booted/shutdown — sem o nome da função no texto) saem
+    como {"runtime": a 1ª palavra}. A função filtrada NO SQL; a janela que bate no teto da API (1000 linhas) volta com o erro "cortada"
+    (as linhas que vieram ficam). → (linhas, erro)."""
+    sql = ("SELECT timestamp AS t, event_message AS m FROM logs WHERE source = 'function_logs' AND (" + filtro_da_funcao(funcao)
+           + " OR event_message NOT LIKE '{%') ORDER BY t LIMIT " + str(LIMITE_DA_API_DE_LOGS))
+    cruas, erro = _consultar_logs(sql, ini_utc, fim_utc, ref)
+    if erro:
+        return [], erro
     saida = []
-    for x in r.get("result") or []:
+    for x in cruas:
         m = x.get("m") or ""
         try:
             j = json.loads(m)
@@ -973,16 +998,18 @@ def logs_da_funcao(funcao: str, ini_utc: float, fim_utc: float, ref: str | None 
             saida.append({"t": t, **{k: j[k] for k in CAMPOS_FIXOS_DO_LOG if k in j}})
         elif not m.lstrip().startswith("{") and m.split():
             saida.append({"t": t, "runtime": m.split()[0][:20]})
-    return saida, None
+    return saida, (f"cortada: a janela passou de {LIMITE_DA_API_DE_LOGS} linhas (a API de logs corta)" if len(cruas) >= LIMITE_DA_API_DE_LOGS else None)
 
 
 def ultimo_pedido(funcao: str, agora_utc: float | None = None) -> tuple[float | None, str | None]:
-    """O instante (UTC) do último pedido à função nos logs de FUNÇÃO dos últimos JANELA_LOGS_MIN min (qualquer quem chama) → (t, erro)."""
+    """O instante (UTC) do último pedido à função nos logs de FUNÇÃO dos últimos JANELA_LOGS_MIN min (qualquer quem chama) → (t, erro):
+    a função filtrada no SQL e o MAIS NOVO primeiro (LIMIT 1) — o teto de 1000 linhas da API não esconde o último."""
     agora_utc = agora_utc or time.time()
-    linhas, erro = logs_da_funcao(funcao, agora_utc - JANELA_LOGS_MIN * 60, agora_utc)
+    sql = "SELECT timestamp AS t FROM logs WHERE source = 'function_logs' AND " + filtro_da_funcao(funcao) + " ORDER BY t DESC LIMIT 1"
+    cruas, erro = _consultar_logs(sql, agora_utc - JANELA_LOGS_MIN * 60, agora_utc)
     if erro:
         return None, erro
-    ts = [x["t"] for x in linhas if "runtime" not in x and isinstance(x.get("t"), float)]
+    ts = [t for t in (instante_utc(x.get("t")) for x in cruas) if isinstance(t, float)]
     return (max(ts) if ts else None), None
 
 
