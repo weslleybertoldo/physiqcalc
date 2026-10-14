@@ -17,6 +17,7 @@ import { lerConta } from "@/conta/ler";
 import { principal, PRINCIPAL_STORAGE_KEY } from "@/integrations/principal/client";
 import { supabase } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
+import { estadoDoisFatores, type DoisFatores } from "./doisFatoresRegras";
 import { entrarComSenhaNoServidor } from "./entrarSenha";
 import { limparProfPendente } from "@/lib/profPendente";
 import { esquecerAparelhoPush } from "@/push/aparelho";
@@ -73,6 +74,11 @@ export interface SessaoValor {
   /** sem situação (nem guardada) e a busca falhou: a tela mostra "Parte do app está fora do ar" */
   erroSituacao: boolean;
   treino: { estado: EstadoTreino; erro: ErroTroca | null };
+  /**
+   * hml-22 (H-22): "pede_codigo" = a conta tem a verificação em 2 etapas ligada (fator verificado na sessão) e entrou só com a senha
+   * ou o Google (token aal1) — o site mostra a tela do código antes da área logada (src/rotas/Rotas.tsx). Sem rede: só a sessão.
+   */
+  doisFatores: DoisFatores;
   /** P25: a senha antiga foi trocada nesta entrada com o Google */
   senhaTrocada: boolean;
   entrarComGoogle: () => Promise<{ erro?: string }>;
@@ -95,6 +101,7 @@ const VAZIO: SessaoValor = {
   carregandoSituacao: false,
   erroSituacao: false,
   treino: { estado: "desnecessario", erro: null },
+  doisFatores: "livre",
   senhaTrocada: false,
   entrarComGoogle: async () => ({}),
   entrarComEmail: async () => ({}),
@@ -224,6 +231,9 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (nova) setSessao(nova);
+      // hml-22 (H-22): o código do app autenticador conferiu (a sessão agora é aal2) → refaz a troca do Treino, que em aal1 foi recusada
+      // ao master com fator (403 precisa_2fa → "dois_fatores", sem tentar sozinha)
+      if (evento === "MFA_CHALLENGE_VERIFIED") setPedidoTroca((p) => ({ n: p.n + 1, forcar: true }));
     });
     return () => {
       vivo = false;
@@ -348,6 +358,11 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         return;
       }
       const falha = r as Extract<typeof r, { ok: false }>;
+      if (falha.erro === "dois_fatores") {
+        // hml-22 (H-22): a troca pede o código (o master com fator, em aal1). A sessão guardada pode não saber do fator (ligado noutro
+        // lugar): relê a sessão — a renovação traz os fatores de agora e o site passa a pedir o código. Não tenta sozinha nem pausa.
+        void principal.auth.refreshSession().catch(() => undefined);
+      }
       if (falha.erro === "invalido") {
         // token do principal inválido ou revogado: sai dos 2 bancos (spec 9)
         setTreino({ estado: "erro", erro: "invalido" });
@@ -538,6 +553,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       carregandoSituacao,
       erroSituacao,
       treino,
+      doisFatores: estadoDoisFatores(sessao),
       senhaTrocada,
       entrarComGoogle,
       entrarComEmail,

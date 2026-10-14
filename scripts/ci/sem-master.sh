@@ -7,8 +7,8 @@
 #   uso: bash scripts/ci/sem-master.sh <pasta>
 #
 # Falha se achar, em qualquer arquivo da pasta, uma das marcas abaixo: strings de CÓDIGO do master, que nenhuma outra tela usa.
-# Controle positivo: as 3 têm que existir no src/ (fora dos testes). Se o código mudar e uma sumir, o teste ficaria oco (passaria
-# sempre); então ele falha pedindo para trocar a marca.
+# Controle positivo: todas têm que existir no src/ (fora dos testes). Se o código mudar e uma sumir, o teste ficaria oco (passaria
+# sempre); então ele falha pedindo para trocar a marca. hml-22 (H-22): a 4ª marca é das telas do 2FA do master (só no site).
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -16,6 +16,7 @@ MARCAS=(
   "master-contas"           # src/master/api.ts: a função do painel master no banco principal
   "master-professores"      # src/pages/master/BibliotecaPage.tsx: a função da Biblioteca global no Treino
   "Contas, planos e alunos" # src/master/MasterLayout.tsx: o cartão "Painel master" do menu
+  "Verificação em 2 etapas" # hml-22: src/master/doisFatores/ (a tela do código e o cartão do Master › Configurações)
 )
 
 erro() {

@@ -7,6 +7,7 @@ import {
   aplicarSessaoTreino,
   depoisDaFalha,
   erroDaResposta,
+  MENSAGEM_TROCA,
   esperaDaTentativa,
   esquecerTrocas,
   lembrarTreinoDe,
@@ -155,5 +156,22 @@ describe("W5 — sem loop de tentativas que piore o limite de 20/h da trocar-tok
     esquecerTrocas();
     expect(pausaDaTroca("u1")).toBeNull();
     expect(treinoDe("u1")).toBeNull();
+  });
+});
+
+describe("hml-22 (H-22): a troca pede o código do app autenticador (403 precisa_2fa)", () => {
+  it("403 precisa_2fa → \"dois_fatores\": não tenta sozinha nem pausa; o 403 desconhecido segue \"email\"", () => {
+    expect(erroDaResposta(403, "precisa_2fa")).toBe("dois_fatores");
+    expect(erroDaResposta(403, "outro_codigo")).toBe("email");
+    expect(erroDaResposta(403, "aluno_bloqueado")).toBe("bloqueado");
+    expect(retentavel("dois_fatores")).toBe(false);
+    expect(tentativasAutomaticas("dois_fatores")).toBe(0);
+    expect(depoisDaFalha("dois_fatores", 0)).toEqual({ tentarEm: null, pausarPor: null });
+    expect(MENSAGEM_TROCA.dois_fatores).toBe("Digite o código do app autenticador para abrir o treino.");
+  });
+  it("pedirTroca: 403 { error: precisa_2fa } → dois_fatores, 1 pedido só", async () => {
+    const f = vi.fn(async () => resposta(403, { error: "precisa_2fa" }));
+    expect(await pedirTroca("t", f as unknown as typeof fetch)).toEqual({ ok: false, erro: "dois_fatores", status: 403 });
+    expect(f).toHaveBeenCalledTimes(1);
   });
 });

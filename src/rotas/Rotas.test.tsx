@@ -11,6 +11,8 @@ const h = vi.hoisted(() => {
     auth: { user: null as null | { id: string; email: string; user_metadata: Record<string, string> }, loading: false, papel: "aluno", isStaff: false, isMaster: false, signOut: async () => {} },
     // W3: login único — o login é o do banco principal (useSessao) e a situação vem da minha_situacao()
     sessao: { usuario: null as null | { id: string; email: string; user_metadata: Record<string, string> }, situacao: null as null | Record<string, unknown> },
+    // hml-22 (H-22): o 2FA do master — "pede_codigo" põe a tela do código na frente das áreas logadas
+    doisFatores: "livre" as "livre" | "pede_codigo",
   };
   const marcador = (id: string) => ({
     default: (props: { userId?: string }) => <div data-testid={id}>{props.userId ? `${id}:${props.userId}` : id}</div>,
@@ -32,6 +34,7 @@ vi.mock("@/nucleo/sessao", () => ({
     carregandoSituacao: false,
     erroSituacao: false,
     treino: { estado: "pronto", erro: null },
+    doisFatores: h.estado.doisFatores,
     senhaTrocada: false,
     entrarComGoogle: async () => ({}),
     entrarComEmail: async () => ({}),
@@ -91,6 +94,8 @@ vi.mock("@/master/paginas/Integracoes", () => h.marcador("master-integracoes"));
 vi.mock("@/master/paginas/AppAluno", () => h.marcador("master-app-aluno"));
 vi.mock("@/master/paginas/Configuracoes", () => h.marcador("master-configuracoes"));
 vi.mock("@/pages/master/BibliotecaPage", () => h.marcador("antiga-master-biblioteca"));
+// hml-22 (H-22): a tela do código do app autenticador (só no site)
+vi.mock("@/master/doisFatores/TelaCodigo", () => h.marcador("tela-codigo-2fa"));
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Rotas } from "./Rotas";
@@ -146,6 +151,7 @@ beforeEach(() => {
   h.plataforma.site = true;
   h.estado.auth = { user: null, loading: false, papel: "aluno", isStaff: false, isMaster: false, signOut: async () => {} };
   h.estado.sessao = { usuario: null, situacao: null };
+  h.estado.doisFatores = "livre";
 });
 afterEach(() => {
   document.documentElement.removeAttribute("data-casca");
@@ -404,6 +410,51 @@ describe("app (APK/AAB): sem o master", () => {
     expect(screen.queryByTestId("master-visao-geral")).toBeNull();
     expect(screen.queryByTestId("master-contas")).toBeNull();
     expect(onde()).toMatch(/^\/master/);
+  });
+});
+
+// hml-22 (H-22): a verificação em 2 etapas do master — com o fator ligado e o login só com a senha ou o Google (aal1), a tela do código
+// vem antes de QUALQUER área logada (o app do aluno, o painel e o master); a entrada leva para a área, e as páginas públicas abrem normal
+describe("hml-22: a tela do código antes da área logada (só no site)", () => {
+  it.each([
+    ["/master", "master"],
+    ["/master/contas", "master"],
+    ["/painel", "master"],
+    ["/", "master"],
+    ["/perfil", "master"],
+    ["/painel/alunos", "professor"],
+  ])("%s (%s com pede_codigo) → a tela do código, sem a área", async (de, papel) => {
+    logar(papel as "master" | "professor");
+    h.estado.doisFatores = "pede_codigo";
+    abrir(de);
+    expect(await screen.findByTestId("tela-codigo-2fa", {}, { timeout: 4000 })).toBeInTheDocument();
+    for (const area of ["master-visao-geral", "master-contas", "pagina-dashboard", "pagina-alunos", "aba-inicio"]) {
+      expect(screen.queryByTestId(area)).toBeNull();
+    }
+    expect(document.querySelector("[data-casca]")).toBeNull();
+  });
+
+  it("/entrar logado com pede_codigo: vai para a área e a tela do código aparece lá", async () => {
+    logar("master");
+    h.estado.doisFatores = "pede_codigo";
+    abrir("/entrar");
+    expect(await screen.findByTestId("tela-codigo-2fa", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(onde()).not.toBe("/entrar");
+  });
+
+  it("página pública com pede_codigo: abre normal (sem a tela do código)", async () => {
+    logar("master");
+    h.estado.doisFatores = "pede_codigo";
+    abrir("/calculator");
+    expect(await screen.findByTestId("publica-calculadora", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.queryByTestId("tela-codigo-2fa")).toBeNull();
+  });
+
+  it("livre (sem fator ou depois do código): o master abre como antes", async () => {
+    logar("master");
+    abrir("/master");
+    expect(await screen.findByTestId("master-visao-geral", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.queryByTestId("tela-codigo-2fa")).toBeNull();
   });
 });
 

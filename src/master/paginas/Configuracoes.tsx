@@ -9,6 +9,7 @@ import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { EstadoCarregando, EstadoErro } from "@/ui/premium/Estados";
 import { ErroMaster, planos, salvarConfig } from "../api";
+import { CartaoDoisFatores } from "../doisFatores/CartaoDoisFatores";
 import { Campo, INPUT, TEXTAREA } from "../pecas/ui";
 import { dataHora, moeda, textoErro } from "../regras";
 import type { AvisoMudanca } from "../tipos";
@@ -22,6 +23,7 @@ const PUBLICOS: Array<{ id: Publico; rotulo: string; dica: string }> = [
 /**
  * Painel master › Configurações (C62): o resumo das regras (só leitura — o que vale em cobrança, teste, legados e login) e o aviso
  * "o Physiq mudou" (W3): liga/desliga geral e por público, com os textos. Quem já viu não vê de novo (a versão não muda aqui).
+ * hml-22 (H-22): + a verificação em 2 etapas do master (o cartão no alto; não depende da lista de planos).
  */
 export default function Configuracoes() {
   const q = useQuery({ queryKey: ["master", "planos"], queryFn: planos, staleTime: 15_000 });
@@ -75,6 +77,7 @@ export default function Configuracoes() {
     <div className="flex flex-col gap-3.5" data-pagina-master="configuracoes">
       <TopoPagina titulo="Configurações" subtitulo="Regras do Physiq e o aviso de mudança"
         acoes={<Botao variante="w" icone={Check} disabled={!mudou || ocupado} onClick={() => void salvar()} data-salvar-aviso>Salvar aviso</Botao>} />
+      <CartaoDoisFatores />
       {q.isLoading ? <EstadoCarregando linhas={6} /> : q.isError ? <EstadoErro aoTentar={() => void q.refetch()} /> : d && (
         <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
           <Cartao className="px-[18px] pb-4 pt-4" data-cartao-regras>

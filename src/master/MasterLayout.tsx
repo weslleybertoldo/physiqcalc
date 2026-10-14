@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, LogOut, ShieldCheck, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSessao } from "@/nucleo/sessao";
 import { tela } from "@/rotas/registro";
 import { usePreCarga } from "@/rotas/usePreCarga";
 import { lembrarArea } from "@/ui/casca/area";
@@ -13,6 +14,7 @@ import { SemConexaoTreino } from "@/ui/casca/SemConexaoTreino";
 import { TransicaoDePagina } from "@/ui/casca/TransicaoDePagina";
 import { useTreinoDaPagina } from "@/ui/casca/treinoDaPagina";
 import MasterLayoutAntigo from "@/layouts/MasterLayout";
+import TelaCodigo from "./doisFatores/TelaCodigo";
 import { MENU_MASTER, itemMasterAtivo, type ItemMenuMaster } from "./menu";
 
 function CardMaster() {
@@ -33,6 +35,7 @@ function CardMaster() {
 export default function MasterLayout() {
   const dados = useDadosCasca();
   const { signOut } = useAuth();
+  const { doisFatores } = useSessao();
   const location = useLocation();
   const navigate = useNavigate();
   // hml-18a (H-40, E): depois do 1º render do master, no ocioso, as páginas do master (a troca não espera o pedaço chegar)
@@ -41,6 +44,8 @@ export default function MasterLayout() {
   if (dados.carregando) return <CarregandoTela />;
   if (!dados.usuario) return <Navigate to="/entrar" replace state={{ de: location.pathname + location.search }} />;
   if (!dados.ehMaster) return <Navigate to={dados.ehProfissional ? "/painel" : "/"} replace />;
+  // hml-22 (H-22): a 2ª barreira (a 1ª é o ComCodigo das rotas) — o master com a verificação em 2 etapas ligada só entra com o código
+  if (doisFatores === "pede_codigo") return <TelaCodigo />;
 
   const itens: ItemNav[] = MENU_MASTER.map((i) => ({
     id: i.id,

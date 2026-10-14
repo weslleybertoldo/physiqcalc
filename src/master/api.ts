@@ -4,6 +4,7 @@
  * prontos (Banco do Treino) vão pelo cliente do Treino, com a sessão da troca de token (RLS: só o master escreve).
  */
 import { principal } from "@/integrations/principal/client";
+import { relerUsuario } from "./doisFatores/mfa";
 import type {
   Aluno,
   ContaLinha,
@@ -46,6 +47,8 @@ export async function chamar<T = Record<string, unknown>>(funcao: FuncaoMaster, 
   const { data, error } = await principal.functions.invoke(funcao, { body: corpo });
   if (error) {
     const c = await corpoDoErro(error);
+    // hml-22 (H-22): a função pediu o código (fator ligado noutro lugar, sessão sem saber): relê a sessão — o site passa a pedir o código
+    if (c?.erro === "precisa_2fa") void relerUsuario();
     throw new ErroMaster(String(c?.erro ?? (c?.code === "UNAUTHORIZED_NO_AUTH_HEADER" ? "sem_login" : "erro_interno")), c ?? {});
   }
   const r = (data ?? {}) as Record<string, unknown>;
