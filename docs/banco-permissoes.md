@@ -359,7 +359,7 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
     divisões (as de antes saem pela FK em cascata) e devolve o MESMO id. Só o master grava (o RLS de hoje).
   - `modelo_ordenar(p_grupo uuid, p_ids uuid[]) → integer`: a ordem de todos os exercícios do modelo de uma vez (antes, 1 pedido por
     exercício — achado 4); um id que não é do modelo → `nao_encontrado` e nada muda (antes, os outros mudavam).
-- **⚠️ Desvio do gate (F7 da hml-21d):** o gate de latência reprovou as leituras pela `treinos` (o Meus treinos p50 2,65 s × 2,04 s lendo direto; com a função quente empatam, mas a 1ª abertura com ela ociosa — ≥ 10 min sem pedido — levou 4,6–12,6 s). O front **não usa** as leituras abaixo: o Painel › Treinos, os Modelos › Treinos, a Busca, o editor, o Master e os treinos prontos do aluno seguem lendo DIRETO (como antes, com o RLS de hoje); o catálogo de leituras fica publicado na `treinos` (provado no E2E) para quando o frio da função for resolvido. As GRAVAÇÕES (abaixo) vão pela `treinos`.
+- **⚠️ Desvio do gate (F7 da hml-21d):** o gate de latência reprovou as leituras pela `treinos` (o Meus treinos p50 2,65 s × 2,04 s lendo direto; com a função quente empatam, mas a 1ª abertura com ela ociosa — ≥ 10 min sem pedido — levou 4,6–12,6 s). O front **não usa** as leituras abaixo: o Painel › Treinos, os Modelos › Treinos, a Busca, o editor, o Master e os treinos prontos do aluno seguem lendo DIRETO (como antes, com o RLS de hoje); o catálogo de leituras fica publicado na `treinos` (provado no E2E) para quando o frio da função for resolvido. As GRAVAÇÕES (abaixo) vão pela `treinos`. (O desvio 24 do `docs/desvios.md`.)
 - **Leituras (`acao: "ler"`, em lote; o motor é a CÓPIA do comum do principal — `_shared/leitura-lote.ts` e `_shared/leitura-servidor.ts`,
   iguais byte a byte, o Vitest confere):** o catálogo `_shared/treinos-leituras.ts`, as mesmas linhas que as libs liam no navegador, como a
   pessoa: Meus treinos (a RPC `modelos_da_lista` e os detalhes da página — as linhas com o exercício citado e os vínculos de pasta, numa
@@ -423,3 +423,75 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
 - **Ficam como estão:** o login e a sessão; a `whatsapp-conectar` (a função da conexão); os links públicos (desvio 21); a foto pelas ações
   da 21a; as leituras do Treino que o gate da 21d deixou no navegador (a aba Treinos dos Modelos lê o Treino direto). A `BASE` da
   `semBancoNoNavegador.test.ts` ficou SÓ com as 6 leituras do Treino; o `RPCS_DE_OUTRA_W_NO_PAINEL` vazio.
+
+## A etapa 4: o que fica com o `authenticated`/`anon` e o que sai (hml-21e, H-43 · o fim da etapa 3 do jeito 2)
+A etapa 3 terminou com a guarda `src/integrations/semBancoNoNavegador.test.ts` sem `BASE` — só o `FICA`: fora do login, o navegador só fala
+com o banco no que está no (1). Nenhum grant, policy ou EXECUTE mudou na hml-21 (decisão 12 da spec: os APKs antigos ainda leem e gravam
+direto — o desvio 2); esta é a lista que a etapa 4 usa para revogar (spec hml-21 §2.11 item 7).
+
+**(1) O que FICA, com o porquê** (o `FICA` da guarda e os desvios do `docs/desvios.md`):
+- **Treino — as 15 tabelas da fila do PowerSync** (desvio 3): `tb_treino_series`, `tb_treino_concluido`, `tb_treino_dia_override`,
+  `treino_historico`, `tb_academia_pesos`, `tb_academias`, `tb_series_padrao_usuario`, `exercicio_ordem_usuario`,
+  `exercicio_substituicao_usuario`, `tb_exercicio_comentarios`, `tb_exercicios_usuario`, `tb_grupos_treino_usuario`,
+  `tb_grupos_exercicios_usuario`, `tb_semana_treinos` e `physiq_profiles` (a fila só grava o `foto_url`): o S/I/U/D do `authenticated` +
+  a policy de dono (`auth.uid() = user_id`; `id` na `physiq_profiles`) — o treino feito sem internet sobe pela fila, como a pessoa. O RLS
+  das 15 provado: o catálogo (RLS ligado sem FORCE, 0 SELECT do `anon`), um uuid falso vê 0 linha na produção (só leitura), a matriz de
+  leitura por perfil (spec §2.8) e, por efeito no staging, o D3 (`e2e/hml21/d3_powersync.py`: ‹D3›).
+- **Treino — a parte do Treino da Evolução do aluno** (desvio 23): o SELECT de `physiq_profiles`, `physiq_avaliacoes` e
+  `physiq_registros_fotos` e a URL assinada do bucket `registros` (`src/evolucao/fontes.ts`).
+- **Treino (e 1 RPC do principal) — as leituras do Treino que o gate da 21d deixou no navegador** (desvio 24): o SELECT de
+  `tb_grupos_treino`, `tb_grupos_exercicios`, `tb_pastas_treino`, `tb_pastas_treino_grupos`, `grupos_musculares`, `tb_exercicios` e
+  `physiq_treinos_prontos` (com as divisões e os exercícios embutidos: `physiq_treinos_prontos_grupos` e `physiq_treinos_prontos_exercicios`);
+  o EXECUTE das RPCs `modelos_da_lista` e `exercicios_da_lista` (Treino) e da `aluno_treino` (principal).
+- **Principal — o `anon` dos links públicos** (desvio 21): o EXECUTE das 5 RPCs (`diario_link`, `diario_listar`, `diario_enviar`,
+  `preconsulta_formulario`, `preconsulta_responder`) e o upload/remove no bucket `diario` pelo link — fica até a etapa 4 (o item 3).
+- **Os 2 — o login e a sessão** (a exceção do jeito 2): o Auth (`auth.*`), sem grant de tabela; e **o PUT no link de upload que o servidor
+  assinou** (`uploadToSignedUrl`) e **o `getPublicUrl`** (só monta a URL) — sem grant de tabela.
+- **E o que as funções do jeito 2 usam:** a `conta`, a `nutricao`, a `financeiro`, a `treinos` e as da W-A leem e gravam COMO A PESSOA (a
+  chave anon + o token de quem chama — `supabase-principal/functions/_shared/porta-pessoa.ts:124-128`,
+  `supabase/functions/_shared/porta-treino.ts:142`): chegam ao PostgREST como `authenticated` e precisam do grant e da policy de hoje
+  (spec §2.10 (1)). É a condição do item 2 abaixo.
+
+**(2) O que a etapa 4 revoga = tudo o que não está no (1).** A regra: um grant de tabela ou um EXECUTE do `authenticated`/`anon` que nenhum
+item do (1) usa sai, nos 2 projetos e nos 2 schemas. Hoje, no STAGING (SQL só leitura por `has_table_privilege`/`has_function_privilege` —
+o `information_schema` dá 0 no modo só leitura —, 14/10/2026 05:25; as mesmas contagens que o redator do contrato da hml-21e leu às 04:3x):
+
+| Projeto | `authenticated`: tabelas (com escrita) | `authenticated`: funções fora gatilhos | `anon`: tabelas | `anon`: funções fora gatilhos |
+|---|---|---|---|---|
+| principal | 86 de 102 (73) | 228 de 347 | 0 | 27 (12 definer — entre elas as 5 dos links) |
+| Treino | 42 de 45 (40) | 14 de 28 | 2: `tb_exercicios` e `grupos_musculares` (o catálogo global) | 5, todas invoker: `manter_ativo`, `physiq_is_master`, `physiq_is_staff`, `physiq_papel`, `physiq_recebimentos_ativar` |
+
+A lista (só leitura; rode em cada projeto e confira contra o (1) — troque `'staging'` por `'public'` para a produção):
+
+```sql
+select 'tabela' as tipo, c.relname::text as nome,
+       has_table_privilege('authenticated', c.oid, 'SELECT') as authenticated_le,
+       (has_table_privilege('authenticated', c.oid, 'INSERT') or has_table_privilege('authenticated', c.oid, 'UPDATE')
+        or has_table_privilege('authenticated', c.oid, 'DELETE')) as authenticated_grava,
+       has_table_privilege('anon', c.oid, 'SELECT') as anon_le, null::boolean as definer
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'staging' and c.relkind in ('r', 'p', 'v')
+union all
+select 'funcao', p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
+       has_function_privilege('authenticated', p.oid, 'EXECUTE'), null, has_function_privilege('anon', p.oid, 'EXECUTE'), p.prosecdef
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'staging' and p.prokind = 'f' and p.prorettype <> 'trigger'::regtype
+ order by 1, 2;
+```
+
+**(3) A etapa 4 (spec hml-21 §2.11 — registrado, não é da hml-21):**
+1. **Versão mínima de app** (APK/AAB): o servidor recusa as versões que ainda leem direto (o `pos-login` já devolve a situação; um campo
+   `versao_minima` + a tela "atualize") e uma data para os APKs antigos (desvio 2).
+2. **Revogar do `authenticated`** os grants de tabela e o `execute` das RPCs que só as funções chamam, nos 2 projetos e nos 2 schemas (a lista
+   sai da guarda: tudo o que não está no `FICA`), e **as policies de escrita do REST** (o H-101 fecha aqui: a de criar categoria).
+   **Condição:** as funções do jeito 2 vão ao PostgREST como `authenticated` (a porta cria o cliente com a chave anon + o token da pessoa —
+   `porta-pessoa.ts:124-128`, `porta-treino.ts:142`); revogar antes quebraria a `conta`, a `nutricao`, a `financeiro` e a `treinos`. Revogar
+   só depois de as funções deixarem de ir ao PostgREST como `authenticated` — a forma é decisão da etapa 4.
+3. **Os links públicos** (desvio 21): uma função pública (`verify_jwt` false, Turnstile e limite por IP na função, como a `alunos` do `/c/`)
+   e o `limite_publico` confiando no IP que ela manda (assinado); revogar o `execute` do `anon`.
+4. **O PowerSync continua** (desvio 3): as 15 tabelas da fila mantêm o grant + a policy do `authenticated`; o resto do Treino sai do REST.
+5. **O desvio 23 resolvido** (ou mantido com grant só nas 3 tabelas) — e o 24 do mesmo jeito (as leituras do Treino de volta à `treinos`, ou
+   o grant só nas tabelas e RPCs dele).
+6. **`httpOnly`** só se o login for para o servidor (hoje o supabase-js guarda a sessão no `localStorage`); sem isso, o passo 4 é "sem
+   `rest`", não o cookie.
+7. **A guarda da 21e vira a lista do que revogar**; o `anonimo.py`/`matriz.py` da skill de homologação provam o fechamento.
