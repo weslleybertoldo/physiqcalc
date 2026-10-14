@@ -22,20 +22,23 @@ PowerSync (src/lib/powersync/instancia.ts:11-16): a fila grava pelo REST — é 
     42501 e a linha da outra igual. physiq_profiles (a fila só grava o foto_url — src/app-aluno/abas/Treino.tsx:109: sem POST/DELETE):
     (a), (b) com o foto_url de agora e (d) o professor lê/atualiza o perfil da aluna DELE → 1/1 e igual; o da w7b-sozinho (sem
     professor) e o do aluno de TESTE da w13-dono (de outro professor) → 0/0 e iguais.
-  · Cuidados (o contrato): todo PATCH "da outra" grava o MESMO valor que já está; DELETE "da outra" só em linha de massa; a
-    pré-condição (SQL só leitura) confere o catálogo das 15 contra o RETRATO congelado aqui (RLS ligado sem FORCE, S/I/U/D do
+  · Cuidados (o contrato): todo PATCH "da outra" grava o MESMO valor que já está; DELETE "da outra" só em linha de massa; ANTES de
+    qualquer login (a revisão da etapa 1), a pré-condição por SQL só leitura: os 2 ids do Treino (o login do principal → o
+    physiq_identidades), o e-mail de teste no Auth do Treino, os perfis, o professor da aluna, o acesso do personal, os papéis, os alvos
+    (d) e 0 sobra — falhou → para sem login; depois da troca, o sub do token tem de ser esse id. E o catálogo das 15 contra o RETRATO congelado aqui (RLS ligado sem FORCE, S/I/U/D do
     authenticated, 0 SELECT do anon, as policies, os gatilhos — só os 2 da physiq_profiles —, as colunas obrigatórias): mudou numa
     tabela → ela vira "por catálogo" (sem massa; o porquê no placar); um caso que passa quando não devia = ALERTA (🔴 no placar; o D3
     segue as outras tabelas e limpa tudo — nada se corrige aqui); /health dos 2 projetos no começo e a cada 5 tabelas (ruim → PARA de
     mandar pedido, nem a limpeza nem o logout: o Estado guarda a massa para o --limpar); pedidos em série, 1 por vez, ~2 s entre as
     tabelas (--pausa-s); o SQL de conferência em lote (2 consultas por tabela: o ANTES e o DEPOIS; um 429 da Management API numa leitura
-    → 60 s e repete 1 vez; numa gravação do --limpar → confere o estado por leitura antes de repetir).
+    ou no /health → 60 s e repete 1 vez; numa gravação do --limpar → confere o estado por leitura antes de repetir). Na saída, das falhas,
+    só o tipo da exceção e o status/código (nunca a mensagem: a da API pode ecoar o SQL).
 Uso: python3 e2e/hml21/d3_powersync.py --seco                       (o plano dos pedidos, os controles e as travas — NADA vai à rede)
      python3 e2e/hml21/d3_powersync.py [--tabelas a,b] [--pausa-s 2]  (o staging do Treino: etapa 2, UMA vez, com a PAUSA e o /health antes)
      python3 e2e/hml21/d3_powersync.py --limpar                       (desfaz pelo Estado: como o dono pelo REST; sem sessão, por SQL com trava)
      python3 e2e/hml21/d3_powersync.py --sair                         (o logout scope=local das sessões das 2 contas que ficaram guardadas)
 Só o staging do Treino: não há opção de produção (um --base/--schema diferente de staging sai com erro antes de qualquer rede).
-Saídas: hml21/agente/d3_powersync_{seco,staging,limpar,sair}.txt, a planilha hml21/medicao/d3_powersync.tsv (tabela × caso × direção ×
+Saídas: hml21/agente/d3_powersync_{seco,staging,staging_tabelas,limpar,sair}.txt, a planilha hml21/medicao/d3_powersync.tsv (tabela × caso × direção ×
 esperado × obtido × ms) e a linha do e2e-rodadas.tsv. Só status, códigos, contagens, booleanos e ms — nunca ids, valores, e-mails ou corpos.
 """
 from __future__ import annotations
@@ -231,6 +234,14 @@ class ParouSaude(Exception):
     """O /health ruim no meio: nenhum pedido a mais (nem a limpeza nem o logout) — o Estado guarda a massa para o --limpar."""
 
 
+def motivo(e: BaseException) -> str:
+    """O que sai de uma falha: SÓ o tipo da exceção e o status/código (o HTTP, o status do sqlrw ou o código das travas daqui) — nunca a
+    mensagem inteira (a da Management API pode ecoar o SQL, com ids)."""
+    texto = str(e)
+    cod = re.search(r"\b(trava_[a-z]+)\b", texto) or re.search(r"\b(?:HTTP|status)\s+(\d{3})\b", texto)
+    return type(e).__name__ + (f" ({cod.group(1)})" if cod else "")
+
+
 # ───────────────────────── as travas (sem rede: o --seco prova cada uma) ─────────────────────────
 _ESCRITA = re.compile(r"(?i)\b(insert|update|delete|truncate|alter|drop|create|grant|revoke|copy|merge|call|vacuum|refresh)\b\s")
 _UUID = r"'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'"
@@ -243,37 +254,37 @@ _RE_DELETE = {t: re.compile(rf"\s*delete from staging\.{t} where user_id = any\(
 def exigir_alvo(base: str = S, schema: str = S, ref: str = TREINO_REF, api: str = API_T) -> None:
     """A trava de ambiente (decisão L): só o schema staging do Treino, pelo domínio do app — qualquer outro alvo sai ANTES da rede."""
     if base != "staging" or schema != "staging" or ref != "uxwpwdbbnlticxgtzcsb" or urlparse(api).hostname != "api.physiqcalc.com.br":
-        raise SystemExit("o D3 só roda no schema staging do Treino (api.physiqcalc.com.br) — recusado antes de qualquer rede")
+        raise SystemExit("trava_alvo: o D3 só roda no schema staging do Treino (api.physiqcalc.com.br) — recusado antes de qualquer rede")
 
 
 def trava_pedido(p: Pedido) -> None:
     """Cada pedido ao REST: só as 15 tabelas, só o que a fila faz, a resposta pedida com select=id, a physiq_profiles sem POST/DELETE."""
     if p.tabela not in TABELAS or "public" in p.tabela or "public" in p.consulta:
-        raise SystemExit("tabela fora das 15 da fila — recusado")
+        raise SystemExit("trava_pedido: tabela fora das 15 da fila — recusado")
     if p.metodo not in ("GET", "POST", "PATCH", "DELETE") or "select=id" not in p.consulta.split("&"):
-        raise SystemExit("pedido fora do que a fila faz (ou sem select=id) — recusado")
+        raise SystemExit("trava_pedido: pedido fora do que a fila faz (ou sem select=id) — recusado")
     if p.tabela == "physiq_profiles" and p.metodo in ("POST", "DELETE"):
-        raise SystemExit("a physiq_profiles só recebe o PATCH do foto_url — recusado")
+        raise SystemExit("trava_pedido: a physiq_profiles só recebe o PATCH do foto_url — recusado")
     if p.metodo in ("PATCH", "DELETE", "GET") and not re.fullmatch(r"id=eq\.[0-9a-f-]{36}&select=id", p.consulta):
-        raise SystemExit("PATCH/DELETE/GET só por 1 id — recusado")
+        raise SystemExit("trava_pedido: PATCH/DELETE/GET só por 1 id — recusado")
 
 
 def trava_leitura(sql: str) -> None:
     """O SQL de leitura: 1 instrução, nenhuma palavra de escrita fora de texto entre aspas, nenhum public."""
     sem_texto = re.sub(r"'[^']*'", "''", sql)
     if _ESCRITA.search(sem_texto) or re.search(r"(?i)\bpublic\s*\.", sql) or sem_texto.strip().rstrip(";").count(";"):
-        raise SystemExit("SQL de leitura com palavra de escrita, public. ou mais de 1 instrução — recusado")
+        raise SystemExit("trava_leitura: SQL de leitura com palavra de escrita, public. ou mais de 1 instrução — recusado")
 
 
 def trava_escrita(sql: str) -> str:
     """A ÚNICA escrita (o --limpar sem sessão): o DELETE da massa de 1 das 14 — SÓ staging, SÓ os 2 donos, SÓ os ids do Estado ou a
     marca/a sentinela (o molde do _RE_DELETE_21D do treinos21d.py). Devolve a tabela; qualquer outra coisa é recusada antes de sair."""
     if re.search(r"(?i)\bpublic\s*\.", sql) or sql.count(";") != 1:
-        raise SystemExit("escrita fora do combinado — recusado")
+        raise SystemExit("trava_escrita: escrita fora do combinado — recusado")
     for t, rx in _RE_DELETE.items():
         if rx.fullmatch(sql):
             return t
-    raise SystemExit("escrita fora do combinado (só o DELETE da massa do D3: staging do Treino, os 2 donos, os ids/a marca) — recusado")
+    raise SystemExit("trava_escrita: só o DELETE da massa do D3 (staging do Treino, os 2 donos, os ids/a marca) — recusado")
 
 
 # ───────────────────────── o pedido (como a fila manda) ─────────────────────────
@@ -377,11 +388,26 @@ def sql_sobras(donos: list[str]) -> str:
         f"{C.txt(t)}, (select count(*) from staging.{t} where user_id = any({d}) and ({COND[t]}))" for t in DA_FILA) + ")"
 
 
+def sql_uid_principal(conta: str) -> str:
+    """O id do login do principal da conta de TESTE (o mesmo SQL do B.uid_da_conta; nada sai na tela)."""
+    if not C.eh_email_de_teste(EMAIL[conta]):
+        raise SystemExit("trava_conta: não é conta de teste")
+    return f"select id::text as id from auth.users where lower(email) = {C.txt(EMAIL[conta])}"
+
+
+def sql_identidades(uid_principal: str) -> str:
+    """As identidades do Treino desse login (o physiq_identidades: principal → Treino) — a do exige_identidade da 21d; tem de ser 1."""
+    return f"select treino_user_id::text as id from staging.physiq_identidades where principal_user_id = {C.txt(C.uuid_ok(uid_principal))}"
+
+
 def sql_comeco(sub_a: str, sub_p: str) -> str:
-    """A pré-condição das contas (só leitura): os 2 perfis, o professor da aluna, o acesso do personal, o papel no auth.users, os 2 alvos
-    (d) de TESTE (o e-mail fica na memória, para conferir — nunca na saída) e 0 sobra nas 14."""
+    """A pré-condição das contas (só leitura, ANTES de qualquer login): o e-mail das 2 no Auth do Treino (= o de teste), os 2 perfis, o
+    professor da aluna, o acesso do personal, o papel no auth.users, os 2 alvos (d) de TESTE (os e-mails ficam na memória, para conferir
+    — nunca na saída) e 0 sobra nas 14."""
     a, p = C.txt(C.uuid_ok(sub_a)), C.txt(C.uuid_ok(sub_p))
-    return (f"select (select count(*) from staging.physiq_profiles x where x.id = {a})::int as perfil_a, "
+    return (f"select coalesce((select lower(u.email) from auth.users u where u.id = {a}), '') as email_a, "
+            f"coalesce((select lower(u.email) from auth.users u where u.id = {p}), '') as email_p, "
+            f"(select count(*) from staging.physiq_profiles x where x.id = {a})::int as perfil_a, "
             f"(select count(*) from staging.physiq_profiles x where x.id = {p})::int as perfil_p, "
             f"coalesce((select x.professor_id = {p}::uuid from staging.physiq_profiles x where x.id = {a}), false) as professor_eh_o_personal, "
             # o corpo do staging.physiq_professor_acesso_ok (o papel só leitura da Management API não tem EXECUTE nela — EXPLAIN de 14/10)
@@ -434,9 +460,19 @@ def sql_sessoes(ids: list[str], desde: str) -> str:
 def sql_apagar(t: str, donos: list[str], ids: list[str]) -> str:
     """O DELETE da massa de 1 tabela (o --limpar sem sessão): SÓ staging, SÓ os 2 donos, os ids do Estado OU a marca/a sentinela."""
     if t not in DA_FILA:
-        raise SystemExit("tabela fora das 14 com massa — recusado")
+        raise SystemExit("trava_escrita: tabela fora das 14 com massa — recusado")
     return (f"delete from staging.{t} where user_id = any({lista_uuid(donos)}) and (id = any({lista_uuid(ids, vazia=True)}) "
             f"or ({COND[t]}));")
+
+
+def saude_com_429(ler, esperar) -> tuple[bool, dict]:
+    """O /health dos 2 projetos (o B19.saude: {"http": 429} quando a Management API recusa por ritmo): um 429 NÃO é saúde ruim — espera
+    60 s e repete 1 vez (decisão K); o que vier depois vale."""
+    ok, estados = ler()
+    if not ok and any(isinstance(v, dict) and v.get("http") == 429 for v in (estados or {}).values()):
+        esperar(60)
+        ok, estados = ler()
+    return ok, estados
 
 
 def ler_mgmt(ref: str, rotulo: str, sql: str) -> list[dict]:
@@ -496,9 +532,16 @@ class Transporte:
         self.o, self.L = o, L
         self._chave: str | None = None
 
-    def exige_identidade(self, o, conta: str) -> None:
-        import treinos21d as T21  # noqa: PLC0415 — só na execução de verdade (a regra da 21d: a conta já existe no Treino)
-        T21.exige_identidade(o, S, conta)
+    def contas_do_treino(self) -> dict:
+        """ANTES de qualquer login: o id do login do principal (pelo e-mail de teste) e as identidades do Treino de cada conta — SQL só
+        leitura (o molde do exige_identidade da 21d: treinos21d.py:218-223)."""
+        saida = {}
+        for q, conta in CONTAS.items():
+            linhas = ler_mgmt(PRINCIPAL_REF, f"uid:{q}", sql_uid_principal(conta))
+            uid = linhas[0].get("id") if len(linhas) == 1 else None
+            ids = [x.get("id") for x in ler_mgmt(TREINO_REF, f"identidade:{q}", sql_identidades(uid))] if C.eh_uuid(uid) else []
+            saida[q] = {"uid_p": uid, "ids": ids}
+        return saida
 
     def sessao_treino(self, conta: str) -> dict:
         return self.L.sessao_treino(conta)  # o login do principal + a troca (contados no registro de logins)
@@ -512,10 +555,6 @@ class Transporte:
                 self.L.d[f"treino:{conta}"] = s
                 self.L._salvar()
         return s if s and s.get("access_token") else None
-
-    def uid_principal(self, conta: str) -> str | None:
-        v = ((self.L.d.get(conta) or {}).get("user") or {}).get("id")
-        return v if C.eh_uuid(v) else None
 
     def rest(self, p: Pedido, token: str) -> tuple[object, object, int]:
         if self._chave is None:
@@ -541,10 +580,14 @@ class Transporte:
                            text=True, env=env, timeout=180)
         st = re.search(r"status (\d+)", r.stdout or "")
         if r.returncode != 0 or not st or not st.group(1).startswith("20"):
-            raise RuntimeError(f"sqlrw (Treino staging) → {st.group(1) if st else 'sem status'}")
+            raise RuntimeError(f"sqlrw (Treino staging) → status {st.group(1) if st else '000'}")
 
     def saude(self) -> tuple[bool, dict]:
-        return B.saude()
+        return saude_com_429(B.saude, self._esperar_429)
+
+    def _esperar_429(self, s: float) -> None:
+        self.o.linha(f"   (429 da Management API no /health: {s:.0f} s e repete 1 vez)")
+        time.sleep(s)
 
     def pausa(self, s: float) -> None:
         time.sleep(s)
@@ -589,6 +632,8 @@ class D3:
         self.foto: dict[str, object] = {}             # o foto_url de agora (na memória; nunca no log)
         self.md5_perfis: dict[str, str] = {}
         self.professor_ok = self.acesso_ok = False
+        self.papel: dict[str, str] = {}               # o app_metadata.role do auth.users do Treino (a pré-condição)
+        self.logou = False                            # houve login/troca (o fechar faz o logout das sessões desta execução)
         self.pulos: list[str] = []
         self.t0 = time.time()
         self.pausas = 0
@@ -621,7 +666,7 @@ class D3:
     def mandar(self, p: Pedido) -> bool:
         trava_pedido(p)
         if p.metodo == "POST" and not self.anotado(p.alvo_id):
-            raise SystemExit("o id do POST não está no Estado — recusado (anotar ANTES do pedido)")
+            raise SystemExit("trava_estado: o id do POST não está no Estado — recusado (anotar ANTES do pedido)")
         st, r, ms = self.tr.rest(p, self.tok[p.quem])
         resultado, obtido = classificar(p, st, r)
         esp = esperado_txt(p.esperado)
@@ -707,8 +752,9 @@ class D3:
     def rodar(self) -> None:
         self.saude("o começo do D3")
         self.catalogo()
-        self.sessoes()
-        self.comeco()
+        self.precondicao()    # SQL só leitura, ANTES de qualquer login: falhou → para aqui (0 login)
+        self.sessoes()        # os 4 logins (2 contas × o login + a troca); o sub do token = o id da pré-condição
+        self.perfis_comeco()  # o md5 e o foto_url dos 4 perfis DEPOIS das trocas (o espelho da troca não conta)
         self.abrir_estado()
         for i, t in enumerate(self.tabelas):
             if i:
@@ -721,8 +767,8 @@ class D3:
             except (ParouSaude, C.Parou, SystemExit):
                 raise
             except Exception as e:  # noqa: BLE001 — uma tabela que caiu no meio: marca, confere a saúde e segue
-                self.registrar(t, "—", "—", "—", type(e).__name__, None, "falha")
-                self.o.ok(False, f"[{t}] parou no meio: {type(e).__name__}: {str(e)[:160]}", parar=False)
+                self.registrar(t, "—", "—", "—", motivo(e), None, "falha")
+                self.o.ok(False, f"[{t}] parou no meio: {motivo(e)}", parar=False)
                 self.saude(f"seguir depois da falha em {t}")
         self.saude("a limpeza dos pais")
         for t in reversed(PAIS):
@@ -774,30 +820,32 @@ class D3:
                   "tb_semana_treinos": {"slot_idx", "user_id"}, "tb_exercicios_usuario": {"grupo_muscular"}}
         return sorted(cols | extras.get(t, set()))
 
-    def sessoes(self) -> None:
+    def precondicao(self) -> None:
+        """ANTES de qualquer login (a revisão da etapa 1): os 2 ids do Treino (o login do principal pelo e-mail de teste → o
+        physiq_identidades: 1 — o exige_identidade da 21d), o e-mail das 2 no Auth do Treino (= o de teste), os perfis, os papéis, o
+        professor da aluna, o acesso do personal, os 2 alvos (d) e 0 sobra nas 14 — tudo por SQL só leitura; falhou → para AQUI, sem login
+        (o D3 só vale 100 % com o (d) provado)."""
+        contas = self.tr.contas_do_treino()
         for q in (A, P):
-            self.tr.exige_identidade(self.o, CONTAS[q])  # ANTES da troca: a conta de teste já existe no Treino
-            s = self.tr.sessao_treino(CONTAS[q])        # o login do principal + a troca (2 linhas no registro)
-            tok = s.get("access_token") or ""
-            sub = (C.claims(tok) or {}).get("sub")
-            self.o.ok(C.eh_uuid(sub), f"a sessão do Treino de {q} pela troca do app (o sub do token)", parar=True)
-            papel = papel_do_token(tok)
-            self.o.ok(papel not in ("admin", "master"), f"o token de {q} sem admin/master (app_metadata.role: {papel or 'nenhum'})", parar=True)
-            self.tok[q], self.sub[q] = tok, sub
-            self.uid_p[q] = self.tr.uid_principal(CONTAS[q]) or ""
+            c = contas.get(q) or {}
+            ids = c.get("ids") or []
+            self.o.ok(C.eh_uuid(c.get("uid_p")) and len(ids) == 1 and C.eh_uuid(ids[0]),
+                      f"{q}: a conta de teste já existe no Treino (o login do principal → o physiq_identidades: {len(ids)}) — a troca de token não "
+                      "cria conta nova (o exige_identidade da 21d), conferido ANTES de qualquer login", parar=True)
+            self.sub[q], self.uid_p[q] = ids[0], c["uid_p"]
         self.o.ok(self.sub[A] != self.sub[P], "as 2 contas são pessoas diferentes no Treino", parar=True)
-        self.o.ok(papel_do_token(self.tok[P]) == "professor", "o token do personal com app_metadata.role = professor (o que a troca põe)",
-                  parar=False)
-
-    def comeco(self) -> None:
         r = (self.tr.ler("comeco", sql_comeco(self.sub[A], self.sub[P]), {"sub": dict(self.sub)}) or [{}])[0]
+        self.o.ok(all((r.get(f"email_{q.lower()}") or "") == EMAIL[CONTAS[q]] and C.eh_email_de_teste(EMAIL[CONTAS[q]]) for q in (A, P)),
+                  "o e-mail das 2 no Auth do Treino = o de TESTE de cada uma (o id veio do login certo)", parar=True)
         self.o.ok(r.get("perfil_a") == 1 and r.get("perfil_p") == 1, "as 2 contas com o physiq_profiles no staging do Treino", parar=True)
-        self.o.ok((r.get("papel_a") or "") == (papel_do_token(self.tok[A]) or "") and (r.get("papel_p") or "") == (papel_do_token(self.tok[P]) or ""),
-                  "o papel do auth.users do Treino = o do token (as 2 contas)", parar=False)
+        self.papel = {A: r.get("papel_a") or "", P: r.get("papel_p") or ""}
+        self.o.ok(self.papel[A] not in ("admin", "master") and self.papel[P] == "professor",
+                  f"os papéis no Auth do Treino: a aluna sem admin/master ({self.papel[A] or 'nenhum'}), o personal professor ({self.papel[P] or 'nenhum'})",
+                  parar=True)
         self.professor_ok = r.get("professor_eh_o_personal") is True
         self.acesso_ok = r.get("acesso_ok") is True
-        self.o.ok(self.professor_ok, "o professor da aluna é o personal (o (d) da aluna)", parar=False)
-        self.o.ok(self.acesso_ok, "o acesso do personal passa no physiq_professor_acesso_ok (o (d)-P de UPDATE)", parar=False)
+        self.o.ok(self.professor_ok, "o professor da aluna é o personal (o (d) da aluna)", parar=True)
+        self.o.ok(self.acesso_ok, "o acesso do personal passa na regra do physiq_professor_acesso_ok (o (d)-P de UPDATE)", parar=True)
         sobras = _json(r.get("sobras")) or {}
         self.o.ok(set(sobras) == set(DA_FILA) and not any(sobras.values()),
                   f"0 linha com a marca/a sentinela das 2 contas nas 14 ({sum(int(v or 0) for v in sobras.values())}; sobrou → o --limpar antes)",
@@ -814,13 +862,31 @@ class D3:
         else:
             self.pulos.append("o alvo (d) aluno de TESTE da w13-dono: nenhum com e-mail de teste (SQL) — só a w7b-sozinho")
             self.o.linha("⏭️ o alvo (d) aluno de TESTE da w13-dono: nenhum com e-mail de teste (SQL) — só a w7b-sozinho")
-        linhas = self.tr.ler("perfis", sql_perfis(list(self.perfis.values())), {"perfis": dict(self.perfis)})
+
+    def sessoes(self) -> None:
+        self.logou = True  # daqui em diante há sessão para fechar (o fechar faz o logout das 4, mesmo se parar no meio)
+        for q in (A, P):
+            s = self.tr.sessao_treino(CONTAS[q])  # o login do principal + a troca (2 linhas no registro)
+            tok = s.get("access_token") or ""
+            self.tok[q] = tok
+            self.o.ok((C.claims(tok) or {}).get("sub") == self.sub[q],
+                      f"a sessão do Treino de {q} pela troca do app: o sub do token = o id do Treino da pré-condição", parar=True)
+            papel = papel_do_token(tok)
+            self.o.ok(papel not in ("admin", "master") and (papel or "") == self.papel[q],
+                      f"o token de {q} sem admin/master e com o papel do Auth do Treino (app_metadata.role: {papel or 'nenhum'})", parar=True)
+
+    def ler_perfis(self, rotulo: str, ctx_extra: dict | None = None) -> dict[str, tuple]:
+        """O md5 da linha e o foto_url de agora dos perfis do (d) (SQL só leitura; o foto_url fica na memória, nunca no log)."""
+        linhas = self.tr.ler(rotulo, sql_perfis(list(self.perfis.values())), {"perfis": dict(self.perfis), **(ctx_extra or {})})
         por_id = {x.get("id"): x for x in linhas}
-        for alias, id_ in self.perfis.items():
-            if id_ in por_id:
-                self.md5_perfis[alias], self.foto[alias] = por_id[id_].get("h"), por_id[id_].get("foto")
-        self.o.ok(len(self.md5_perfis) == len(self.perfis), f"o começo: os {len(self.perfis)} physiq_profiles (o md5 de cada linha e o "
-                                                            "foto_url de agora — na memória, nunca no log)", parar=True)
+        return {alias: (por_id[id_].get("h"), por_id[id_].get("foto")) for alias, id_ in self.perfis.items() if id_ in por_id}
+
+    def perfis_comeco(self) -> None:
+        lidos = self.ler_perfis("perfis")
+        for alias, (h, foto) in lidos.items():
+            self.md5_perfis[alias], self.foto[alias] = h, foto
+        self.o.ok(len(lidos) == len(self.perfis), f"o começo: os {len(self.perfis)} physiq_profiles (o md5 de cada linha e o foto_url de agora — "
+                                                  "na memória, nunca no log)", parar=True)
 
     def tabela(self, t: str) -> None:
         if t in self.por_catalogo:
@@ -845,9 +911,8 @@ class D3:
         if t in self.so_massa:
             return
         antes = {x.get("id"): x for x in self.tr.ler(f"antes:{t}", sql_antes(t, [ids[A], ids[P]]), {"t": t, "ids": dict(ids)})}
-        if not self.o.ok(set(antes) == set(ids.values()), f"[{t}] o ANTES (SQL só leitura, 1 consulta): as 2 linhas de massa — o md5 e o "
-                                                         f"{COLUNA_PATCH[t]} de agora (na memória)", parar=False):
-            return
+        self.o.ok(set(antes) == set(ids.values()), f"[{t}] o ANTES (SQL só leitura, 1 consulta): as 2 linhas de massa — o md5 e o "
+                                                  f"{COLUNA_PATCH[t]} de agora (na memória)", parar=True)  # sem elas depois de 2 × 201: para
         h = {q: antes[ids[q]].get("h") for q in (A, P)}
         v = {q: antes[ids[q]].get("v") for q in (A, P)}
         col = COLUNA_PATCH[t]
@@ -870,14 +935,16 @@ class D3:
         for q in (A, P):  # (c′): o id da linha da OUTRA com o próprio user_id (o ON CONFLICT DO UPDATE da fila)
             o_ = OUTRO[q]
             self.put(t, "c2", f"{q}×{o_}", q, self.corpo(t, "c2", q, q, ids[o_]), ("recusa", 403, "42501"), True,
-                     "o id da linha da outra com o próprio user_id")
+                     "o id da linha da outra com o próprio user_id" + (" (sem policy de UPDATE: o 403 vem dela — o dono também levaria)"
+                                                                       if t == "treino_historico" else ""))
         d = (self.tr.ler(f"depois:{t}", sql_depois(t, [ids[A], ids[P]], ids_c, [self.sub[A], self.sub[P]]),
                          {"t": t, "ids": dict(ids), "h": dict(h)}) or [{}])[0]
         for q in (A, P):  # a linha de q só muda se a OUTRA conseguiu o (b) ou o (c′)
             igual = (_json(d.get("massa")) or {}).get(ids[q]) == h[q]
             self.registrar(t, "sql", f"{OUTRO[q]}×{q}", "md5 igual", "igual" if igual else "MUDOU", None, "ok" if igual else "alerta")
-            self.marcar("ok" if igual else "alerta", f"[{t}] (b)(c′) {OUTRO[q]}×{q}: a linha de {q} igual depois do PATCH/DELETE/PUT da outra "
-                                                     f"(md5, SQL só leitura)")
+            self.marcar("ok" if igual else "alerta", f"[{t}] (b)(c′) {OUTRO[q]}×{q}: a linha de {q} viva e igual depois do DELETE e do PUT (c′) "
+                                                     f"da outra (md5, SQL só leitura; o PATCH da outra regrava o mesmo valor — a prova dele é o "
+                                                     f"200 com 0 linha)")
         criadas = int(d.get("criadas_c") or 0)
         self.registrar(t, "sql", "A×P · P×A", "0 linha criada", f"{criadas}", None, "ok" if criadas == 0 else "alerta")
         self.marcar("ok" if criadas == 0 else "alerta", f"[{t}] (c) 0 linha criada pelos 2 PUT com o user_id da outra (SQL: {criadas})")
@@ -898,6 +965,15 @@ class D3:
 
     def perfis_d(self) -> None:
         t, ida, idp = "physiq_profiles", self.perfis[A], self.perfis[P]
+        lidos = self.ler_perfis("perfis_antes_d")  # o foto_url e o md5 de AGORA (a revisão: lidos logo antes do (d), não no começo)
+        self.o.ok(len(lidos) == len(self.perfis), f"[{t}] os {len(self.perfis)} perfis lidos de novo logo antes do (d) (SQL só leitura)", parar=True)
+        mudou = sorted(alias for alias, (h, _f) in lidos.items() if h != self.md5_perfis.get(alias))
+        if mudou:
+            self.o.linha(f"   ({len(mudou)} perfil(is) mudou(aram) entre o começo e o (d), fora do D3 — o (d) usa o valor de agora)")
+        for alias, (h, foto) in lidos.items():
+            self.md5_perfis[alias], self.foto[alias] = h, foto
+        self.m()["perfis_md5"] = dict(self.md5_perfis)
+        self.estado.salvar()
         self.get(t, "a", "A×P", A, idp, 0, True, "a aluna lê o perfil do personal")
         self.get(t, "a", A, A, ida, 1, False, "a aluna lê o próprio (controle)")
         self.get(t, "a", P, P, idp, 1, False, "o personal lê o próprio (controle)")
@@ -921,10 +997,9 @@ class D3:
             self.get(t, "d", f"P×{alvo}", P, self.perfis[alvo], 0, True, "o professor lê o perfil de quem NÃO é aluno dele")
             self.patch(t, "d", f"P×{alvo}", P, self.perfis[alvo], {"foto_url": self.foto[alvo]}, 0, True,
                        "o professor: foto_url = o de agora, em quem NÃO é aluno dele")
-        depois = {x.get("id"): x.get("h") for x in self.tr.ler("perfis_depois", sql_perfis(list(self.perfis.values())),
-                                                                {"perfis": dict(self.perfis), "h": dict(self.md5_perfis)})}
-        for alias, id_ in self.perfis.items():
-            igual = depois.get(id_) == self.md5_perfis.get(alias)
+        depois = self.ler_perfis("perfis_depois", {"h": dict(self.md5_perfis)})
+        for alias in self.perfis:
+            igual = (depois.get(alias) or (None,))[0] == self.md5_perfis.get(alias)
             res = "ok" if igual else ("falha" if alias == A else "alerta")  # a da aluna: o professor PODE gravar (o mesmo valor)
             self.registrar(t, "sql", alias, "md5 igual", "igual" if igual else "MUDOU", None, res)
             self.marcar(res, f"[{t}] o perfil {alias} igual ao começo (md5, SQL só leitura)")
@@ -944,28 +1019,38 @@ class D3:
                          "voltar")
             return
         except Exception as e:  # noqa: BLE001
-            self.o.ok(False, f"a limpeza parou no meio: {type(e).__name__}: {str(e)[:160]} — o Estado fica para o --limpar", parar=False)
+            self.o.ok(False, f"a limpeza parou no meio: {motivo(e)} — o Estado fica para o --limpar", parar=False)
         self.sair()
 
     def limpar_resto(self) -> None:
-        """O que ainda está no Estado (uma tabela que caiu no meio, um (c) que passou): o dono apaga pelo REST — os filhos antes dos pais."""
+        """O que ainda está no Estado (uma tabela que caiu no meio, um (c) que passou): o dono apaga pelo REST — os filhos antes dos pais; o
+        que não saiu pelo REST é conferido por 1 SQL só leitura por tabela (decisão K): já sem linha (o CASCADE do pai levou / o PUT tinha
+        falhado) → sai do Estado; viva → fica para o --limpar."""
         restam = list(self.m()["linhas"])
         if not restam:
             return
         self.saude("a limpeza do que sobrou no Estado")
         dono_de = {self.sub[q]: q for q in (A, P) if q in self.sub}
         for t in reversed(DA_FILA):
+            falhou = []
             for _t, id_, dono in [x for x in restam if x[0] == t]:
                 q = dono_de.get(dono)
                 if not (q and q in self.tok):
                     continue  # sem a sessão do dono: fica no Estado para o --limpar
-                if self.delete(t, "limpeza", q, q, id_, 1, False, "limpeza do que sobrou (o dono apaga)") or self.sumiu(t, id_):
-                    self.desanotar(id_)  # apagada agora ou já sem linha (o CASCADE do pai levou / o PUT tinha falhado)
+                if self.delete(t, "limpeza", q, q, id_, 1, False, "limpeza do que sobrou (o dono apaga)"):
+                    self.desanotar(id_)
+                else:
+                    falhou.append(id_)
+            if falhou:
+                vivas = self.vivos(t, falhou)
+                for id_ in falhou:
+                    if id_ not in vivas:
+                        self.desanotar(id_)
 
-    def sumiu(self, t: str, id_: str) -> bool:
-        """A linha já não existe (o CASCADE do pai levou): SQL só leitura, só contagem."""
-        r = self.tr.ler(f"sumiu:{t}", f"select count(*)::int as n from staging.{t} where id = {C.txt(C.uuid_ok(id_))}", {"t": t}) or [{}]
-        return int(r[0].get("n") or 0) == 0
+    def vivos(self, t: str, ids: list[str]) -> set[str]:
+        """Quais destes ids ainda existem em `t` — 1 SQL só leitura por tabela, em lote (decisão K); os ids ficam na memória."""
+        r = self.tr.ler(f"vivos:{t}", f"select x.id::text as id from staging.{t} x where x.id = any({lista_uuid(ids)})", {"t": t}) or []
+        return {x.get("id") for x in r if C.eh_uuid(x.get("id"))}
 
     def conferir_fim(self) -> None:
         m = self.m()
@@ -990,7 +1075,7 @@ class D3:
             self.o.ok(False, f"o Estado FICA com a chave hml21e ({len(m['linhas'])} linha(s)) — rode o --limpar", parar=False)
 
     def sair(self) -> None:
-        if not self.tok:
+        if not self.logou:
             return
         self.tr.sair(self.o, [CONTAS[A], CONTAS[P]])
         try:
@@ -1000,7 +1085,7 @@ class D3:
             self.o.ok(n_t == 0 and n_p == 0, f"as sessões desta execução fechadas (SQL só leitura, só contagem, desde o começo): Treino {n_t}, "
                                              f"principal {n_p}", parar=False)
         except Exception as e:  # noqa: BLE001
-            self.o.ok(False, f"a conferência das sessões parou: {type(e).__name__}", parar=False)
+            self.o.ok(False, f"a conferência das sessões parou: {motivo(e)}", parar=False)
 
     # ── o resumo ──
     def resumo(self) -> None:
@@ -1083,7 +1168,7 @@ def limpar(o, tr, estado) -> None:
                 tr.escrever(sql_apagar(t, donos, ids_t))
                 erro = None
             except RuntimeError as e:
-                erro = str(e)
+                erro = motivo(e)  # só o tipo e o status (nunca a mensagem)
             n = (tr.ler(f"limpar:{t}", f"select count(*)::int as n from staging.{t} where user_id = any({lista_uuid(donos)}) and "
                                        f"(id = any({lista_uuid(ids_t, vazia=True)}) or ({COND[t]}))", {"t": t}) or [{}])[0].get("n")
             if int(n or 0) == 0 or tentativa == 2:
@@ -1112,10 +1197,12 @@ def limpar(o, tr, estado) -> None:
 # ───────────────────────── o --seco: o plano dos pedidos, os controles e as travas — SEM rede ─────────────────────────
 @dataclass(frozen=True)
 class Lido:
-    """O marcador do valor que a execução de verdade lê por SQL só leitura (o --seco não vai ao banco)."""
+    """O marcador do valor que a execução de verdade lê por SQL só leitura (o --seco não vai ao banco); `leitura` = qual leitura (o
+    foto_url do (d) vem da releitura "antes_d", logo antes do (d))."""
     tabela: str
     quem: str
     coluna: str
+    leitura: str = ""
 
 
 def jwt_falso(sub: str, papel: str | None) -> str:
@@ -1144,21 +1231,27 @@ class TransporteSeco:
         self.saudes = list(self.cen.get("saude", []))
         self.com_sessao = com_sessao
 
-    def exige_identidade(self, o, conta: str) -> None:  # noqa: ARG002
-        self.eventos.append({"tipo": "identidade", "conta": conta})
+    def contas_do_treino(self) -> dict:
+        """Os ids ANTES do login: o MESMO SQL da execução de verdade (anotado e conferido pela trava), com a resposta do cenário."""
+        saida = {}
+        for q, conta in CONTAS.items():
+            uid = FALSO["pA" if q == A else "pP"]
+            for rotulo, sql in ((f"uid:{q}", sql_uid_principal(conta)), (f"identidade:{q}", sql_identidades(uid))):
+                trava_leitura(sql)
+                self.eventos.append({"tipo": "sql", "rotulo": rotulo, "sql": sql})
+            saida[q] = {"uid_p": uid, "ids": list(self.cen.get("identidades", {}).get(q, [FALSO[q]]))}
+        return saida
 
     def sessao_treino(self, conta: str) -> dict:
         q = A if conta == CONTAS[A] else P
         self.eventos.append({"tipo": "troca", "conta": conta})
-        return {"access_token": jwt_falso(FALSO[q], "professor" if q == P else None)}
+        sub = "00000000-0000-4000-8000-0000000000ff" if q in self.cen.get("sub_errado", ()) else FALSO[q]
+        return {"access_token": jwt_falso(sub, "professor" if q == P else None)}
 
     def sessao_treino_sem_login(self, conta: str) -> dict | None:
         if not self.com_sessao:
             return None
         return self.sessao_treino(conta)
-
-    def uid_principal(self, conta: str) -> str:
-        return FALSO["pA" if conta == CONTAS[A] else "pP"]
 
     def anotados(self) -> set[str]:
         est = self.d3.estado if self.d3 else self.estado
@@ -1187,13 +1280,16 @@ class TransporteSeco:
         if rotulo == "exercicios":
             return [{"id": FALSO["ex1"]}, {"id": FALSO["ex2"]}]
         if rotulo == "comeco":
-            return [{"perfil_a": 1, "perfil_p": 1, "professor_eh_o_personal": True, "acesso_ok": True, "papel_a": "", "papel_p": "professor",
+            return [{"email_a": EMAIL[CONTAS[A]], "email_p": EMAIL[CONTAS[P]], "perfil_a": 1, "perfil_p": 1, "professor_eh_o_personal": True, "acesso_ok": True, "papel_a": "", "papel_p": "professor",
                      "sozinho": [{"id": FALSO["sozinho"], "email": EMAIL[SOZINHO], "sem_professor": True}],
                      "w13_alunos": [{"id": FALSO["w13_aluno"], "email": "w13.aluno.teste.claude@physiqnutri.app"}],
                      "sobras": {t: 0 for t in DA_FILA}}]
-        if rotulo in ("perfis", "perfis_depois"):
-            return [{"id": id_, "h": f"md5-perfil-{alias}", "foto": Lido("physiq_profiles", alias, "foto_url")}
+        if rotulo in ("perfis", "perfis_antes_d", "perfis_depois"):
+            leitura = "antes_d" if rotulo == "perfis_antes_d" else ""
+            return [{"id": id_, "h": f"md5-perfil-{alias}", "foto": Lido("physiq_profiles", alias, "foto_url", leitura)}
                     for alias, id_ in ctx.get("perfis", {}).items()]
+        if rotulo.startswith("vivos:"):
+            return []
         if rotulo.startswith("antes:"):
             t = ctx["t"]
             return [{"id": id_, "h": f"md5-{t}-{q}", "v": Lido(t, q, COLUNA_PATCH[t])} for q, id_ in ctx["ids"].items()]
@@ -1212,9 +1308,19 @@ class TransporteSeco:
         self.eventos.append({"tipo": "sql_escrita", "tabela": trava_escrita(sql), "sql": sql})
 
     def saude(self) -> tuple[bool, dict]:
-        ok = self.saudes.pop(0) if self.saudes else True
-        self.eventos.append({"tipo": "saude", "ok": ok})
+        return saude_com_429(self._ler_saude, self._esperar)
+
+    def _ler_saude(self) -> tuple[bool, dict]:
+        """O /health do cenário: True (bom), False (ruim) ou 429 (a Management API recusou por ritmo — o {"http": 429} do B19.saude)."""
+        v = self.saudes.pop(0) if self.saudes else True
+        ok = v is True
+        self.eventos.append({"tipo": "saude", "ok": ok, "v": v})
+        if v == 429:
+            return False, {"uxwpwd": {"http": 429}, "hkxvts": {"db": "ACTIVE_HEALTHY"}}
         return ok, {"seco": "ACTIVE_HEALTHY" if ok else "UNHEALTHY"}
+
+    def _esperar(self, s: float) -> None:
+        self.eventos.append({"tipo": "espera", "s": s})
 
     def pausa(self, s: float) -> None:
         self.eventos.append({"tipo": "pausa", "s": s})
@@ -1282,7 +1388,8 @@ def cenario(cen: dict | None = None, tabelas: tuple[str, ...] = ORDEM, so_massa:
     except ParouSaude:
         pass
     except (Exception, SystemExit) as e:  # noqa: BLE001
-        so.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:200]}", parar=False)
+        if not getattr(e, "impresso", False):
+            so.ok(False, f"parou no meio: {motivo(e)}", parar=False)
     finally:
         d3.fechar()
         d3.resumo()
@@ -1396,8 +1503,10 @@ def _seco(o) -> None:
     da_outra = [p for p in patches if p.nega]
     dono_da_linha = {id_: q for (_t, q), id_ in massa_de.items()} | {FALSO[x]: x for x in (A, P, "sozinho", "w13_aluno")}
     o.ok(all(isinstance(v, Lido) and v.tabela == p.tabela and v.coluna == COLUNA_PATCH[p.tabela] and v.quem == dono_da_linha[p.alvo_id]
-             for p in patches for v in p.corpo.values()) and all(v.quem != p.quem for p in da_outra for v in p.corpo.values()),
-         f"todo PATCH ({len(patches)}) grava o valor de AGORA da PRÓPRIA linha, lido por SQL (o marcador): os {len(da_outra)} \"da outra\" com o "
+             and v.leitura == ("antes_d" if p.tabela == "physiq_profiles" else "") for p in patches for v in p.corpo.values())
+         and all(v.quem != p.quem for p in da_outra for v in p.corpo.values()),
+         f"todo PATCH ({len(patches)}) grava o valor de AGORA da PRÓPRIA linha, lido por SQL (o marcador; o foto_url do (d) da releitura logo "
+         f"antes dele): os {len(da_outra)} \"da outra\" com o "
          "valor da outra — mesmo com o RLS quebrado, nada mudaria")
     o.ok(all(set(p.corpo) <= set(d3.colunas_que_manda(p.tabela)) for p in posts + patches),
          "os corpos usam só as colunas que a pré-condição confere no catálogo vivo (colunas_que_manda)")
@@ -1416,9 +1525,17 @@ def _seco(o) -> None:
     logouts = [e for e in ev if e["tipo"] == "logout"]
     o.ok(len(logouts) == 4 and all(e["url"].endswith("/auth/v1/logout?scope=local") for e in logouts),
          "no fim, o logout de escopo local SÓ das 4 sessões desta execução (Treino e principal das 2 contas)")
-    ordem_ev = [(e["tipo"], e.get("conta")) for e in ev if e["tipo"] in ("identidade", "troca")]
-    o.ok(ordem_ev == [("identidade", CONTAS[A]), ("troca", CONTAS[A]), ("identidade", CONTAS[P]), ("troca", CONTAS[P])],
-         "o exige_identidade ANTES de cada troca (a conta já existe no Treino); 4 logins planejados (2 contas × o login + a troca)")
+    i_troca = [i for i, e in enumerate(ev) if e["tipo"] == "troca"]
+    i_sql = {e["rotulo"]: i for i, e in enumerate(ev) if e["tipo"] == "sql"}
+    i_perfil = next(i for i, e in enumerate(ev) if e["tipo"] == "rest" and e["p"].tabela == "physiq_profiles")
+    o.ok(len(i_troca) == 2 and all(i_sql[r] < i_troca[0] for r in ("uid:A", "identidade:A", "uid:P", "identidade:P", "catalogo", "exercicios",
+                                                                   "comeco"))
+         and i_sql["perfis"] > i_troca[-1] and not any(e["tipo"] == "rest" for e in ev[:i_troca[0]]),
+         "a pré-condição INTEIRA por SQL só leitura (os 2 ids do Treino pelo login do principal → o physiq_identidades, o e-mail no Auth do "
+         "Treino, os perfis, os papéis, o professor, o acesso, os alvos (d), 0 sobra) ANTES do 1º login; 4 logins planejados (2 contas × o "
+         "login + a troca); o md5 e o foto_url do começo DEPOIS das trocas")
+    o.ok([e["tipo"] for e in ev[i_perfil - 1:i_perfil]] == ["sql"] and ev[i_perfil - 1]["rotulo"] == "perfis_antes_d",
+         "o foto_url e o md5 dos 4 perfis lidos de NOVO logo antes do (d) (a revisão: nunca o valor do começo)")
     primeira = [e["p"].tabela for e in rest]
     vistas = list(dict.fromkeys(primeira))
     limpezas_pais = [e["p"].tabela for e in rest if e["p"].caso == "limpeza" and e["p"].tabela in PAIS]
@@ -1436,7 +1553,8 @@ def _seco(o) -> None:
     casos = {}
     for e in rest:
         casos[CASO_TXT[e["p"].caso]] = casos.get(CASO_TXT[e["p"].caso], 0) + 1
-    o.linha(f"\n## o placar planejado: {len(rest)} pedidos REST em série (1 por vez) · {len(sqls)} SQL só leitura · 4 logins (2 contas × login + "
+    o.linha(f"\n## o placar planejado: {len(rest)} pedidos REST em série (1 por vez) · {len(sqls)} SQL só leitura (4 delas os ids ANTES do "
+            f"login) · 4 logins (2 contas × login + "
             f"troca) · tabelas com massa {len({t for t, _q in massa_de})}/14 · por catálogo 0 · physiq_profiles: (a)(b)(d) sem massa")
     o.linha("   por caso: " + " · ".join(f"{k} {v}" for k, v in casos.items()))
     o.linha("   por tabela (as 14): massa 2 (A, P) · (a) 4 (cada dono a sua + a da outra, nas 2 direções) · (b) 6 (PATCH e DELETE da outra + o PATCH "
@@ -1480,6 +1598,43 @@ def _seco(o) -> None:
     o.ok([e["p"].caso for e in rest if e["p"].tabela == "tb_grupos_treino_usuario"] == ["massa", "massa", "limpeza", "limpeza"] and cod == 0
          and not d3.estado.d.get(CHAVE),
          "[controle] --tabelas tb_series_padrao_usuario: o pai entra SÓ com a massa (sem os casos) e sai no fim")
+
+    # ── a revisão da etapa 1: o 429 do /health, a pré-condição antes do login, o sub do token, o ANTES vazio ──
+    d3, tr, cod = cenario({"saude": [429, True]})
+    ev = tr.eventos
+    o.ok(not d3.parou_saude and cod == 0 and [e["s"] for e in ev if e["tipo"] == "espera"] == [60]
+         and [e["v"] for e in ev if e["tipo"] == "saude"][:2] == [429, True] and not d3.estado.d.get(CHAVE),
+         "[controle] um 429 da Management API no /health: espera 60 s e repete 1 vez — o 2º bom, o D3 segue e fecha 100 %")
+    d3, tr, cod = cenario({"saude": [429, 429]})
+    ev = tr.eventos
+    o.ok(d3.parou_saude and not any(e["tipo"] in ("troca", "rest", "logout") for e in ev) and [e["s"] for e in ev if e["tipo"] == "espera"] == [60],
+         "[controle] 429 de novo depois dos 60 s: saúde ruim — para, 0 login, 0 pedido")
+    sem_login = []
+    for nome, cen in (("a conta sem identidade no Treino", {"identidades": {A: []}}),
+                      ("o e-mail no Auth do Treino ≠ o de teste", {"sql": {"comeco": [{**TransporteSeco().ler("comeco", sql_comeco(FALSO[A], FALSO[P]))[0],
+                                                                                         "email_p": "outra.pessoa@exemplo.com"}]}}),
+                      ("o professor da aluna ≠ o personal", {"sql": {"comeco": [{**TransporteSeco().ler("comeco", sql_comeco(FALSO[A], FALSO[P]))[0],
+                                                                                   "professor_eh_o_personal": False}]}}),
+                      ("o acesso do personal não passa", {"sql": {"comeco": [{**TransporteSeco().ler("comeco", sql_comeco(FALSO[A], FALSO[P]))[0],
+                                                                                "acesso_ok": False}]}}),
+                      ("sobra da massa de antes", {"sql": {"comeco": [{**TransporteSeco().ler("comeco", sql_comeco(FALSO[A], FALSO[P]))[0],
+                                                                         "sobras": {**{t: 0 for t in DA_FILA}, "tb_academias": 1}}]}})):
+        d3, tr, cod = cenario(cen)
+        sem_login.append((nome, cod == 1 and not any(e["tipo"] in ("troca", "rest", "logout") for e in tr.eventos) and not d3.aberto
+                          and not d3.estado.d.get(CHAVE)))
+    o.ok(all(ok for _n, ok in sem_login), "[controle] a pré-condição que falha PARA ANTES de qualquer login (0 troca, 0 pedido, sem Estado): "
+         + " · ".join(f"{n} {'ok' if ok else 'NÃO PAROU'}" for n, ok in sem_login))
+    d3, tr, cod = cenario({"sub_errado": (P,)})
+    ev = tr.eventos
+    o.ok(cod == 1 and [e["conta"] for e in ev if e["tipo"] == "troca"] == [CONTAS[A], CONTAS[P]] and not any(e["tipo"] == "rest" for e in ev)
+         and len([e for e in ev if e["tipo"] == "logout"]) == 4 and not d3.estado.d.get(CHAVE),
+         "[controle] o sub do token ≠ o id do Treino da pré-condição: para logo depois da troca, sem massa, e o logout das 4 sessões abertas")
+    d3, tr, cod = cenario({"sql": {"antes:tb_academias": []}})
+    ev = tr.eventos
+    rest = [e["p"] for e in ev if e["tipo"] == "rest"]
+    o.ok(cod == 1 and [(p.caso, p.metodo) for p in rest] == [("massa", "POST"), ("massa", "POST"), ("limpeza", "DELETE"), ("limpeza", "DELETE")]
+         and not d3.estado.d.get(CHAVE) and len([e for e in ev if e["tipo"] == "logout"]) == 4,
+         "[controle] o ANTES sem as 2 linhas logo depois de 2 × 201: PARA (parar=True) e a limpeza do fim apaga as 2 pelo REST (o dono); o Estado sai")
 
     # ── 3. o --limpar (pelo Estado): como o dono pelo REST; sem sessão, por SQL com a trava ──
     for com_sessao in (True, False):
@@ -1536,7 +1691,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             seco(o)
         except (Exception, SystemExit) as e:  # noqa: BLE001
-            o.ok(False, f"o --seco parou: {type(e).__name__}: {str(e)[:300]}")
+            o.ok(False, f"o --seco parou: {motivo(e)}")
         return o.fim()
     B.usar_base("staging")
     if a.limpar or a.sair:
@@ -1551,7 +1706,7 @@ def main(argv: list[str] | None = None) -> int:
                 tr.sair(o, list(CONTAS.values()))
         except (Exception, SystemExit) as e:  # noqa: BLE001
             if not getattr(e, "impresso", False):
-                o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
+                o.ok(False, f"parou no meio: {motivo(e)}")
         C.C2.registrar_rodada(o.oks, o.oks + o.falhas)
         return o.fim()
     tabelas, so_massa = escolher(a.tabelas)
@@ -1570,7 +1725,7 @@ def main(argv: list[str] | None = None) -> int:
         pass
     except (Exception, SystemExit) as e:  # noqa: BLE001
         if not getattr(e, "impresso", False):
-            o.ok(False, f"parou no meio: {type(e).__name__}: {str(e)[:300]}")
+            o.ok(False, f"parou no meio: {motivo(e)}")
     finally:
         if d3 is not None:
             d3.fechar()
