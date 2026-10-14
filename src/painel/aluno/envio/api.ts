@@ -3,7 +3,10 @@
  * `aluno_avisar_plano` da W16) e manda o e-mail pelo Resend (sem repetir em 10 minutos; staging só para a caixa de teste).
  * Se a função não responde (rede, servidor), grava só o sino pela RPC da W16 — o "enviar" nunca termina sem o aviso no app.
  * Erro de regra (sem acesso, nada para enviar) sobe para a tela.
+ * hml-21c (H-43 · jeito 2, etapa 3; decisão 22): a reserva (só o sino) pela função conta — a MESMA aluno_avisar_plano e os MESMOS
+ * argumentos, no servidor, como a pessoa; os erros de regra, os mesmos (o raise de propósito volta como o código).
  */
+import { acaoConta, codigoDaGravacao } from "@/conta/gravar";
 import { principal } from "@/integrations/principal/client";
 import { lerResultado, type ModuloEnvio, type ResultadoEnvio } from "./regras";
 
@@ -30,8 +33,13 @@ async function corpoDoErro(erro: unknown): Promise<Record<string, unknown> | nul
 
 /** Só o sino (a W16): a reserva quando a função do e-mail não responde. */
 async function soOSino(pacienteId: string, modulos: ModuloEnvio[]): Promise<ResultadoEnvio> {
-  const { data, error } = await principal.rpc("aluno_avisar_plano" as never, { p_aluno: pacienteId, p_modulos: modulos } as never);
-  if (error) throw new ErroEnvio(ERROS_DE_REGRA.has(error.message) ? error.message : "erro_interno");
+  let data: unknown;
+  try {
+    data = (await acaoConta<{ resultado?: unknown }>("aluno_avisar_plano", { aluno: pacienteId, modulos })).resultado;
+  } catch (e) {
+    const codigo = codigoDaGravacao(e);
+    throw new ErroEnvio(ERROS_DE_REGRA.has(codigo) ? codigo : "erro_interno");
+  }
   const r = (data ?? {}) as { ok?: boolean; erro?: string; avisado?: boolean; sem_login?: boolean; repetido?: boolean };
   if (r.ok === false) throw new ErroEnvio(r.erro ?? "erro_interno");
   return { avisado: !!r.avisado, repetido: !!r.repetido, semLogin: !!r.sem_login, email: null };

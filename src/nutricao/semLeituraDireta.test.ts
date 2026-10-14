@@ -70,14 +70,14 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; m
   // refeicoes_concluidas — 20c; aluno_compromissos, aluno_responsavel, aluno_acesso e o paciente_dado_livre — H-43) está fora destas pastas.
   // revisão da 20b: + a casca (Cabecalho.tsx, AlunoLayout.tsx), a aba Prontuário (abas/Prontuario.tsx) e os cards do Resumo (resumo/) — 104
   // arquivos; o detector acha 0 leitura direta neles (antes e depois: o que o Resumo lê de outra W mora nas libs de lá — 20c e H-43).
+  // hml-21c (H-43, decisão E da 21c): a mensagens_desligadas também saiu (a faixa lê pela função conta, no lote da casca) — base 0, sem desvio.
   "painel-aluno": {
     pastas: [
       "src/nutricao/prontuario", "src/painel/aluno/dados", "src/painel/aluno/avaliacao", "src/nutricao/avaliacao", "src/painel/aluno/abas/Avaliacao.tsx",
       "src/nutricao/editor/lib/profissional.ts", "src/nutricao/editor/lib/antropometrias.ts",
       "src/painel/aluno/Cabecalho.tsx", "src/painel/aluno/AlunoLayout.tsx", "src/painel/aluno/abas/Prontuario.tsx", "src/painel/aluno/resumo",
     ],
-    base: 1,
-    desvio: { "src/painel/aluno/dados/api.ts": ["rpc.mensagens_desligadas"] },
+    base: 0,
     minimo: 100,
   },
   // hml-20c: a Dieta do aluno no Painel (as libs do editor), as Dietas (Alimentos, Receitas, Diário), a Pré-consulta (Formulários, Respostas,
@@ -103,13 +103,9 @@ const AREAS: Record<string, { pastas: string[]; base: number; fora?: string[]; m
  * revisão da 20b: as RPCs que a área do Painel › Aluno AINDA chama direto — todas de OUTRA W, nomeadas (o H-43: o acesso do aluno — a
  * aluno_acesso lê E garante, por isso está em RPC_QUE_GRAVAM e o detector de leitura não a conta —, a senha, os dados/ajustes/link do aluno
  * e o aviso das mensagens desligadas, a única de LEITURA, contada no desvio da área). Uma RPC nova na área entra aqui com o motivo.
+ * hml-21c (H-43, decisão E da 21c): as 9 saíram — o acesso do aluno, os dados/ajustes/link e a faixa vão pela função conta → vazio.
  */
-const RPCS_DE_OUTRA_W_NO_PAINEL: Record<string, string[]> = {
-  "src/painel/aluno/dados/api.ts": [
-    "aluno_novo_link", "aluno_salvar_ajustes", "aluno_salvar_dados", "mensagens_aviso_fechar", "mensagens_desligadas", "mensagens_ligar_para_todos",
-  ],
-  "src/painel/aluno/resumo/acesso/api.ts": ["aluno_acesso", "paciente_criar_acesso", "paciente_redefinir_senha"],
-};
+const RPCS_DE_OUTRA_W_NO_PAINEL: Record<string, string[]> = {};
 /**
  * O que saiu do navegador para o servidor — no src/ inteiro, ninguém lê direto (o nome escrito na chamada). hml-20a: as 2 do app do
  * aluno; hml-20b: as 4 do Painel › Aluno (aluno_perfil, aluno_evolucao, aluno_anotacoes, exames_do_aluno — nenhuma tem leitor em área de
@@ -255,8 +251,10 @@ describe("hml-20a — o detector acha o que procura (controle positivo)", () => 
 describe("hml-20b — o detector também acha as leituras de antes do Painel › Aluno (controle positivo)", () => {
   it("o invólucro local de RPC (com e sem o tipo), o .rpc com o tipo, a URL de 1 anexo e o profiles; a definição do invólucro não conta", () => {
     expect(leiturasDiretas('const r = await rpc<PerfilAluno>("aluno_perfil", { p_aluno: alunoId });')).toEqual(["1: rpc.aluno_perfil"]);
-    expect(leiturasDiretas('const r = await rpc<MensagensDesligadas | null>("mensagens_desligadas", {});')).toEqual(["1: rpc.mensagens_desligadas"]);
-    expect(leiturasDiretas('return rpc("aluno_responsavel", { p_aluno: alunoId });')).toEqual(["1: rpc.aluno_responsavel"]);
+    // hml-21c (a regra das listas): a mensagens_desligadas e a aluno_responsavel saíram do RPC_SO_LEITURA (vão pela função conta) — os
+    // exemplos usam 2 que seguem nela, com as MESMAS formas (o tipo com "| null"; o invólucro sem o tipo); o que o controle prova não muda
+    expect(leiturasDiretas('const r = await rpc<PlanoFavorito[] | null>("planos_favoritos", {});')).toEqual(["1: rpc.planos_favoritos"]);
+    expect(leiturasDiretas('return rpc("painel_resumo", { p_conta: contaId });')).toEqual(["1: rpc.painel_resumo"]);
     expect(leiturasDiretas('const { data } = await supabase.rpc<Json>("exames_do_aluno", args);')).toEqual(["1: rpc.exames_do_aluno"]);
     expect(leiturasDiretas("async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T> {")).toEqual([]);
     expect(leiturasDiretas('await rpc("aluno_salvar_dados", { p_aluno: alunoId });')).toEqual([]); // RPC que grava
@@ -331,8 +329,9 @@ describe("hml-20a — as áreas migradas não leem direto (só o desvio listado)
     expect(achadas).toEqual(RPCS_DE_OUTRA_W_NO_PAINEL);
     const todas = Object.values(achadas).flat();
     for (const r of ["aluno_perfil", "aluno_evolucao", "aluno_anotacoes", "exames_do_aluno"]) expect(todas, r).not.toContain(r);
-    // de leitura (RPC_SO_LEITURA) entre elas, só a do desvio da área (o aviso das mensagens — H-43)
-    expect(todas.filter((r) => RPC_SO_LEITURA.has(r))).toEqual(["mensagens_desligadas"]);
+    // de leitura (RPC_SO_LEITURA) entre elas, só a do desvio da área (o aviso das mensagens — H-43); hml-21c (a regra 11:57 da 21d — o que
+    // registrava a peça desta W como pendente vira o estado sem ela): nenhuma (a mensagens_desligadas também vai pela conta)
+    expect(todas.filter((r) => RPC_SO_LEITURA.has(r))).toEqual([]);
   });
 
   it("hml-20d — financeiro: nenhum .rpc( (nem o invólucro com o nome numa variável) e nenhum .from( de tabela; do principal sobram só a função e o PUT do comprovante", () => {

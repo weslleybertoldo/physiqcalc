@@ -1,5 +1,5 @@
-// Physiq hml-21a (H-43 · jeito 2, etapa 3) — o que os módulos de gravação da função conta (casca.ts, app.ts; na 21b, agenda.ts e alunos.ts)
-// dividem: o contexto, a resposta,
+// Physiq hml-21a (H-43 · jeito 2, etapa 3) — o que os módulos de gravação da função conta (casca.ts, app.ts; na 21b, agenda.ts e alunos.ts;
+// na 21c, aluno.ts, configuracoes.ts, mensagens.ts e lixeira.ts — + o rpcDaAcao) dividem: o contexto, a resposta,
 // a recusa, o 0 linha e a tradução do erro do banco/RPC e do Storage. ESTRUTURAL, como o functions/nutricao/leituras.ts e o preconsulta.ts:
 // não importa a porta (_shared/porta-pessoa.ts traz o supabase-js do esm.sh e o Deno) — o contexto é o pedaço do ContextoPessoa que os
 // módulos usam (o deno check confere no index.ts que o da porta encaixa). Assim o Vitest roda os módulos com um cliente falso
@@ -68,6 +68,23 @@ export function falha(c: ContextoConta, acao: string, e: unknown, conhecidos: re
   if (t.inesperado) c.log.excecao(e, { codigo: t.erro === "tempo_esgotado" ? "tempo_esgotado" : "banco_falhou", acao, schema: c.schema });
   else c.log.aviso({ codigo: t.erro, schema: c.schema, acao, pg: typeof o.code === "string" ? o.code : null });
   return { ok: false, erro: t.erro };
+}
+
+/**
+ * hml-21c: a RPC de hoje de uma ação, como a pessoa, com os args que o MÓDULO montou do corpo já conferido (o corpo nunca vira arg); o raise
+ * de propósito (`conhecidos` — a varredura da decisão B) volta como o código; o valor volta como veio, no `resultado` (a lib confere o
+ * { ok, erro } da RPC como hoje). Os módulos da 21a/21b seguem com o chamarRpc deles.
+ */
+export async function rpcDaAcao(
+  c: ContextoConta,
+  acao: string,
+  rpc: string,
+  args: Record<string, unknown>,
+  conhecidos: readonly string[] = [],
+): Promise<Resposta> {
+  const { data, error } = await c.comoPessoa.rpc(rpc, args);
+  if (error) return falha(c, acao, error, conhecidos);
+  return { ok: true, resultado: data ?? null };
 }
 
 /** O Storage não respondeu como devia (o link assinado, a lista): 502, com o status dele no log. */

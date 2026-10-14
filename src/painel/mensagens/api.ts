@@ -3,6 +3,12 @@
 //     celular publica o QR), desconectar e teste (1 mensagem para o próprio número conectado);
 //   · as funções do banco da W22: whatsapp_resumo, whatsapp_fila, whatsapp_salvar_config, whatsapp_reenviar, whatsapp_limpar_falhas.
 // O app NUNCA grava nas tabelas do WhatsApp (quem grava são as funções e o agente). O header x-schema do cliente escolhe public/staging.
+// hml-21c (H-43 · jeito 2, etapa 3): as 5 funções do banco e o perfil vão pela função conta, COM A SESSÃO de quem está logado — as MESMAS
+// RPCs e os MESMOS argumentos, no servidor: as leituras (o resumo — também o número do menu —, a fila e o perfil) no lote da tela (1 ida); as
+// gravações (a config, o reenviar, o "Limpar") como ações. A whatsapp-conectar fica como está (já é servidor). O erro: ErroMensagens com o
+// CÓDIGO (a rede que caiu → sem_internet; o { ok: false, erro } da RPC, como hoje) — a mensagem crua do banco não vem mais.
+import { acaoConta, codigoDaGravacao, type AcaoConta } from "@/conta/gravar";
+import { codigoDaLeitura, lerConta, type ConsultaDaConta } from "@/conta/ler";
 import { principal } from "@/integrations/principal/client";
 import { paraGravar, type ConfigWhatsapp } from "./disparosUtil";
 import type { EscopoFila, FiltroFila, ItemFila, StatusMensagem } from "./filaUtil";
@@ -60,14 +66,35 @@ export async function enviarTeste(): Promise<{ repetida: boolean }> {
   return { repetida: !!r.repetida };
 }
 
-/** Chama uma função do banco; `{ ok: false, erro }` vira ErroMensagens com o código. */
-async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T> {
-  if (offline()) throw new ErroMensagens("sem_internet");
-  const { data, error } = await principal.rpc(nome as never, args as never);
-  if (error) throw new ErroMensagens(error.message || "erro_interno");
+/** O valor de uma função do banco; `{ ok: false, erro }` vira ErroMensagens com o código. */
+function okOuErro<T>(data: unknown): T {
   const d = (data ?? {}) as Record<string, unknown>;
   if (d.ok === false) throw new ErroMensagens(String(d.erro ?? "erro_interno"));
   return d as T;
+}
+
+/** hml-21c: uma leitura pela conta (no lote da tela) — o erro com o código. */
+async function ler<T>(q: ConsultaDaConta, params: Record<string, unknown>): Promise<T> {
+  if (offline()) throw new ErroMensagens("sem_internet");
+  let valor: unknown;
+  try {
+    valor = (await lerConta(q, params)).valor;
+  } catch (e) {
+    throw new ErroMensagens(codigoDaLeitura(e));
+  }
+  return okOuErro<T>(valor);
+}
+
+/** hml-21c: uma gravação pela conta (a RPC de hoje no servidor, como a pessoa) — o erro com o código. */
+async function acao<T>(nome: AcaoConta, corpo: Record<string, unknown>): Promise<T> {
+  if (offline()) throw new ErroMensagens("sem_internet");
+  let resultado: unknown;
+  try {
+    resultado = (await acaoConta<{ resultado?: unknown }>(nome, corpo)).resultado;
+  } catch (e) {
+    throw new ErroMensagens(codigoDaGravacao(e));
+  }
+  return okOuErro<T>(resultado);
 }
 
 export interface ResumoMensagens {
@@ -88,7 +115,7 @@ export interface ResumoMensagens {
 }
 
 export async function buscarResumo(contaId: string | null): Promise<ResumoMensagens> {
-  const r = await rpc<ResumoMensagens>("whatsapp_resumo", { p_conta: contaId });
+  const r = await ler<ResumoMensagens>("whatsapp_resumo", { conta: contaId });
   return { ...r, serie_enviadas: Array.isArray(r.serie_enviadas) ? r.serie_enviadas.map(Number) : [] };
 }
 
@@ -103,26 +130,26 @@ export interface PaginaFila {
 export type CursorFila = { antes: string; antesId: string } | null;
 
 export async function listarFila(p: { contaId: string | null; escopo: EscopoFila; filtro: FiltroFila; limite?: number; cursor?: CursorFila }): Promise<PaginaFila> {
-  const r = await rpc<PaginaFila>("whatsapp_fila", {
-    p_conta: p.contaId, p_escopo: p.escopo, p_filtro: p.filtro, p_limite: p.limite ?? 30, p_antes: p.cursor?.antes ?? null, p_antes_id: p.cursor?.antesId ?? null,
+  const r = await ler<PaginaFila>("whatsapp_fila", {
+    conta: p.contaId, escopo: p.escopo, filtro: p.filtro, limite: p.limite ?? 30, antes: p.cursor?.antes ?? null, antes_id: p.cursor?.antesId ?? null,
   });
   return { ...r, itens: Array.isArray(r.itens) ? r.itens : [] };
 }
 
 /** grava as mensagens automáticas (profiles.config.whatsapp — o resto do config fica como está) */
 export async function salvarConfig(cfg: ConfigWhatsapp): Promise<ConfigWhatsapp> {
-  const r = await rpc<{ whatsapp: ConfigWhatsapp }>("whatsapp_salvar_config", { p_whatsapp: paraGravar(cfg) });
+  const r = await acao<{ whatsapp: ConfigWhatsapp }>("whatsapp_config_salvar", { whatsapp: paraGravar(cfg) });
   return r.whatsapp;
 }
 
 /** a própria mensagem com falha volta para a fila (o banco confere se ainda faz sentido) */
 export async function reenviar(id: string): Promise<void> {
-  await rpc("whatsapp_reenviar", { p_id: id });
+  await acao("whatsapp_reenviar", { id });
 }
 
 /** "Limpar": as falhas de até agora deixam de contar no número do menu */
 export async function limparFalhas(): Promise<void> {
-  await rpc("whatsapp_limpar_falhas", {});
+  await acao("whatsapp_limpar_falhas", {});
 }
 
 export interface PerfilWhatsapp {
@@ -131,10 +158,17 @@ export interface PerfilWhatsapp {
   config: unknown;
 }
 
-/** o WhatsApp de Configurações › Perfil (dados_profissionais) e a config das automáticas (config.whatsapp) */
-export async function lerPerfilWhatsapp(uid: string): Promise<PerfilWhatsapp | null> {
+/**
+ * o WhatsApp de Configurações › Perfil (dados_profissionais) e a config das automáticas (config.whatsapp) — hml-21c: o profiles DE QUEM ESTÁ
+ * LOGADO pela conta (q=perfil_mensagens: o servidor filtra pelo user do token; o `uid` fica na assinatura de antes), no lote da tela
+ */
+export async function lerPerfilWhatsapp(_uid: string): Promise<PerfilWhatsapp | null> {
   if (offline()) throw new ErroMensagens("sem_internet");
-  const { data, error } = await principal.from("profiles").select("nome, dados_profissionais, config").eq("id", uid).maybeSingle();
-  if (error) throw new ErroMensagens(error.message || "erro_interno");
-  return (data as PerfilWhatsapp | null) ?? null;
+  let linhas: unknown[] | undefined;
+  try {
+    linhas = (await lerConta("perfil_mensagens")).linhas;
+  } catch (e) {
+    throw new ErroMensagens(codigoDaLeitura(e));
+  }
+  return ((linhas ?? [])[0] as PerfilWhatsapp | undefined) ?? null;
 }

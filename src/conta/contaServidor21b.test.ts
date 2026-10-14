@@ -16,11 +16,11 @@ import { ehRpc, planoDaTabela, type CatalogoLeitura, type ConsultaLeitura, type 
 import { atenderLeitura } from "../../supabase-principal/functions/_shared/leitura-servidor";
 import {
   BLOQUEIOS_FUTUROS_MAX, CATALOGO_CONTA, COLUNAS_DA_AGENDA, COLUNAS_DOS_ALUNOS, CONSULTAS_AGENDA, CONSULTAS_ALUNOS, CONSULTAS_CONTA, CONSULTAS_DA_21B,
-  CONSULTAS_DA_21D, CONSULTAS_DA_CONTA, ERROS_DA_MATRICULA_DA_ROTA, FILTROS_DOS_ALUNOS, TODAS_AS_CONSULTAS, consultaDaConta,
+  CONSULTAS_DA_21C, CONSULTAS_DA_21D, CONSULTAS_DA_CONTA, ERROS_DA_MATRICULA_DA_ROTA, FILTROS_DOS_ALUNOS, TODAS_AS_CONSULTAS, consultaDaConta,
 } from "../../supabase-principal/functions/_shared/conta-leituras";
 import {
-  ACOES_DA_AGENDA, ACOES_DA_CASCA, ACOES_DA_CONTA, ACOES_DO_APP, ACOES_DOS_ALUNOS, CORPOS_DA_21B, CORPOS_DAS_ACOES, ERROS_DAS_TAGS, lerCamposDaAcao,
-  lerCorpoDaAcao, moduloDoPedido, statusDoErroConta, type AcaoDaAgenda,
+  ACOES_DA_21C, ACOES_DA_AGENDA, ACOES_DA_CASCA, ACOES_DA_CONTA, ACOES_DO_APP, ACOES_DOS_ALUNOS, CORPOS_DA_21B, CORPOS_DAS_ACOES, ERROS_DAS_TAGS,
+  lerCamposDaAcao, lerCorpoDaAcao, moduloDoPedido, statusDoErroConta, type AcaoDaAgenda,
 } from "../../supabase-principal/functions/_shared/conta-regras";
 import { CONSULTAS_NUTRICAO } from "../../supabase-principal/functions/_shared/nutricao-leituras";
 import { CONSULTAS_FINANCEIRO } from "../../supabase-principal/functions/_shared/financeiro-leituras";
@@ -150,7 +150,8 @@ describe("hml-21b — o catálogo da conta (as consultas do bloco 21b da §2.2)"
     expect(CONSULTAS_DA_21B).toEqual([...Object.keys(CONSULTAS_AGENDA), ...Object.keys(CONSULTAS_ALUNOS)]);
     expect(CONSULTAS_DA_CONTA).toEqual(Object.keys(CONSULTAS_CONTA));
     // hml-21d (a regra da DECISÃO 03:25: a lista ganha o item novo por acréscimo — o que o caso prova não muda): + o aluno_treino da 21d
-    expect(TODAS_AS_CONSULTAS).toEqual([...CONSULTAS_DA_CONTA, ...CONSULTAS_DA_21B, ...CONSULTAS_DA_21D]);
+    expect(TODAS_AS_CONSULTAS).toEqual([...CONSULTAS_DA_CONTA, ...CONSULTAS_DA_21B, ...CONSULTAS_DA_21D, ...CONSULTAS_DA_21C]);
+    // hml-21c (a mesma regra): + as consultas da 21c, no fim
     // nenhum nome da 21b repete um da 21a; o catálogo do motor tem as 28 (e só as consultas — nenhuma opção a mais)
     expect(CONSULTAS_DA_21B.filter((q) => (CONSULTAS_DA_CONTA as string[]).includes(q))).toEqual([]);
     expect(Object.keys(CATALOGO_CONTA.consultas)).toEqual(TODAS_AS_CONSULTAS);
@@ -231,8 +232,13 @@ describe("hml-21b — o catálogo da conta (as consultas do bloco 21b da §2.2)"
       const f = c.fonte as FonteTabela;
       return !!(f.fixos || f.colunasSe || f.recorte?.modelo === "meu_ou_da_conta" || (f.filtros ?? []).some((x) => x.op === "gt"));
     };
+    // hml-21c (H-112; a regra da DECISÃO 03:25 — a lista ganha os itens novos por acréscimo; o que o caso prova das consultas de antes não
+    // muda): os ★ da Ferramentas › Modelos — as consultas NOVAS da 21c no fim dos 2 catálogos — usam o `fixos` (o .eq(favorito, true) da lib);
+    // as da 20a–21a seguem sem nenhuma das 4 (o plano delas não muda)
+    const DA_21C = [...Object.keys(CONSULTAS_NUTRICAO).slice(-9), "fin_modelos_recibo_favoritos"];
+    expect(DA_21C.slice(0, 9).every((q) => q.startsWith("modelos_favoritos_"))).toBe(true);
     for (const [nome, cat] of [["nutricao", CONSULTAS_NUTRICAO], ["financeiro", CONSULTAS_FINANCEIRO], ["conta 21a", CONSULTAS_CONTA]] as const) {
-      for (const [q, c] of Object.entries(cat as CatalogoLeitura)) expect(usa(c), `${nome}.${q}`).toBe(false);
+      for (const [q, c] of Object.entries(cat as CatalogoLeitura)) expect(usa(c), `${nome}.${q}`).toBe(DA_21C.includes(q));
     }
     expect(CONSULTAS_DA_21B.filter((q) => usa((CATALOGO_CONTA.consultas as CatalogoLeitura)[q]))).toEqual([
       "agenda_calendarios", "agenda_agendamentos", "agenda_bloqueios", "agenda_bloqueios_futuros", "agenda_travas", "agenda_alunos", "aluno_do_seletor",
@@ -444,7 +450,8 @@ describe("hml-21b — o despacho e as listas fechadas das ações da Agenda e do
     expect([...ACOES_DOS_ALUNOS]).toEqual(["pacote_definir"]);
     const da21a = [...ACOES_DA_CASCA, ...ACOES_DO_APP] as string[];
     expect([...ACOES_DA_AGENDA, ...ACOES_DOS_ALUNOS].filter((a) => da21a.includes(a))).toEqual([]);
-    expect(ACOES_DA_CONTA).toEqual([...ACOES_DA_CASCA, ...ACOES_DO_APP, ...ACOES_DA_AGENDA, ...ACOES_DOS_ALUNOS]);
+    // hml-21c (a mesma regra da DECISÃO 03:25: a lista ganha as ações da 21c por acréscimo, no fim; o que o caso prova não muda)
+    expect(ACOES_DA_CONTA).toEqual([...ACOES_DA_CASCA, ...ACOES_DO_APP, ...ACOES_DA_AGENDA, ...ACOES_DOS_ALUNOS, ...ACOES_DA_21C]);
     expect(Object.keys(CORPOS_DA_21B).sort()).toEqual([...ACOES_DA_AGENDA, ...ACOES_DOS_ALUNOS].sort());
     for (const a of [...ACOES_DA_AGENDA, ...ACOES_DOS_ALUNOS]) expect(CORPOS_DAS_ACOES[a], a).toBe(CORPOS_DA_21B[a]);
     for (const [acao, corpo] of Object.entries(CORPOS_DA_21B)) {

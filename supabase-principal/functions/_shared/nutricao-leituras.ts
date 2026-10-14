@@ -32,7 +32,8 @@
 //   · Storage: as miniaturas do diário em lote (diario_urls, 1 h, como hoje) e a foto grande por clique (diario_foto_url, 300 s): o
 //     servidor relê a linha pelo id como a pessoa e assina SÓ o caminho dela (nunca um caminho do corpo), no diario do ambiente.
 // As sub-worktrees seguintes (20d Financeiro, na função financeiro) não mexem aqui.
-import type { ConsultaLeitura, EmbutidoLeitura } from "./leitura-lote.ts";
+import type { CatalogoLeitura, ConsultaLeitura, EmbutidoLeitura } from "./leitura-lote.ts";
+import type { CatalogoDoServidor } from "./leitura-servidor.ts";
 import { ERROS_DO_AVISO, bucketDaEvolucao, bucketDoDiario, bucketDosAnexos } from "./nutricao-regras.ts";
 
 /** A validade das URLs assinadas de leitura do app do aluno (a mesma de hoje: 1 h). */
@@ -231,6 +232,23 @@ const daDieta = (tabela: TabelaDaDieta, ordem: readonly { coluna: string; asc: b
   params: { aluno },
   fonte: { tabela, colunas: COLUNAS_DA_DIETA[tabela], teto: TETO_LISTA, filtros: [{ param: "aluno", coluna: "paciente_id", op: "eq" }], vivas: true, ordem },
 }) as const;
+/**
+ * hml-21c (H-112): os ★ de quem chama numa tabela de modelos — o favoritosDe da Ferramentas › Modelos (src/ferramentas/modelos/dados.ts:30):
+ * .select(as colunas da tela).eq(<favorito|favorita>, true).eq("nutricionista_id", uid).is("deleted_at", null).limit(500) — o MESMO plano
+ * no motor: o fixo (favorito = true, nunca do corpo), o dono = o user do token, as vivas, o teto 500. 1 tabela por consulta (o motor lê 1
+ * tabela por consulta e não muda).
+ */
+export const MODELOS_FAVORITOS_MAX = 500;
+const favoritosDe = (tabela: string, colunas: readonly string[], coluna = "favorito", embutidos?: readonly EmbutidoLeitura[]) => ({
+  params: {},
+  fonte: { tabela, colunas, teto: MODELOS_FAVORITOS_MAX, fixos: [{ coluna, valor: true }], vivas: true, ...(embutidos ? { embutidos } : {}) },
+  dono: "nutricionista_id",
+}) as const;
+/** hml-21c: os ingredientes da receita ★ (o select da lib: as 3 colunas, o alimento com as 10 e as medidas — o (*) escrito coluna a coluna) */
+const INGREDIENTES_DO_FAVORITO: EmbutidoLeitura = {
+  nome: "ingredientes", tabela: "ingredientes_receita", colunas: ["quantidade_g", "medida_caseira_id", "quantidade_medida"],
+  embutidos: [{ nome: "alimento", tabela: "alimentos", colunas: COLUNAS_DA_DIETA.alimento_embutido, embutidos: [MEDIDAS] }],
+};
 /** hml-20c: os modelos e o catálogo de produtos (o RLS decide: a nutri vê os dela, o master todos — a lib não filtrava por dono) */
 const daConta20c = (tabela: TabelaDaDieta, ordem: readonly { coluna: string; asc: boolean }[]) => ({
   params: {},
@@ -540,6 +558,17 @@ export const CONSULTAS_NUTRICAO = {
       filtros: [{ param: "desde", coluna: "respondido_em", op: "gte" }], vivas: true, recorte: RECORTE_DA_CONTA, ordem: [desc("respondido_em")],
     },
   },
+  // ───── hml-21c (H-112): a Ferramentas › Modelos — os ★ de quem chama (o favoritosDe da tela: as colunas do select dela, o filtro de hoje) ─────
+  // (os planos ★ seguem pela planos_favoritos com a conta, acima; o "tirar a ★" pelas ações *_editar que já existem)
+  modelos_favoritos_anamnese: favoritosDe("modelos_anamnese", ["id", "updated_at", "titulo", "perguntas"]),
+  modelos_favoritos_orientacao: favoritosDe("modelos_orientacao", ["id", "updated_at", "titulo", "conteudo"]),
+  modelos_favoritos_documento: favoritosDe("modelos_documento", ["id", "updated_at", "titulo", "tipo"]),
+  modelos_favoritos_meta: favoritosDe("modelos_meta", ["id", "updated_at", "titulo", "dias_semana"]),
+  modelos_favoritos_manipulado: favoritosDe("modelos_formula", ["id", "updated_at", "titulo", "ativos"]),
+  modelos_favoritos_exame: favoritosDe("exames_catalogo", ["id", "updated_at", "nome", "unidade", "ref_min", "ref_max", "referencia_texto"]),
+  modelos_favoritos_questionario: favoritosDe("questionarios", ["id", "updated_at", "titulo", "perguntas"]),
+  modelos_favoritos_produto: favoritosDe("produtos", ["id", "updated_at", "nome", "marca", "categoria"]),
+  modelos_favoritos_receita: favoritosDe("receitas", ["id", "nome", "updated_at", "porcoes", "rendimento_g"], "favorita", [INGREDIENTES_DO_FAVORITO]),
 } as const satisfies Record<string, ConsultaLeitura>;
 
 export type ConsultaDaNutricao = keyof typeof CONSULTAS_NUTRICAO;
@@ -557,3 +586,11 @@ export function bucketDaLeitura(bucket: string, schema: "public" | "staging"): s
   if (bucket === "anexos") return bucketDosAnexos(schema);
   return schema === "staging" ? `${bucket}-staging` : bucket;
 }
+
+// ───────────────────────── hml-21c (H-112): o catálogo da nutricao para o motor comum ─────────────────────────
+/**
+ * O catálogo da função nutricao para o motor comum (_shared/leitura-servidor.ts — o functions/nutricao/leituras.ts passa a ser ele): as
+ * consultas + o bucket do ambiente (os buckets da nutricao: diario, evolucao e anexos com o nome de cada schema). É o MESMO objeto que a
+ * diferencial da hml-21a montava à mão (src/integrations/leituraServidor.test.ts).
+ */
+export const CATALOGO_NUTRICAO: CatalogoDoServidor = { consultas: CONSULTAS_NUTRICAO as unknown as CatalogoLeitura, bucketDaLeitura };

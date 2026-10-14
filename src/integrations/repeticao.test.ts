@@ -52,15 +52,17 @@ describe("podeRepetir", () => {
     expect(podeRepetir(new Request(`${P}/functions/v1/cobranca-conta`, { method: "POST" }))).toBe(false);
   });
 
-  it("as 30 de leitura repetem; as 23 que gravam não; os 2 conjuntos não se cruzam", () => {
+  it("as 23 de leitura repetem; as 5 que gravam não; os 2 conjuntos não se cruzam", () => {
     // hml-21a: as 6 de leitura que a função conta chama saíram — eram 45
     // hml-21b: as 9 de leitura da Agenda e dos Alunos que a função conta chama saíram — eram 39
-    expect(RPC_SO_LEITURA.size).toBe(30);
+    // hml-21c: as 7 de leitura do Resumo, das Configurações, da Mensagens, da Lixeira e da faixa que a função conta chama saíram — eram 30
+    expect(RPC_SO_LEITURA.size).toBe(23);
     // hml-19b: a paciente_marcar_refeicao e a aluno_marcar_meta saíram do front (o app marca pela função nutricao) — eram 40
     // hml-19c: a aluno_avisar_avaliacao saiu do front (o aviso vai pela função nutricao) — eram 38
     // hml-21a: as 8 que gravam e a função conta chama saíram — eram 37
     // hml-21b: as 6 da Agenda que a função conta chama saíram — eram 29
-    expect(RPC_QUE_GRAVAM.size).toBe(23);
+    // hml-21c: as 18 do Resumo, das Configurações, da Mensagens, da Lixeira e da faixa que a função conta chama saíram — eram 23 (as 5 dos links)
+    expect(RPC_QUE_GRAVAM.size).toBe(5);
     expect(RPC_QUE_GRAVAM.has("aluno_avisar_avaliacao")).toBe(false);
     for (const nome of RPC_SO_LEITURA) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(true);
     for (const nome of RPC_QUE_GRAVAM) expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
@@ -68,12 +70,31 @@ describe("podeRepetir", () => {
   });
 
   it("hml-12: a ficha do responsável repete (STABLE); o aceite e o registro do responsável vão 1 vez (gravam)", () => {
-    expect(podeRepetir(`${P}/rest/v1/rpc/aluno_responsavel`, { method: "POST" })).toBe(true);
+    // hml-21c (a regra das listas): a ficha e o registro do responsável saíram do front (a função conta: q=aluno_responsavel — o `ler`
+    // repete 1 vez pela ACOES_DE_LEITURA — e a ação aluno_responsavel_registrar, 1 vez); o POST direto (o front antigo) não repete
+    expect(podeRepetir(`${P}/rest/v1/rpc/aluno_responsavel`, { method: "POST" })).toBe(false);
     expect(podeRepetir(`${P}/rest/v1/rpc/aceitar_no_acesso`, { method: "POST" })).toBe(false);
     expect(podeRepetir(`${P}/rest/v1/rpc/aluno_responsavel_registrar`, { method: "POST" })).toBe(false);
-    // hml-21a: o aceite saiu do front (vai pela função conta, ação aceitar_textos); o registro do responsável segue
+    // hml-21a: o aceite saiu do front (vai pela função conta, ação aceitar_textos); hml-21c: o registro do responsável também
     expect(RPC_QUE_GRAVAM.has("aceitar_no_acesso")).toBe(false);
-    expect(RPC_QUE_GRAVAM.has("aluno_responsavel_registrar")).toBe(true);
+    expect(RPC_QUE_GRAVAM.has("aluno_responsavel_registrar")).toBe(false);
+    expect(RPC_SO_LEITURA.has("aluno_responsavel")).toBe(false);
+  });
+
+  it("hml-21c: as 25 RPCs do Resumo, das Configurações, da Mensagens, da Lixeira e da faixa saíram das 2 listas (a função conta as chama)", () => {
+    const leituras = ["aluno_responsavel", "lixeira_da_conta", "mensagens_desligadas", "paciente_dado_livre", "w2l_prontuarios_para_baixar", "whatsapp_fila", "whatsapp_resumo"];
+    const gravacoes = [
+      "aluno_acesso", "alterar_papeis_membro", "aluno_avisar_plano", "aluno_novo_link", "aluno_responsavel_registrar", "aluno_salvar_ajustes",
+      "aluno_salvar_dados", "garantir_meu_codigo", "lixeira_apagar", "lixeira_restaurar", "mensagens_aviso_fechar", "mensagens_ligar_para_todos",
+      "paciente_criar_acesso", "paciente_redefinir_senha", "remover_membro", "whatsapp_limpar_falhas", "whatsapp_reenviar", "whatsapp_salvar_config",
+    ];
+    expect([leituras.length, gravacoes.length]).toEqual([7, 18]);
+    for (const nome of [...leituras, ...gravacoes]) {
+      expect(RPC_SO_LEITURA.has(nome) || RPC_QUE_GRAVAM.has(nome), nome).toBe(false);
+      expect(podeRepetir(`${P}/rest/v1/rpc/${nome}`, { method: "POST" }), nome).toBe(false);
+    }
+    // sobram só as 5 dos links públicos (o desvio 21)
+    expect([...RPC_QUE_GRAVAM].sort()).toEqual(["diario_enviar", "diario_link", "diario_listar", "preconsulta_formulario", "preconsulta_responder"]);
   });
 
   it("hml-21a: as 14 RPCs da casca e do app do aluno saíram das 2 listas (a função conta as chama); a que não está numa lista nunca repete", () => {
@@ -403,11 +424,14 @@ describe("guarda: toda rpc(\"…\") do front está decidida", () => {
   it("acha as chamadas (o padrão de busca ainda pega o código)", () => {
     // hml-21a: as 14 da casca e do app do aluno saíram do front (eram 63 achadas)
     // hml-21b: as 15 da Agenda e dos Alunos saíram do front (eram 48 achadas; ficam 33)
-    expect(chamadas.size).toBeGreaterThanOrEqual(30);
+    // hml-21c: as 25 do Resumo, das Configurações, da Mensagens, da Lixeira e da faixa saíram (ficam 8: as 3 leituras do Treino que o gate da
+    // 21d deixou — aluno_treino, exercicios_da_lista, modelos_da_lista — e as 5 dos links públicos)
+    expect(chamadas.size).toBeGreaterThanOrEqual(8);
     // hml-21a: a minha_situacao saiu do front (vai pela função conta) — o controle passa a ser a alunos_da_conta
     // hml-21b: a alunos_da_conta saiu do front (vai pela função conta) — o controle passa a ser a whatsapp_resumo (sai na 21c)
-    expect(chamadas.has("whatsapp_resumo") && chamadas.has("diario_enviar")).toBe(true);
-    expect(chamadas.has("minha_situacao") || chamadas.has("alunos_da_conta") || chamadas.has("agenda_horarios")).toBe(false);
+    // hml-21c: a whatsapp_resumo saiu (vai pela função conta) — o controle passa a ser a preconsulta_responder (o link público, desvio 21)
+    expect(chamadas.has("preconsulta_responder") && chamadas.has("diario_enviar")).toBe(true);
+    expect(chamadas.has("minha_situacao") || chamadas.has("alunos_da_conta") || chamadas.has("agenda_horarios") || chamadas.has("whatsapp_resumo")).toBe(false);
   });
 
   it("cada RPC está em RPC_SO_LEITURA ou em RPC_QUE_GRAVAM (RPC nova obriga a decidir)", () => {

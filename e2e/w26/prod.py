@@ -46,7 +46,9 @@ ESCRITA_TABELA = re.compile(r"/rest/v1/(?!rpc/)")
 # da produção gravaria o sino); o `ler` dela passa pelo corpo, como o da nutricao/financeiro.
 # W-A P2 (LINUX 3): as 3 da W-A também — acessos, aluno-dia e (no Treino) treino-acessos —; o `ler` delas passa pelo corpo.
 # hml-21d (risco 4 da spec hml-21): a treinos (Treino) também — ANTES de qualquer E2E na produção; o `ler` dela passa pelo corpo.
-ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar|conta|acessos|aluno-dia|treino-acessos|treinos)(?:[/?#]|$)")
+# hml-21c (decisão 23 da spec hml-21, o achado 7): a whatsapp-conectar também — o `status` cria a instância na 1ª visita (e renova o pedido
+# no aguardando_qr), o conectar/desconectar gravam e o teste MANDA mensagem; ela não tem `ler` (fica fora do LEITURA_FUNCAO).
+ESCRITA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|mp-contas-renovar|conta|acessos|aluno-dia|treino-acessos|treinos|whatsapp-conectar)(?:[/?#]|$)")
 # hml-20a (decisão I): as funções em que o corpo { "acao": "ler" } é LEITURA — só a nutricao e a financeiro. A mp-contas-renovar (W2) não
 # lê o `acao` (o corpo dela é { schema, forcar_conta? }: com o schema certo, a rodada roda e grava) → segue escrita.
 LEITURA_FUNCAO = re.compile(r"/functions/v1/(?:nutricao|financeiro|conta|acessos|aluno-dia|treino-acessos|treinos)(?:[/?#]|$)")

@@ -14,6 +14,11 @@
 //              agendamento_criar|editar|excluir, bloqueio_criar|excluir, trava_criar|excluir, regras_salvar e a Agenda do aluno
 //              (agenda_confirmar|desistir|reagendar|marcar)
 //   alunos.ts  (hml-21b) pacote_definir — as outras ações dos Alunos seguem pela função alunos
+//   aluno.ts   (hml-21c) o Aluno › Resumo: acesso_ler|criar|redefinir_senha (o login do aluno — a aba Acessos), aluno_ajustes_salvar,
+//              aluno_dados_salvar, aluno_link_novo, aluno_responsavel_registrar, aluno_avisar_plano
+//   configuracoes.ts (hml-21c) perfil_salvar, conta_salvar, equipe_papeis, equipe_remover, meu_codigo_garantir, prontuarios_para_baixar
+//   mensagens.ts (hml-21c) whatsapp_config_salvar, whatsapp_reenviar, whatsapp_limpar_falhas, faixa_ligar_para_todos, faixa_fechar
+//   lixeira.ts (hml-21c) lixeira_restaurar, lixeira_apagar
 // O despacho (moduloDoPedido, em _shared/conta-regras.ts) é a lista fechada: ação de fora → 400 acao_invalida.
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { acao, ... }
@@ -25,14 +30,20 @@
 // própria (20260929120000_w05_equipe) e os grants de hoje — cada pessoa lê e grava o que já lia e gravava, agora pela função.
 // hml-21b: a v2 (= a v1 + a Agenda e os Alunos) PRECISA da migration 20261013100000_hml21b_agenda_atomicas (as RPCs
 // agenda_excluir_calendario e agenda_garantir_inicio) aplicada no schema ANTES de publicar (o calendario_excluir e o agenda_garantir as chamam).
+// hml-21c: a v5 (= a v4 + os 4 módulos da 21c e as consultas dela) NÃO precisa de migration: as RPCs, as tabelas (profiles, contas), as
+// policies e os grants de hoje — cada pessoa lê e grava o que já lia e gravava, agora pela função.
 import { json, servirComoPessoa, type ContextoPessoa } from "../_shared/porta-pessoa.ts";
 import { CATALOGO_CONTA } from "../_shared/conta-leituras.ts";
 import { moduloDoPedido, statusDoErroConta, type PedidoConta } from "../_shared/conta-regras.ts";
 import { atenderLeitura } from "../_shared/leitura-servidor.ts";
 import { atenderAgenda } from "./agenda.ts";
+import { atenderAluno } from "./aluno.ts";
 import { atenderAlunos } from "./alunos.ts";
 import { atenderApp } from "./app.ts";
 import { atenderCasca } from "./casca.ts";
+import { atenderConfiguracoes } from "./configuracoes.ts";
+import { atenderLixeira } from "./lixeira.ts";
+import { atenderMensagens } from "./mensagens.ts";
 
 /** O módulo da área atende a ação (cada um devolve { ok: true, … } ou { ok: false, erro }). */
 function atender(c: ContextoPessoa, pedido: PedidoConta) {
@@ -47,6 +58,15 @@ function atender(c: ContextoPessoa, pedido: PedidoConta) {
       return atenderAgenda(c, pedido.acao);
     case "alunos":
       return atenderAlunos(c, pedido.acao);
+    // hml-21c
+    case "aluno":
+      return atenderAluno(c, pedido.acao);
+    case "configuracoes":
+      return atenderConfiguracoes(c, pedido.acao);
+    case "mensagens":
+      return atenderMensagens(c, pedido.acao);
+    case "lixeira":
+      return atenderLixeira(c, pedido.acao);
   }
 }
 

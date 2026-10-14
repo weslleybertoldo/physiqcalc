@@ -386,3 +386,40 @@ grants e só precisa do `search_path`. Definer que o visitante chama de propósi
 - Nenhum grant de tabela nem policy muda (decisão 12 da spec hml-21: a função usa a sessão da pessoa; os APKs antigos ainda chamam direto).
   Ordem: a migration no staging do Treino ANTES de publicar a `treinos` (as ações chamam as RPCs) e na produção ANTES do merge (o front
   antigo não chama as RPCs novas). Prova: `python3 e2e/hml21/sql_treinos.py` (staging do Treino, como a pessoa, blocos desfeitos).
+
+## Principal: o Aluno › Resumo, as Configurações, a Mensagens, a Lixeira e os Modelos pela função `conta` (hml-21c, H-43 parte 4 + H-112/H-109 parte 2 · jeito 2, etapa 3)
+- **Sem migration:** as 25 RPCs que o front chamava direto seguem como estão (as mesmas definições, os mesmos `raise`), agora chamadas pela
+  `conta` COMO A PESSOA (o token de quem chama no cliente do Supabase — nenhuma chave secreta): o RLS e o `auth.uid()` de dentro delas valem
+  como hoje. Nenhum grant de tabela, policy ou EXECUTE muda (decisão 12 da spec hml-21: os APKs antigos ainda chamam direto).
+- **A `conta` v5 = a v4 + 4 módulos** (`conta/{aluno,configuracoes,mensagens,lixeira}.ts`), cada ação com o corpo em lista fechada (o dono
+  NUNCA vem do corpo; os objetos `ajustes`, `dados`, `whatsapp` são FECHADOS: chave de fora = recusa, nada roda) e o `raise` de propósito
+  de cada RPC devolvido como o código (a varredura do progresso da 21c; nunca 500 + `log.excecao`):
+  - o Aluno › Resumo (8): `acesso_ler` (a `aluno_acesso` — só lê, mas é AÇÃO: decisão 13), `acesso_criar` (`paciente_criar_acesso`),
+    `acesso_redefinir_senha` (`paciente_redefinir_senha` — o Master usa a MESMA pela `SheetSenhaAluno`), `aluno_ajustes_salvar` (só a chave
+    `mensagens_automaticas`: as 3 que foram para a aba Acessos na W-A P4 são recusa), `aluno_dados_salvar`, `aluno_link_novo`,
+    `aluno_responsavel_registrar` e `aluno_avisar_plano` (a reserva do "Salvar e enviar");
+  - as Configurações (6): `perfil_salvar` (o `profiles` de quem chama: o nome, o tipo, a área e SÓ as chaves do `dados_profissionais` que o
+    form edita, por cima do JSON atual — a foto, nunca: vai pelas ações da 21a), `conta_salvar` (o RLS de hoje: só o dono; 0 linha =
+    `nao_encontrado`), `equipe_papeis` (`alterar_papeis_membro`), `equipe_remover` (`remover_membro`), `meu_codigo_garantir`
+    (`garantir_meu_codigo`) e `prontuarios_para_baixar` (o ZIP da exclusão — `w2l_prontuarios_para_baixar`: é AÇÃO porque a RPC não tem
+    DEFAULT no `p_conta` e o motor de leitura não manda null);
+  - a Mensagens e a faixa (5): `whatsapp_config_salvar`, `whatsapp_reenviar`, `whatsapp_limpar_falhas`, `faixa_ligar_para_todos`
+    (`mensagens_ligar_para_todos`, até 500 ids) e `faixa_fechar` (`mensagens_aviso_fechar`);
+  - a Lixeira (2): `lixeira_restaurar`/`lixeira_apagar` (o tipo como texto: a RPC decide — `tipo_invalido`, `aluno_nao_apaga`).
+- **Leituras (`acao: "ler"`, em lote):** 8 consultas novas no catálogo `_shared/conta-leituras.ts`, as mesmas linhas que as libs liam, como
+  a pessoa: `dado_livre` (`paciente_dado_livre`), `aluno_responsavel`, `perfil_profissional` e `perfil_mensagens` (o `profiles` de quem
+  chama: `id` = o user do token, as colunas do form), `whatsapp_resumo`, `whatsapp_fila`, `mensagens_desligadas` (a casca: o número da
+  Mensagens e a faixa) e `lixeira` (`lixeira_da_conta`, no lote só dela). As 7 RPCs de leitura saíram do `RPC_SO_LEITURA` e as 18 que gravam
+  do `RPC_QUE_GRAVAM` (`src/integrations/repeticao.ts`: sobram só os 5 links públicos — o desvio 21); o `ler` repete 1 vez, as ações não.
+- **A `nutricao` e a `financeiro` no motor comum (H-112) e o JWKS nas leituras (H-109):** os módulos `functions/{nutricao,financeiro}/
+  leituras.ts` viram o motor comum (`_shared/leitura-servidor.ts`) com os catálogos exportados (`CATALOGO_NUTRICAO`, `CATALOGO_FINANCEIRO`)
+  — a mesma resposta, os mesmos pedidos ao banco e o mesmo log (a diferencial com o oráculo congelado do `c6e795b`); a opção
+  `jwtLeitura: "jwks"` só no `ler`. Os ★ dos Modelos: 9 consultas `modelos_favoritos_<tipo>` na `nutricao` e a `fin_modelos_recibo_favoritos`
+  na `financeiro` (a ★, o dono = quem chama, as vivas, até 500 — o select da lib); tirar a ★ = a ação `*_editar` da tela dona (o mesmo UPDATE;
+  0 linha = `nao_encontrado`).
+- **A Guarda dos E2E (decisão 23):** a `whatsapp-conectar` = gravação (o `status` cria a instância na 1ª visita e renova o pedido no
+  `aguardando_qr`; o `conectar`/`desconectar` gravam; o `teste` manda mensagem) — em `FUNCOES_QUE_SEMPRE_GRAVAM` (`e2e/hml17/_base.py`) e na
+  `ESCRITA_FUNCAO` (`e2e/w26/prod.py`); a `guarda_da_w()` da hml-21 deixa passar as 7 RPCs de leitura (o front antigo as chama até a release).
+- **Ficam como estão:** o login e a sessão; a `whatsapp-conectar` (a função da conexão); os links públicos (desvio 21); a foto pelas ações
+  da 21a; as leituras do Treino que o gate da 21d deixou no navegador (a aba Treinos dos Modelos lê o Treino direto). A `BASE` da
+  `semBancoNoNavegador.test.ts` ficou SÓ com as 6 leituras do Treino; o `RPCS_DE_OUTRA_W_NO_PAINEL` vazio.

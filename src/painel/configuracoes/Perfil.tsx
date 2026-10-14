@@ -2,9 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Dumbbell, GraduationCap, KeyRound, Mail, Moon, Salad, Sparkles, Sun, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { principal } from "@/integrations/principal/client";
 import { salvarMinhaSenha } from "@/nucleo/senha";
-import type { Json } from "@/integrations/principal/types";
 import { acaoTreinos } from "@/treino/servidor";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessao } from "@/nucleo/sessao";
@@ -18,13 +16,13 @@ import { Segmentado } from "@/ui/premium/Segmentado";
 import { useTema, type Tema } from "@/ui/tema/useTema";
 import { AtalhoExcluir } from "./excluirConta/AtalhoExcluir";
 import { CampoSelect, LinhaInfo, OpcoesPilula, SecaoForm, type OpcaoPilula } from "./pecas/Form";
-import { enviarFotoPerfil, validarFoto } from "./perfil/foto";
+import { buscarPerfil, gravarFotoDoPerfil, salvarPerfil } from "./perfil/api";
+import { subirFotoPerfil, validarFoto } from "./perfil/foto";
 import {
   AREA_OUTRA_MAX,
   TIPOS_PERFIL,
   UFS,
   areaOutraParaGravar,
-  comFoto,
   dadosParaGravar,
   formDoPerfil,
   formasDeEntrar,
@@ -38,21 +36,7 @@ import {
   type TipoPerfil,
 } from "./perfil/regras";
 
-interface LinhaPerfil {
-  nome: string | null;
-  email: string | null;
-  tipo_perfil: string | null;
-  area_outra: string | null;
-  dados_profissionais: unknown;
-}
-
 const ICONE_TIPO: Record<TipoPerfil, typeof Dumbbell> = { personal: Dumbbell, nutricionista: Salad, academico: GraduationCap, outra_area: Sparkles };
-
-async function buscarPerfil(uid: string): Promise<LinhaPerfil | null> {
-  const { data, error } = await principal.from("profiles").select("nome, email, tipo_perfil, area_outra, dados_profissionais").eq("id", uid).maybeSingle();
-  if (error) throw error;
-  return (data as LinhaPerfil | null) ?? null;
-}
 
 /**
  * O nome e a foto que os alunos já veem nas telas antigas do Calc (Pagamentos, lista do professor) moram no Banco do Treino:
@@ -116,13 +100,9 @@ export default function Perfil() {
     if (problema) return setErro(problema);
     setSalvando(true);
     try {
-      const atual = await buscarPerfil(uid); // o jsonb mais novo (a foto pode ter mudado agora há pouco)
       const nome = form.nome.trim();
-      const { error } = await principal
-        .from("profiles")
-        .update({ nome, tipo_perfil: form.tipo || null, area_outra: areaOutraParaGravar(form), dados_profissionais: dadosParaGravar(form, atual?.dados_profissionais) as Json })
-        .eq("id", uid);
-      if (error) throw error;
+      // hml-21c: pela função conta — o servidor lê o jsonb mais novo (a foto pode ter mudado agora há pouco) e põe só as chaves do form por cima
+      await salvarPerfil({ nome, tipo_perfil: form.tipo || null, area_outra: areaOutraParaGravar(form), dados: dadosParaGravar(form, {}) });
       if (usuarioTreino && isStaff) await espelharNoTreino(usuarioTreino.id, { nome });
       await qc.invalidateQueries({ queryKey: chave });
       await recarregarSituacao();
@@ -135,10 +115,9 @@ export default function Perfil() {
     }
   };
 
-  const gravarFoto = async (url: string | null) => {
-    const atual = await buscarPerfil(uid);
-    const { error } = await principal.from("profiles").update({ dados_profissionais: comFoto(atual?.dados_profissionais, url) as Json }).eq("id", uid);
-    if (error) throw error;
+  // hml-21c: a foto pelas ações da 21a (o caminho que subiu pelo link assinado; null = tirar) — a anterior sai do bucket; volta a URL nova
+  const gravarFoto = async (caminho: string | null) => {
+    const url = await gravarFotoDoPerfil(caminho);
     if (usuarioTreino && isStaff) await espelharNoTreino(usuarioTreino.id, { foto_url: url ?? fotoGoogle });
     await qc.invalidateQueries({ queryKey: chave });
     await recarregarSituacao();
@@ -152,7 +131,7 @@ export default function Perfil() {
     if (problema) return void toast.error(problema);
     setEnviandoFoto(true);
     try {
-      await gravarFoto(await enviarFotoPerfil(uid, arquivo));
+      await gravarFoto((await subirFotoPerfil(arquivo)).caminho);
       toast.success("Foto trocada.");
     } catch (err) {
       console.error("[Perfil] foto:", err);

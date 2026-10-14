@@ -3,14 +3,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const rpc = vi.fn();
 // a falha de rede vem por uma função comum (um vi.fn que lança deixa o teste vermelho no Vitest 3 mesmo com o erro tratado)
 let falhar = false;
-vi.mock("@/integrations/principal/client", () => ({
-  principal: {
+// ⚪8 da revisão da 21c: a rede de VERDADE no jeito 2 cai entre o navegador e a função — o functions.invoke devolve o FunctionsFetchError
+// do supabase-js (o "Failed to fetch" dentro do context); o `falhar` acima é o banco que lança DENTRO do servidor (vira erro_interno)
+let semRede = false;
+// hml-21c (H-43): a pré-checagem lê pela função conta — o functions.invoke("conta") roda os módulos de verdade do servidor
+// (src/test/contaFalsa.ts) sobre o MESMO banco falso (a RPC de hoje, como a pessoa); o que o teste prova não muda
+vi.mock("@/integrations/principal/client", async () => {
+  const { invocarComConta } = await import("@/test/contaFalsa");
+  const banco = {
     rpc: (...a: unknown[]) => {
       if (falhar) throw new Error("rede");
       return rpc(...a);
     },
-  },
-}));
+  };
+  const invocar = invocarComConta(banco);
+  const caiu = { data: null, error: { name: "FunctionsFetchError", message: "Failed to send a request to the Edge Function", context: new TypeError("Failed to fetch") } };
+  return {
+    principal: { ...banco, functions: { invoke: (nome: string, o?: { body?: unknown }) => (semRede ? Promise.resolve(caiu) : invocar(nome, o)) } },
+  };
+});
 
 import { conferirDadoLivre } from "./dadoLivre";
 import {
@@ -61,6 +72,7 @@ describe("W16b — pré-checagem (paciente_dado_livre)", () => {
   beforeEach(() => {
     rpc.mockReset();
     falhar = false;
+    semRede = false;
   });
 
   it("manda o e-mail normalizado e o CPF só com dígitos, e devolve os booleanos", async () => {
@@ -80,5 +92,15 @@ describe("W16b — pré-checagem (paciente_dado_livre)", () => {
   it("sem rede (a chamada falha) também não trava", async () => {
     falhar = true;
     expect(await conferirDadoLivre({ cpf: "52998224725" })).toBeNull();
+  });
+
+  it("sem rede de verdade (o functions.invoke com o FunctionsFetchError — o navegador não chega à função) também não trava; nada chega ao banco", async () => {
+    semRede = true;
+    rpc.mockResolvedValue({ data: { ok: true, email_livre: true, cpf_livre: true }, error: null });
+    expect(await conferirDadoLivre({ email: "a@b.co", cpf: "52998224725" })).toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
+    // controle: com a rede de volta, a MESMA chamada confere
+    semRede = false;
+    expect(await conferirDadoLivre({ email: "a@b.co", cpf: "52998224725" })).toEqual({ email_livre: true, cpf_livre: true });
   });
 });

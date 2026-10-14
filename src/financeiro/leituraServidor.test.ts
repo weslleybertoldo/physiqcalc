@@ -16,6 +16,8 @@ import {
   COBRANCAS_POR_LEITURA, COLUNAS_DO_FINANCEIRO, CONSULTAS_DO_FINANCEIRO, CONSULTAS_FINANCEIRO, DATA_TEXTO_MAX, ERROS_DAS_RPCS_DA_CONTA,
   INT4_MAX, LIMITE_RPC_MAX, MAX_LEITURAS_COBRANCAS, POR_PAGINA_LEITURA, STATUS_EM_ABERTO, TETO_LISTA, TEXTO_FILTRO_MAX, consultaDoFinanceiro,
   filtroEmAbertoOuNoPeriodo, type ConsultaFinanceiro,
+  // hml-21c (H-112): o catálogo exportado e o filtro a mais dele (o módulo passou a ser o motor comum)
+  CATALOGO_FINANCEIRO, filtrosExtrasDoFinanceiro,
 } from "../../supabase-principal/functions/_shared/financeiro-leituras";
 import { ACOES_DO_FINANCEIRO, acaoDoFinanceiro } from "../../supabase-principal/functions/_shared/financeiro-gravar-regras";
 import { atenderLeitura } from "../../supabase-principal/functions/financeiro/leituras";
@@ -112,6 +114,8 @@ describe("hml-20d — o catálogo do Financeiro (forma, dono, colunas = o select
     expect(CONSULTAS_DO_FINANCEIRO).toEqual([
       "fin_categorias", "fin_modelos_recibo", "fin_ultimo_recibo", "fin_profissional", "fin_resumo_periodo", "fin_lancamentos", "fin_recibos",
       "fin_cobrancas_resumo", "fin_transacoes_do_aluno", "fin_recibos_do_aluno", "fin_totais_do_aluno", "fin_do_aluno",
+      // hml-21c (H-112; a regra da DECISÃO 03:25 da 21b — a lista ganha o item novo por acréscimo, no fim): os ★ de recibo dos Modelos
+      "fin_modelos_recibo_favoritos",
     ]);
     expect(consultaDoFinanceiro("fin_categorias")).toBe(CONSULTAS_FINANCEIRO.fin_categorias);
     for (const q of ["nao_existe", "__proto__", "constructor", "aluno_dieta", "profissional", 3, null]) expect(consultaDoFinanceiro(q), String(q)).toBeNull();
@@ -131,6 +135,8 @@ describe("hml-20d — o catálogo do Financeiro (forma, dono, colunas = o select
     const minhas = Object.entries(CONSULTAS_FINANCEIRO as Record<string, ConsultaFinanceiro>).filter(([, c]) => c.dono).map(([q, c]) => [q, c.dono]);
     expect(minhas).toEqual([
       ["fin_categorias", "nutricionista_id"], ["fin_modelos_recibo", "nutricionista_id"], ["fin_ultimo_recibo", "nutricionista_id"], ["fin_profissional", "id"],
+      // hml-21c (H-112; a mesma regra — por acréscimo): os ★ de recibo da Ferramentas › Modelos (o favoritosDe da tela filtrava pelo uid)
+      ["fin_modelos_recibo_favoritos", "nutricionista_id"],
     ]);
   });
 
@@ -496,14 +502,25 @@ describe("hml-20d — os negativos: params ruins, corpo ignorado, outra conta, e
 });
 
 describe("hml-20d — o módulo lê como a pessoa (fonte): sem chave secreta, sem Storage, o motor da nutricao sem mudança", () => {
+  // hml-21c (H-112): o módulo passou a ser o motor comum (_shared/leitura-servidor.ts) com o CATALOGO_FINANCEIRO — o código que este caso lê
+  // mora no motor; o "em aberto OU no período" é o filtrosExtras do catálogo (o filtrosDaConsulta de antes) e o "sem Storage" é o catálogo
+  // que não declara assinar nem bucket (o motor só vai ao Storage para quem declara). O que o caso prova não muda.
   const modulo = readFileSync(resolve(RAIZ, "supabase-principal/functions/financeiro/leituras.ts"), "utf-8");
+  const motor = readFileSync(resolve(RAIZ, "supabase-principal/functions/_shared/leitura-servidor.ts"), "utf-8");
   it("tudo pelo c.comoPessoa; nenhuma chave secreta nem cliente de serviço; nenhum .storage; o select vem do planoDaTabela (o dono = c.userId)", () => {
-    expect(modulo).not.toMatch(/service_?role|SERVICE_ROLE|sb_secret|createClient|Deno\.env|\.storage\b/);
-    expect(modulo).toMatch(/c\.comoPessoa\.rpc\(/);
-    expect(modulo).toMatch(/c\.comoPessoa\.from\(plano\.tabela\)/);
-    expect(modulo).toMatch(/planoDaTabela\(consulta as ConsultaLeitura & \{ fonte: FonteTabela \}, params, userId\)/);
-    expect(modulo).toMatch(/filtrosDaConsulta\(consulta, item\.params, c\.userId\)/);
+    expect(modulo).toContain("return atenderNoMotor(c, CATALOGO_FINANCEIRO);");
+    expect(modulo.replace(/^\s*\/\/.*$/gm, "")).not.toMatch(/service_?role|SERVICE_ROLE|sb_secret|createClient|Deno\.env|\.storage\b/);
+    expect(motor).not.toMatch(/service_?role|SERVICE_ROLE|sb_secret|createClient|Deno\.env/);
+    expect(Object.values(CONSULTAS_FINANCEIRO).filter((c) => "assinar" in c)).toEqual([]);
+    expect(CATALOGO_FINANCEIRO.bucketDaLeitura).toBeUndefined();
+    expect(motor).toMatch(/c\.comoPessoa\.rpc\(/);
+    expect(motor).toMatch(/c\.comoPessoa\.from\(plano\.tabela\)/);
+    expect(motor).toMatch(/const plano = planoDaTabela\(consulta, params, userId\);/);
+    expect(motor).toMatch(/planoComExtras\(catalogo, consulta, item\.params, c\.userId\)/);
+    expect(motor).toMatch(/const mais = catalogo\.filtrosExtras \? catalogo\.filtrosExtras\(consulta, params, userId\) : \[\];/);
+    expect(CATALOGO_FINANCEIRO.filtrosExtras).toBe(filtrosExtrasDoFinanceiro);
     // não importa a porta (o Vitest roda o módulo; o deno check confere no index.ts que o ContextoPessoa encaixa)
     expect(modulo).not.toMatch(/from "[^"]*porta-pessoa/);
+    expect(motor).not.toMatch(/from "[^"]*porta-pessoa/);
   });
 });

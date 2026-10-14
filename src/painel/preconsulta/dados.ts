@@ -93,8 +93,6 @@ export async function excluirFormulario(id: string): Promise<void> {
 export const duplicarFormulario = (f: FormularioPreconsulta, uid: string, contaId: string): Promise<FormularioPreconsulta> =>
   criarFormulario(uid, contaId, copiaDeFormulario(f));
 
-export { carregarFormularioPublico, responderFormularioPublico, type FormularioPublico, type RespostaEnviada } from "./publico";
-
 // ───────────────────────── respostas ─────────────────────────
 /**
  * hml-14b (B21): UMA página (20) das respostas vivas do recorte da conta, com os filtros (formulário, busca, novas, aluno), a contagem

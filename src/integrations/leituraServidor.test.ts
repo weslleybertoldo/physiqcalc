@@ -7,17 +7,27 @@
 // erro e lançando; e os casos de borda (o laço no teto e no prazo, a página além do fim, o { ok: false } das RPCs da conta, os lotes).
 // Depois, o motor com um 3º catálogo (de teste): a ordem, o erro por item, o dedupe, o laço de 1000 com teto, e o erro do banco que nunca
 // vaza a mensagem. A nutricao e a financeiro publicadas seguem com os módulos de hoje (migram na hml-21c): este teste é a garantia dela.
+// hml-21c (H-112): a nutricao e a financeiro MIGRARAM — os 2 functions/{nutricao,financeiro}/leituras.ts passaram a ser o motor + o catálogo
+// EXPORTADO (CATALOGO_NUTRICAO/CATALOGO_FINANCEIRO). Para o oráculo não virar tautologia, o "módulo de hoje" é a CÓPIA CONGELADA do c6e795b
+// (src/test/oraculoH112/: o módulo E o catálogo de antes, gerados por git show, nunca editados): cada uma das 64 + 12 consultas de ANTES roda
+// no congelado × no motor com o catálogo exportado de AGORA (que ganhou os ★ por acréscimo — as de antes não podem ter mudado) × no módulo
+// publicado (o que vai ao ar) — os 3 iguais.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  LOTE_MAX, ehRpc, type CatalogoLeitura, type ConsultaLeitura, type FonteRpc, type FonteTabela, type ParamLeitura, type ParamSimples,
+  LOTE_MAX, ehRpc, type ConsultaLeitura, type FonteRpc, type FonteTabela, type ParamLeitura, type ParamSimples,
 } from "../../supabase-principal/functions/_shared/leitura-lote";
 import { atenderLeitura as motor, bucketPadrao, type CatalogoDoServidor } from "../../supabase-principal/functions/_shared/leitura-servidor";
-import { CONSULTAS_NUTRICAO, bucketDaLeitura } from "../../supabase-principal/functions/_shared/nutricao-leituras";
-import { CONSULTAS_FINANCEIRO, filtroEmAbertoOuNoPeriodo, type ConsultaFinanceiro } from "../../supabase-principal/functions/_shared/financeiro-leituras";
-import { atenderLeitura as moduloNutricao } from "../../supabase-principal/functions/nutricao/leituras";
-import { atenderLeitura as moduloFinanceiro } from "../../supabase-principal/functions/financeiro/leituras";
+import { CATALOGO_NUTRICAO, CONSULTAS_NUTRICAO, bucketDaLeitura } from "../../supabase-principal/functions/_shared/nutricao-leituras";
+import { CATALOGO_FINANCEIRO, CONSULTAS_FINANCEIRO, filtrosExtrasDoFinanceiro } from "../../supabase-principal/functions/_shared/financeiro-leituras";
+import { atenderLeitura as publicadoNutricao } from "../../supabase-principal/functions/nutricao/leituras";
+import { atenderLeitura as publicadoFinanceiro } from "../../supabase-principal/functions/financeiro/leituras";
+// hml-21c (H-112): o oráculo FIXO — o módulo e o catálogo do c6e795b, congelados (src/test/oraculoH112/)
+import { CONSULTAS_NUTRICAO as NUTRICAO_C6E795B } from "../test/oraculoH112/nutricaoCatalogo.c6e795b";
+import { CONSULTAS_FINANCEIRO as FINANCEIRO_C6E795B } from "../test/oraculoH112/financeiroCatalogo.c6e795b";
+import { atenderLeitura as moduloNutricao } from "../test/oraculoH112/nutricaoLeituras.c6e795b";
+import { atenderLeitura as moduloFinanceiro } from "../test/oraculoH112/financeiroLeituras.c6e795b";
 
 const RAIZ = resolve(__dirname, "../..");
 const EU = "33333333-3333-4333-8333-333333333333";
@@ -25,17 +35,13 @@ const OUTRO = "99999999-9999-4999-8999-999999999999";
 const CONTA = "66666666-6666-4666-8666-666666666666";
 const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
-/** Os 2 catálogos de hoje no formato do motor comum (o que cada módulo faz de diferente vira opção — a hml-21c leva para as funções). */
-const NUTRICAO: CatalogoDoServidor = { consultas: CONSULTAS_NUTRICAO as unknown as CatalogoLeitura, bucketDaLeitura };
-const FINANCEIRO: CatalogoDoServidor = {
-  consultas: CONSULTAS_FINANCEIRO as unknown as CatalogoLeitura,
-  erroNoValorDaRpc: true,
-  filtrosExtras: (consulta, params) => {
-    const o = (consulta as ConsultaFinanceiro).emAbertoOuNoPeriodo;
-    const ou = o ? filtroEmAbertoOuNoPeriodo(o, params) : null;
-    return ou === null ? [] : [{ op: "ou", filtro: ou }];
-  },
-};
+/**
+ * Os 2 catálogos de hoje no formato do motor comum (o que cada módulo faz de diferente vira opção). hml-21c (H-112): são os EXPORTADOS pelos
+ * catálogos (_shared/{nutricao,financeiro}-leituras.ts: CATALOGO_NUTRICAO e CATALOGO_FINANCEIRO) — os MESMOS objetos que esta diferencial
+ * montava à mão na 21a (as consultas; o bucket do ambiente; o erroNoValorDaRpc e o "em aberto OU no período").
+ */
+const NUTRICAO: CatalogoDoServidor = CATALOGO_NUTRICAO;
+const FINANCEIRO: CatalogoDoServidor = CATALOGO_FINANCEIRO;
 
 // ───────────────────────── o banco falso (grava cada pedido; responde pelo "comportamento" do cenário) ─────────────────────────
 type Resposta = { data: unknown; error: unknown; count?: number | null };
@@ -129,6 +135,9 @@ async function comparar(
   const hoje = await lado(modulo, corpo, b, schema, prazo);
   const comum = await lado(((c: never) => motor(c, catalogo)) as Rodar, corpo, b, schema, prazo);
   expect(comum).toEqual(hoje);
+  // hml-21c (H-112): e o módulo PUBLICADO (o functions/<funcao>/leituras.ts que vai ao ar = o motor com o catálogo exportado) também
+  const publicado = PUBLICADO.get(modulo);
+  if (publicado) expect(await lado(publicado, corpo, b, schema, prazo)).toEqual(hoje);
   return hoje;
 }
 
@@ -207,15 +216,35 @@ const bancoComErro = (codigo: string, mensagem: string): Comportamento => ({
   assinarUm: () => ({ data: null, error: { statusCode: "503" } }),
 });
 
+// hml-21c (H-112): as consultas de cada lado são as do catálogo CONGELADO (as 64 + 12 de antes); o motor roda com o catálogo EXPORTADO de agora
 const CATALOGOS: Array<[string, Rodar, CatalogoDoServidor, Record<string, ConsultaLeitura>]> = [
-  ["nutricao", moduloNutricao as unknown as Rodar, NUTRICAO, CONSULTAS_NUTRICAO as unknown as Record<string, ConsultaLeitura>],
-  ["financeiro", moduloFinanceiro as unknown as Rodar, FINANCEIRO, CONSULTAS_FINANCEIRO as unknown as Record<string, ConsultaLeitura>],
+  ["nutricao", moduloNutricao as unknown as Rodar, NUTRICAO, NUTRICAO_C6E795B as unknown as Record<string, ConsultaLeitura>],
+  ["financeiro", moduloFinanceiro as unknown as Rodar, FINANCEIRO, FINANCEIRO_C6E795B as unknown as Record<string, ConsultaLeitura>],
 ];
+/** O módulo publicado de cada função (o 3º lado do comparar). */
+const PUBLICADO = new Map<Rodar, Rodar>([
+  [moduloNutricao as unknown as Rodar, publicadoNutricao as unknown as Rodar],
+  [moduloFinanceiro as unknown as Rodar, publicadoFinanceiro as unknown as Rodar],
+]);
 
 describe("hml-21a (H-112) — o motor comum dá o MESMO que os 2 módulos de hoje, consulta por consulta", () => {
   it("os 2 catálogos de hoje: 64 consultas na nutricao e 12 na financeiro (todas passam pelo diferencial abaixo)", () => {
-    expect(Object.keys(CONSULTAS_NUTRICAO)).toHaveLength(64);
-    expect(Object.keys(CONSULTAS_FINANCEIRO)).toHaveLength(12);
+    // hml-21c (H-112): as 64 + 12 de ANTES são as do catálogo congelado do c6e795b; o de agora tem as mesmas + os ★ (por acréscimo, no fim)
+    expect(Object.keys(NUTRICAO_C6E795B)).toHaveLength(64);
+    expect(Object.keys(FINANCEIRO_C6E795B)).toHaveLength(12);
+    expect(Object.keys(CONSULTAS_NUTRICAO).slice(0, 64)).toEqual(Object.keys(NUTRICAO_C6E795B));
+    expect(Object.keys(CONSULTAS_FINANCEIRO).slice(0, 12)).toEqual(Object.keys(FINANCEIRO_C6E795B));
+    // e cada consulta de antes é a MESMA declaração no catálogo de agora (o acréscimo não mexeu em nenhuma)
+    for (const [q, c] of Object.entries(NUTRICAO_C6E795B)) expect((CONSULTAS_NUTRICAO as Record<string, unknown>)[q], q).toEqual(c);
+    for (const [q, c] of Object.entries(FINANCEIRO_C6E795B)) expect((CONSULTAS_FINANCEIRO as Record<string, unknown>)[q], q).toEqual(c);
+  });
+
+  it("hml-21c (H-112): os catálogos EXPORTADOS = os que a 21a montava à mão (as consultas; o bucket; o erroNoValorDaRpc e o filtro a mais)", () => {
+    expect(Object.keys(CATALOGO_NUTRICAO).sort()).toEqual(["bucketDaLeitura", "consultas"]);
+    expect([CATALOGO_NUTRICAO.consultas, CATALOGO_NUTRICAO.bucketDaLeitura]).toEqual([CONSULTAS_NUTRICAO, bucketDaLeitura]);
+    expect(Object.keys(CATALOGO_FINANCEIRO).sort()).toEqual(["consultas", "erroNoValorDaRpc", "filtrosExtras"]);
+    expect([CATALOGO_FINANCEIRO.consultas, CATALOGO_FINANCEIRO.erroNoValorDaRpc, CATALOGO_FINANCEIRO.filtrosExtras])
+      .toEqual([CONSULTAS_FINANCEIRO, true, filtrosExtrasDoFinanceiro]);
   });
 
   for (const [nome, modulo, catalogo, consultas] of CATALOGOS) {
@@ -413,10 +442,15 @@ describe("hml-21a (H-112) — a fonte do motor: como a pessoa, sem chave secreta
     expect(fonte).toMatch(/c\.comoPessoa\.from\(plano\.tabela\)/);
     expect(fonte).not.toMatch(/from "[^"]*porta-pessoa/);
   });
-  it("os 2 módulos de hoje e o motor puro NÃO mudaram nesta W (a nutricao e a financeiro migram na hml-21c)", () => {
-    // o motor comum é um arquivo NOVO; os módulos de hoje seguem sem importá-lo
-    for (const m of ["nutricao/leituras.ts", "financeiro/leituras.ts"]) {
-      expect(readFileSync(resolve(RAIZ, `supabase-principal/functions/${m}`), "utf-8")).not.toContain("leitura-servidor");
+  it("hml-21c (H-112): os 2 módulos MIGRARAM — cada um é o motor comum com o catálogo exportado da função (a duplicação saiu)", () => {
+    // (a 21a registrava esta peça como pendente: "os 2 módulos seguem sem importar o motor" — a regra 11:57 da 21d: o esperado vira o estado
+    // sem a pendência)
+    for (const [m, catalogo] of [["nutricao/leituras.ts", "CATALOGO_NUTRICAO"], ["financeiro/leituras.ts", "CATALOGO_FINANCEIRO"]]) {
+      const f = readFileSync(resolve(RAIZ, `supabase-principal/functions/${m}`), "utf-8");
+      expect(f, m).toMatch(/from "\.\.\/_shared\/leitura-servidor\.ts";/);
+      expect(f, m).toContain(`return atenderNoMotor(c, ${catalogo});`);
+      // nenhuma cópia do motor ficou no módulo: nem o cliente, nem os construtores, nem o falhou
+      expect(f.replace(/^\s*\/\/.*$/gm, ""), m).not.toMatch(/comoPessoa|planoDaTabela|aplicarFiltro|lerEmLaco|function falhou|rodarLote/);
     }
   });
 });

@@ -12,13 +12,20 @@
 // single — o que o falso do teste não tiver, pula, como antes); os ids de mentira também nos params uuid/uuids dos itens do `ler` (as
 // consultas da 21b têm a conta, o aluno, o calendário…) e de volta dentro do .or() (o recorte "meu ou da conta" leva a conta na string) e
 // nos valores gravados (a consulta, o bloqueio…). A validação de verdade é do src/conta/contaServidor21b.test.ts.
+// hml-21c: + o Resumo, as Configurações, a Mensagens e a Lixeira — as gravações em conta/{aluno,configuracoes,mensagens,lixeira}.ts (os ids
+// de mentira também nos campos `ids` — a faixa — e nos uuid de dentro de um objeto fechado não mudam: são texto lá). A validação de verdade é
+// do src/conta/contaServidor21c.test.ts.
 import { CATALOGO_CONTA, consultaDaConta } from "../../supabase-principal/functions/_shared/conta-leituras";
 import { CORPOS_DAS_ACOES, moduloDoPedido, statusDoErroConta } from "../../supabase-principal/functions/_shared/conta-regras";
 import { atenderLeitura } from "../../supabase-principal/functions/_shared/leitura-servidor";
 import { atenderAgenda } from "../../supabase-principal/functions/conta/agenda";
+import { atenderAluno } from "../../supabase-principal/functions/conta/aluno";
 import { atenderAlunos } from "../../supabase-principal/functions/conta/alunos";
 import { atenderApp } from "../../supabase-principal/functions/conta/app";
 import { atenderCasca } from "../../supabase-principal/functions/conta/casca";
+import { atenderConfiguracoes } from "../../supabase-principal/functions/conta/configuracoes";
+import { atenderLixeira } from "../../supabase-principal/functions/conta/lixeira";
+import { atenderMensagens } from "../../supabase-principal/functions/conta/mensagens";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** hml-21b: um uuid de mentira (o que um id do teste vira na ida) dentro de um texto — o .or() do recorte */
@@ -174,7 +181,8 @@ export function invocarContaPeloModulo(banco: unknown, opcoes: { userId?: string
       for (const [nome, p] of Object.entries(CORPOS_DAS_ACOES[pedido.acao] as Record<string, { tipo: string }>)) {
         if (!(nome in novo)) continue;
         if (p.tipo === "uuid") novo[nome] = trocar(novo[nome]);
-        if (p.tipo === "uuids" && Array.isArray(novo[nome])) novo[nome] = (novo[nome] as unknown[]).map(trocar);
+        // hml-21c: + o `ids` (a lista da faixa)
+        if ((p.tipo === "uuids" || p.tipo === "ids") && Array.isArray(novo[nome])) novo[nome] = (novo[nome] as unknown[]).map(trocar);
       }
     }
     const c = {
@@ -191,7 +199,12 @@ export function invocarContaPeloModulo(banco: unknown, opcoes: { userId?: string
     else if (pedido.modulo === "casca") r = await atenderCasca(c as never, pedido.acao);
     else if (pedido.modulo === "app") r = await atenderApp(c as never, pedido.acao);
     else if (pedido.modulo === "agenda") r = await atenderAgenda(c as never, pedido.acao);
-    else r = await atenderAlunos(c as never, pedido.acao);
+    else if (pedido.modulo === "alunos") r = await atenderAlunos(c as never, pedido.acao);
+    // hml-21c
+    else if (pedido.modulo === "aluno") r = await atenderAluno(c as never, pedido.acao);
+    else if (pedido.modulo === "configuracoes") r = await atenderConfiguracoes(c as never, pedido.acao);
+    else if (pedido.modulo === "mensagens") r = await atenderMensagens(c as never, pedido.acao);
+    else r = await atenderLixeira(c as never, pedido.acao);
     const json = JSON.parse(JSON.stringify(r)) as { ok?: unknown; erro?: unknown };
     if (json.ok === true) return { data: json, error: null };
     const resposta = new Response(JSON.stringify(json), { status: statusDoErroConta(json.erro), headers: { "Content-Type": "application/json" } });

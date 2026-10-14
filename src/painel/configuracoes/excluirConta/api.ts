@@ -6,6 +6,7 @@
  * O campo `fluxo: "profissional"` é a trava: sem ele a borda faz o de sempre (o "Excluir" do aluno) — supabase-principal/functions/
  * _shared/exclusao-profissional-regras.ts.
  */
+import { acaoConta, codigoDaGravacao } from "@/conta/gravar";
 import { PRINCIPAL_ANON, PRINCIPAL_SCHEMA, PRINCIPAL_URL, principal } from "@/integrations/principal/client";
 import { ehLoja } from "@/lib/distribuicao";
 import { CONTATO_SUPORTE } from "@/nucleo/suporte";
@@ -128,10 +129,19 @@ export interface ProntuariosParaBaixar {
   }>;
 }
 
+/**
+ * hml-21c (H-43 · jeito 2, etapa 3): 1 lote do ZIP pela função conta (a ação prontuarios_para_baixar — a MESMA RPC, com o p_conta null
+ * explícito dos pacientes sem conta; a RPC só lê). O erro como hoje: sem internet antes; a função/o banco = erro_interno (com o código no
+ * extra — a mensagem do banco não vem mais); o { ok: false, erro } da RPC com o código dela.
+ */
 export async function prontuariosParaBaixar(conta: string | null, pacientes: string[]): Promise<ProntuariosParaBaixar> {
   if (semInternet()) throw new ErroExclusao("sem_internet");
-  const { data, error } = await principal.rpc("w2l_prontuarios_para_baixar" as never, { p_conta: conta, p_pacientes: pacientes } as never);
-  if (error) throw new ErroExclusao("erro_interno", { mensagem: error.message });
+  let data: unknown;
+  try {
+    data = (await acaoConta<{ resultado?: unknown }>("prontuarios_para_baixar", { conta, pacientes })).resultado;
+  } catch (e) {
+    throw new ErroExclusao("erro_interno", { codigo: codigoDaGravacao(e) });
+  }
   const d = (data ?? {}) as Record<string, unknown>;
   if (d.ok !== true) throw new ErroExclusao(String(d.erro ?? "erro_interno"), d);
   return {

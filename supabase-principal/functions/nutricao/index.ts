@@ -23,6 +23,9 @@
 // (as 7 RPCs dieta_*; sem ela só as ações tudo-ou-nada da Dieta falham). A Avaliação (hml-19c) não precisa de migration: as 2 tabelas,
 // as policies, o bucket evolucao e a RPC aluno_avisar_avaliacao de hoje. As leituras (hml-20a) também não: as RPCs de leitura, as policies
 // de leitura (tabelas e buckets) e os grants de hoje — o aluno lê o que já lia, agora pela função.
+// hml-21c (H-112 · H-109, 13/10/2026): o `ler` passa ao motor comum (leituras.ts = _shared/leitura-servidor.ts + CATALOGO_NUTRICAO, com os ★
+// da Ferramentas › Modelos por acréscimo) e o token do `ler` é conferido pelo JWKS do principal na porta (jwtLeitura: "jwks", como a conta),
+// sem a ida ao Auth; as gravações seguem no getUser. Sem migration.
 import { json, servirComoPessoa, type ContextoPessoa } from "../_shared/porta-pessoa.ts";
 import { moduloDoPedido, statusDoErro, type PedidoNutricao } from "../_shared/nutricao-regras.ts";
 import { atenderAluno } from "./aluno.ts";
@@ -50,7 +53,7 @@ function atender(c: ContextoPessoa, pedido: PedidoNutricao) {
   }
 }
 
-servirComoPessoa("nutricao", { freio: 240 }, async (c) => {
+servirComoPessoa("nutricao", { freio: 240, jwtLeitura: "jwks" }, async (c) => {
   const pedido = moduloDoPedido(c.corpo);
   if (!pedido) {
     c.log.aviso({ codigo: "acao_invalida", schema: c.schema });
