@@ -46,7 +46,7 @@ produção não muda (o texto novo nem entra no bundle de produção; a guarda `
    guardados no aparelho".
 5. **(decisão minha — o mesmo assunto, em 2 lugares que o texto já tinha)** Seção 12: o item "os lembretes das suas rotinas, agendados no
    aparelho pelo app Android; saem quando você sai da conta;". Seção 13: "As notificações não mostram nome nem valor." ganha a frase dos
-   lembretes ("Os lembretes das rotinas mostram o nome e a dose; o de remédio mostra só a hora, e o nome aparece ao abrir o app.") — sem ela,
+   lembretes ("Os lembretes das rotinas mostram o nome da rotina e a dose; o de remédio mostra só a hora, e o nome do remédio aparece ao abrir o app.") — sem ela,
    a frase de hoje fica ambígua com o lembrete "Hora da rotina — Creatina · 5 g". Se ele preferir sem os 2, sai 1 commit.
 
 ## Arquivos

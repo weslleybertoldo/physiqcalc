@@ -145,6 +145,7 @@ recusa e o front ainda é o velho.
 | 08/10/2026 | Política em vigor (`Privacidade.tsx`, sem número de versão) | correções de fato: o push, as cópias de segurança, o Telegram, a lixeira, as séries de 12 meses e o país do us-east-1 | não (são fatos; ele confere no pacote) |
 | 08/10/2026 | `2026-10-08` (Política, Termos de Uso e Termos de assinatura) | versão nova, em revisão no staging | pendente |
 | 08/10/2026 | `2026-10-08` | o aceite registrado, os consentimentos e a regra de idade (hml-12): no staging; na produção, só o banco, com a versão nula | pendente |
+| 13/10/2026 | `2026-10-08` (em revisão) | W-A: as rotinas e lembretes e o que o aluno registra com a dieta liberada — os dados, os sensíveis, quem vê, o que sai ao excluir, o aparelho e os lembretes: no staging (a Política em vigor não muda) | pendente |
 
 ## Os processos à mão que os textos prometem
 
