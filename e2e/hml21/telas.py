@@ -1160,6 +1160,11 @@ PRINTS_21C = (*CASO_DA_TELA_21C.values(), "c_modelos_personal", "c_erro")
 BARRA_ANTES_21C = re.compile(r"https://api-principal\.physiqcalc\.com\.br/rest/v1/rpc/lixeira_da_conta(\?|$)")
 ERRO_DA_LIXEIRA = '[data-pagina-lixeira] [data-estado="erro"]'
 OCIOSA_FOLGA_S = 0.3
+# F7 da 21c: as telas PARADAS na entrada não podem acordar as funções na espera da ociosa — os números do menu do painel
+# (src/painel/PainelLayout.tsx monta os contadores: useContadorMensagens → conta/whatsapp_resumo e useContadorPreConsulta →
+# nutricao/preconsulta_novas, refetchInterval 5 min) pediriam às funções a cada 5 min por contexto e a espera de ≥ 10 min nunca fecharia.
+# Na espera, os POST às 3 funções saem barrados NO NAVEGADOR (não chegam à função; a escuta não os conta) e a barra sai antes da medida.
+BARRA_OCIOSA = re.compile(r"https://api-principal\.physiqcalc\.com\.br/functions/v1/(conta|nutricao|financeiro)(\?|$)")
 TELAS_HML20 = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "hml20" / "medicao"
 
 
@@ -1319,10 +1324,17 @@ def ociosa_21c(o, base: str, canal: str | None) -> None:  # noqa: PLR0915
     L = B.Sessoes(f"telas21 ociosa {base}")
     commit = B.commit_medido(base)
     ultimo = {"t": 0.0}
+    barrando = {"v": False, "n": 0}
 
     def ouvir(req) -> None:
         if "/functions/v1/" in req.url and req.method == "POST":
+            if barrando["v"] and BARRA_OCIOSA.match(req.url):
+                return  # o número do menu barrado no navegador na espera: não chega à função
             ultimo["t"] = time.time()
+
+    def barrar(route, _req) -> None:
+        barrando["n"] += 1
+        route.abort()
 
     abertos: list[tuple] = []
     try:
@@ -1341,6 +1353,9 @@ def ociosa_21c(o, base: str, canal: str | None) -> None:  # noqa: PLR0915
                     t.esperar(lambda: t.n("[data-aba-perfil]" if app else "[data-casca]") > 0, 60)
                     B.esperar_pronto(t, pend, max_s=40)
                 todas = tuple(sorted({f for _n, fs, *_r in P21C.TELAS_OCIOSA for f in fs}))
+                for _n, _f, _c, _r, _s, t, _p in abertos:  # a espera: os números do menu barrados no navegador (BARRA_OCIOSA)
+                    t.ctx.route(BARRA_OCIOSA, barrar)
+                barrando["v"] = True
                 inicio = time.time()
                 while True:
                     ociosa, parada, nota = P21C.ociosa_agora(todas, ultimo["t"])
@@ -1351,8 +1366,14 @@ def ociosa_21c(o, base: str, canal: str | None) -> None:  # noqa: PLR0915
                     agora = time.time()
                     contagem = {f: sum(1 for x in P21C.logs_da_funcao(f, agora - P21C.TETO_OCIOSA_S, agora)[0] if "runtime" not in x) for f in todas}
                     o.ok(True, f"ociosa: as funções não ficaram {P21C.OCIOSA_S} s paradas em {P21C.TETO_OCIOSA_S // 60} min ({nota}) — quentes pelo tráfego: "
-                               f"NÃO é falha; os pedidos nos logs de função na janela (UTC até {time.strftime('%H:%M:%S', time.gmtime(agora))}): {contagem}")
+                               f"NÃO é falha; os pedidos nos logs de função na janela (UTC até {time.strftime('%H:%M:%S', time.gmtime(agora))}): {contagem}; "
+                               f"os números do menu barrados no navegador na espera: {barrando['n']}")
                     return
+                for _n, _f, _c, _r, _s, t, _p in abertos:  # sai da entrada AINDA com a barra (nenhum número do menu escapa entre a barra e a medida)
+                    t.pg.goto("about:blank")
+                    t.ctx.unroute(BARRA_OCIOSA, barrar)
+                barrando["v"] = False
+                o.linha(f"   ociosa — os números do menu barrados no navegador na espera (não chegaram às funções): {barrando['n']}")
                 with LockPesado():
                     t0 = time.time()
                     for _n, _f, _c, rota, _s, t, _p in abertos:
@@ -1418,9 +1439,15 @@ def seco_21c(o, area: str) -> None:
     o.ok(P21C.OCIOSA_S == 600 and P21C.TETO_OCIOSA_S == 1800 and criterio_ociosa()
          and [x[0] for x in P21C.TELAS_OCIOSA] == ["lixeira", "modelos", "dieta_app", "financeiro_painel"]
          and [x[1] for x in P21C.TELAS_OCIOSA] == [("conta",), ("nutricao", "financeiro"), ("nutricao",), ("financeiro",)]
-         and "source = 'function_logs'" in fonte_p and "function_edge_logs" not in fonte_p and "t.ir(rota)" in oc and "with LockPesado():" in oc,
+         and "source = 'function_logs'" in fonte_p and "function_edge_logs" not in fonte_p and "t.ir(rota)" in oc and "with LockPesado():" in oc
+         and "t.ctx.route(BARRA_OCIOSA, barrar)" in oc and "t.ctx.unroute(BARRA_OCIOSA, barrar)" in oc
+         and oc.index("t.ctx.unroute(BARRA_OCIOSA, barrar)") < oc.index("with LockPesado():") < oc.index("t.ir(rota)")
+         and all(BARRA_OCIOSA.match(f"{Pu}/functions/v1/{f}") for f in ("conta", "nutricao", "financeiro"))
+         and not any(BARRA_OCIOSA.match(f"{Pu}/functions/v1/{f}") for f in ("whatsapp-conectar", "aluno-dia", "contas", "conta-x"))
+         and not BARRA_OCIOSA.match(f"{Pu}/rest/v1/rpc/conta"),
          "a ociosa (decisão K): ≥ 10 min sem pedido (o critério da medição logs_borda_*), teto de 30 min, as 4 telas críticas (a Lixeira, os Modelos, o Dieta "
-         "do app, o Financeiro), pelos logs de FUNÇÃO (function_logs — nunca a borda), a página RECARREGADA, o pesado.lock só na medida")
+         "do app, o Financeiro), pelos logs de FUNÇÃO (function_logs — nunca a borda), a página RECARREGADA, o pesado.lock só na medida; na espera, os "
+         "números do menu (5 min) barrados no navegador SÓ nas 3 funções — a barra sai antes da medida (o F7)")
     import calendar  # noqa: PLC0415
     o.ok(P21C.instante_utc("2026-10-13T17:24:03") == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0))
          and P21C.instante_utc("2026-10-13 17:24:03.250") == calendar.timegm((2026, 10, 13, 17, 24, 3, 0, 0, 0)) + 0.25
