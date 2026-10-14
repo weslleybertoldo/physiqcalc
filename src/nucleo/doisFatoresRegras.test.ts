@@ -12,6 +12,7 @@ import {
   ligadaDesde,
   limparCodigo,
   pedeCodigo,
+  qrComoImagem,
   TEXTO_ERRO_CODIGO,
 } from "./doisFatoresRegras";
 
@@ -97,6 +98,14 @@ describe("hml-22 — fatores, código e datas", () => {
       muitas: "Muitas tentativas. Espere alguns minutos.",
       falhou: "Não deu para conferir agora. Tente de novo.",
     });
+  });
+  it("o QR do cadastro vai codificado no <img> (o \"#\" de uma cor no SVG não corta a imagem); outro formato passa como veio", () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect fill="#000000" width="10%"/></svg>';
+    const img = qrComoImagem(`data:image/svg+xml;utf-8,${svg}`);
+    expect(img.startsWith("data:image/svg+xml;charset=utf-8,")).toBe(true);
+    expect(img).not.toContain("#");
+    expect(decodeURIComponent(img.slice("data:image/svg+xml;charset=utf-8,".length))).toBe(svg);
+    expect(qrComoImagem("data:image/png;base64,AAAA")).toBe("data:image/png;base64,AAAA");
   });
   it("'Ligada desde': o dia (em São Paulo) da verificação do fator", () => {
     expect(ligadaDesde(verificado)).toBe("14/10/2026");

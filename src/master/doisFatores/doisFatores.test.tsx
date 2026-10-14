@@ -120,7 +120,7 @@ describe("hml-22 — o cartão \"Verificação em 2 etapas\" (Master › Configu
     expect(h.unenroll).toHaveBeenCalledWith({ factorId: "f-velho" });
     expect(h.enroll).toHaveBeenCalledWith({ factorType: "totp", issuer: "Physiq", friendlyName: "Celular" });
     expect(h.unenroll.mock.invocationCallOrder[0]).toBeLessThan(h.enroll.mock.invocationCallOrder[0]);
-    expect(document.querySelector("img[data-2fa-qr]")?.getAttribute("src")).toBe(CADASTRO.data.totp.qr_code);
+    expect(document.querySelector("img[data-2fa-qr]")?.getAttribute("src")).toBe(`data:image/svg+xml;charset=utf-8,${encodeURIComponent("<svg/>")}`);
     expect(document.querySelector("[data-2fa-segredo]")?.textContent).toBe("JBSW Y3DP EHPK 3PXP JBSW Y3DP");
     expect(screen.getByText("Não dá para ler? Digite este código no app:")).toBeInTheDocument();
     expect(screen.getByText("2. Digite os 6 números que aparecem.")).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe("hml-22 — as chamadas (mfa.ts) e a função do master que pede o cód
     const r = await comecarCadastro();
     expect(h.unenroll).toHaveBeenCalledTimes(1);
     expect(h.unenroll).toHaveBeenCalledWith({ factorId: "f-velho" });
-    expect(r).toEqual({ ok: true, valor: { id: "f-novo", qr: CADASTRO.data.totp.qr_code, segredo: CADASTRO.data.totp.secret } });
+    expect(r).toEqual({ ok: true, valor: { id: "f-novo", qr: "data:image/svg+xml;charset=utf-8,%3Csvg%2F%3E", segredo: CADASTRO.data.totp.secret } });
   });
   it("comecarCadastro e confirmar: o erro do Auth vira o erro da tela (e exceção não escapa)", async () => {
     h.enroll.mockResolvedValueOnce(erroAuth(429, "over_request_rate_limit"));

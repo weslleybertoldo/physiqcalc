@@ -6,7 +6,7 @@
  * Nada aqui decide quem é master: quem decide é o servidor (o banco e as funções conferem o fator e o aal do token).
  */
 import { principal } from "@/integrations/principal/client";
-import { erroDoCodigo, fatoresVerificados, type ErroCodigo, type FatorDaSessao } from "@/nucleo/doisFatoresRegras";
+import { erroDoCodigo, fatoresVerificados, qrComoImagem, type ErroCodigo, type FatorDaSessao } from "@/nucleo/doisFatoresRegras";
 
 export type Resultado<T> = { ok: true; valor: T } | { ok: false; erro: ErroCodigo };
 
@@ -53,7 +53,7 @@ export async function comecarCadastro(): Promise<Resultado<Cadastro>> {
     }
     const { data, error } = await principal.auth.mfa.enroll({ factorType: "totp", issuer: "Physiq", friendlyName: "Celular" });
     if (error || !data || data.type !== "totp") return falha(error);
-    return { ok: true, valor: { id: data.id, qr: data.totp.qr_code, segredo: data.totp.secret } };
+    return { ok: true, valor: { id: data.id, qr: qrComoImagem(data.totp.qr_code), segredo: data.totp.secret } };
   } catch (e) {
     return falha(e);
   }

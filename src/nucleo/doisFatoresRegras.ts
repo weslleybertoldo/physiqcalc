@@ -97,6 +97,16 @@ export function erroDoCodigo(erro: unknown): ErroCodigo {
   return "falhou";
 }
 
+/**
+ * O QR do cadastro pronto para o <img>: o supabase-js entrega o SVG do Auth cru atrás de "data:image/svg+xml;utf-8," — um "#" (cor)
+ * ou um "%" dentro do SVG quebraria a imagem (o "#" vira o fim da URL). Aqui o SVG vai codificado; outro formato passa como veio.
+ */
+export function qrComoImagem(qr: string): string {
+  const prefixo = "data:image/svg+xml;utf-8,";
+  if (!qr.startsWith(prefixo)) return qr;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr.slice(prefixo.length))}`;
+}
+
 /** "dd/mm/aaaa" do dia em que o fator foi verificado (o updated_at do fator; sem ele, o created_at) — o "Ligada desde". */
 export function ligadaDesde(fator: Pick<FatorDaSessao, "created_at" | "updated_at"> | null | undefined): string | null {
   const iso = fator?.updated_at || fator?.created_at;
