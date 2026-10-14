@@ -3054,8 +3054,14 @@ def p_mensagens_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # no
         P21C.anotar_devolver(estado, "ajustes", [al["id"], False])
         P21C.anotar_devolver(estado, "aviso_w14", uid)
         st, r, _h, _ms = B.conta(tok, "faixa_ligar_para_todos", {"ids": [al["id"]]})
-        o.ok(st == 200 and P21C.msg_auto(s, al["id"]) is True and P21C.config_do_perfil(s, uid).get("tem_aviso_w14"),
-             f"P faixa_ligar_para_todos (o aluno de teste — {motivo_faixa}) → as mensagens dele ligadas e o aviso da faixa no config (SQL) ({st})")
+        # a mensagens_ligar_para_todos só liga quem TEM destino (o whatsapp_destino do telefone): o aluno de teste sem telefone (o seguro do 🟡4)
+        # fica desligado — ligados 0 — e o aviso da faixa é gravado do mesmo jeito (o caminho inteiro: a ação → a RPC com os ids → o config)
+        res, liga = resultado(r) or {}, P21C.msg_auto(s, al["id"])
+        sem_destino = bool((B.ler_principal(f"select ({s}.whatsapp_destino(telefone) is null) as v from {s}.pacientes where id = {C.txt(al['id'])}") or [{}])[0].get("v"))
+        o.ok(st == 200 and res.get("ok") is True and P21C.config_do_perfil(s, uid).get("tem_aviso_w14")
+             and ((liga is True and res.get("ligados") == 1) or (sem_destino and liga is False and res.get("ligados") == 0)),
+             f"P faixa_ligar_para_todos (o aluno de teste — {motivo_faixa}) → {'as mensagens dele ligadas' if liga else 'ligados 0 (a RPC só liga quem tem destino)'}"
+             f" e o aviso da faixa no config (SQL) ({st})")
         P21C.devolver_pelas_acoes(o, estado, s, L)
         P21C.devolver_por_sql(o, estado, s)
         P21C.anotar_devolver(estado, "aviso_w14", uid)
@@ -3072,7 +3078,7 @@ def p_mensagens_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # no
             o.ok(erro_de(st, r) == "nao_encontrada", f"N1 OUTRA conta reenvia a mensagem da nutri → nao_encontrada ({st})")
         st, r, _h, _ms = B.ler(tok_o, [B.item("whatsapp_resumo", conta=conta), B.item("whatsapp_fila", conta=conta, escopo="conta", filtro="todas", limite=30)])
         texto = json.dumps(r)
-        o.ok(st == 200 and uid not in texto and (msg or "-") not in texto, f"N1 OUTRA conta lê o resumo e a fila da conta da nutri → nada da nutri ({st})")
+        o.ok(st == 200 and uid not in texto and (msg is None or msg not in texto), f"N1 OUTRA conta lê o resumo e a fila da conta da nutri → nada da nutri ({st})")
 
 
 def p_lixeira_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:

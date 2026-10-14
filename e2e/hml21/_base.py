@@ -438,7 +438,9 @@ CONSULTAS_FAVORITOS_21C = (*[q for q in FAVORITOS_DA_21C if q.startswith("modelo
 LISTAS_DA_LIB = LISTAS_DA_LIB + ("perfil_profissional", "perfil_mensagens", *FAVORITOS_DA_21C, "modelos_favoritos_receita")
 SEM_ORDEM_TOTAL = SEM_ORDEM_TOTAL | set(FAVORITOS_DA_21C) | {"modelos_favoritos_receita"}
 # as chaves que a RPC devolve com o relógio do banco (comparar fora delas: o 20b PADRÃO do 'agora'; a minha_situacao devolve o gerado_em)
-CHAVES_DO_RELOGIO = {"agora", "agora_em", "servidor_agora", "hoje", "gerado_em"}
+# hml-21c (F5): + o falhas_desde da whatsapp_resumo (o greatest(now() − 7 dias, a marca) — sem a marca, anda com o relógio) e o agente_ping
+# (o max(ultimo_ping) das instâncias: o agente do celular bate a cada ~1 min) — só a whatsapp_resumo tem as 2
+CHAVES_DO_RELOGIO = {"agora", "agora_em", "servidor_agora", "hoje", "gerado_em", "falhas_desde", "agente_ping"}
 # os valores que o SQL da lib aceita (cada um conferido: nada do corpo de ninguém entra no SQL sem passar por aqui)
 _V_UUID = frozenset({"uid", "conta", "id", "profissional", "aluno", "calendario", "agendamento", "ignorar", "paciente", "antes_id"})  # 21c: + 2
 _V_INSTANTE = frozenset({"desde", "de", "ate", "agora"})
