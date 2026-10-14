@@ -26,6 +26,8 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
    `--base local|staging|prod` (prod SÓ LEITURA), `--loja`, `--seco` e `--limpar` (a massa leva a marca "WA E2E"; as sobras têm de dar 0;
    `python3 e2e/wa/_base.py --limpar` desfaz a Massa compartilhada). O `wa/sql_wa.py` (o banco) e o `wa/apk_rotinas.py` (o aparelho) só
    quando a parte mexe neles.
+   Mexeu na Política em revisão (`src/publico/legal/politica.ts`): `telas_politica.py` (a /privacidade: as linhas da W-A no staging, nenhuma
+   na produção; sem login e sem massa — só `--base` e `--seco`) e o `hml11/telas.py --modo staging --casos S3,S4,S5`.
 3. **Fora da rotina** (só com a massa do dono da worktree, e sabendo o que fazem): os que criam massa e NÃO limpam — `h4`, `w06`,
    `w07b`, `w13`, `w27`, `w28` (os 3 do Mercado Pago usam o sandbox).
 4. **Nunca na rotina** (escrevem em produção): `--schema public` do `w08b`, `w20c` e `w14`; `*/prova_real.py`; `w07b/smoke_prod.py`;
@@ -35,6 +37,13 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 13/10 21:40 | W-A P7 | `9944cb15` | `e2e/hml11/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging-wa-p7 --modo staging --casos S3,S4,S5 --canal msedge` | staging | 69/69 | regressão das 3 páginas do texto em revisão (hml-11) com a Política nova da P7: a versão 2026-10-08, a faixa "em revisão", os links, nenhum marcador de rascunho |
+| 13/10 21:40 | W-A P7 | `9944cb15` | `e2e/wa/telas_politica.py --base staging --canal msedge` | staging | 21/21 | a /privacidade em revisão no staging (Vercel): as 12 frases novas da W-A (rotinas e dieta liberada) a 1280 e a 390 px, a página cabe em 390 px, 6 prints |
+| 13/10 21:38 | W-A P7 | `9944cb15` | `e2e/wa/telas_politica.py --base local --canal msedge` | local | 21/21 | a /privacidade do build de staging (5173): as frases novas com a faixa "em revisão" (o build de PRODUÇÃO passa na guarda `sem-texto-legal-novo.sh`: o texto novo fica fora) |
+| 13/10 21:09 | W-A P6 | `f46d3304` | `e2e/wa/api.py --so-leitura --desde 2026-10-13T23:55:29Z` | produção | 23/23 | produção depois do merge da P6 (só leitura): 0 5xx das 3 funções |
+| 13/10 21:08 | W-A P6 | `f46d3304` | `e2e/w07/smoke_prod.py telas --versao 3.119 --canal msedge` | produção | 13/13 | produção depois do merge da P6 (só leitura) |
+| 13/10 21:08 | W-A P6 | `f46d3304` | `e2e/wa/telas_acessos.py --base prod --canal msedge` | produção | 6/6 | produção depois do merge da P6 (só leitura) |
+| 13/10 21:07 | W-A P6 | `f46d3304` | `e2e/wa/telas_painel.py --base prod --canal msedge` | produção | 4/4 | produção depois do merge da P6 (só leitura): o Resumo com o card Rotinas, só `ler` na aluno-dia, 0 gravação |
 | 13/10 20:43 | W-A P6 | `5391138c` | `e2e/wa/telas_acessos.py --base staging --canal msedge` | staging | 36/36 | regressão da aba Acessos (P4): a dica das rotinas aponta para o card Rotinas do Resumo (a P6 o criou) |
 | 13/10 20:39 | W-A P6 | `5391138c` | `e2e/w16/telas.py --base https://physiqcalc-staging.vercel.app --prefixo staging --casos secoes` | staging | 17/18 | regressão da família w16: "[secoes] as 8 seções (Plano, Dia a dia, …)" ✅; o ❌ é VELHO e fora da P6 — "[atalhos] … Registrar consulta segue no site antigo": o atalho foi para o Prontuário novo na W28 (#115); passado à homologação |
 | 13/10 20:33 | W-A P6 | `5391138c` | `e2e/wa/telas_painel.py --base staging --canal msedge` | staging | 40/40 | telas no staging (Vercel): o mesmo roteiro do local; sobras 0 |
