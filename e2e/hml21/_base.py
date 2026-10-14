@@ -81,6 +81,9 @@ CHAVE_21D = "hml21d"  # a chave da massa da 21d no Estado (como a da 21b: o abri
 # e a rodada na área "hml21c" (o --limpar desta W só desfaz a rodada dela)
 AREAS_DA_21C = ("aluno", "configuracoes", "mensagens", "lixeira", "modelos")
 CHAVE_21C = "hml21c"
+# hml-21e (decisão C do contrato da 21e): o D3 do PowerSync (e2e/hml21/d3_powersync.py) guarda a massa das 14 tabelas da fila na chave
+# "hml21e" do Estado — nenhuma rodada da 21a–21d abre por cima dela (o abrir_rodada daqui confere), nem ela por cima de outra
+CHAVE_21E = "hml21e"
 
 
 def usar_area(area: str) -> None:
@@ -878,11 +881,18 @@ def tem_massa_21c(estado) -> bool:
     return isinstance(m, dict) and any(bool(m.get(k)) for k in ("linhas", "avisos", "devolver"))
 
 
+def tem_massa_21e(estado) -> bool:
+    """hml-21e: o Estado ainda tem a massa do D3 do PowerSync (a chave "hml21e": os 2 donos e as linhas que a fila criou — o
+    --limpar do d3_powersync.py desfaz)."""
+    m = estado.d.get(CHAVE_21E)
+    return isinstance(m, dict) and any(bool(m.get(k)) for k in ("linhas", "donos"))
+
+
 def abrir_rodada(o, s: str):
     """A rodada nova: recusa se há outra pendente (de qualquer W: o vazio() da hml-19 + a foto desta) e grava o Estado com a área desta W."""
     pendente = Estado.ler()
     if not pendente.vazio() or pendente.d.get("hml21_foto") or pendente.d.get("hml21_destino") or tem_massa_21b(pendente) or tem_massa_21d(pendente) \
-            or tem_massa_21c(pendente):  # hml-21c
+            or tem_massa_21c(pendente) or tem_massa_21e(pendente):  # hml-21c · hml-21e
         o.ok(False, f"há uma rodada que caiu no meio (área {pendente.d.get('area') or '?'}): rode o --limpar dela antes", parar=True)
     estado = Estado({"rodada": nova_rodada(), "schema": s, "area": AREA_ESTADO, "linhas": [], "storage": [], "n8": None})
     estado.salvar()
@@ -901,7 +911,7 @@ def fechar_rodada(o, estado, s: str, L) -> None:
         finally:
             limpar_foto(o, estado, s, L)
     if estado.vazio() and not estado.d.get("hml21_foto") and not estado.d.get("hml21_push") and not tem_massa_21b(estado) and not tem_massa_21d(estado) \
-            and not tem_massa_21c(estado):  # hml-21c
+            and not tem_massa_21c(estado) and not tem_massa_21e(estado):  # hml-21c · hml-21e
         estado.apagar()
     else:
         o.ok(False, "o Estado ficou com pendência (a massa, o push ou a foto): rode o api.py --limpar", parar=False)

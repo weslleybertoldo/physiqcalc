@@ -142,8 +142,9 @@ ARQ_SESSOES = SCRATCH / "tmp" / "hml19_sessoes.json"
 # (hml21/agente/logins_etapa2_21a.txt — o da 20d fica). hml-21b (contrato da 21b): o registro passa a ser o da hml-21b
 # (hml21/agente/logins_etapa2_21b.txt — o da 21a fica). hml-21d (contrato da 21d): o registro passa a ser o da hml-21d
 # (hml21/agente/logins_etapa2_21d.txt — o da 21b fica). hml-21c (contrato da 21c): o registro passa a ser o da hml-21c
-# (hml21/agente/logins_etapa2_21c.txt — o da 21d fica)
-REG_LOGINS = SCRATCH.parent / "hml21" / "agente" / "logins_etapa2_21c.txt"
+# (hml21/agente/logins_etapa2_21c.txt — o da 21d fica). hml-21e (contrato da 21e): o registro passa a ser o da hml-21e
+# (hml21/agente/logins_etapa2_21e.txt — o da 21c fica)
+REG_LOGINS = SCRATCH.parent / "hml21" / "agente" / "logins_etapa2_21e.txt"
 # hml-20a F7 (sessão principal, 12/10/2026): +4 logins para o F7 no staging — o teto da W inteira passa a 10 (os 6 da etapa 2 já usados).
 # hml-20b (revisão, 🟡2): o registro novo (logins_etapa2_20b.txt) começa com o teto de 6 — os da etapa 2 desta W; a sessão principal sobe
 # para 10 no F6 (o staging), como fez na 20a
@@ -167,7 +168,9 @@ REG_LOGINS = SCRATCH.parent / "hml21" / "agente" / "logins_etapa2_21c.txt"
 # e a etapa 2 já usou 8; o resto é do E2E de staging, da regressão que faltou e do gate
 # hml-21c (contrato da 21c): o registro novo (logins_etapa2_21c.txt) começa com o teto de 6 — os da etapa 2 desta W (o teto da W no
 # staging é 10: a sessão principal guarda 4 para o smoke e o F7 e sobe no F7, como nas 20a–21d)
-MAX_LOGINS = 10
+# hml-21e (contrato da 21e): o registro novo (logins_etapa2_21e.txt) começa com o teto de 6 — os da etapa 2 desta W (o D3 do
+# PowerSync: 2 contas do Treino × 2 = o login + a troca de token; o teto da W no staging é 10, a sessão principal guarda 4 para o F7)
+MAX_LOGINS = 6
 FOLGA_S = 20 * 60  # o access token reaproveitado vale ainda 20 min: o app não renova no meio de um teste
 
 

@@ -9,8 +9,9 @@
 //   · channel  `.channel(` (Realtime — hoje, nenhum);
 //   · auth     `.auth.<método>(` FORA dos arquivos do login (o login é a exceção do jeito 2: LOGIN abaixo) e do getSession que só lê a sessão
 //              guardada antes de chamar uma função (SESSAO_ANTES_DA_FUNCAO).
-// Duas listas: FICA (permanente, com o motivo — a fila do PowerSync, o desvio 23 e os 2 links públicos) e BASE (arquivo → os achados de
-// hoje que ainda não saíram: SÓ DIMINUI — cada sub-worktree da hml-21 tira os da área dela; a 21e termina com BASE = {}). A regra:
+// Duas listas: FICA (com o motivo — a fila do PowerSync, o desvio 23, os 2 links públicos e, desde a hml-21e, as 6 leituras do Treino do
+// desvio 24) e BASE (arquivo → os achados de hoje que ainda não saíram: SÓ DIMINUI — cada sub-worktree da hml-21 tirou os da área dela; a
+// 21e terminou com BASE = {}: a guarda é a lista do que fica — a etapa 4 revoga o resto, spec §2.11 item 7). A regra:
 // achados ⊆ BASE ∪ FICA, contados por (arquivo, forma, alvo) — nada novo em lugar nenhum; um arquivo novo com qualquer achado falha. Quando
 // um achado da BASE some (alguém tirou a chamada), o teste AVISA no log (sem falhar): quem tirou tira a linha (na sub-W da área).
 // Com a W-A da LINUX 3: os arquivos novos dela não podem ter achado (a guarda dela, src/aluno-dia/semBancoDireto.test.ts, pede o mesmo) e
@@ -162,8 +163,15 @@ export function excessos(arquivo: string, agora: Record<string, number>, permiti
     .map(([k, n]) => `${arquivo} › ${k} (${n} × ${permitido[k] ?? 0})`);
 }
 
+/** O porquê do desvio 24 (docs/desvios.md): as leituras do Treino que o gate da 21d deixou no navegador (decisão 17 da spec). */
+const GATE_21D =
+  "o gate da 21d reprovou a leitura pela função treinos (Meus treinos p50 2,65 s pela treinos × 2,04 s direto; a função ociosa 4,6–12,6 s) — " +
+  "sai quando o banco do Treino sair da máquina pequena (H-80) ou na etapa 4";
+
 /**
- * FICA (permanente — spec §2.9; a 21e termina só com estes): o arquivo, o motivo e o que ele faz hoje (contado: nada novo nem nele).
+ * FICA (spec §2.9 — o que fica no navegador no fim da etapa 3; a etapa 4 revoga o que não está aqui, §2.11 itens 2 e 7): o arquivo, o
+ * motivo e o que ele faz hoje (contado: nada novo nem nele). Os 4 da spec (a fila do PowerSync, o desvio 23 e os 2 links públicos) + os 6
+ * das leituras do Treino que o gate da 21d deixou no navegador (hml-21e, desvio 24 — a contagem de 14/10/2026, a mesma da BASE da 21c).
  */
 export const FICA: Readonly<Record<string, { motivo: string; achados: Readonly<Record<string, number>> }>> = {
   "src/lib/powersync/connector.ts": {
@@ -182,7 +190,37 @@ export const FICA: Readonly<Record<string, { motivo: string; achados: Readonly<R
     motivo: "desvio 21: o link público /f/:slug (sem login, como anônimo; o limite por IP mora no SQL) — sai na etapa 4",
     achados: { "rpc:preconsulta_formulario": 1, "rpc:preconsulta_responder": 2 },
   },
+  // hml-21e (decisão B do contrato 21e): as 6 leituras do Treino saem da BASE para cá — desvio 24
+  "src/app-aluno/sozinho/api.ts": {
+    motivo: `desvio 24: os Treinos prontos do aluno sem profissional leem o Treino direto (physiq_treinos_prontos) — ${GATE_21D}`,
+    achados: { "tabela:physiq_treinos_prontos.select": 1 },
+  },
+  "src/master/app/treinosProntos.ts": {
+    motivo: `desvio 24: os Treinos prontos do Master leem o Treino direto (physiq_treinos_prontos com os grupos e os exercícios embutidos; tb_exercicios, os globais) — ${GATE_21D}`,
+    achados: { "tabela:physiq_treinos_prontos.select": 1, "tabela:tb_exercicios.select": 1 },
+  },
+  "src/pages/master/BibliotecaPage.tsx": {
+    motivo: `desvio 24: a Biblioteca global do Master lê o Treino direto (a RPC exercicios_da_lista, grupos_musculares, tb_exercicios — a contagem por grupo — e o invólucro tabela()) — ${GATE_21D}`,
+    achados: { "rpc:exercicios_da_lista": 1, "tabela:?": 1, "tabela:grupos_musculares.select": 1, "tabela:tb_exercicios.select": 1 },
+  },
+  "src/painel/busca/Treinos.tsx": {
+    motivo: `desvio 24: a Busca (Ctrl K) lê os treinos direto do Treino (tb_grupos_treino) — ${GATE_21D}`,
+    achados: { "tabela:tb_grupos_treino.select": 1 },
+  },
+  "src/painel/treinos/api.ts": {
+    motivo: `desvio 24: o Painel › Treinos (Meus treinos, Detalhe, Biblioteca, Folha) e a aba Treinos dos Modelos leem o Treino direto (a RPC modelos_da_lista, tb_grupos_exercicios, tb_pastas_treino_grupos ×2, tb_pastas_treino, grupos_musculares, tb_grupos_treino ×2, tb_exercicios ×2 e o invólucro tabela()) — ${GATE_21D}`,
+    achados: { "rpc:modelos_da_lista": 1, "tabela:?": 1, "tabela:grupos_musculares.select": 1, "tabela:tb_exercicios.select": 2, "tabela:tb_grupos_exercicios.select": 1, "tabela:tb_grupos_treino.select": 2, "tabela:tb_pastas_treino.select": 1, "tabela:tb_pastas_treino_grupos.select": 2 },
+  },
+  "src/treino/editor/api.ts": {
+    motivo: `desvio 24: o editor do treino (Aluno › Treino) lê direto a RPC aluno_treino do PRINCIPAL e a exercicios_da_lista do Treino — ${GATE_21D}`,
+    achados: { "rpc:aluno_treino": 1, "rpc:exercicios_da_lista": 1 },
+  },
 };
+/** As 6 leituras do Treino do desvio 24 (estavam na BASE até a 21c; no FICA desde a 21e). */
+const DESVIO_24 = [
+  "src/app-aluno/sozinho/api.ts", "src/master/app/treinosProntos.ts", "src/pages/master/BibliotecaPage.tsx", "src/painel/busca/Treinos.tsx",
+  "src/painel/treinos/api.ts", "src/treino/editor/api.ts",
+] as const;
 
 /**
  * BASE (hml-21a): os achados de hoje que ainda não saíram — DEPOIS da 21a (a casca e o app do aluno já fora). SÓ DIMINUI: cada sub-W
@@ -195,15 +233,11 @@ export const FICA: Readonly<Record<string, { motivo: string; achados: Readonly<R
  * faixa do aluno, a pré-checagem do e-mail/CPF, o responsável, a reserva do envio, o Perfil e a Conta das Configurações, a Equipe, o ZIP, a
  * Mensagens, a Lixeira e os ★ dos Modelos — 70 achados) → 6 arquivos, 21 achados: SÓ as leituras do Treino que o gate da 21d deixou no
  * navegador (o desvio novo — a 21e decide).
+ * hml-21e (14/10/2026, decisão 15 da spec — GERAR_BASE=1 imprime "BASE GERADA {}"): a BASE terminou VAZIA. A história: 21a 22 arquivos/136
+ * achados → 21b 18/91 → 21d 18/60 (as gravações do Treino; as leituras voltaram com o gate) → 21c 6/21 → 21e 0 (os 6 das leituras do Treino
+ * no FICA, desvio 24, com a mesma contagem). Daqui em diante, um achado fora do FICA é novo — falha.
  */
-export const BASE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  "src/app-aluno/sozinho/api.ts": { "tabela:physiq_treinos_prontos.select": 1 },
-  "src/master/app/treinosProntos.ts": { "tabela:physiq_treinos_prontos.select": 1, "tabela:tb_exercicios.select": 1 },
-  "src/pages/master/BibliotecaPage.tsx": { "rpc:exercicios_da_lista": 1, "tabela:?": 1, "tabela:grupos_musculares.select": 1, "tabela:tb_exercicios.select": 1 },
-  "src/painel/busca/Treinos.tsx": { "tabela:tb_grupos_treino.select": 1 },
-  "src/painel/treinos/api.ts": { "rpc:modelos_da_lista": 1, "tabela:?": 1, "tabela:grupos_musculares.select": 1, "tabela:tb_exercicios.select": 2, "tabela:tb_grupos_exercicios.select": 1, "tabela:tb_grupos_treino.select": 2, "tabela:tb_pastas_treino.select": 1, "tabela:tb_pastas_treino_grupos.select": 2 },
-  "src/treino/editor/api.ts": { "rpc:aluno_treino": 1, "rpc:exercicios_da_lista": 1 },
-};
+export const BASE: Readonly<Record<string, Readonly<Record<string, number>>>> = {};
 
 function fontesDoSrc(): string[] {
   const saida: string[] = [];
@@ -317,19 +351,26 @@ describe("hml-21a — o src/ inteiro ⊆ BASE ∪ FICA (nada novo em lugar nenhu
     expect(excessos(arquivo, menos, permitido)).toEqual([]);
   });
 
-  it("a BASE só diminui: hoje 18 arquivos e 60 achados (a próxima sub-W tira os dela; nunca sobe)", () => {
+  it("a BASE terminou VAZIA (hml-21e, decisão 15 da spec): nada fica no navegador fora do FICA", () => {
     // hml-21a: 22 arquivos e 136 achados; hml-21b: −4 arquivos e −45 achados (a Agenda, a Agenda do aluno, os Alunos e a leitura da Equipe);
-    // hml-21d (F3a, as gravações do Treino): −31 achados (o Painel › Treinos, os treinos prontos e a Biblioteca do master, o espelho do Perfil)
-    expect(Object.keys(BASE).length).toBeLessThanOrEqual(18);
-    expect(Object.values(BASE).reduce((n, c) => n + Object.values(c).reduce((m, x) => m + x, 0), 0)).toBeLessThanOrEqual(60);
+    // hml-21d (F3a, as gravações do Treino): −31 achados (o Painel › Treinos, os treinos prontos e a Biblioteca do master, o espelho do Perfil);
+    // hml-21c: −12 arquivos e −39 achados (o Resumo, as Configurações, a Mensagens, a Lixeira e os ★ dos Modelos) → 6 arquivos e 21 achados;
+    // hml-21e: −6 arquivos e −21 achados (as leituras do Treino que o gate da 21d deixou no navegador passaram para o FICA — desvio 24) → 0
+    expect(Object.keys(BASE)).toEqual([]);
   });
 
-  it("o FICA são só os 4 arquivos (a fila do PowerSync, o desvio 23 e os 2 links públicos), cada um com o motivo; nenhum deles na BASE", () => {
-    expect(Object.keys(FICA).sort()).toEqual(["src/evolucao/fontes.ts", "src/lib/powersync/connector.ts", "src/painel/dietas/publico.ts", "src/painel/preconsulta/publico.ts"]);
+  it("o FICA são EXATAMENTE os 10 (os 4 da spec + as 6 leituras do Treino do desvio 24), cada um com o motivo; nenhum deles na BASE", () => {
+    expect(Object.keys(FICA).sort()).toEqual([
+      "src/app-aluno/sozinho/api.ts", "src/evolucao/fontes.ts", "src/lib/powersync/connector.ts", "src/master/app/treinosProntos.ts",
+      "src/pages/master/BibliotecaPage.tsx", "src/painel/busca/Treinos.tsx", "src/painel/dietas/publico.ts", "src/painel/preconsulta/publico.ts",
+      "src/painel/treinos/api.ts", "src/treino/editor/api.ts",
+    ]);
     for (const [arquivo, f] of Object.entries(FICA)) {
       expect(f.motivo.length, arquivo).toBeGreaterThan(20);
       expect(BASE[arquivo], arquivo).toBeUndefined();
     }
+    // os 6 da hml-21e — e só eles — com o motivo do desvio 24
+    expect(Object.keys(FICA).filter((arquivo) => FICA[arquivo].motivo.startsWith("desvio 24: ")).sort()).toEqual([...DESVIO_24]);
   });
 
   it("a casca e o app do aluno (a 21a) não estão na BASE: 0 acesso direto nas 13 libs que a 21a levou para a função conta", () => {
@@ -342,7 +383,7 @@ describe("hml-21a — o src/ inteiro ⊆ BASE ∪ FICA (nada novo em lugar nenhu
       expect(BASE[arquivo], arquivo).toBeUndefined();
       expect(agora.get(arquivo), arquivo).toEqual({});
     }
-    // o app do aluno sem profissional: só os treinos prontos do Treino (a 21d) seguem direto
+    // o app do aluno sem profissional: só os treinos prontos do Treino seguem direto (desvio 24 — o gate da 21d; no FICA desde a 21e)
     expect(agora.get("src/app-aluno/sozinho/api.ts")).toEqual({ "tabela:physiq_treinos_prontos.select": 1 });
   });
 
@@ -369,11 +410,10 @@ describe("hml-21a — o src/ inteiro ⊆ BASE ∪ FICA (nada novo em lugar nenhu
       expect(BASE[arquivo], arquivo).toBeUndefined();
       expect(agora.get(arquivo), arquivo).toEqual({});
     }
-    // o que sobra na BASE: SÓ as 6 leituras do Treino que o gate da 21d deixou no navegador (a 21e decide)
-    expect(Object.keys(BASE).sort()).toEqual([
-      "src/app-aluno/sozinho/api.ts", "src/master/app/treinosProntos.ts", "src/pages/master/BibliotecaPage.tsx", "src/painel/busca/Treinos.tsx",
-      "src/painel/treinos/api.ts", "src/treino/editor/api.ts",
-    ]);
+    // hml-21e (a regra 11:57 da 21d — o que registrava a peça desta W como pendente vira o estado sem ela): a BASE vazia; as 6 leituras do
+    // Treino que o gate da 21d deixou no navegador moram no FICA (desvio 24)
+    expect(Object.keys(BASE)).toEqual([]);
+    expect(DESVIO_24.filter((arquivo) => FICA[arquivo] !== undefined)).toEqual([...DESVIO_24]);
   });
 
   it("o aviso (sem falhar): o achado da BASE que sumiu — quem tirou a chamada tira a linha da BASE", () => {
