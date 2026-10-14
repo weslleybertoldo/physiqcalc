@@ -2771,8 +2771,7 @@ def p_aluno_21c(o, L, s: str, estado, rodada: str, ctx: dict) -> None:  # noqa: 
     o.ok(st == 200 and erro_de(st, r) in RECUSAS_DO_REGISTRAR, f"P aluno_responsavel_registrar (confirmo false) → a recusa da RPC {erro_de(st, r)} ({st})")
     # o retirar SÓ sem registro vigente: o "atual" da aluno_responsavel nulo E a responsavel_vigente() do banco false (SQL só leitura) — com um
     # registro vigente, o retirar REVOGARIA o consentimento (um registro legal): nunca
-    responsavel_vigente = (isinstance(r0, dict) and r0.get("atual") is not None) or bool(
-        (B.ler_principal(f"select {s}.responsavel_vigente({C.txt(tela)}::uuid) as v") or [{}])[0].get("v"))
+    responsavel_vigente = (isinstance(r0, dict) and r0.get("atual") is not None) or P21C.responsavel_vigente(s, tela)  # a tabela: o F5 (42501 na função)
     if not responsavel_vigente:
         st, r, _h, _ms = B.conta(tok, "aluno_responsavel_registrar", {"aluno": tela, "dados": corpo_responsavel("retirar")})
         o.ok(st == 200 and erro_de(st, r) == "sem_registro_vigente", f"P aluno_responsavel_registrar (retirar, sem registro vigente) → sem_registro_vigente ({st})")

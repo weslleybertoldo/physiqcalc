@@ -145,6 +145,15 @@ def dados_do_aluno(s: str, aluno: str) -> dict:
     return (B.ler_principal(f"select nome, apelido, link_codigo from {s}.pacientes where id = {C.txt(C.uuid_ok(aluno))}") or [{}])[0]
 
 
+def responsavel_vigente(s: str, aluno: str) -> bool:
+    """O registro de responsável VIGENTE do aluno = o corpo da {s}.responsavel_vigente(uuid) (20261008200000_hml12_aceite_e_consentimento.sql:115:
+    o último aceite do documento 'responsavel' é 'aceitou') lido na TABELA — a função é definer sem EXECUTE para o papel só leitura (o F5:
+    42501). SQL só leitura; só o booleano."""
+    r = B.ler_principal(f"select coalesce((select a.evento = 'aceitou' from {s}.aceites a where a.paciente_id = {C.txt(C.uuid_ok(aluno))}::uuid "
+                        f"and a.documento = 'responsavel' order by a.em desc, a.id desc limit 1), false) as v")
+    return bool((r or [{}])[0].get("v"))
+
+
 def msg_auto(s: str, aluno: str) -> bool:
     """O ajuste "Mensagens automáticas" do aluno (o w14_ajuste: sem a chave = false) — SQL só leitura."""
     r = B.ler_principal(f"select coalesce((config->>'mensagens_automaticas')::boolean, false) as v from {s}.pacientes where id = {C.txt(C.uuid_ok(aluno))}")
