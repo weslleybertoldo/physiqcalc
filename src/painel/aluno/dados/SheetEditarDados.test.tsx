@@ -212,4 +212,16 @@ describe("Editar dados › o dado que chega com a folha aberta (hml-25, H-137)",
     // o resto do fluxo não muda (o mesmo da falha do salvarNoTreino)
     expect(h.sucesso).toHaveBeenCalledWith("Dados salvos.");
   });
+
+  it("(i) abrir a folha zera os tocados: o nome mexido antes de fechar recebe o cadastro novo que chega com ela aberta de novo", () => {
+    h.estado = "desnecessario";
+    const r = montar(folha({ perfil: perfil(), treino: null }));
+    digitar("nome", "Rafael Moura Silva");
+    r.rerender(folha({ perfil: perfil(), treino: null, aberto: false }));
+    r.rerender(folha({ perfil: perfil(), treino: null, aberto: true }));
+    expect(campo("nome")).toHaveValue("Rafael Moura");
+    // o nome gravado em outro lugar chega com a folha aberta de novo
+    r.rerender(folha({ perfil: perfil({ nome: "Rafael Souza", agora: "2026-09-30T19:47:00Z" }), treino: null }));
+    expect(campo("nome")).toHaveValue("Rafael Souza");
+  });
 });
