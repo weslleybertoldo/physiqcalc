@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { CardPayment } from "@mercadopago/sdk-react";
 import { CreditCard, Repeat } from "lucide-react";
 import { MP_PUBLIC_KEY, ensureMpInit } from "@/components/pagamentos/mpInit";
+import { pagadorDoBrick, type PagadorDoCartao } from "@/components/pagamentos/mpDevice";
 import { reais } from "@/nucleo/cobranca/regras";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 
@@ -10,6 +11,8 @@ export interface DadosCartao {
   payment_method_id?: string;
   issuer_id?: string | number;
   installments?: number;
+  /** mp-cartao: o titular e o documento do formulário do cartão (só quando vieram — pagadorDoBrick); o plano do painel ignora */
+  pagador?: PagadorDoCartao;
 }
 
 /**
@@ -19,6 +22,8 @@ export interface DadosCartao {
  * W2: com `chavePublica` (o Mercado Pago do personal), o Brick nasce com a chave DO VENDEDOR — o token do cartão vale na conta que
  * recebe; sem ela, a do Physiq (o plano do personal e o modo de hoje). Quem paga o personal sem a chave dele não abre este cartão
  * (decisão 14). O `data-brick-chave` diz QUAL chave ("conta" | "physiq") para o E2E, nunca o valor.
+ * mp-cartao: o envio leva também o titular e o documento que a pessoa digitou no Brick (`pagador`, para a aprovação no MP) — quem
+ * usa decide se manda (a folha do aluno manda; o plano do painel não).
  */
 export function CartaoPagamento({
   aberto,
@@ -63,7 +68,12 @@ export function CartaoPagamento({
   useEffect(() => {
     enviar.current = aoEnviar;
   }, [aoEnviar]);
-  const aoSubmeter = useCallback((form: unknown) => enviar.current(form as DadosCartao), []);
+  // mp-cartao: o 2º parâmetro do Brick (additionalData) traz o nome do titular; o documento vem no formData.payer — o envio de sempre +
+  // o `pagador` quando há o que mandar (sem nada, o objeto do Brick como antes)
+  const aoSubmeter = useCallback((form: unknown, extra?: unknown) => {
+    const pagador = pagadorDoBrick(form, extra);
+    return enviar.current(pagador ? { ...(form as DadosCartao), pagador } : (form as DadosCartao));
+  }, []);
   const aoErro = useCallback((e: unknown) => console.error("[Brick] erro", e), []);
   return (
     <PainelDeslizante

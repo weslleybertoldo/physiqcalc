@@ -530,6 +530,16 @@ export function mensagemErroFinanceiro(codigo: string | null | undefined, padrao
   return (codigo && MENSAGEM_ERRO_FINANCEIRO[codigo]) || padrao;
 }
 
+/** mp-cartao (§7.7, decisão 7): o texto da recusa do antifraude do Mercado Pago — o "recusado pelo cartão" de antes fazia a pessoa pensar no
+ *  banco (14/10). */
+export const TEXTO_RECUSA_SEGURANCA = "O Mercado Pago recusou este pagamento por segurança. Tente o Pix ou outro cartão.";
+
+/** mp-cartao: o texto da recusa do cartão pelo motivo do MP (o status_detail do pagamento ou o código que a função tirou da recusa): só o
+ *  cc_rejected_high_risk tem o texto próprio; o resto, o de sempre ("Pagamento recusado pelo cartão."). */
+export function mensagemDaRecusa(statusDetail: unknown): string {
+  return statusDetail === "cc_rejected_high_risk" ? TEXTO_RECUSA_SEGURANCA : MENSAGEM_ERRO_FINANCEIRO.cartao_recusado;
+}
+
 /** W2 — o PROFISSIONAL no painel (as ações do financeiro do aluno: cancelar a cobrança, estornar, registrar, a cobrança automática): os
  *  códigos cuja frase global fala com o ALUNO. O 409 mp_conta_indisponivel da Task 9 (a conexão do MP dele caída) chega aos dois. */
 const FRASE_DO_PROFISSIONAL: Record<string, string> = {

@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Copy, CreditCard, FlaskConical, Loader2, QrCode, RefreshCw, Repeat, TimerOff } from "lucide-react";
 import { toast } from "sonner";
 import { acaoFinanceiro, ErroFinanceiro, invalidarResumo } from "@/financeiro/api";
-import { dataHoraBR, mensagemErroFinanceiro, reais, tituloDoPagar } from "@/financeiro/regras";
+import { dataHoraBR, mensagemDaRecusa, mensagemErroFinanceiro, reais, tituloDoPagar } from "@/financeiro/regras";
 import type { CobrancaVista, MatriculaPagamentos } from "@/financeiro/tipos";
 import { CartaoPagamento, type DadosCartao } from "@/painel/configuracoes/plano/CartaoPagamento";
+import { carregarSegurancaMp, deviceIdMp } from "@/components/pagamentos/mpDevice";
 import { useSessao } from "@/nucleo/sessao";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
@@ -23,6 +24,10 @@ const INTERVALO_MS = 5000;
  * vista e a automática — com a chave pública DELE (o token do cartão nasce na conta que recebe; o aluno_status só a manda com a conexão
  * ativa). A conexão caída (mp.disponivel false) → só o aviso; sem a chave → só o Pix (decisão 14: nunca o Brick com a chave do Physiq
  * para pagar o personal).
+ * mp-cartao (contrato §2.1): aberta com cartão, a folha põe o script de segurança do MP na página (o id do aparelho — decisão 2: só aqui);
+ * o cartão (à vista ou parcelado) manda o titular e o documento do Brick (`pagador`) e o id do aparelho (`device_id`, esperado até 2 s);
+ * a automática, só o `device_id` (o /preapproval leva só o cabeçalho — decisão 6). Sem eles, o corpo de antes. A recusa do antifraude do MP
+ * (cc_rejected_high_risk) tem o texto próprio (§7.7); o resto, o de sempre.
  */
 export function PagarMercadoPago({
   matricula,
@@ -61,6 +66,11 @@ export function PagarMercadoPago({
       avisou.current = false;
     }
   }, [alvo]);
+
+  // mp-cartao: o id do aparelho fica pronto enquanto a pessoa digita o cartão (o security.js leva ~3 s); 1× por página
+  useEffect(() => {
+    if (alvo && comCartao) carregarSegurancaMp();
+  }, [alvo, comCartao]);
 
   const pago = (msg = "Pagamento confirmado!") => {
     if (avisou.current) return;
@@ -119,9 +129,11 @@ export function PagarMercadoPago({
 
   const pagarCartao = async (d: DadosCartao) => {
     try {
+      const device = await deviceIdMp();
+      const comDevice = device ? { device_id: device } : {};
       if (cartao === "assinar") {
         const r = await acaoFinanceiro<{ primeira_cobranca: string | null; sandbox: boolean; init_point: string | null }>("aluno_mp_assinar", {
-          paciente_id: matricula.paciente_id, card_token: d.token,
+          paciente_id: matricula.paciente_id, card_token: d.token, ...comDevice,
         });
         setCartao(null);
         invalidarResumo();
@@ -130,19 +142,20 @@ export function PagarMercadoPago({
         aoPago();
         return;
       }
-      const r = await acaoFinanceiro<{ status: string }>("aluno_mp_cartao", {
+      const r = await acaoFinanceiro<{ status: string; status_detail?: string | null }>("aluno_mp_cartao", {
         ...corpoAlvo, card_token: d.token, payment_method_id: d.payment_method_id, issuer_id: d.issuer_id,
-        installments: Number(d.installments) || 1,
+        installments: Number(d.installments) || 1, ...(d.pagador ? { pagador: d.pagador } : {}), ...comDevice,
       });
       setCartao(null);
       if (r.status === "paga") pago("Pagamento aprovado!");
-      else if (r.status === "cancelada" || r.status === "aberta") toast.error("Pagamento recusado pelo cartão.");
+      else if (r.status === "cancelada" || r.status === "aberta") toast.error(mensagemDaRecusa(r.status_detail));
       else {
         toast.info("Pagamento em processamento — a situação atualiza em instantes.");
         aoPago();
       }
     } catch (e) {
-      toast.error(mensagemErroFinanceiro(e instanceof ErroFinanceiro ? e.codigo : null, "Erro no pagamento. Confira os dados do cartão."));
+      toast.error(e instanceof ErroFinanceiro && e.codigo === "cartao_recusado" ? mensagemDaRecusa(e.extra.status_detail)
+        : mensagemErroFinanceiro(e instanceof ErroFinanceiro ? e.codigo : null, "Erro no pagamento. Confira os dados do cartão."));
       throw e;
     }
   };

@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 type PropsDoBrick = {
   initialization: unknown;
   customization: { paymentMethods: { maxInstallments: number } };
-  onSubmit: (form: unknown) => Promise<void>;
+  onSubmit: (form: unknown, extra?: unknown) => Promise<void>;
   onError: (e: unknown) => void;
 };
 const h = vi.hoisted(() => ({ props: [] as PropsDoBrick[], ensure: vi.fn(), chavePhysiq: "TEST-chave" as string | undefined }));
@@ -126,5 +126,30 @@ describe("CartaoPagamento — a chave do vendedor (W2: o Mercado Pago do persona
     render(<CartaoPagamento {...base} modo="avista" chavePublica={VENDEDOR} />);
     expect(document.querySelector('[data-brick-mp][data-brick-chave="conta"]')).not.toBeNull();
     expect(h.ensure).toHaveBeenLastCalledWith(VENDEDOR);
+  });
+});
+
+describe("CartaoPagamento — o titular e o documento do Brick (mp-cartao: o 2º parâmetro do onSubmit)", () => {
+  const form = { token: "tok", payment_method_id: "master", issuer_id: "24", installments: 1, transaction_amount: 1000,
+    payer: { email: "a@teste.com", identification: { type: "CPF", number: "123.456.789-09" } } };
+  beforeEach(() => {
+    h.props.length = 0;
+    h.chavePhysiq = "TEST-chave";
+  });
+
+  it("onSubmit(form, extra) → o envio de sempre + pagador (o nome do additionalData e o documento do payer, só os dígitos)", async () => {
+    h.props.length = 0;
+    const aoEnviar = vi.fn(async () => {});
+    render(<CartaoPagamento {...base} modo="avista" aoEnviar={aoEnviar} />);
+    await h.props.at(-1)!.onSubmit(form, { bin: "503143", lastFourDigits: "6351", cardholderName: "Maria  da Silva" });
+    expect(aoEnviar).toHaveBeenCalledWith({ ...form, pagador: { nome: "Maria da Silva", documento: { tipo: "CPF", numero: "12345678909" } } });
+  });
+
+  it("sem o titular e sem o documento → o objeto do Brick como antes (sem a chave pagador)", async () => {
+    h.props.length = 0;
+    const aoEnviar = vi.fn(async (_d: unknown) => {});
+    render(<CartaoPagamento {...base} modo="assinar" aoEnviar={aoEnviar} />);
+    await h.props.at(-1)!.onSubmit({ token: "tok", installments: 1 }, { bin: "503143", lastFourDigits: "6351" });
+    expect(aoEnviar.mock.calls[0][0]).toStrictEqual({ token: "tok", installments: 1 });
   });
 });
