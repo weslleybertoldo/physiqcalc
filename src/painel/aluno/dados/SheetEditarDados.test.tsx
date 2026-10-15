@@ -192,6 +192,8 @@ describe("Editar dados › o dado que chega com a folha aberta (hml-25, H-137)",
     expect(h.dados).toHaveBeenCalledTimes(1);
     expect(h.dados).toHaveBeenCalledWith("p1", { nome: "Rafael Moura Silva" });
     expect(h.noTreino).not.toHaveBeenCalled();
+    // sem Treino e sem altura/peso mudados: nenhum aviso de que a altura e o peso não chegaram (sem aviso à toa)
+    expect(h.erro).not.toHaveBeenCalled();
   });
 
   it("(h) o Salvar no vão da troca do Treino (a altura mudada e a sessão de lá saiu de pronto): avisa que a altura e o peso não chegaram", async () => {
@@ -272,5 +274,15 @@ describe("Editar dados › o dado que chega com a folha aberta (hml-25, H-137)",
     await waitFor(() => expect(aoFechar).toHaveBeenCalledTimes(1));
     expect(h.dados).toHaveBeenCalledTimes(1);
     expect(h.dados).toHaveBeenCalledWith("p1", { nome: "Rafael Moura Silva" });
+  });
+
+  it("(l) a comparação do tocado é exata: o espaço no fim do nome, no meio da digitação, sobrevive à rebusca", () => {
+    h.estado = "desnecessario";
+    const r = montar(folha({ perfil: perfil(), treino: null }));
+    digitar("nome", "Rafael Moura ");
+    // a rebusca chega no meio da digitação (o mesmo nome; o apelido novo mostra que a mescla rodou)
+    r.rerender(folha({ perfil: perfil({ apelido: "Rafinha", agora: "2026-09-30T19:47:00Z" }), treino: null }));
+    expect(campo("apelido")).toHaveValue("Rafinha");
+    expect(campo("nome")).toHaveValue("Rafael Moura ");
   });
 });
