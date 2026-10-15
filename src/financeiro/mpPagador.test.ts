@@ -124,8 +124,7 @@ describe("mp-cartao — o motivo da recusa (codigosDoMp, a resposta de erro)", (
     expect(recusaNoTexto({ message: "Invalid card_token_id" })).toBeNull();
     expect(recusaNoTexto(null)).toBeNull();
     expect(codigosDoMp({ message: "cc_rejected_high_risk", status: 400 })).toEqual({ mp_status_detail: "cc_rejected_high_risk" });
-    // sem NENHUM código, o slug seguro da mensagem (o achado da F5 — o describe do fim)
-    expect(codigosDoMp({ message: "Card token service not found", status: 404 })).toEqual({ mp_status_detail: "msg_card_token_service_not_found" });
+    expect(codigosDoMp({ message: "Card token service not found", status: 404 })).toEqual({});
   });
   it("o status_detail da resposta vale antes do texto; o error e as causas seguem como antes", () => {
     expect(codigosDoMp({ status_detail: "cc_rejected_other_reason", message: "cc_rejected_high_risk" }))
@@ -151,32 +150,46 @@ describe("mp-cartao — o motivo da recusa (codigosDoMp, a resposta de erro)", (
     expect(codigoDaRecusa({ status: "rejected", status_detail: "cc_rejected_high_risk" })).toBe("cc_rejected_high_risk");
     expect(codigoDaRecusa({ message: "CC_VAL_433 Credit card validation has failed" })).toBe("cc_val_433");
     expect(codigoDaRecusa({ status_detail: "Texto Livre com espaço" })).toBeNull();
-    expect(codigoDaRecusa({ message: "nada" })).toBe("msg_nada");                      // o slug seguro (o achado da F5)
-    expect(codigoDaRecusa({ message: "Payer pagador@exemplo.com 12345678909" })).toBeNull();   // a mensagem com dado: descartada inteira
+    expect(codigoDaRecusa({ message: "nada" })).toBeNull();
   });
 });
 
-describe("mp-cartao — o motivo quando o MP só manda TEXTO (o achado da F5: a automática recusada no sandbox com externo {})", () => {
-  it("o slug seguro da mensagem: msg_<slug> minúsculo, sem acento, os _ colapsados e aparados", () => {
-    expect(codigosDoMp({ message: "Invalid users involved", status: 400 })).toEqual({ mp_status_detail: "msg_invalid_users_involved" });
+describe("mp-cartao — o texto do MP SÓ no log da automática (o achado da F5 + a conferência do aa0599b0, 05:02)", () => {
+  // os casos da conferência: nome sem e com acento, CPF com pontos, e-mail com " at " e com %40, telefone, CEP e data curta
+  const NOMES = ["Invalid card holder name MARIA DA SILVA", "titular João Conceição inválido"];
+  const COM_DADO = [
+    "Invalid identification 123.456.789-09", "Invalid payer maria.silva at gmail.com", "Invalid payer MARIA.SILVA AT GMAIL.COM",
+    "Invalid payer maria.silva%40gmail.com", "Invalid phone (82) 99999-9999", "Invalid phone 82 999 99", "Invalid zip 57.000-000",
+    "Invalid birth date 01/02/90", "Invalid payer pagador@exemplo.com", "Invalid user identification number 12345678909", "Payment 1234 failed",
+    "linha 1\nlinha 2", "tab\tno meio", "x".repeat(161),
+  ];
+
+  it("o codigosDoMp (o log geral, o aviso do Telegram e, pelo codigoDaRecusa, a resposta) é o do 3ee5afb2: mensagem só com texto → nada", () => {
+    for (const message of ["Invalid users involved", ...NOMES, ...COM_DADO]) {
+      expect(codigosDoMp({ message, status: 400 }), message.slice(0, 30)).toEqual({});
+      expect(codigoDaRecusa({ message, status: 400 }), message.slice(0, 30)).toBeNull();
+    }
+  });
+  it("o slug (só no log da automática, sem NENHUM código do MP): msg_<slug> minúsculo, sem acento, os _ colapsados, até 60 depois do msg_", () => {
+    expect(slugDaMensagem({ message: "Invalid users involved" })).toBe("msg_invalid_users_involved");
     expect(slugDaMensagem({ message: "  Cartão   inválido!! (tente de novo) " })).toBe("msg_cartao_invalido_tente_de_novo");
     expect(slugDaMensagem({ message: "--- ___ ---" })).toBeNull();
-  });
-  it("no máximo 60 depois do msg_ (cabe no ^[a-z0-9_]{1,64}$ do log), sem _ no fim", () => {
     const s = slugDaMensagem({ message: "palavra ".repeat(19) })!;
-    expect(s.length).toBeLessThanOrEqual(64);
     expect(s).toMatch(/^msg_[a-z0-9_]{1,60}$/);
     expect(s.endsWith("_")).toBe(false);
   });
-  it("a mensagem é descartada INTEIRA com e-mail, 4+ dígitos seguidos (CPF, id), caractere de controle ou mais de 160 caracteres", () => {
-    for (const message of ["Invalid payer pagador@exemplo.com", "Invalid user identification number 12345678909", "Payment 1234 failed",
-      "linha 1\nlinha 2", "tab\tno meio", "x".repeat(161), "", "   ", 42, null]) {
+  it("a mensagem é descartada INTEIRA: número formatado (CPF, telefone, CEP, data), e-mail (@, %40, \" at \"), 4+ dígitos, controle, > 160", () => {
+    for (const message of [...COM_DADO, "", "   ", 42, null]) {
       expect(slugDaMensagem({ message }), String(message).slice(0, 30)).toBeNull();
-      expect(codigosDoMp({ message, status: 400 }), String(message).slice(0, 30)).toEqual({});
     }
-    expect(slugDaMensagem({ message: "Error 433 here" })).toBe("msg_error_433_here");   // 3 dígitos passam
+    expect(slugDaMensagem({ message: "Failed AT the gateway" })).toBeNull();                  // o "at" isolado, sem diferenciar maiúscula
+    expect(slugDaMensagem({ message: "Invalid attribute" })).toBe("msg_invalid_attribute");   // o "at" dentro da palavra passa
+    expect(slugDaMensagem({ message: "Error 433 here" })).toBe("msg_error_433_here");         // até 3 dígitos sem separador passam
   });
-  it("a precedência de hoje não muda: error, cause[].code, status_detail, code no formato, cc_rejected_* e CC_VAL_* vêm antes (sem slug)", () => {
+  it("o nome (sem dígito) ainda viraria slug: por isso o slug não está no codigosDoMp — o pedido do /preapproval não leva nome nem CPF", () => {
+    expect(slugDaMensagem({ message: NOMES[0] })).toBe("msg_invalid_card_holder_name_maria_da_silva");
+  });
+  it("a precedência não muda: error, cause[].code, status_detail, code no formato, cc_rejected_* e CC_VAL_* (a automática usa o slug só sem NENHUM)", () => {
     expect(codigosDoMp({ error: "bad_request", message: "Invalid users involved" })).toEqual({ mp_erro: "bad_request" });
     expect(codigosDoMp({ cause: [{ code: 2034 }], message: "Invalid users involved" })).toEqual({ mp_causas: [2034] });
     expect(codigosDoMp({ status_detail: "cc_rejected_other_reason", message: "Invalid users involved" }))
@@ -184,7 +197,6 @@ describe("mp-cartao — o motivo quando o MP só manda TEXTO (o achado da F5: a 
     expect(codigosDoMp({ code: "not_found", message: "Resource not found" })).toEqual({ mp_erro: "not_found" });
     expect(codigosDoMp({ message: "cc_rejected_high_risk" })).toEqual({ mp_status_detail: "cc_rejected_high_risk" });
     expect(codigosDoMp({ message: "CC_VAL_433 Credit card validation has failed" })).toEqual({ mp_status_detail: "cc_val_433" });
-    // o 2034 do /v1/payments (com a causa) segue só com a causa — o slug é só para quem não manda NENHUM código
     expect(codigosDoMp({ message: "Invalid users involved", error: "bad_request", status: 400, cause: [{ code: 2034, description: "Invalid users involved" }] }))
       .toEqual({ mp_erro: "bad_request", mp_causas: [2034] });
   });

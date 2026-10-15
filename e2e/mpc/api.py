@@ -556,23 +556,28 @@ def local_automatica_recusa() -> None:
     print("\n── automatica_recusa: o POST /preapproval 400 com o código SÓ na mensagem (o retrato de 14/10) → o código no log e na resposta")
     garantir_integracao()
     # revisão mpc 🟡2: a mensagem do cc_rejected_… e a da validação do cartão ("CC_VAL_433 Credit card validation has failed" → cc_val_433)
-    # + o achado da F5 (04:50): o 400 só com texto ("Invalid users involved", sem código nenhum) → o slug seguro msg_invalid_users_involved
-    for mensagem, codigo in (("cc_rejected_high_risk", "cc_rejected_high_risk"), ("CC_VAL_433 Credit card validation has failed", "cc_val_433"),
-                             ("Invalid users involved", "msg_invalid_users_involved")):
+    # + o achado da F5 (04:50) e a conferência do aa0599b0 (05:02): o 400 só com texto ("Invalid users involved", sem código nenhum) → o slug
+    # msg_invalid_users_involved SÓ no log da automática, e a resposta sai com status_detail null; a mensagem com dado (o CPF de TESTE do MP
+    # escrito com pontos) é descartada inteira → o log sai sem o mp_status_detail
+    for mensagem, codigo, na_resposta in (("cc_rejected_high_risk", "cc_rejected_high_risk", "cc_rejected_high_risk"),
+                                          ("CC_VAL_433 Credit card validation has failed", "cc_val_433", "cc_val_433"),
+                                          ("Invalid users involved", "msg_invalid_users_involved", None),
+                                          ("Invalid identification 123.456.789-09", None, None)):
+        rotulo = codigo or "texto_com_dado"
         base_do_caso("mercadopago_conta")
         W2.sim_cenario(preapproval_recusa=mensagem)
         (st, r), pedidos, log = janela(lambda: pedir(ALUNO, "aluno_mp_assinar", {"paciente_id": CTX["pac"], "card_token": "sim-card-APRO",
                                                                                 "device_id": CTX["device"]}))
         post = ultimo_pedido(pedidos, "POST", "/preapproval")
         falhou = [x for x in linhas_do_log(log) if x.get("codigo") == "mp_assinatura_falhou"]
-        p.check(st == 400 and r.get("erro") == "cartao_recusado" and r.get("status_detail") == codigo and "detalhe" not in r
+        p.check(st == 400 and r.get("erro") == "cartao_recusado" and r.get("status_detail") == na_resposta and "detalhe" not in r
                 and bool((post or {}).get("device")) and sem_valores(r),
-                f"[automatica_recusa · {codigo}] 400 cartao_recusado com status_detail {codigo} e SEM o texto do MP (o detalhe saiu); o POST "
+                f"[automatica_recusa · {rotulo}] 400 cartao_recusado com status_detail {na_resposta} e SEM o texto do MP (o detalhe saiu); o POST "
                 f"/preapproval levou o cabeçalho ({st} {r.get('erro')} {r.get('status_detail')})")
         p.check(len(falhou) == 1 and falhou[0].get("status") == 400 and falhou[0].get("resultado") == "com_device"
-                and falhou[0].get("externo") == {"mp_status_detail": codigo},
-                f"[automatica_recusa · {codigo}] o log: mp_assinatura_falhou 400, com_device e o mp_status_detail tirado da mensagem (14/10 "
-                f"ficou {{}}) ({[{k: x.get(k) for k in ('status', 'resultado', 'externo')} for x in falhou]})")
+                and (falhou[0].get("externo") or {}) == ({"mp_status_detail": codigo} if codigo else {}),
+                f"[automatica_recusa · {rotulo}] o log: mp_assinatura_falhou 400, com_device e o mp_status_detail {codigo} tirado da mensagem "
+                f"(14/10 ficou {{}}) ({[{k: x.get(k) for k in ('status', 'resultado', 'externo')} for x in falhou]})")
 
 
 def local_avulsa() -> None:

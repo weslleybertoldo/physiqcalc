@@ -141,7 +141,7 @@ import { criarLog, emSegundoPlano } from "../_shared/log.ts";
 import { claimsDoJwt, emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import { masterComAal } from "../_shared/master-regras.ts";
 import {
-  codigosDoMp, erroDeCartao, hojeSP, modoConfere, preapprovalDoPagamento, recusaDoSandbox, type AssinaturaMp, type PagamentoMp,
+  codigosDoMp, erroDeCartao, hojeSP, modoConfere, preapprovalDoPagamento, recusaDoSandbox, slugDaMensagem, type AssinaturaMp, type PagamentoMp,
 } from "../_shared/cobranca-regras.ts";
 import {
   DESCRITOR_FATURA, cabecalhosDoDevice, codigoDaRecusa, deviceDoPedido, infoAdicionalDoPedido, itemDoPedido, pagadorDoPedido, resultadoDoDevice,
@@ -1537,8 +1537,12 @@ Deno.serve(async (req) => {
         ({ status: st, body: pre } = await pendente());
       }
       if (st >= 300 || !pre?.id) {
-        // mp-cartao: + o resultado com/sem aparelho; o codigosDoMp tira o cc_rejected_… da mensagem (14/10: 400 sem códigos — o log ficou {})
-        log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, resultado: comAparelho, externo: codigosDoMp(pre) });
+        // mp-cartao: + o resultado com/sem aparelho; o codigosDoMp tira o cc_rejected_…/CC_VAL_… da mensagem (14/10: 400 sem códigos — o log ficou
+        // {}); sem NENHUM código, o slug seguro da mensagem SÓ neste log (o achado da F5 + a conferência do aa0599b0: o pedido do /preapproval não
+        // leva nome nem CPF — decisão 6 —, e o slug nunca vai à resposta)
+        const semCodigo = !Object.keys(codigosDoMp(pre)).length;
+        log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, resultado: comAparelho,
+          externo: { ...codigosDoMp(pre), ...(semCodigo ? { mp_status_detail: slugDaMensagem(pre) } : {}) } });
         if (erroDeCartao(st, pre)) {
           falhar("cartao_recusado", 400, { status_detail: codigoDaRecusa(pre) });
         }

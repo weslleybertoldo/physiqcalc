@@ -1067,11 +1067,15 @@ describe("mp-cartao — o pedido de cartão leva o aparelho, o titular, o item e
     const b = bloco("aluno_mp_assinar");
     ordem(b, "const aparelho = deviceDoPedido(body.device_id);", "const comAparelho = resultadoDoDevice(aparelho);",
       ': await mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, card_token_id: cardToken, status: "authorized" }), headers: cabecalhosDoDevice(aparelho) });',
-      'log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, resultado: comAparelho, externo: codigosDoMp(pre) });',
+      "const semCodigo = !Object.keys(codigosDoMp(pre)).length;",
+      'log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, resultado: comAparelho,',
+      "externo: { ...codigosDoMp(pre), ...(semCodigo ? { mp_status_detail: slugDaMensagem(pre) } : {}) } });",
       'falhar("cartao_recusado", 400, { status_detail: codigoDaRecusa(pre) });');
     expect(b).toContain('const pendente = () => mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, status: "pending" }) });');
     expect(b.replace(/^\s*\/\/.*$/gm, "")).not.toMatch(/pagadorDoPedido|body\.pagador|additional_info|statement_descriptor|itemDoPedido/);
     expect(b.match(/cabecalhosDoDevice\(/g)).toHaveLength(1);
+    // a conferência do aa0599b0: o slug da mensagem só neste log da automática (1 vez na função inteira) e nunca na resposta
+    expect(f.replace(/^\s*\/\/.*$/gm, "").match(/slugDaMensagem\(/g)).toHaveLength(1);
   });
 
   it("o titular e o aparelho só vão ao pedido do MP: nenhum log, resposta, gravação no banco ou outro uso", () => {

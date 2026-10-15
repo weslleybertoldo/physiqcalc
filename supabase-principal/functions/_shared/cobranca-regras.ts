@@ -228,15 +228,20 @@ export function recusaNoTexto(corpo: unknown): string | null {
 
 /**
  * mp-cartao (o achado da F5, 15/10 04:50: a automática recusada no sandbox chegou ao log com `externo {}`): o motivo quando a resposta do MP
- * só traz TEXTO — um slug seguro da `message`, `msg_<slug>` (ex.: "Invalid users involved" → `msg_invalid_users_involved`). A mensagem é
- * descartada INTEIRA (null) se tiver `@`, 4 ou mais dígitos seguidos, mais de 160 caracteres ou caractere de controle — o e-mail, o
- * documento e o texto livre longo nunca viram slug. O slug: sem acento, minúsculo, só [a-z0-9_], os `_` colapsados e aparados e no máximo 60
- * depois do `msg_` (cabe no `^[a-z0-9_]{1,64}$` do log).
+ * só traz TEXTO — um slug seguro da `message`, `msg_<slug>` (ex.: "Invalid users involved" → `msg_invalid_users_involved`). SÓ para o log do
+ * mp_assinatura_falhou (e o aviso dessa linha; a automática: o pedido do /preapproval não leva nome nem CPF — decisão 6) e só quando o
+ * codigosDoMp vem vazio — nunca no codigosDoMp compartilhado (os outros logs e avisos) nem na resposta (a conferência do aa0599b0, 05:02).
+ * A mensagem é descartada INTEIRA (null) se tiver `@`, `%40`, a palavra "at" (o e-mail disfarçado), 4 ou mais dígitos seguidos, número
+ * formatado (dígito, separador, dígito: CPF, CNPJ, telefone, CEP e data com ponto, hífen, barra ou espaço), mais de 160 caracteres ou
+ * caractere de controle. O slug: sem acento, minúsculo, só [a-z0-9_], os `_` colapsados e aparados e no máximo 60 depois do `msg_` (cabe no
+ * `^[a-z0-9_]{1,64}$` do log).
  */
 export function slugDaMensagem(corpo: unknown): string | null {
   const msg = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as { message?: unknown }).message : null;
-  // eslint-disable-next-line no-control-regex -- o caractere de controle descarta a mensagem inteira
-  if (typeof msg !== "string" || !msg.trim() || msg.length > 160 || msg.includes("@") || /\d{4,}/.test(msg) || /[\u0000-\u001f\u007f]/.test(msg)) {
+  if (typeof msg !== "string" || !msg.trim() || msg.length > 160 || msg.includes("@") || msg.includes("%40") || /\bat\b/i.test(msg)
+      || /\d{4,}/.test(msg) || /\d[\s.\-/]+\d/.test(msg)
+      // eslint-disable-next-line no-control-regex -- o caractere de controle descarta a mensagem inteira
+      || /[\u0000-\u001f\u007f]/.test(msg)) {
     return null;
   }
   const slug = msg.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
@@ -248,19 +253,17 @@ export function slugDaMensagem(corpo: unknown): string | null {
  * hml-10 (H-24) — o MP recusou: para o log vão SÓ os códigos da resposta (`error`, os `cause[].code` e o `status_detail`),
  * nunca o corpo (a resposta do MP pode trazer e-mail, nome e documento de quem paga). O log confere o formato de cada um.
  * mp-cartao: sem `status_detail`, o código que vier no texto (recusaNoTexto: `cc_rejected_…` ou `cc_val_<n>`) vai como `mp_status_detail`;
- * sem `error`, o `code` da resposta com formato de código (`^[a-z_]{1,40}$`) vai como `mp_erro` (revisão mpc 🟡2). Sem NENHUM desses
- * (nem `cause[].code`), o slug seguro da mensagem (slugDaMensagem: `msg_<slug>`) vai como `mp_status_detail` — o achado da F5.
+ * sem `error`, o `code` da resposta com formato de código (`^[a-z_]{1,40}$`) vai como `mp_erro` (revisão mpc 🟡2). O texto livre nunca:
+ * o slug da mensagem fica só no log da automática (slugDaMensagem — a conferência do aa0599b0).
  */
 export function codigosDoMp(corpo: unknown): CodigosDoMp {
   const c = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as Record<string, unknown>) : {};
   const causas = (Array.isArray(c.cause) ? c.cause : [])
     .map((x) => (x && typeof x === "object" ? (x as { code?: unknown }).code : null))
     .filter((x) => x !== null && x !== undefined);
+  const detalhe = c.status_detail !== undefined && c.status_detail !== null ? c.status_detail : recusaNoTexto(c);
   const erro = c.error !== undefined && c.error !== null ? c.error
     : typeof c.code === "string" && /^[a-z_]{1,40}$/.test(c.code) ? c.code : null;
-  const codigo = c.status_detail !== undefined && c.status_detail !== null ? c.status_detail : recusaNoTexto(c);
-  // só sem NENHUM código (nem error, nem cause, nem status_detail, nem code, nem cc_rejected_/CC_VAL_ no texto): a ordem de antes não muda
-  const detalhe = codigo !== null && codigo !== undefined ? codigo : erro === null && !causas.length ? slugDaMensagem(c) : null;
   return {
     ...(erro !== null ? { mp_erro: erro } : {}),
     ...(causas.length ? { mp_causas: causas } : {}),
