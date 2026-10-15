@@ -5,7 +5,8 @@
 // ida a mais. O caminho de verdade até a "rede": o hook, o usePerfilAluno, as libs (buscarPerfilAluno, carregarPrincipalDoPainel) e o
 // leitor em lote — só o invoke da função e a parte do Treino (a treino-leitura, fora da 20b) são falsos.
 // hml-26 (H-128): a parte que falhou é pedida de novo SOZINHA (o caso do nao_encontrado) e a regra pura da série parcial (serieParcial e
-// juntarParteDeNovo); os números do cabeçalho com a série parcial estão em src/painel/aluno/kpis/KpiPesoGordura.test.tsx.
+// juntarParteDeNovo); os números do cabeçalho com a série parcial estão em src/painel/aluno/kpis/KpiPesoGordura.test.tsx. A revisão (achado
+// 1): o 403 sem_acesso do Treino (o perfil do Treino é de OUTRA conta) é a falha "sem-acesso" — fora do parcial e da nova tentativa.
 import type { ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -45,6 +46,7 @@ vi.mock("./fontes", async (original) => ({
   carregarTreinoDoPainel: (id: string) => h.treino(id),
 }));
 
+import { ErroFonte } from "@/evolucao/fontes";
 import { chavePerfilAluno } from "../dados/usePerfilAluno";
 import { juntarParteDeNovo, serieParcial, useAvaliacaoDoAluno, type DadosAvaliacao, type FalhaParte } from "./useAvaliacaoDoAluno";
 
@@ -168,6 +170,21 @@ describe("hml-20b — a série do painel vai no lote do perfil (1 ida) e só o T
     expect(h.treino).toHaveBeenCalledTimes(1);
   });
 
+  it("hml-26 (a revisão, achado 1): o Treino de OUTRA conta (403 sem_acesso) — a falha dele é 'sem-acesso' (verdadeira: a aba Avaliação avisa como antes), fora do parcial e sem nova tentativa", async () => {
+    h.treino.mockRejectedValue(new ErroFonte("treino", "sem_acesso"));
+    const { result } = montar();
+    await waitFor(() => expect(h.invoke).toHaveBeenCalledTimes(1));
+    soltar.shift()?.();
+    await waitFor(() => expect(result.current.dados).toBeDefined());
+    expect(result.current.dados?.falhas).toEqual({ treino: "sem-acesso", principal: null });
+    expect(result.current.dados?.treino).toBeNull();
+    expect(result.current.parcial).toBe(false); // a série visível por esta conta É a do principal
+    expect(result.current.serie?.avaliacoes.map((a) => a.idOriginal)).toEqual(["an1"]);
+    await new Promise((r) => setTimeout(r, 60)); // a nova tentativa sairia logo: nenhuma (nem o Treino, nem o principal)
+    expect(h.treino).toHaveBeenCalledTimes(1);
+    expect(idas()).toHaveLength(1);
+  });
+
   it("o perfil já em cache (outra aba): a série sai num lote SÓ dela, sem pedir o perfil de novo, e o Treino vai junto (sem esperar a ida)", async () => {
     const qc = new QueryClient();
     qc.setQueryData(chavePerfilAluno(ALUNO), { ...PERFIL, modulos: ["treino", "nutricao"] });
@@ -190,13 +207,17 @@ describe("hml-26 (H-128) — a regra da série parcial (pura): serieParcial e ju
     falhas: { treino, principal },
   });
 
-  it("serieParcial: uma parte com falha (erro ou sem conexão) → incompleta; as 2 ok — vazias ou o aluno só de Nutrição (sem a parte do Treino, sem falha) — não; sem dado, só com o erro da consulta", () => {
+  it("serieParcial: uma parte com falha (erro ou sem conexão) → incompleta; as 2 ok — vazias ou o aluno só de Nutrição (sem a parte do Treino, sem falha) — não; o Treino de outra conta (sem-acesso) não; sem dado, só com o erro da consulta", () => {
     expect(serieParcial(dadosCom(null, null), null)).toBe(false);
     expect(serieParcial({ treino: null, principal: PRINCIPAL_OK, falhas: { treino: null, principal: null } }, null)).toBe(false);
     expect(serieParcial(dadosCom("erro", null), null)).toBe(true);
     expect(serieParcial(dadosCom("sem-conexao", null), null)).toBe(true);
     expect(serieParcial(dadosCom(null, "erro"), null)).toBe(true);
     expect(serieParcial(dadosCom(null, "sem-conexao"), null)).toBe(true);
+    // a revisão (achado 1): o Treino de OUTRA conta (a treino-leitura responde 403 sem_acesso de propósito) não é queda — a série visível
+    // por essa conta É a do principal; com o principal em erro, segue incompleta
+    expect(serieParcial(dadosCom("sem-acesso", null), null)).toBe(false);
+    expect(serieParcial(dadosCom("sem-acesso", "erro"), null)).toBe(true);
     expect(serieParcial(undefined, new Error("erro_interno"))).toBe(true); // as 2 partes em erro: a consulta caiu, sem dado
     expect(serieParcial(undefined, null)).toBe(false); // carregando (ou a consulta parada sem o perfil)
     expect(serieParcial(dadosCom(null, null), new Error("erro_interno"))).toBe(false); // a releitura que caiu: vale o dado inteiro que ficou

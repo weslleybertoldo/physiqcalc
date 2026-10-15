@@ -13,7 +13,13 @@ export const chaveAvaliacao = (alunoId: string) => ["aluno-avaliacao", alunoId] 
 /** hml-26 (H-128): a nova tentativa da parte que falhou, por leitura da série (o dataUpdatedAt dela) — fora do prefixo da chaveAvaliacao. */
 export const chaveParteDeNovo = (alunoId: string, leitura: number) => ["aluno-avaliacao-de-novo", alunoId, leitura] as const;
 
-export type FalhaParte = "sem-conexao" | "erro" | null;
+/**
+ * A falha de uma parte da série: "sem-conexao" (a rede), "erro" (o resto) ou — só a do Treino — "sem-acesso": a treino-leitura responde
+ * 403 sem_acesso de propósito quando o perfil do Treino do aluno é de OUTRA conta (hml-14, H-51 item 4). hml-26 (a revisão, achado 1): o
+ * "sem-acesso" NÃO é queda — para quem vê por essa conta, a série visível É a do principal (fica fora do serieParcial e da nova tentativa);
+ * a aba Avaliação segue lendo a falha como verdadeira (o aviso + Tentar de antes).
+ */
+export type FalhaParte = "sem-conexao" | "erro" | "sem-acesso" | null;
 
 export interface DadosAvaliacao {
   treino: TreinoDoPainel | null;
@@ -27,14 +33,20 @@ export const NOVAS_TENTATIVAS_DA_PARTE = 3;
 /** hml-26 (H-128): as partes que voltaram na nova tentativa — só as que tinham falhado (sem a chave = a parte não foi buscada de novo). */
 export type PartesDeNovo = Partial<Pick<DadosAvaliacao, "treino" | "principal">>;
 
+/** hml-26 (a revisão, achado 1): a parte que FALTA na série — a que falhou, menos o Treino de outra conta (o "sem-acesso": não há o que buscar). */
+function faltaParte(falha: FalhaParte): boolean {
+  return falha !== null && falha !== "sem-acesso";
+}
+
 /**
  * hml-26 (H-128): a série está INCOMPLETA — uma parte (a do Treino ou a do principal) não veio, ou nenhuma (a consulta em erro, sem
  * dado). Pura e AQUI, onde as 2 partes se juntam e a série é montada: só o `carregar` sabe qual parte falhou (o `falhas`); o montarSerie
  * (src/evolucao/serie.ts, o mesmo do app do aluno) recebe `null` tanto para "o aluno não tem a parte" quanto para "a parte falhou". Com a
- * série incompleta, os números do cabeçalho não saem de metade dela.
+ * série incompleta, os números do cabeçalho não saem de metade dela. O Treino de OUTRA conta ("sem-acesso") não conta: a série visível por
+ * essa conta É a do principal (a revisão, achado 1).
  */
 export function serieParcial(dados: DadosAvaliacao | undefined, erro: unknown): boolean {
-  if (dados) return dados.falhas.treino !== null || dados.falhas.principal !== null;
+  if (dados) return faltaParte(dados.falhas.treino) || faltaParte(dados.falhas.principal);
   return erro !== null && erro !== undefined;
 }
 
@@ -71,13 +83,15 @@ async function carregar(alunoId: string, perfil: Promise<Pick<PerfilAluno, "modu
   const querTreino = p.modulos.includes("treino");
   const [t, pr] = await Promise.allSettled([querTreino ? carregarTreinoDoPainel(alunoId) : Promise.resolve(null), principal]);
   const motivo = (e: unknown): FalhaParte => (semRede() || (e instanceof ErroFonte && e.message === "sem_internet") ? "sem-conexao" : "erro");
+  // hml-26 (a revisão, achado 1): o 403 sem_acesso do Treino = o perfil do Treino é de OUTRA conta (a treino-leitura recusa de propósito)
+  const motivoDoTreino = (e: unknown): FalhaParte => (e instanceof ErroFonte && e.message === "sem_acesso" ? "sem-acesso" : motivo(e));
   if (t.status === "rejected") console.warn("[avaliacao] Banco do Treino:", t.reason);
   if (pr.status === "rejected") console.warn("[avaliacao] banco principal:", pr.reason);
   if (t.status === "rejected" && pr.status === "rejected") throw pr.reason instanceof Error ? pr.reason : new Error("erro_interno");
   return {
     treino: t.status === "fulfilled" ? t.value : null,
     principal: pr.status === "fulfilled" ? pr.value : null,
-    falhas: { treino: t.status === "rejected" ? motivo(t.reason) : null, principal: pr.status === "rejected" ? motivo(pr.reason) : null },
+    falhas: { treino: t.status === "rejected" ? motivoDoTreino(t.reason) : null, principal: pr.status === "rejected" ? motivo(pr.reason) : null },
   };
 }
 
@@ -95,14 +109,15 @@ function carregarComOPerfil(qc: QueryClient, alunoId: string): Promise<DadosAval
 
 /**
  * hml-26 (H-128 · decisão 2): busca de novo SÓ a parte que falhou — a do Treino pela treino-leitura, a do principal pela nutricao (num
- * lote só dela); a que veio fica. Falhou de novo → a consulta tenta outra vez (até NOVAS_TENTATIVAS_DA_PARTE).
+ * lote só dela); a que veio fica. Falhou de novo → a consulta tenta outra vez (até NOVAS_TENTATIVAS_DA_PARTE). O Treino de outra conta
+ * (o "sem-acesso") nunca é pedido de novo (a revisão, achado 1).
  */
 async function buscarParteDeNovo(alunoId: string, falhas: DadosAvaliacao["falhas"]): Promise<PartesDeNovo> {
   const [treino, principal] = await Promise.all([
-    falhas.treino !== null ? carregarTreinoDoPainel(alunoId) : undefined,
-    falhas.principal !== null ? carregarPrincipalDoPainel(alunoId) : undefined,
+    faltaParte(falhas.treino) ? carregarTreinoDoPainel(alunoId) : undefined,
+    faltaParte(falhas.principal) ? carregarPrincipalDoPainel(alunoId) : undefined,
   ]);
-  return { ...(falhas.treino !== null ? { treino } : {}), ...(falhas.principal !== null ? { principal } : {}) };
+  return { ...(faltaParte(falhas.treino) ? { treino } : {}), ...(faltaParte(falhas.principal) ? { principal } : {}) };
 }
 
 export interface EstadoAvaliacao {
@@ -113,7 +128,7 @@ export interface EstadoAvaliacao {
   dados: DadosAvaliacao | undefined;
   /** a MESMA série da aba Evolução do aluno (W10): avaliações e fotos dos 2 bancos, em ordem de data e com o autor */
   serie: Serie | null;
-  /** hml-26 (H-128): a série está incompleta (serieParcial) — os números do cabeçalho mostram "—" + "dado parcial" */
+  /** hml-26 (H-128): a série está incompleta (serieParcial; o Treino de outra conta não conta) — os números do cabeçalho mostram "—" + "dado parcial" */
   parcial: boolean;
   recarregar: () => Promise<void>;
 }
@@ -142,11 +157,12 @@ export function useAvaliacaoDoAluno(alunoId: string): EstadoAvaliacao {
   // hml-26 (H-128 · decisão 2): a parte que falhou é buscada de novo sozinha — 1 consulta por leitura da série (a chave leva o dataUpdatedAt:
   // a leitura nova começa do zero), até 3 vezes com 1 s entre elas, sem laço; depois a falha fica até a próxima abertura (a consulta em erro
   // tenta de novo quando alguém a abre — o retryOnMount) ou o foco (em erro, sem dado, ela é sempre "velha"). Voltou → fica (staleTime).
+  // O Treino de outra conta (o "sem-acesso") não a liga: nunca mais um pedido do Treino depois dele, nem no foco (a revisão, achado 1).
   const falhas = q.data?.falhas;
   const deNovo = useQuery({
     queryKey: chaveParteDeNovo(alunoId, q.dataUpdatedAt),
     queryFn: () => buscarParteDeNovo(alunoId, falhas ?? { treino: null, principal: null }),
-    enabled: !!falhas && (falhas.treino !== null || falhas.principal !== null),
+    enabled: !!falhas && (faltaParte(falhas.treino) || faltaParte(falhas.principal)),
     staleTime: Infinity,
     gcTime: 5 * 60_000,
     retry: (n, e) => !semNovaTentativa(e) && n < NOVAS_TENTATIVAS_DA_PARTE - 1,

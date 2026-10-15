@@ -3,6 +3,8 @@
 // da parte que veio, sem aviso (medido na w5p-aluna: 2,2 kg e 2,7 pontos com a série inteira × 0,9 kg e 1,0 ponto só com o principal).
 // Agora: "—" no lugar do valor e "dado parcial" embaixo (nunca a conta com metade da série) e a parte que falhou é buscada de novo sozinha
 // (até 3 vezes, com espera curta; depois o "—" fica até a próxima abertura ou o foco); voltou → o número da série inteira.
+// A revisão (achado 1): o Treino de OUTRA conta (a treino-leitura responde 403 sem_acesso de propósito) NÃO é queda — a série visível por
+// essa conta É a do principal: o número dela, sem "dado parcial" e sem pedir o Treino de novo.
 // O caminho de verdade até a "rede" (os 2 KPIs, o useAvaliacaoDoAluno, o usePerfilAluno, as libs e o leitor em lote, com o cliente do React
 // Query do app): só o invoke da função e a parte do Treino são falsos, como em src/painel/aluno/avaliacao/useAvaliacaoDoAluno.test.tsx.
 import { render, waitFor, within } from "@testing-library/react";
@@ -244,4 +246,23 @@ describe("hml-26 (H-128) — Peso e Gordura do cabeçalho com uma parte da séri
     expect(h.treino).toHaveBeenCalledTimes(5);
     expect(idas()).toHaveLength(1);
   }, 12_000);
+
+  it("o Treino de OUTRA conta (403 sem_acesso, de propósito): não é queda — o número da série do principal, sem 'dado parcial'; 1 pedido do Treino só, nem no foco", async () => {
+    h.treino.mockRejectedValue(new ErroFonte("treino", "sem_acesso"));
+    montar();
+    // a série visível por esta conta É a do principal (82,7 → 81,8 kg; 20,3 → 19,3%): o número de antes da hml-26
+    await waitFor(() => {
+      expect(kpi("Peso")?.textContent).toBe("Peso81,8 kg0,9 kg em 6 meses");
+      expect(kpi("Gordura")?.textContent).toBe("Gordura19,3%1,0 ponto");
+    });
+    expect(parciais()).toEqual([]);
+    expect(document.body.textContent).not.toContain("dado parcial");
+    await new Promise((r) => setTimeout(r, 1200)); // a nova tentativa sairia logo (e a seguinte em 1 s): nenhuma
+    expect(h.treino).toHaveBeenCalledTimes(1);
+    window.dispatchEvent(new Event("visibilitychange")); // o mesmo foco do caso de cima
+    await new Promise((r) => setTimeout(r, 300));
+    expect(h.treino).toHaveBeenCalledTimes(1);
+    expect(idas()).toHaveLength(1);
+    expect(kpi("Peso")?.textContent).toBe("Peso81,8 kg0,9 kg em 6 meses");
+  }, 10_000);
 });

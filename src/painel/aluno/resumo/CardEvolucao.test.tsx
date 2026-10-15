@@ -3,8 +3,9 @@
 // pela treino-leitura, ou a do principal, pela aluno_evolucao_painel), o Peso, o Músculo, o chip da última avaliação e o gráfico do peso
 // saíam da parte que veio, sem aviso. Agora: "—" no Peso e no Músculo, sem o chip e sem o gráfico, e "dado parcial" no lugar dele; a
 // parte que falhou é buscada de novo sozinha (o hook) e, quando volta, os números e o gráfico da série inteira. As 2 partes em erro: o
-// "Não deu para carregar agora." de hoje. O caminho de verdade até a "rede" (o card, o useAvaliacaoDoAluno, o usePerfilAluno, as libs e o
-// leitor em lote, com o cliente do React Query do app): só o invoke da função e a parte do Treino são falsos.
+// "Não deu para carregar agora." de hoje. O Treino de OUTRA conta (403 sem_acesso, de propósito — a revisão, achado 1) não é queda: os
+// números e o gráfico da série do principal. O caminho de verdade até a "rede" (o card, o useAvaliacaoDoAluno, o usePerfilAluno, as libs e
+// o leitor em lote, com o cliente do React Query do app): só o invoke da função e a parte do Treino são falsos.
 import { render, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -183,4 +184,17 @@ describe("hml-26 (H-128) — o card Evolução do Resumo com uma parte da série
     await waitFor(() => expect(texto("[data-card-evolucao]")).toContain("Não deu para carregar agora."), { timeout: 4000 });
     expect(tela()).toEqual({ peso: null, musculo: null, proxima: null, chip: false, grafico: null, parcial: null });
   });
+
+  it("o Treino de OUTRA conta (403 sem_acesso, de propósito): não é queda — os números e o gráfico da série do principal, sem 'dado parcial'; o Treino não é pedido de novo", async () => {
+    h.treino.mockRejectedValue(new ErroFonte("treino", "sem_acesso"));
+    montar();
+    // a série visível por esta conta É a do principal: Peso 81,8 kg · M. magra 64,3 kg · o gráfico com os 2 pesos dela; a Próxima (do perfil
+    // do Treino, que não veio) "—"
+    const DO_PRINCIPAL = { peso: "81,8 kg", musculo: "64,3 kg", proxima: "—", chip: true, grafico: "2", parcial: null };
+    await waitFor(() => expect(tela()).toEqual(DO_PRINCIPAL));
+    expect(document.querySelector("[data-card-evolucao-numeros]")).not.toBeNull();
+    await new Promise((r) => setTimeout(r, 1200)); // a nova tentativa sairia logo (e a seguinte em 1 s): nenhuma
+    expect(h.treino).toHaveBeenCalledTimes(1);
+    expect(tela()).toEqual(DO_PRINCIPAL);
+  }, 10_000);
 });
