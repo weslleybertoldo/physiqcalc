@@ -48,7 +48,8 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
   // marca e desmarca, com a comparação exata (o espaço no fim do nome segue tocado). Devolveu ao valor da base ou ao de onde partiu =
   // não tocado: a mescla traz o novo e o Salvar não mexe no campo
   const tocados = useRef(new Set<keyof FormDadosAluno>());
-  // hml-25: o valor de onde a pessoa partiu em cada campo (o do 1º `muda` dele desde a abertura)
+  // hml-25: o valor de onde a pessoa partiu em cada campo (o do 1º `muda` dele desde a abertura, ou desde que a mescla trocou o valor
+  // dele na tela)
   const origem = useRef<Partial<FormDadosAluno>>({});
   const estavaAberta = useRef(false);
   const [salvando, setSalvando] = useState(false);
@@ -70,7 +71,11 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
       setRepetidos([]);
       return;
     }
-    // aberta: o inicial novo mescla (os avisos de repetido ficam; só o `muda` do campo os tira)
+    // aberta: o inicial novo mescla (os avisos de repetido ficam; só o `muda` do campo os tira). O campo não tocado cujo valor na tela
+    // muda para o da base nova passa a partir dele: a origem desse campo zera
+    for (const k of Object.keys(inicial) as (keyof FormDadosAluno)[]) {
+      if (!tocados.current.has(k) && atual.current[k] !== inicial[k]) delete origem.current[k];
+    }
     setF((x) => {
       const novo = mesclarForm(x, inicial, tocados.current);
       atual.current = novo;
