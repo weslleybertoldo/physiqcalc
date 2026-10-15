@@ -35,18 +35,23 @@ Grupos (--so a,b; padrão: todos menos o offline, que entra com --com-sw):
   master      /master e as 8 páginas (no staging o w27-master vira master SÓ no staging.profiles enquanto o grupo roda e volta
               ao papel de antes no fim, mesmo se falhar)
   aluno       (390 px) /, /treino, /dieta, /evolucao, /perfil, /perfil/pagamentos, /perfil/conta
+  aluno_cartao (390 px, mp-cartao) Perfil › Pagamentos → Pagar (o MP com cartão) → o script de segurança do MP (security.js) 1×, com o
+              nonce, o MP_DEVICE_SESSION_ID em ≤ 10 s (só o tamanho e o formato), o widget dele rodou → "Pagar com cartão" → o Brick e o
+              número de teste digitado, SEM pagar; o script não duplica. Conta: a matrícula do app no MP do Physiq (staging: prof1; produção:
+              w7b-prod). Com --emular-host (local), o host da produção — como o plano
   sondas      numa página logada: data:, blob:, worker blob:, WASM, eval e new Function num worker (P1), script com o nonce
               (permitidos); script inline, onerror= e javascript: (barrados); <embed> de PDF blob: (D4, informativa); fetch de
               host fora da lista dentro de um worker (local: o coletor vê o worker)
   offline     (--com-sw) o SW instala, e a 2ª abertura do / e do /treino é SEM rede
 Contas (TESTE; troca com --contas grupo=chave): local/staging w5-dono (painel, impressos, plano, sondas), a nutri do aluno com o
-anexo em PDF (clinico; o banco diz qual, só leitura), w13-dono (treino), w27-master (master), w13-aluno (aluno); produção
-nutri-legado, master (admin.teste) e aluno-calc.
+anexo em PDF (clinico; o banco diz qual, só leitura), w13-dono (treino), w27-master (master), w13-aluno (aluno), prof1 (aluno_cartao: a
+matrícula do app, sem cobertura, no MP do Physiq); produção nutri-legado, master (admin.teste), aluno-calc e w7b-prod (aluno_cartao).
 
 Uso: python3 e2e/hml15/csp.py --base local --canal msedge --modo relatorio
      python3 e2e/hml15/csp.py --base local --canal msedge --modo valendo --com-tela --so impressos
      python3 e2e/hml15/csp.py --base local --canal msedge --modo valendo --com-sw
      python3 e2e/hml15/csp.py --base local --canal msedge --modo valendo --so plano --emular-host physiqcalc.com.br
+     python3 e2e/hml15/csp.py --base local --canal msedge --modo valendo --so plano,aluno_cartao --emular-host physiqcalc.com.br
      python3 e2e/hml15/csp.py --base staging --canal msedge --modo relatorio
 Saída: ~/projetos/physiqcalc-scratch/hml/hml15/csp_<base>_<modo>[_sw|_tela|_so-…].txt (+ .json com cada violação e as origens
 contatadas por grupo) · prints em ~/projetos/physiqcalc-scratch/prints/hml15/ · a rodada no ~/projetos/physiqcalc-scratch/e2e-rodadas.tsv.
@@ -83,11 +88,14 @@ MP_INIT = REPO / "src" / "components" / "pagamentos" / "mpInit.ts"
 VERCEL = REPO / "vercel.json"
 HOST_STAGING = "physiqcalc-staging.vercel.app"
 CSP_RO, CSP_VALE = "content-security-policy-report-only", "content-security-policy"
-GRUPOS = ("cabecalhos", "publicas", "painel", "impressos", "plano", "clinico", "treino", "master", "aluno", "sondas", "offline")
+GRUPOS = ("cabecalhos", "publicas", "painel", "impressos", "plano", "clinico", "treino", "master", "aluno", "aluno_cartao", "sondas", "offline")
+# mp-cartao: o aluno_cartao precisa de uma matrícula SEM cobertura numa conta do MP — a do app (o MP do Physiq): prof1 no staging (conferido só
+# leitura em 15/10: modo mercadopago, sem cobertura, 0 automática viva); w7b-prod na produção (o F6 do contrato: abre o cartão SEM pagar)
 CONTAS_TESTE = {"painel": "w5-dono", "impressos": "w5-dono", "plano": "w5-dono", "sondas": "w5-dono", "treino": "w13-dono",
-                "master": "w27-master", "aluno": "w13-aluno"}
+                "master": "w27-master", "aluno": "w13-aluno", "aluno_cartao": "prof1"}
 CONTAS_PROD = {"painel": "nutri-legado", "impressos": "nutri-legado", "plano": "nutri-legado", "sondas": "nutri-legado",
-               "treino": "master", "master": "master", "aluno": "aluno-calc"}
+               "treino": "master", "master": "master", "aluno": "aluno-calc", "aluno_cartao": "w7b-prod"}
+SEGURANCA_JS = "https://www.mercadopago.com/v2/security.js"   # src/components/pagamentos/mpDevice.ts › MP_SECURITY_JS
 # o Edge do notebook sem GPU: o 3D (WebGL) pelo SwiftShader, como o scripts/exercicios3d/foto.py
 ARGS_NAVEGADOR = ["--no-sandbox", "--disable-dev-shm-usage", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
 CONSOLE_CSP = re.compile(r"Content.Security.Policy|Refused to|Permissions-Policy|Unrecognized feature", re.I)
@@ -919,6 +927,130 @@ def g_aluno(o, nav, R) -> None:
         caso.fim()
 
 
+def g_aluno_cartao(o, nav, R) -> None:
+    """mp-cartao (contrato §2.1, §4): a folha de pagar do aluno aberta com cartão põe o script de segurança do MP (security.js, view checkout)
+    1×, com o nonce da CSP; o id do aparelho aparece em ≤ 10 s (só o tamanho e o formato na tela); o widget que ele injeta roda com o nonce;
+    o "Pagar com cartão" abre o Brick (o antifraude do SDK, como no plano) e o número de teste é digitado — SEM pagar; o script não duplica.
+    Com --emular-host (só no local): a MESMA tela com o navegador achando que está no host dado (o molde do g_plano). Nada é gravado."""
+    E = ex()
+    conta = E.contas["aluno_cartao"]
+    emulado = E.a.emular_host
+    base_real, origem_real = E.R.base, E.col.origem
+    if emulado:
+        E.R.base = E.col.origem = f"https://{emulado}"
+    try:
+        _g_aluno_cartao(o, nav, R, conta, emulado, base_real)
+    finally:
+        E.R.base, E.col.origem = base_real, origem_real
+
+
+def provar_seguranca(caso, seg: dict, segundos: float = 10) -> dict:
+    """A prova do script de segurança: 1 <script src=security.js> com view=checkout e o nonce; o MP_DEVICE_SESSION_ID no formato da função em
+    ≤ `segundos` (nunca o valor); o web_device e o anonymous_device_session 200; o widget dele (a resposta do web_device) com o nonce na página
+    e os globais que ele define; nenhum aviso nem violação vinda dele."""
+    E = ex()
+    js = """([src, n]) => {
+        const s = [...document.scripts].filter((x) => x.src === src);
+        const v = window.MP_DEVICE_SESSION_ID;
+        return { scripts: s.length, comNonce: s.filter((x) => x.nonce === n).length, view: s.map((x) => x.getAttribute('view')),
+                 id: typeof v === 'string' ? { tamanho: v.length, formato: /^[A-Za-z0-9._:-]{8,512}$/.test(v) } : null,
+                 inlineComNonce: [...document.scripts].filter((x) => !x.src && x.nonce === n).length, meli: !!window.MELI_SESSION_ID };
+    }"""
+    t0 = time.time()
+    estado = caso.pg.evaluate(js, [SEGURANCA_JS, E.nonce])
+    while not estado.get("id") and time.time() - t0 < segundos:
+        caso.pg.wait_for_timeout(250)
+        estado = caso.pg.evaluate(js, [SEGURANCA_JS, E.nonce])
+    espera = time.time() - t0
+    codigo = str((seg.get("web_device") or {}).get("widget") or "")
+    if codigo:
+        SAIDA.mkdir(parents=True, exist_ok=True)
+        (SAIDA / f"mp_seguranca_widget_{E.R.prefixo}.js").write_text(codigo, encoding="utf-8")
+    hosts = sorted(set(re.findall(r"https?://[A-Za-z0-9.-]+", codigo)))
+    globais = sorted(set(re.findall(r"window\.([A-Za-z_$][\w$]*)\s*=", codigo)))
+    definidos = caso.pg.evaluate("(gs) => gs.filter((g) => window[g] !== undefined)", globais) if globais else []
+    chamadas = {k: v for k, v in seg.get("status", {}).items()}
+    vindas = [v for v in E.col.da_tela("aluno_cartao_folha") if not v.esperada]
+    # o MP serve 2 variantes do MESMO endereço, pela página que pede (medido em 15/10): no localhost e no staging, o carregador (4,9 KB:
+    # web_device → o widget inline com o nonce → 3 s → anonymous_device_session → o id); no physiqcalc.com.br (--emular-host), o script
+    # inteiro (30 KB: usa o currentScript.nonce e define o id direto, sem o device_sessions). Vale o que a variante faz — o id no formato
+    # em ≤ 10 s e 0 violação nas 2
+    carregador = "web_device" in chamadas or "anonymous_device_session" in chamadas
+    variante = ("o carregador: web_device → widget inline → anonymous_device_session" if carregador
+                else "a do domínio da produção: o script define o id direto, sem o device_sessions")
+    ok = (estado.get("scripts") == 1 and estado.get("comNonce") == 1 and estado.get("view") == ["checkout"] and bool(estado.get("id"))
+          and (estado.get("id") or {}).get("formato") is True and not vindas
+          and (not carregador or (chamadas.get("web_device") == 200 and chamadas.get("anonymous_device_session") == 200
+                                  and estado.get("inlineComNonce", 0) >= 1)))
+    E.evidencias["seguranca"] = {"variante": variante, "estado": estado, "espera_s": round(espera, 1), "chamadas": chamadas, "widget_bytes": len(codigo),
+                                 "hosts_no_widget": hosts, "globais_no_widget": globais, "globais_definidos": definidos}
+    texto = (f"variante {variante}; <script src=security.js>: {estado.get('scripts')} (com o nonce {estado.get('comNonce')}, view {estado.get('view')}); "
+             f"MP_DEVICE_SESSION_ID {'com ' + str(estado['id']['tamanho']) + ' caracteres, no formato ' + str(estado['id']['formato']) if estado.get('id') else 'NÃO veio'} "
+             f"em {espera:.1f} s; web_device {chamadas.get('web_device')}, anonymous_device_session {chamadas.get('anonymous_device_session')}; "
+             f"widget {len(codigo)} bytes, <script> inline com o nonce: {estado.get('inlineComNonce')}, globais definidos {definidos or '-'}; "
+             f"violações da tela: {len(vindas)}; hosts citados no widget: {hosts or '-'}")
+    return {"ok": ok, "texto": texto}
+
+
+def _g_aluno_cartao(o, nav, R, conta: str, emulado: str | None, base_local: str) -> None:
+    E = ex()
+    caso = novo_caso(nav, "aluno_cartao", desktop=False)
+    if emulado:
+        caso.ctx.route(f"https://{emulado}/**", proxy_local(base_local))
+    seg: dict = {"status": {}}
+    widget: dict = {}
+
+    def resposta(r) -> None:
+        try:
+            u = r.url.split("?")[0]
+            if "/v1/device_sessions/" in u and r.request.method == "POST":
+                ultimo = u.rsplit("/", 1)[-1]
+                seg["status"][ultimo] = r.status
+                if ultimo == "web_device":
+                    seg["web_device"] = r.json()
+            elif u == SEGURANCA_JS:
+                seg["status"]["security.js"] = r.status
+            elif "/devices/widgets" in u and r.request.method == "POST":
+                widget.update(status=r.status, url=u, dados=r.json())
+        except Exception as e:  # noqa: BLE001 — a resposta sem corpo legível: só o status
+            seg.setdefault("erros", []).append(type(e).__name__)
+
+    caso.pg.on("response", resposta)
+    try:
+        E.col.grupo = "aluno_cartao" + (f" (host emulado {emulado})" if emulado else "")
+        ab = abrir(caso, "aluno_cartao", "/perfil/pagamentos", "[data-pagar-mensalidade]", conta=conta)
+        fechar(caso, "aluno_cartao", ab, f"{conta} (390 px) · o Pagar {'na tela' if ab else 'NÃO apareceu'}")
+        if not ab:
+            (aviso if E.producao else lambda t: o.ok(False, t))(f"[aluno_cartao] o Pagar não apareceu para {conta}: a folha fica de fora")
+            return
+        nome = "aluno_cartao_folha"
+        E.col.tela = nome
+        caso.pg.locator("[data-pagar-mensalidade]").first.click()
+        folha = caso.esperar(lambda: caso.tem("[data-mp-cartao]"), 30)
+        prova = provar_seguranca(caso, seg) if folha else {"ok": False, "texto": "a folha do MP com o cartão não abriu"}
+        fechar(caso, nome, folha, f"a folha do MP {'abriu com o cartão' if folha else 'NÃO abriu com o cartão'}")
+        o.ok(prova["ok"], f"[aluno_cartao] o script de segurança do Mercado Pago rodou com o nonce: {prova['texto']}")
+        if not folha:
+            return
+        nome = "aluno_cartao_brick"
+        E.col.tela = nome
+        caso.pg.locator("[data-mp-cartao]").first.click()
+        painel = caso.esperar(lambda: caso.tem("[data-cartao-mp]"), 20)
+        brick = caso.esperar(lambda: caso.pg.locator("[data-brick-mp] iframe").count() > 0, 60)
+        caso.esperar(lambda: bool(widget), 30)
+        cartao = digitar_cartao(caso) if brick else "-"
+        caso.pg.wait_for_timeout(6000)  # o antifraude do SDK roda e a bandeira aparece
+        n_scripts = caso.pg.evaluate("(src) => [...document.scripts].filter((x) => x.src === src).length", SEGURANCA_JS)
+        avisos_mp = [m for m in E.col.mp_console if "DeviceProfile could not be loaded" in m or "Invalid options" in m]
+        fechar(caso, nome, painel and brick, f"o painel do cartão {'abriu' if painel else 'NÃO abriu'} e o Brick "
+                                             f"{'carregou' if brick else 'NÃO carregou'}; {cartao} — sem pagar")
+        o.ok(n_scripts == 1 and widget.get("status") == 200 and not avisos_mp,
+             f"[aluno_cartao] com o Brick: o security.js segue 1× ({n_scripts}); o antifraude do SDK (POST /devices/widgets) "
+             f"{widget.get('status')}; aviso 'DeviceProfile could not be loaded': {len(avisos_mp)}")
+    finally:
+        caso.fim()
+
+
 def g_sondas(o, nav, R) -> None:
     E = ex()
     conta = E.contas["sondas"]
@@ -1069,8 +1201,9 @@ def main() -> int:
     ap.add_argument("--prefixo", help="o começo dos prints e da saída (padrão: local, staging, prod ou url)")
     ap.add_argument("--jsonl", default=str(JSONL), help="o JSONL do servidor_dist.py (só no local)")
     ap.add_argument("--contas", default="", help="troca a conta de TESTE de um grupo: grupo=chave,... (chaves das CONTAS da W5)")
-    ap.add_argument("--emular-host", help="só no local e só com --so plano: o navegador acha que está neste host (ex.: physiqcalc.com.br) e o "
-                                          "servidor local responde tudo — o antifraude do MP escolhe os hosts pelo domínio da página")
+    ap.add_argument("--emular-host", help="só no local e só com --so plano e/ou aluno_cartao: o navegador acha que está neste host (ex.: "
+                                          "physiqcalc.com.br) e o servidor local responde tudo — o antifraude do MP escolhe os hosts pelo "
+                                          "domínio da página")
     a = ap.parse_args()
 
     base = T.BASES.get(a.base, a.base).rstrip("/")
@@ -1090,8 +1223,8 @@ def main() -> int:
         raise SystemExit(f"grupos desconhecidos: {sorted(desconhecidos)} (conhecidos: {', '.join(GRUPOS)})")
     if "offline" in grupos and not a.com_sw:
         raise SystemExit("o grupo offline precisa do --com-sw")
-    if a.emular_host and (not local or set(grupos) != {"plano"}):
-        raise SystemExit("--emular-host só no local e só com --so plano")
+    if a.emular_host and (not local or not set(grupos) <= {"plano", "aluno_cartao"}):
+        raise SystemExit("--emular-host só no local e só com --so plano e/ou aluno_cartao")
     contas = dict(CONTAS_PROD if producao else CONTAS_TESTE)
     for par in (x.strip() for x in a.contas.split(",") if x.strip()):
         g, _, chave = par.partition("=")
@@ -1103,6 +1236,9 @@ def main() -> int:
     H12 = carregar_hml12()
     C, B5 = T.carregar("public" if producao else "staging")
     C.SAIDA, B5.PRINTS = SAIDA, PRINTS  # as saídas e os prints desta W
+    # mp-cartao: a conta de TESTE do aluno_cartao na produção (a do e2e/hml18/_base.py) — só se a senha já existe (nada é criado aqui)
+    if (Path.home() / ".physiq-teste-w7b-prod").exists():
+        B5.CONTAS.setdefault("w7b-prod", ("w7b.prod.teste.claude@physiqnutri.app", B5.senha_de("w7b-prod")))
     o = C.Saida(f"csp_{prefixo}_{a.modo}{sufixo}", parar=False)
     R = T.Rodada(C=C, B5=B5, o=o, base=base, prefixo=f"{prefixo}_{a.modo}{sufixo}", producao=producao, sess=C.Sessoes())
     for g, chave in contas.items():
@@ -1122,7 +1258,7 @@ def main() -> int:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     funcoes = {"publicas": g_publicas, "painel": g_painel, "impressos": g_impressos, "plano": g_plano, "clinico": g_clinico, "treino": g_treino,
-               "master": g_master, "aluno": g_aluno, "sondas": g_sondas, "offline": g_offline}
+               "master": g_master, "aluno": g_aluno, "aluno_cartao": g_aluno_cartao, "sondas": g_sondas, "offline": g_offline}
     with sync_playwright() as pw:
 
         def rodar(fn) -> None:

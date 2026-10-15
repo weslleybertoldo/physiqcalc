@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Physiq mp-cartao — a leitura da PROVA VIVA do cartão na produção (contrato hml/mpc/CONTRATO_MPC.md §4 F6 e §7.9; o molde do
+e2e/w07b/prova_real.py, só o `conferir`): depois que O WESLLEY (ou o aluno dele) paga com cartão no MP do personal, este script LÊ — sem a
+API do Mercado Pago e sem login — a linha da cobrança e o log novo da pagamentos-aluno. O estorno é pelo app (Financeiro › Estornar).
+
+  conferir [--desde "AAAA-MM-DD HH:MM"] [--schema public|staging]
+           SQL SÓ LEITURA (a Management API com read_only, o molde do hml/sqlro.py): as cobranças de CARTÃO do MP desde a hora (forma mp,
+           metodo cartao) por conta que recebe no MP — status, mp_status e se tem o pagamento e o collector (contagens; nenhum id, nome ou
+           e-mail); as automáticas criadas desde a hora (status); e o LOG das funções (o endpoint de logs da Management API, só leitura): as
+           linhas mp_cartao_recusado, mp_cartao_falhou e mp_assinatura_falhou da pagamentos-aluno com o resultado (com/sem device) e o
+           mp_status_detail — a prova se lê sem a API do MP
+  --seco   sem rede: as conferências puras (a leitura das linhas do log e o resumo)
+Precisa: ~/.pc-pat. Nunca imprime id, e-mail, nome, CPF ou token.
+Uso: python3 e2e/mpc/prova_real.py conferir --desde "2026-10-15 18:00"
+     python3 e2e/mpc/prova_real.py --seco
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import re
+import sys
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+REF = "hkxvtsbwctxkrqzkkdoz"            # o banco principal (public e staging)
+UA = "physiq-mpc/1.0 (prova_real)"
+CODIGOS = ("mp_cartao_recusado", "mp_cartao_falhou", "mp_assinatura_falhou", "mp_cartao_modo_errado")
+BRT = dt.timezone(dt.timedelta(hours=-3))
+
+
+def pat() -> str:
+    return Path.home().joinpath(".pc-pat").read_text(encoding="utf-8").strip()
+
+
+def api(metodo: str, caminho: str, corpo: dict | None = None) -> object:
+    req = urllib.request.Request(f"https://api.supabase.com{caminho}", data=None if corpo is None else json.dumps(corpo).encode(), method=metodo,
+                                 headers={"Authorization": f"Bearer {pat()}", "Content-Type": "application/json", "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        return json.loads(r.read() or b"null")
+
+
+def ler(sql: str) -> list[dict]:
+    """SQL SÓ LEITURA (read_only da Management API)."""
+    r = api("POST", f"/v1/projects/{REF}/database/query", {"query": sql, "read_only": True})
+    return r if isinstance(r, list) else []
+
+
+def quando(t: object) -> str:
+    """O timestamp do log (microssegundos ou ISO em UTC, conforme o endpoint) → dd/mm HH:MM:SS de Brasília."""
+    try:
+        d = dt.datetime.fromtimestamp(int(t) / 1e6, dt.timezone.utc) if str(t).isdigit() else dt.datetime.fromisoformat(str(t)).replace(tzinfo=dt.timezone.utc)
+        return d.astimezone(BRT).strftime("%d/%m %H:%M:%S")
+    except (TypeError, ValueError):
+        return "?"
+
+
+def linhas_do_log(eventos: list[dict]) -> list[dict]:
+    """As mensagens do log das funções → as linhas JSON do _shared/log.ts da pagamentos-aluno com os códigos da W (só os campos do formato)."""
+    saida = []
+    for e in eventos:
+        msg = str(e.get("event_message") or "")
+        i = msg.find("{")
+        if i < 0:
+            continue
+        try:
+            d = json.loads(msg[i:])
+        except ValueError:
+            continue
+        if isinstance(d, dict) and d.get("funcao") == "pagamentos-aluno" and d.get("codigo") in CODIGOS:
+            saida.append({"quando": e.get("quando"), **{k: d.get(k) for k in ("nivel", "codigo", "schema", "acao", "status", "resultado", "externo")}})
+    return saida
+
+
+def conferir(a) -> int:
+    s = a.schema
+    desde = a.desde or (dt.datetime.now(BRT) - dt.timedelta(hours=6)).strftime("%Y-%m-%d %H:%M")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", desde):
+        raise SystemExit("--desde no formato AAAA-MM-DD HH:MM (hora de Brasília)")
+    t0 = f"{desde}:00-03"
+    print(f"── conferir ({s}, desde {desde} BRT) — só leitura, sem a API do Mercado Pago")
+    cob = ler(f"""select k.recebimento_modo as modo, c.status, c.mp_status, (c.mp_payment_id is not null) as tem_pagamento,
+                         (c.mp_collector_id is not null) as tem_collector, count(*)::int as n
+                    from {s}.cobrancas c join {s}.contas k on k.id = c.conta_id
+                   where c.forma = 'mp' and c.metodo = 'cartao' and c.created_at >= '{t0}'::timestamptz
+                   group by 1, 2, 3, 4, 5 order by 1, 2""")
+    print("   cobranças de cartão do MP:", cob or "nenhuma")
+    aut = ler(f"""select k.recebimento_modo as modo, a.status, count(*)::int as n from {s}.aluno_assinaturas a join {s}.contas k on k.id = a.conta_id
+                   where a.criado_em >= '{t0}'::timestamptz group by 1, 2 order by 1, 2""")
+    print("   automáticas criadas:", aut or "nenhuma")
+    ini = dt.datetime.strptime(desde, "%Y-%m-%d %H:%M").replace(tzinfo=BRT).astimezone(dt.timezone.utc)
+    fim = dt.datetime.now(dt.timezone.utc)
+    # o molde do ~/projetos/physiqcalc-scratch/w2/fim/logs_cartao.py (14/10, o mesmo endpoint e a mesma tabela)
+    sql = ("SELECT timestamp AS t, event_message FROM logs WHERE source = 'function_logs' AND "
+           "positionCaseInsensitive(event_message, 'pagamentos-aluno') > 0 AND ("
+           + " OR ".join(f"positionCaseInsensitive(event_message, '{c}') > 0" for c in CODIGOS) + ") ORDER BY t DESC LIMIT 100")
+    q = urllib.parse.urlencode({"sql": sql, "iso_timestamp_start": ini.strftime("%Y-%m-%dT%H:%M:%SZ"), "iso_timestamp_end": fim.strftime("%Y-%m-%dT%H:%M:%SZ")})
+    r = api("GET", f"/v1/projects/{REF}/analytics/endpoints/logs?{q}")
+    eventos = [{"quando": quando(x.get("t")), "event_message": x.get("event_message")}
+               for x in ((r or {}).get("result") or [])] if isinstance(r, dict) else []
+    linhas = [x for x in linhas_do_log(eventos) if x.get("schema") == s]
+    print(f"   log da pagamentos-aluno ({len(linhas)} linha(s) dos códigos da W):")
+    for x in linhas:
+        print("     ", json.dumps(x, ensure_ascii=False))
+    return 0
+
+
+def seco() -> int:
+    ev = [{"quando": "15/10 18:00:01", "event_message": json.dumps({"nivel": "aviso", "funcao": "pagamentos-aluno", "codigo": "mp_cartao_recusado",
+                                                                      "schema": "public", "acao": "aluno_mp_cartao", "ref": "123", "resultado": "com_device",
+                                                                      "externo": {"mp_status_detail": "cc_rejected_high_risk"}})},
+          {"quando": "x", "event_message": "texto solto"},
+          {"quando": "y", "event_message": json.dumps({"funcao": "outra", "codigo": "mp_cartao_recusado"})}]
+    lido = linhas_do_log(ev)
+    ok = (len(lido) == 1 and lido[0]["resultado"] == "com_device" and lido[0]["externo"] == {"mp_status_detail": "cc_rejected_high_risk"}
+          and "ref" not in lido[0])
+    print(("✅ " if ok else "❌ ") + "seco: o log lido só com as linhas da pagamentos-aluno e os campos do formato (sem o ref)")
+    return 0 if ok else 1
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Physiq mp-cartao — a leitura da prova viva do cartão (só leitura)")
+    ap.add_argument("comando", nargs="?", choices=("conferir",))
+    ap.add_argument("--desde", default=None)
+    ap.add_argument("--schema", default="public", choices=("public", "staging"))
+    ap.add_argument("--seco", action="store_true")
+    a = ap.parse_args()
+    if a.seco:
+        return seco()
+    if a.comando == "conferir":
+        return conferir(a)
+    ap.error("conferir ou --seco")
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
