@@ -3,7 +3,7 @@
 // codigosDoMp tirando o cc_rejected_… da mensagem (as automáticas recusadas de 14/10 voltaram 400 sem error, cause nem status_detail).
 // Os números de documento daqui são de TESTE (gerados com o dígito verificador; nenhum é de uma pessoa).
 import { describe, expect, it } from "vitest";
-import { codigosDoMp, recusaNoTexto } from "../../supabase-principal/functions/_shared/cobranca-regras";
+import { codigosDoMp, recusaNoTexto, slugDaMensagem } from "../../supabase-principal/functions/_shared/cobranca-regras";
 import {
   CABECALHO_DEVICE, CATEGORIA_DO_ITEM, DESCRITOR_FATURA, DEVICE_RX, cabecalhosDoDevice, cnpjValido, codigoDaRecusa, cpfValido, deviceDoPedido,
   infoAdicionalDoPedido, itemDoPedido, pagadorDoPedido, resultadoDoDevice,
@@ -124,7 +124,8 @@ describe("mp-cartao — o motivo da recusa (codigosDoMp, a resposta de erro)", (
     expect(recusaNoTexto({ message: "Invalid card_token_id" })).toBeNull();
     expect(recusaNoTexto(null)).toBeNull();
     expect(codigosDoMp({ message: "cc_rejected_high_risk", status: 400 })).toEqual({ mp_status_detail: "cc_rejected_high_risk" });
-    expect(codigosDoMp({ message: "Card token service not found", status: 404 })).toEqual({});
+    // sem NENHUM código, o slug seguro da mensagem (o achado da F5 — o describe do fim)
+    expect(codigosDoMp({ message: "Card token service not found", status: 404 })).toEqual({ mp_status_detail: "msg_card_token_service_not_found" });
   });
   it("o status_detail da resposta vale antes do texto; o error e as causas seguem como antes", () => {
     expect(codigosDoMp({ status_detail: "cc_rejected_other_reason", message: "cc_rejected_high_risk" }))
@@ -150,6 +151,41 @@ describe("mp-cartao — o motivo da recusa (codigosDoMp, a resposta de erro)", (
     expect(codigoDaRecusa({ status: "rejected", status_detail: "cc_rejected_high_risk" })).toBe("cc_rejected_high_risk");
     expect(codigoDaRecusa({ message: "CC_VAL_433 Credit card validation has failed" })).toBe("cc_val_433");
     expect(codigoDaRecusa({ status_detail: "Texto Livre com espaço" })).toBeNull();
-    expect(codigoDaRecusa({ message: "nada" })).toBeNull();
+    expect(codigoDaRecusa({ message: "nada" })).toBe("msg_nada");                      // o slug seguro (o achado da F5)
+    expect(codigoDaRecusa({ message: "Payer pagador@exemplo.com 12345678909" })).toBeNull();   // a mensagem com dado: descartada inteira
+  });
+});
+
+describe("mp-cartao — o motivo quando o MP só manda TEXTO (o achado da F5: a automática recusada no sandbox com externo {})", () => {
+  it("o slug seguro da mensagem: msg_<slug> minúsculo, sem acento, os _ colapsados e aparados", () => {
+    expect(codigosDoMp({ message: "Invalid users involved", status: 400 })).toEqual({ mp_status_detail: "msg_invalid_users_involved" });
+    expect(slugDaMensagem({ message: "  Cartão   inválido!! (tente de novo) " })).toBe("msg_cartao_invalido_tente_de_novo");
+    expect(slugDaMensagem({ message: "--- ___ ---" })).toBeNull();
+  });
+  it("no máximo 60 depois do msg_ (cabe no ^[a-z0-9_]{1,64}$ do log), sem _ no fim", () => {
+    const s = slugDaMensagem({ message: "palavra ".repeat(19) })!;
+    expect(s.length).toBeLessThanOrEqual(64);
+    expect(s).toMatch(/^msg_[a-z0-9_]{1,60}$/);
+    expect(s.endsWith("_")).toBe(false);
+  });
+  it("a mensagem é descartada INTEIRA com e-mail, 4+ dígitos seguidos (CPF, id), caractere de controle ou mais de 160 caracteres", () => {
+    for (const message of ["Invalid payer pagador@exemplo.com", "Invalid user identification number 12345678909", "Payment 1234 failed",
+      "linha 1\nlinha 2", "tab\tno meio", "x".repeat(161), "", "   ", 42, null]) {
+      expect(slugDaMensagem({ message }), String(message).slice(0, 30)).toBeNull();
+      expect(codigosDoMp({ message, status: 400 }), String(message).slice(0, 30)).toEqual({});
+    }
+    expect(slugDaMensagem({ message: "Error 433 here" })).toBe("msg_error_433_here");   // 3 dígitos passam
+  });
+  it("a precedência de hoje não muda: error, cause[].code, status_detail, code no formato, cc_rejected_* e CC_VAL_* vêm antes (sem slug)", () => {
+    expect(codigosDoMp({ error: "bad_request", message: "Invalid users involved" })).toEqual({ mp_erro: "bad_request" });
+    expect(codigosDoMp({ cause: [{ code: 2034 }], message: "Invalid users involved" })).toEqual({ mp_causas: [2034] });
+    expect(codigosDoMp({ status_detail: "cc_rejected_other_reason", message: "Invalid users involved" }))
+      .toEqual({ mp_status_detail: "cc_rejected_other_reason" });
+    expect(codigosDoMp({ code: "not_found", message: "Resource not found" })).toEqual({ mp_erro: "not_found" });
+    expect(codigosDoMp({ message: "cc_rejected_high_risk" })).toEqual({ mp_status_detail: "cc_rejected_high_risk" });
+    expect(codigosDoMp({ message: "CC_VAL_433 Credit card validation has failed" })).toEqual({ mp_status_detail: "cc_val_433" });
+    // o 2034 do /v1/payments (com a causa) segue só com a causa — o slug é só para quem não manda NENHUM código
+    expect(codigosDoMp({ message: "Invalid users involved", error: "bad_request", status: 400, cause: [{ code: 2034, description: "Invalid users involved" }] }))
+      .toEqual({ mp_erro: "bad_request", mp_causas: [2034] });
   });
 });

@@ -556,7 +556,9 @@ def local_automatica_recusa() -> None:
     print("\n── automatica_recusa: o POST /preapproval 400 com o código SÓ na mensagem (o retrato de 14/10) → o código no log e na resposta")
     garantir_integracao()
     # revisão mpc 🟡2: a mensagem do cc_rejected_… e a da validação do cartão ("CC_VAL_433 Credit card validation has failed" → cc_val_433)
-    for mensagem, codigo in (("cc_rejected_high_risk", "cc_rejected_high_risk"), ("CC_VAL_433 Credit card validation has failed", "cc_val_433")):
+    # + o achado da F5 (04:50): o 400 só com texto ("Invalid users involved", sem código nenhum) → o slug seguro msg_invalid_users_involved
+    for mensagem, codigo in (("cc_rejected_high_risk", "cc_rejected_high_risk"), ("CC_VAL_433 Credit card validation has failed", "cc_val_433"),
+                             ("Invalid users involved", "msg_invalid_users_involved")):
         base_do_caso("mercadopago_conta")
         W2.sim_cenario(preapproval_recusa=mensagem)
         (st, r), pedidos, log = janela(lambda: pedir(ALUNO, "aluno_mp_assinar", {"paciente_id": CTX["pac"], "card_token": "sim-card-APRO",

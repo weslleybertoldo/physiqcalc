@@ -216,7 +216,8 @@ describe("hml-10 (D2): do Mercado Pago, só os códigos", () => {
     expect(codigosDoMp(RECUSA_DO_MP)).toEqual({ mp_erro: "bad_request", mp_causas: [2067], mp_status_detail: "cc_rejected_other_reason" });
     expect(codigosDoMp(null)).toEqual({});
     expect(codigosDoMp("erro")).toEqual({});
-    expect(codigosDoMp({ message: "rede" })).toEqual({}); // o mpFetch sem resposta (status 599)
+    // o mpFetch sem resposta (status 599): mp-cartao — sem NENHUM código, o slug seguro da mensagem (msg_rede, msg_tempo_esgotado)
+    expect(codigosDoMp({ message: "rede" })).toEqual({ mp_status_detail: "msg_rede" });
     expect(codigosDoMp({ error: "x", cause: { code: 1 } })).toEqual({ mp_erro: "x" });
   });
 

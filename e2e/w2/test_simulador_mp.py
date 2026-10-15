@@ -576,6 +576,16 @@ class MpCartaoTest(SimuladorBase):
         st, r, _ = self.pedir("POST", "/preapproval", corpo, token=tok)
         self.assertEqual((st, r), (400, {"message": "CC_VAL_433 Credit card validation has failed", "status": 400}))
 
+    def test_cenario_preapproval_recusa_so_com_texto(self) -> None:
+        """O achado da F5 (15/10 04:50): a automática recusada no sandbox com o 400 só com o texto "Invalid users involved" (sem código)."""
+        tok = self.par()["access_token"]
+        self.adm("/_cenario", {"preapproval_recusa": "Invalid users involved"})
+        corpo = {"reason": "Physiq", "payer_email": "c@example.com", "back_url": "https://exemplo", "external_reference": "x", "status": "authorized",
+                 "card_token_id": "sim-card-APRO", "auto_recurring": {"frequency": 1, "frequency_type": "months", "transaction_amount": 10,
+                                                                      "currency_id": "BRL"}}
+        st, r, _ = self.pedir("POST", "/preapproval", corpo, token=tok)
+        self.assertEqual((st, r), (400, {"message": "Invalid users involved", "status": 400}))   # sem error, cause, status_detail nem code
+
 
 class GeralTest(SimuladorBase):
     def test_cenario_troca_so_as_chaves_e_guarda_os_recursos(self) -> None:
