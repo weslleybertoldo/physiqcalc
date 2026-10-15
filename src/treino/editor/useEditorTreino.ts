@@ -188,7 +188,9 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
       if (!treinoUserId) return null;
       await qc.cancelQueries({ queryKey: chave });
       const antes = qc.getQueryData<DadosEditor>(chave);
-      if (opts.otimista && antes) qc.setQueryData<DadosEditor>(chave, opts.otimista(antes));
+      // revisão hml-24 (⚪3): sem otimista, o retrato volta igual — o cancelamento de uma leitura cujo "voltar" um setQueryData no meio
+      // apagou (o aoOk da fila) deixaria a consulta em erro, e a tela em "Não deu para abrir o treino" até a releitura do fim
+      if (antes) qc.setQueryData<DadosEditor>(chave, opts.otimista ? opts.otimista(antes) : antes);
       setOcupado(rotulo);
       try {
         const r = await fn();
@@ -238,9 +240,13 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
       const promessa = filaDoEditor.mudar(chaveFila, base, novo, {
         enviar,
         aoOk: (_r, envio) => {
-          // o servidor tem o valor: o cache também (uma leitura velha no meio não o apaga) e esta vira a linha salva
+          // o servidor tem o valor: o cache também e esta vira a linha salva
           qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, envio.valor) : d));
           salvas.set(chaveFila, linhaDaChave(qc.getQueryData<DadosEditor>(chave), meta.alvo, exDaMeta));
+          // revisão hml-24 (🟡1): uma releitura que começou ANTES desta confirmação traria o valor velho e apagaria o confirmado (a linha
+          // já saiu da fila: a sobreposição não a cobre; a próxima mudança da linha regravaria os outros campos com o velho). Ela é
+          // cancelada em silêncio (o cancelRefetch do invalidate) e a leitura sai de novo, depois da gravação — ativa ou não
+          if (qc.isFetching({ queryKey: chave }) > 0) void qc.invalidateQueries({ queryKey: chave, refetchType: "all" });
           if (ok) toast.success(ok);
           onMudou?.();
           if (envio.campos.has("series")) void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });

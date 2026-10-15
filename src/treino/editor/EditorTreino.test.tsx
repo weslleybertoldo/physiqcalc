@@ -93,10 +93,11 @@ function dados(o: Partial<DadosEditor> = {}): DadosEditor {
   };
 }
 
-const montar = (ui: React.ReactNode) =>
+const novoCliente = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const montar = (ui: React.ReactNode, cliente: QueryClient = novoCliente()) =>
   render(
     <MemoryRouter useTransitions={false}>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider client={cliente}>
         <ProvedorConfirmar>{ui}</ProvedorConfirmar>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -396,6 +397,71 @@ describe("hml-24 (H-127) — a fila por linha no editor", () => {
   });
 });
 
+describe("revisão hml-24 — a releitura no meio da gravação e o cancelamento do rodar", () => {
+  it("🟡1: a releitura que leu o banco ANTES de a linha confirmar não apaga o confirmado; a próxima mudança da linha leva o confirmado", async () => {
+    const gravacaoX = adiada();
+    const releitura = adiada<DadosEditor>();
+    // o banco depois da gravação de X (Supino Inclinado, reps 12) — o que uma leitura nova traz
+    const comX = () =>
+      dados({ seriesPadrao: [...dados().seriesPadrao, { grupo_id: "gA", grupo_usuario_id: null, exercicio_id: "e2", exercicio_usuario_id: null, num_series: 3, reps_alvo: "12", descanso_segundos: null, carga_sugerida_kg: null }] });
+    h.carregarEditor.mockResolvedValueOnce(dados()).mockReturnValueOnce(releitura.promessa).mockImplementation(async () => comX());
+    let chamadasX = 0;
+    h.salvarPrescricao.mockImplementation((_u: string, _a: unknown, ex: { exercicio_id: string }) => {
+      if (ex.exercicio_id === "e1") return Promise.reject(new Error("internal"));
+      chamadasX++;
+      return chamadasX === 1 ? gravacaoX.promessa : Promise.resolve({ ok: true });
+    });
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    const reps = digitarCampo(/reps de Supino Inclinado/, "12"); // a linha X grava (fica no ar)
+    digitarCampo(/reps de Supino Reto/, "15"); // outra linha falha → a releitura sai e fica no ar, lendo o banco de ANTES de X
+    await waitFor(() => expect(h.carregarEditor).toHaveBeenCalledTimes(2));
+    await act(async () => gravacaoX.soltar({ ok: true })); // X confirma no meio da releitura
+    await act(async () => releitura.soltar(dados())); // a releitura chega com o valor VELHO de X
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+    });
+    expect(reps.value).toBe("12");
+    // outro campo da mesma linha: o pedido leva o confirmado (nunca o velho de volta)
+    digitarCampo(/carga de Supino Inclinado/, "30");
+    await waitFor(() => expect(chamadasX).toBe(2));
+    expect(h.salvarPrescricao.mock.calls.at(-1)?.[3]).toEqual({ series: 3, reps: "12", descanso: null, carga: 30 });
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("⚪3: um botão sem otimista com uma leitura em voo (o retrato trocado no meio) não deixa o editor em 'Não deu para abrir o treino'", async () => {
+    const cliente = novoCliente();
+    const leitura = adiada<DadosEditor>();
+    const tirar = adiada();
+    h.carregarEditor.mockResolvedValueOnce(dados()).mockReturnValueOnce(leitura.promessa).mockImplementation(async () => dados());
+    h.removerExercicio.mockReturnValue(tirar.promessa);
+    montar(<EditorTreino treinoUserId="t1" />, cliente);
+    await screen.findByText("A · Peito e tríceps");
+    // uma releitura em voo e um setQueryData no meio dela (o que o aoOk da fila faz): o "voltar" da leitura some
+    await act(async () => {
+      void cliente.invalidateQueries({ queryKey: ["treino-editor", "t1"] });
+    });
+    await waitFor(() => expect(h.carregarEditor).toHaveBeenCalledTimes(2));
+    act(() => {
+      cliente.setQueryData<DadosEditor>(["treino-editor", "t1"], (d) => (d ? { ...d } : d));
+    });
+    // tirar um exercício (o rodar SEM otimista) cancela a leitura e espera o servidor
+    fireEvent.click(screen.getByRole("button", { name: "Tirar Supino Inclinado do treino" }));
+    const dialogo = await screen.findByRole("alertdialog");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-ok]")!);
+    await waitFor(() => expect(h.removerExercicio).toHaveBeenCalledTimes(1));
+    // o pedido do servidor ainda no ar: a tela já renderizou o que o cancelamento deixou
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+    });
+    expect(screen.queryByText("Não deu para abrir o treino")).toBeNull();
+    expect(document.querySelector("[data-editor-treino]")).not.toBeNull();
+    await act(async () => tirar.soltar({ ok: true }));
+    await act(async () => leitura.soltar(dados()));
+    await waitFor(() => expect(screen.queryByText("Não deu para abrir o treino")).toBeNull());
+  });
+});
+
 describe("W15 — card Treino do Resumo (tela 7) e a aba", () => {
   it('"N de M na semana", os treinos A/B/C e as séries por grupo', async () => {
     const dias = datasDaSemana(new Date()).map(chaveData);
@@ -428,12 +494,17 @@ describe("W15 — card Treino do Resumo (tela 7) e a aba", () => {
   });
 
   it("hml-24 (H-131): a semana com erro → sem o chip (o 0 DE M de mentira não aparece)", async () => {
+    const cliente = novoCliente();
     h.estado.mockReturnValue({ tipo: "ok", treinoUserId: "t1", somenteLeitura: false, perfil: perfil() });
     h.carregarSemanaAtual.mockRejectedValue(new Error("statement timeout"));
-    montar(<CardTreino alunoId="p1" />);
+    montar(<CardTreino alunoId="p1" />, cliente);
     expect(await screen.findByText("A · Peito e tríceps")).toBeInTheDocument();
-    await new Promise((r) => setTimeout(r, 50));
+    // revisão hml-24 (⚪4): o useSemanaAtual tenta 2 vezes (retry: 1, ~1 s entre elas) — espera o ERRO de verdade, não o "carregando"
+    const chaveSemana = ["treino-semana-atual", "t1", chaveData(datasDaSemana(new Date())[0])];
+    await waitFor(() => expect(h.carregarSemanaAtual).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    await waitFor(() => expect(cliente.getQueryState(chaveSemana)?.status).toBe("error"), { timeout: 4000 });
     expect(document.querySelector("[data-card-treino-semana]")).toBeNull();
+    expect(screen.queryByText(/DE 5 NA SEMANA/)).toBeNull();
   });
 
   it("aluno sem o módulo Treino: o card não aparece; a aba explica", async () => {
