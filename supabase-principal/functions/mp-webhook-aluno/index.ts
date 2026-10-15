@@ -153,6 +153,7 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null, p: Prazo
     const m = a ? await carregarMatricula(db, a.paciente_id) : calc ? await matriculaDoTreino(db, calc.treinoUserId) : null;
     if (!m) return a ? "matricula_inexistente" : "assinatura_inexistente";
     const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preId, origem: calc ? "assinatura_calc" : "assinatura" }, log, schema);
+    registrarRecusaDoAviso(log, schema, pay, r, "aviso_mp");
     await cancelarSeSaiuDoApp(db, schema, m, preId, p);
     return r ? `assinatura_${r.status}` : "assinatura_sem_valor";
   }
@@ -160,6 +161,7 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null, p: Prazo
     const m = await matriculaDoTreino(db, calc.treinoUserId);
     if (!m) return "aluno_sem_matricula";
     const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { origem: "webhook_calc", mesRef: calc.mesRef }, log, schema);
+    registrarRecusaDoAviso(log, schema, pay, r, "aviso_mp");
     return r ? `calc_${r.status}` : "calc_sem_valor";
   }
   return "nao_e_de_aluno";

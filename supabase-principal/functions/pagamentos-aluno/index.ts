@@ -186,6 +186,7 @@ import {
   espelhoAssinaturaAluno,
   linkDoAlunoNoPainel,
   recebedor,
+  registrarRecusaDoAviso,
   type Cobranca,
   type Matricula,
 } from "../_shared/financeiro-mp.ts";
@@ -870,7 +871,8 @@ Deno.serve(async (req) => {
         outroPagamento(c);
         return c;
       }
-      await aplicarPagamentoMp(db, c, r.pay, m, log, schema);
+      // mpc-b (a revisão, 🟡1): a conferência do app pode ver a recusa ANTES do aviso do MP — aí é ela quem registra o motivo
+      registrarRecusaDoAviso(log, schema, r.pay, await aplicarPagamentoMp(db, c, r.pay, m, log, schema), "aluno_conferir");
       return await buscarCobranca(c.id);
     }, c);
   };
