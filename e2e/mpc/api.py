@@ -35,7 +35,15 @@ Modos:
                      do OAuth da W2 (a integração cifrada com a MP_TOKENS_CHAVE das funções, lida do cofre só na memória, conferida pelo digest):
                      recusado_com_device (o titular + o aparelho), recusado_sem_device (o corpo do APK de antes) e automatica — nunca 500, o
                      log PUBLICADO (o endpoint de logs, até 150 s) com mp_cartao_falhou/mp_assinatura_falhou, as causas do sandbox (2034 com
-                     o par da W2; outra = anotar) e com/sem device; nada pago; a automática criada no MP cancelada na hora
+                     o par da W2; outra = anotar) e com/sem device; nada pago; a automática criada no MP cancelada na hora; sem código
+                     do MP, o msg_<slug> da mensagem só no log (a v50), nunca na resposta. E (a decisão de 15/10 05:28: a credencial
+                     de TESTE do MP do Physiq voltou a aprovar no sandbox) o aceite INTEIRO pelo MP do PHYSIQ — a conta do prof2 no modo
+                     mercadopago por SQL (só no staging; o desfazer devolve), o cartão tokenizado pela chave pública de TESTE do Physiq:
+                       physiq_aprovado  o APRO com o titular, o CPF de teste e o aparelho → paga; o GET do pagamento com a TEST- mostra
+                                        o item (5 campos), o descritor, o tipo do documento e o titular (só presença e tipo); o estorno
+                                        pelo app (prof_reembolsar) ou, com o sandbox recusando, pela TEST-
+                       physiq_recusado  o OTHE com o aparelho → 201 rejected: a linha não paga, o status_detail na resposta e o log
+                                        PUBLICADO mp_cartao_recusado com com_device (o aprovado não gera linha de log)
   --limpar           só desfaz uma rodada que caiu no meio (pelo arquivo de estado)
 Desfazer (o do e2e/w2/api.py — W2.desfazer): ANTES de gravar, a foto (a matrícula do aluno2, a conta do prof2 — modo e bloqueio —, as
 flags, as mensalidades e automáticas de antes e os 2 jobs do MP) vai para ~/projetos/physiqcalc-scratch/hml/mpc/local/api-estado.json (600);
@@ -44,11 +52,12 @@ resto volta à foto — o último ✅ confere campo a campo. Os 2 jobs (mp-renov
 PUBLICADAS com a integração da rodada) ficam PARADOS durante a rodada e voltam no desfazer. A rodada só começa com a conta do prof2 SEM
 integração do MP e sem automática viva. Processos (o Deno, o simulador, o navegador): o pid na tela e o fim pelo pid.
 Precisa: ~/.pc-pat, as senhas das contas de TESTE, o ~/.deno/bin/deno e as portas 8790 e 8799 livres; no --sandbox, os arquivos 600 do
-vendedor e do comprador de teste (a W2) e o Playwright (--canal msedge).
+vendedor e do comprador de teste (a W2) e o Playwright (--canal msedge); nos physiq_*, a credencial de TESTE do MP do Physiq
+(~/.physiq-mp-test e ~/.physiq-mp-public-test, as do e2e/w06/_base.py).
 Uso: python3 e2e/mpc/api.py --seco
      python3 e2e/mpc/api.py --local [--casos physiq_avista,...]
      python3 e2e/mpc/api.py --local --sandbox [--vendedor oauth|app] [--canal msedge] [--sem-device-real]
-     python3 e2e/mpc/api.py [--casos recusado_com_device,...]                (F5: a função PUBLICADA no staging)
+     python3 e2e/mpc/api.py [--casos recusado_com_device,...,physiq_aprovado,physiq_recusado] [--sinal ARQ]   (F5: a função PUBLICADA)
      python3 e2e/mpc/api.py --limpar
 """
 from __future__ import annotations
@@ -108,7 +117,9 @@ CASOS_LOCAL = ("physiq_avista", "physiq_automatica", "conta_avista", "conta_auto
                "avulsa", "recusa_seguranca", "automatica_recusa", "renova_com_device")
 CASOS_SANDBOX = ("sandbox_physiq", "sandbox_conta")
 # revisão mpc 🟡1 (o roteiro da F5): com a função PUBLICADA e o sandbox que NÃO paga, prova-se o caminho da recusa — nunca 500, o motivo no log
-CASOS_STAGING = ("recusado_com_device", "recusado_sem_device", "automatica")
+# + a F5 (a decisão de 15/10 05:28): o aceite inteiro pelo MP do Physiq (a TEST- voltou a aprovar no sandbox) — por ÚLTIMO (o aprovado deixa
+# uma linha paga na rodada e os de cima conferem "nada pago na rodada")
+CASOS_STAGING = ("recusado_com_device", "recusado_sem_device", "automatica", "physiq_aprovado", "physiq_recusado")
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
 
 B = None   # a base dos E2E (e2e/w06/_base.py), carregada no main (o --seco não carrega: nada de rede)
@@ -852,6 +863,12 @@ def caso_automatica_real(rotulo: str = "automatica") -> None:
         falhou = [x for x in linhas if x.get("codigo") == "mp_assinatura_falhou"]
         p.check(bool(falhou) and falhou[-1].get("resultado") == "com_device",
                 f"[{rotulo}] o log: mp_assinatura_falhou com_device ({[{k: x.get(k) for k in ('status', 'resultado', 'externo')} for x in falhou][-1:]})")
+        # F5 (o passo extra da sessão principal, 05:18 — a v50): sem NENHUM código do MP, o slug seguro da mensagem vai SÓ ao log (msg_…) —
+        # nunca à resposta
+        ext = (falhou[-1].get("externo") or {}) if falhou else {}
+        p.check(bool(ext) and "msg_" not in json.dumps(r, ensure_ascii=False),
+                f"[{rotulo}] o motivo no log: externo {ext} (sem código do MP → o msg_<slug> da v50); a resposta sem msg_ "
+                f"(status_detail {r.get('status_detail')})")
 
 
 def sandbox_physiq() -> None:
@@ -876,8 +893,90 @@ def staging_automatica() -> None:
     caso_automatica_real("automatica")
 
 
+# F5 — a decisão da sessão principal (15/10 05:28; o achado 05:27: a credencial de TESTE do MP do Physiq voltou a aprovar no sandbox): o
+# aceite INTEIRO do §4 pelo MP do PHYSIQ — a conta do prof2 no modo mercadopago (SQL do servidor, só no staging; o desfazer devolve o modo), o
+# cartão de teste tokenizado pela chave pública de TESTE do Physiq (B.token_cartao) e a função PUBLICADA com a TEST- dela
+
+def staging_physiq_aprovado() -> None:
+    """O APRO com o titular, o CPF de teste e o id do aparelho → a cobrança paga; o GET do pagamento com a TEST- mostra o item (5 campos), o
+    descritor, o tipo do documento e o titular — só presença, tipo e códigos; o estorno pelo app (prof_reembolsar, o dono) ou, se o sandbox
+    recusar, pela TEST- (a linha sai no desfazer). O cabeçalho do aparelho não volta no GET: a prova dele é o com_device do physiq_recusado."""
+    print("\n── physiq_aprovado: o cartão APRO no MP do PHYSIQ (a TEST- da função publicada) com o titular, o CPF de teste e o aparelho")
+    base_do_caso("mercadopago")
+    try:
+        tok = B.token_cartao("APRO")      # o Mastercard de teste pela chave pública de TESTE do Physiq (o BIN que essa chave acha)
+    except AssertionError as e:
+        p.check(False, f"[physiq_aprovado] o card token pela chave pública de TESTE do Physiq não saiu ({str(e)[:80]})")
+        return
+    st, r = pedir(ALUNO, "aluno_mp_cartao", corpo_cartao(CTX["pac"], cartao=tok, titular=("APRO", "Mpcteste"), device=CTX["device"],
+                                                        metodo="master"))
+    cid = (r.get("cobranca") or {}).get("id")
+    linha = W2.cobranca(cid)
+    p.check(st == 200 and r.get("status") == "paga" and linha.get("status") == "paga" and linha.get("mp_status") == "approved",
+            f"[physiq_aprovado] o MP do Physiq APROVOU o pedido novo: {st} {r.get('status') or r.get('erro')} (status_detail "
+            f"{r.get('status_detail')}); a linha {linha.get('status')} / {linha.get('mp_status')}")
+    pid = linha.get("mp_payment_id")
+    if not pid:
+        return
+    stg, pay = B.mp_teste("GET", f"/v1/payments/{pid}")
+    pay = pay if isinstance(pay, dict) else {}
+    res = resumo_do_pagamento(pay)
+    payer = pay.get("payer") if isinstance(pay.get("payer"), dict) else {}
+    titular = {"payer_first_name": bool(payer.get("first_name")), "payer_last_name": bool(payer.get("last_name"))}
+    CTX.setdefault("evidencia_sandbox", {})["physiq_aprovado"] = {"http_get": stg, **res, **titular}
+    print("   o GET do pagamento (a TEST-; só presença, tipo e códigos): " + json.dumps(CTX["evidencia_sandbox"]["physiq_aprovado"],
+                                                                                  ensure_ascii=False), flush=True)
+    p.check(stg == 200 and aceite_ok(res) and res.get("live_mode") is False,
+            f"[physiq_aprovado] o GET (TEST-) mostra o item com {res['item_5_campos']} (id certo {res['item_id_certo']}, categoria "
+            f"{res['item_categoria']!r}, 1 unidade {res['item_quantidade_1']}, o valor {res['item_valor_certo']}), o descritor "
+            f"{res['statement_descriptor']!r} e payer.identification.type {res['payer_identification_type']!r} com 11 dígitos "
+            f"{res['payer_identification_11_digitos']} (o número não impresso); live_mode {res['live_mode']}")
+    p.check(titular["payer_first_name"] or res["additional_info_payer_first_name"],
+            f"[physiq_aprovado] o titular no pagamento (só presença): payer.first_name {titular['payer_first_name']}, payer.last_name "
+            f"{titular['payer_last_name']}, additional_info.payer.first_name {res['additional_info_payer_first_name']}")
+    st2, r2 = pedir(DONO, "prof_reembolsar", {"cobranca_id": cid})
+    depois = W2.cobranca(cid)
+    if st2 == 200 and depois.get("mp_status") == "refunded":
+        p.check(True, f"[physiq_aprovado] o estorno pelo app (prof_reembolsar, o dono): a linha {depois.get('status')} / {depois.get('mp_status')}")
+        return
+    st3, _ = B.mp_teste("POST", f"/v1/payments/{pid}/refunds", {})
+    _, pay3 = B.mp_teste("GET", f"/v1/payments/{pid}")
+    situacao = pay3.get("status") if isinstance(pay3, dict) else None
+    p.check(situacao == "refunded", f"[physiq_aprovado] o estorno: o app deu {st2} {r2.get('erro')} → pela TEST-: {st3} → {situacao} (a linha "
+                                    f"{depois.get('status')} sai no desfazer)")
+
+
+def staging_physiq_recusado() -> None:
+    """O par do physiq_aprovado na RECUSA (o cartão aprovado não gera linha de log; a recusa gera): o OTHE com o titular, o CPF de teste e
+    o aparelho → o MP cria o pagamento recusado (201 rejected) → a função responde 200 com a linha não paga e o status_detail (a tela escolhe
+    o texto), e o log PUBLICADO tem mp_cartao_recusado com com_device e o mp_status_detail — a prova do aparelho na função publicada."""
+    print("\n── physiq_recusado: o cartão OTHE no MP do PHYSIQ (a TEST-) com o aparelho → a recusa no log com com_device")
+    base_do_caso("mercadopago")
+    try:
+        tok = B.token_cartao("OTHE")
+    except AssertionError as e:
+        p.check(False, f"[physiq_recusado] o card token pela chave pública de TESTE do Physiq não saiu ({str(e)[:80]})")
+        return
+    desde = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 5))
+    st, r = pedir(ALUNO, "aluno_mp_cartao", corpo_cartao(CTX["pac"], cartao=tok, titular=("OTHE", "Mpcteste"), device=CTX["device"],
+                                                        metodo="master"))
+    linha = W2.cobranca((r.get("cobranca") or {}).get("id"))
+    detalhe = r.get("status_detail")
+    p.check(st == 200 and r.get("status") in ("aberta", "cancelada") and str(detalhe or "").startswith("cc_rejected_") and "detalhe" not in r
+            and linha.get("status") != "paga",
+            f"[physiq_recusado] o MP do Physiq recusou (201 rejected): {st} {r.get('status') or r.get('erro')} (status_detail {detalhe}); a "
+            f"linha {linha.get('status')} / {linha.get('mp_status')}; nada pago")
+    linhas = log_publicado(desde, "aluno_mp_cartao", ("mp_cartao_recusado", "mp_cartao_falhou", "mp_cartao_modo_errado", "excecao"))
+    rec = [x for x in linhas if x.get("codigo") == "mp_cartao_recusado"]
+    ext = (rec[-1].get("externo") or {}) if rec else {}
+    p.check(bool(rec) and rec[-1].get("resultado") == "com_device" and ext.get("mp_status_detail") == detalhe
+            and not [x for x in linhas if x.get("codigo") == "excecao"],
+            f"[physiq_recusado] o log PUBLICADO: mp_cartao_recusado com {rec[-1].get('resultado') if rec else '—'} e o mp_status_detail "
+            f"{ext.get('mp_status_detail')} ({len(linhas)} linha(s) da ação)")
+
+
 FUNCOES_STAGING = {"recusado_com_device": staging_recusado_com_device, "recusado_sem_device": staging_recusado_sem_device,
-                   "automatica": staging_automatica}
+                   "automatica": staging_automatica, "physiq_aprovado": staging_physiq_aprovado, "physiq_recusado": staging_physiq_recusado}
 
 
 # ───────────────────────── seco ─────────────────────────

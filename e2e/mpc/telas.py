@@ -21,10 +21,15 @@ Modos:
                   da chave do vendedor (a do api.py); a ação sai com o pagador e o device_id; o card token leva o device.meli.session_id; o
                   sandbox NÃO paga (2034 com o par da W2): a função responde cartao_recusado (400), nunca 500; nada fica pago; o desfazer
                   sempre (o finally)
+                  --physiq (a decisão de 15/10 05:28: a credencial de TESTE do MP do Physiq voltou a aprovar no sandbox) a conta do prof2
+                  no MP do PHYSIQ (o modo mercadopago por SQL, só no staging; o desfazer devolve): o Brick com a chave de TESTE do Physiq
+                  (data-brick-chave physiq), o Mastercard de teste com o titular APRO e o CPF de teste → Pagar → a função PUBLICADA (a
+                  TEST-) aprova: a ação com o pagador e o device_id, o card token com o aparelho do SDK, 200 paga e a linha approved; o
+                  estorno pelo app (prof_reembolsar, o dono) ou, com o sandbox recusando, pela TEST-
   --explorar      (com --base local) só lista a estrutura do Brick (os iframes e os campos: nome, id, tipo — nunca valor) e sai
 Uso: python3 e2e/mpc/telas.py --seco
      python3 e2e/mpc/telas.py --base local --canal msedge [--loja] [--com-tela] [--explorar]
-     python3 e2e/mpc/telas.py --base staging --canal msedge          (F5)
+     python3 e2e/mpc/telas.py --base staging --canal msedge [--physiq]          (F5)
 Saída: prints em ~/projetos/physiqcalc-scratch/prints/mpc/ (conferidos numa cópia reduzida; nunca no git).
 """
 from __future__ import annotations
@@ -127,7 +132,7 @@ def digitar_no_iframe(pg, nome_parcial: str, texto: str) -> bool:
         return False
 
 
-def preencher_brick(pg, numero: str = CARTAO["numero"]) -> dict:
+def preencher_brick(pg, numero: str = CARTAO["numero"], titular: str = TITULAR) -> dict:
     """O cartão de TESTE nos campos seguros (iframes) e o titular e o CPF nos campos da página do Brick."""
     feito = {"numero": digitar_no_iframe(pg, "cardNumber", numero)}
     pg.wait_for_timeout(1500)   # a bandeira (a consulta do BIN)
@@ -136,7 +141,7 @@ def preencher_brick(pg, numero: str = CARTAO["numero"]) -> dict:
     nome = pg.locator("[data-brick-mp] input[name*='HOLDER' i], [data-brick-mp] input[id*='cardholderName' i], [data-brick-mp] input[name*='cardholder' i]")
     feito["titular"] = nome.count() > 0
     if feito["titular"]:
-        nome.first.fill(TITULAR)
+        nome.first.fill(titular)
     # medido em 15/10 (--explorar): os iframes cardNumber/expirationDate/securityCode; na página, HOLDER_NAME, o tipo (select) e DOCUMENT
     doc = pg.locator("[data-brick-mp] input[name='DOCUMENT'], [data-brick-mp] input[name*='IDENTIFICATION_NUMBER' i], "
                      "[data-brick-mp] input[name*='identification' i]")
@@ -313,17 +318,27 @@ def rodar_staging(a) -> int:
     capturas: dict = {"token": [], "acao": [], "resposta": []}
     C, B5 = T.carregar("staging")
     C.SAIDA, B5.PRINTS = SAIDA, PRINTS
-    o = C.Saida("telas_mpc_staging", parar=False)
+    physiq = bool(getattr(a, "physiq", False))
+    o = C.Saida("telas_mpc_staging" + ("_physiq" if physiq else ""), parar=False)
     try:
-        MPC.CTX["vendedor"] = MPC.vendedor_de_teste("oauth")
-        aceito = MPC.cartao_aceito(MPC.CTX["vendedor"]["public_key"])
-        o.ok(bool(aceito), f"a bandeira de teste que a chave do vendedor acha pelo BIN: {aceito[0] if aceito else 'NENHUMA'}")
-        if not aceito:
-            return o.fim()
+        if physiq:
+            # F5 (a decisão de 15/10 05:28): o MP do PHYSIQ — a chave pública do build de staging é a de TESTE do Physiq, que acha o BIN do
+            # Mastercard de teste (o e2e/w06/_base.py › token_cartao); a TEST- da função publicada cria o pagamento
+            aceito = ("master", CARTAO["numero"])
+        else:
+            MPC.CTX["vendedor"] = MPC.vendedor_de_teste("oauth")
+            aceito = MPC.cartao_aceito(MPC.CTX["vendedor"]["public_key"])
+            o.ok(bool(aceito), f"a bandeira de teste que a chave do vendedor acha pelo BIN: {aceito[0] if aceito else 'NENHUMA'}")
+            if not aceito:
+                return o.fim()
         MPC.preparar()
-        MPC.integracao_do_vendedor(MPC.W2.chave_do_servico())
-        MPC.base_do_caso("mercadopago_conta")
-        R = T.Rodada(C=C, B5=B5, o=o, base=BASE_STAGING, prefixo="mpc_staging", producao=False, sess=C.Sessoes())
+        if physiq:
+            MPC.base_do_caso("mercadopago")   # a conta do prof2 no MP do Physiq (SQL do servidor, só no staging; o desfazer devolve o modo)
+        else:
+            MPC.integracao_do_vendedor(MPC.W2.chave_do_servico())
+            MPC.base_do_caso("mercadopago_conta")
+        R = T.Rodada(C=C, B5=B5, o=o, base=BASE_STAGING, prefixo="mpc_staging" + ("_physiq" if physiq else ""), producao=False,
+                     sess=C.Sessoes())
         with sync_playwright() as pw:
             nav = pw.chromium.launch(channel=a.canal, headless=not a.com_tela, args=ARGS_NAVEGADOR)
             try:
@@ -350,8 +365,10 @@ def rodar_staging(a) -> int:
                 R.entrar(caso, "/perfil/pagamentos", MPC.ALUNO)
                 if not abrir_o_brick(caso, o):
                     return o.fim()
-                o.ok(caso.pg.locator("[data-brick-mp][data-brick-chave='conta']").count() > 0, "o Brick com a chave do VENDEDOR de teste")
-                feito = preencher_brick(caso.pg, aceito[1])
+                chave = "physiq" if physiq else "conta"
+                o.ok(caso.pg.locator(f"[data-brick-mp][data-brick-chave='{chave}']").count() > 0,
+                     "o Brick com a chave " + ("de TESTE do Physiq" if physiq else "do VENDEDOR de teste"))
+                feito = preencher_brick(caso.pg, aceito[1], "APRO" if physiq else TITULAR)   # o sandbox decide pelo titular: APRO aprova
                 o.ok(all(feito.values()), f"o Brick preenchido com o cartão de TESTE {aceito[0]} ({feito})")
                 caso.pg.locator("[data-brick-mp] button[type='submit'], [data-brick-mp] button:has-text('Pagar')").first.click(timeout=15000)
                 caso.esperar(lambda: bool(capturas["resposta"]), 90)
@@ -361,10 +378,30 @@ def rodar_staging(a) -> int:
                 st, corpo = capturas["resposta"][-1] if capturas["resposta"] else (0, None)
                 o.ok(acao_ok(acao), f"a ação com o pagador e o device_id ({ {k: v for k, v in acao.items() if k != 'campos'} })")
                 o.ok(tok.get("device_meli_session_id") is True, f"o card token com o aparelho do SDK ({tok.get('device_meli_session_id')})")
-                o.ok(recusa_ok(st, corpo), f"o sandbox não paga (o par da W2 → 2034): a função responde {st} "
-                                           f"{(corpo or {}).get('erro') if isinstance(corpo, dict) else '?'} — nunca 500, sem o texto do MP")
-                o.ok(MPC.pagas_na_rodada() == 0, "nada pago na rodada")
-                o.linha(f"   print: {caso.print('cartao_aluno_staging_depois')}")
+                if physiq:
+                    c = corpo if isinstance(corpo, dict) else {}
+                    cid = (c.get("cobranca") or {}).get("id")
+                    linha = MPC.W2.cobranca(cid)
+                    o.ok(st == 200 and c.get("status") == "paga" and linha.get("status") == "paga" and linha.get("mp_status") == "approved",
+                         f"o MP do Physiq (a TEST- da função publicada) APROVOU o pedido da tela: {st} {c.get('status') or c.get('erro')} "
+                         f"(status_detail {c.get('status_detail')}); a linha {linha.get('status')} / {linha.get('mp_status')}")
+                    o.linha(f"   print: {caso.print('cartao_aluno_staging_physiq_depois')}")
+                    if cid and linha.get("status") == "paga":
+                        st2, r2 = MPC.pedir(MPC.DONO, "prof_reembolsar", {"cobranca_id": cid})   # o estorno pelo app (o dono)
+                        depois = MPC.W2.cobranca(cid)
+                        if not (st2 == 200 and depois.get("mp_status") == "refunded") and linha.get("mp_payment_id"):
+                            stm, _ = MPC.B.mp_teste("POST", f"/v1/payments/{linha['mp_payment_id']}/refunds", {})   # o sandbox recusou: a TEST-
+                            _, pay = MPC.B.mp_teste("GET", f"/v1/payments/{linha['mp_payment_id']}")
+                            o.ok(isinstance(pay, dict) and pay.get("status") == "refunded",
+                                 f"o estorno: o app deu {st2} {r2.get('erro')} → pela TEST-: {stm} → {pay.get('status') if isinstance(pay, dict) else '?'}")
+                        else:
+                            o.ok(st2 == 200 and depois.get("mp_status") == "refunded",
+                                 f"o estorno pelo app (prof_reembolsar, o dono): {st2} → a linha {depois.get('status')} / {depois.get('mp_status')}")
+                else:
+                    o.ok(recusa_ok(st, corpo), f"o sandbox não paga (o par da W2 → 2034): a função responde {st} "
+                                               f"{(corpo or {}).get('erro') if isinstance(corpo, dict) else '?'} — nunca 500, sem o texto do MP")
+                    o.ok(MPC.pagas_na_rodada() == 0, "nada pago na rodada")
+                    o.linha(f"   print: {caso.print('cartao_aluno_staging_depois')}")
             finally:
                 try:
                     R.sess.fechar(o)
@@ -416,8 +453,12 @@ def main() -> int:
     ap.add_argument("--com-tela", action="store_true")
     ap.add_argument("--loja", action="store_true", help="só no local: o servidor_dist servindo o build:loja (o health.json diz 'play')")
     ap.add_argument("--explorar", action="store_true", help="local: só lista a estrutura do Brick")
+    ap.add_argument("--physiq", action="store_true",
+                    help="só no --base staging: o MP do PHYSIQ (a TEST- da função publicada) — o Brick → paga → o estorno (a decisão de 15/10 05:28)")
     ap.add_argument("--seco", action="store_true")
     a = ap.parse_args()
+    if a.physiq and a.base != "staging":
+        ap.error("--physiq só no --base staging")
     if a.loja and a.base != "local":
         ap.error("--loja só no --base local (o staging serve o build do site — a revisão mpc 🟡5)")
     if a.seco:
