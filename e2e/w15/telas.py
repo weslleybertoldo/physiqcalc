@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import re
 import socket
 import subprocess
 import sys
@@ -431,7 +432,11 @@ def caso_semana_series(nav, base: str, prefixo: str, m: dict, rota: str) -> None
         B.saude_ok("volume/histórico/relatório")
         p.check(c.esperar(lambda: c.pg.locator("[data-volume-aluno] [data-volume-grupo]").count() >= 3, 30), "volume semanal por grupo")
         p.check(c.esperar(lambda: c.pg.locator("[data-historico-item]").count() >= len(m["feitos"]), 30), f"histórico do mês com {len(m['feitos'])} treinos")
-        c.pg.locator("[data-historico-item]").first.click()
+        # hml-24 (F5): abre um treino feito DA MASSA DA W15 (o dia mais recente dos "feitos", com exercício), não o 1º da lista — a massa
+        # da W25 (que voltou a montar no F5) põe no mesmo aluno um "Treino A" de HOJE com 0 exercício, que fica em 1º e não tem série
+        feito = c.pg.locator(f'[data-historico-item="{max(m["feitos"])}"]').filter(has_text=re.compile(r"[1-9]\d* exercício"))
+        if c.esperar(lambda: feito.count() > 0, 30):
+            feito.first.click()
         p.check(c.esperar(lambda: c.pg.locator("[data-historico-detalhe] li").count() > 0, 30), "histórico: o treino feito abre com as séries")
         c.pg.keyboard.press("Escape")
         c.pg.wait_for_timeout(500)
