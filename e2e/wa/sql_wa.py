@@ -381,9 +381,12 @@ def casos() -> dict[str, tuple[str, str, dict]]:
                + f"  v_j := {S}.dia_extra_salvar(null, jsonb_build_object('dia', v_hoje, 'nome', '  Lanche   da tarde ', 'horario', '16:00'));\n"
                + "  v_id := (v_j -> 'extra' ->> 'id')::uuid;\n"
                + res(nome="v_j -> 'extra' ->> 'nome'", comi="(v_j -> 'extra' ->> 'concluida_em') is not null",
-                     # P2 (Task 1): comparado com o paciente_id do plano_ativo do meu_dia (definer) — NÃO com o plano lido como a aluna: o RLS
-                     # dela é o meu_paciente_id() (limit 1 sem order by) e o preâmbulo cria a 2ª matrícula viva dela (deu null 1× no staging)
+                     # P2 (Task 1): matricula = o paciente_id do plano_ativo do meu_dia (definer, sem o RLS). hml-23 (H-115): + matricula_rls =
+                     # o plano lido COMO A ALUNA (o texto de antes da P2) — o preâmbulo cria a 2ª matrícula viva dela; com a escalar de antes
+                     # (meu_paciente_id, limit 1 sem order by) o RLS ficava com uma só e deu null 1× no staging; agora olha o conjunto
                      matricula=f"(v_j -> 'extra' ->> 'paciente_id') = ({S}.meu_dia(v_hoje) -> 'plano_ativo' ->> 'paciente_id')",
+                     matricula_rls="(v_j -> 'extra' ->> 'paciente_id')::uuid = (select pl.paciente_id from " + S + ".planos_alimentares pl where pl.id = "
+                                   f"(select (({S}.meu_dia(v_hoje) -> 'plano_ativo') ->> 'plano_id')::uuid))",
                      pus=f"{S}.dia_adicionar(v_hoje, jsonb_build_object('extra_id', v_id, 'alimento_id', v_taco, 'quantidade_g', 80)) -> 'ok'",
                      desmarcar=f"{S}.dia_extra_marcar(v_id, false) -> 'concluida_em'",
                      sem_dia=f"{S}.dia_extra_salvar(null, '{{\"nome\": \"x\"}}'::jsonb) ->> 'erro'",
@@ -392,8 +395,8 @@ def casos() -> dict[str, tuple[str, str, dict]]:
                + f"  insert into {S}.aluno_dia_refeicoes (paciente_id, dono_user_id, dia, nome) select v_pac_a, v_aluna, v_hoje, '{B.MARCA} ' || g\n"
                f"    from generate_series(1, 10 - (select count(*) from {S}.aluno_dia_refeicoes where dono_user_id = v_aluna and dia = v_hoje and deleted_at is null)::int) g;\n"
                + como("v_aluna") + res(limite=f"{S}.dia_extra_salvar(null, jsonb_build_object('dia', v_hoje, 'nome', 'a 11ª')) ->> 'erro'") + VOLTA,
-               {"nome": "Lanche da tarde", "comi": True, "matricula": True, "pus": True, "desmarcar": None, "sem_dia": "dados_invalidos",
-                "excluir": {"ok": True}, "itens_vivos": 0, "limite": "limite"})
+               {"nome": "Lanche da tarde", "comi": True, "matricula": True, "matricula_rls": True, "pus": True, "desmarcar": None,
+                "sem_dia": "dados_invalidos", "excluir": {"ok": True}, "itens_vivos": 0, "limite": "limite"})
     k["D6"] = ("dieta", liberar() + como("v_aluna")
                + f"  v_j := {S}.meu_alimento_salvar(null, '{{\"nome\": \"{B.MARCA} pão da padaria\", \"porcao_g\": 50, \"energia_kcal\": 280, "
                "\"proteina_g\": 9, \"carboidrato_g\": 55, \"lipidio_g\": 3, \"fibra_g\": 2}'::jsonb);\n  v_id := (v_j -> 'alimento' ->> 'id')::uuid;\n"

@@ -22,6 +22,7 @@ O Supabase dá `EXECUTE` a `anon` e a `authenticated` em toda função nova. Por
 - Função do segundo tipo **confere quem chama** dentro dela (`auth.uid()`, papel, vínculo). A conferência não pode cair no
   `NULL`: use `exists (…)` ou `coalesce(…, false)` (ex.: `pode_mexer_no_acesso`, `pode_ver_aluno`).
 - Função de gatilho não precisa de `EXECUTE` de ninguém.
+- Função **de policy** (roda como quem pede) é do 2º tipo: `meus_pacientes_ids()` e `minhas_nutricionistas_ids()` (hml-23).
 - Função `SECURITY DEFINER` sempre com `search_path` fixo (`''` com os nomes completos, ou o schema dela).
 
 ## Principal: o plano alimentar do aluno no painel (hml-17, H-38)
