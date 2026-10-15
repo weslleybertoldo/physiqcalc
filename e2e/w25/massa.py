@@ -20,6 +20,7 @@ Uso: python3 e2e/w25/massa.py [--limpar | --seco]   (--seco: sem rede — monta 
 from __future__ import annotations
 
 import argparse
+import ast
 import datetime as dt
 import json
 import socket
@@ -200,13 +201,13 @@ def limpar() -> None:
         B.B5.exec_treino(f"""
           delete from {S}.tb_treino_series where user_id = '{t}'; delete from {S}.tb_treino_concluido where user_id = '{t}';
           delete from {S}.tb_semana_treinos where user_id = '{t}'; delete from {S}.tb_grupos_treino_perfis where user_id = '{t}';""")
+        q(f"update {S}.pacientes set treino_user_id = {lit(m.get('carlos_tid_antes'))} where id = '{m['carlos_paciente']}'")
+        sp = B.service(B.TREINO_REF)
+        B.http("DELETE", f"{B.B5.TREINO_URL}/auth/v1/admin/users/{t}", None, {"apikey": sp, "Authorization": f"Bearer {sp}"})
     if m.get("grupo_w25"):
         # hml-24: o treino próprio da W25 sai junto (os exercícios e o "recebe" dele vão pela FK)
         B.B5.exec_treino(f"delete from {S}.tb_semana_treinos where grupo_id = '{m['grupo_w25']}'; "
                          f"delete from {S}.tb_grupos_treino where id = '{m['grupo_w25']}'")
-        q(f"update {S}.pacientes set treino_user_id = {lit(m.get('carlos_tid_antes'))} where id = '{m['carlos_paciente']}'")
-        sp = B.service(B.TREINO_REF)
-        B.http("DELETE", f"{B.B5.TREINO_URL}/auth/v1/admin/users/{t}", None, {"apikey": sp, "Authorization": f"Bearer {sp}"})
     if m.get("rafael_treino"):
         t = m["rafael_treino"]
         B.B5.exec_treino(f"""
@@ -242,7 +243,17 @@ def seco() -> int:
     ok = so_staging and so_carlos and sem_o_a and TREINO_W25.endswith(" W25") and sql.count(f"'{g}'") >= 5
     print(("✅ " if ok else "❌ ") + f"seco: o treino do Carlos no grupo próprio da W25 ({len(linhas)} comandos, só no staging, só do Carlos e do grupo "
           "dele; o treino A da W15 só aparece para tirar a ligação velha)")
-    return 0 if ok else 1
+    # revisão hml-24 (🟡2): no --limpar, a volta da matrícula e a exclusão do login de teste do Treino ficam no bloco do carlos_treino; o
+    # bloco do grupo_w25 só apaga o grupo (conferido pela árvore do Python, não pelo texto)
+    arvore = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    func = next(n for n in arvore.body if isinstance(n, ast.FunctionDef) and n.name == "limpar")
+    blocos = {ast.unparse(n.test): ast.unparse(n) for n in func.body if isinstance(n, ast.If)}
+    carlos, grupo = blocos.get("m.get('carlos_treino')", ""), blocos.get("m.get('grupo_w25')", "")
+    login = "/auth/v1/admin/users/" in carlos and "'DELETE'" in carlos and "set treino_user_id" in carlos
+    so_grupo = bool(grupo) and "/auth/v1/admin/users/" not in grupo and "treino_user_id" not in grupo and "tb_grupos_treino where id" in grupo
+    ok2 = login and so_grupo
+    print(("✅ " if ok2 else "❌ ") + "seco: o --limpar volta a matrícula e apaga o login de teste no bloco do carlos_treino; o do grupo_w25 só apaga o grupo")
+    return 0 if ok and ok2 else 1
 
 
 if __name__ == "__main__":
