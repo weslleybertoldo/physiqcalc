@@ -23,16 +23,19 @@ Modos:
                        automatica_recusa  o POST /preapproval 400 com o código SÓ na mensagem (14/10) → cartao_recusado com o
                                           status_detail e o log mp_assinatura_falhou com o código
                      e, no fim de toda rodada, o log do Deno da rodada SEM o CPF, o nome e o device de teste (0 ocorrência)
-  --local --sandbox  (F3, ANTES de publicar) a MESMA função local com o MP de VERDADE em SANDBOX: a conta do prof2 no MP do personal com o
-                     VENDEDOR DE TESTE (o par de ~/.physiq-mp-vendedor-teste-oauth.json — o caminho da W2 —, cifrado com a chave da rodada),
-                     o COMPRADOR de teste no MP_TEST_PAYER_EMAIL e o cartão de teste APRO pela chave pública do vendedor →
-                     aluno_mp_cartao com o titular, o CPF de teste e o id do aparelho (o de verdade do security.js, pelo Playwright; sem
-                     ele, um no formato) → o GET do pagamento (token do vendedor) mostra additional_info.items[0] (5 campos),
-                     statement_descriptor e payer.identification.type (o número nunca impresso) → o estorno pelo token do vendedor.
-                     O MP do Physiq fica FORA (o token dele no Deno é inválido de propósito: nada da conta real do Physiq é usado)
-  (sem --local)      (F5, da sessão principal — NÃO roda na etapa 1) a pagamentos-aluno PUBLICADA no staging com o vendedor de teste (a
-                     integração cifrada com a MP_TOKENS_CHAVE das funções, lida do cofre só na memória, conferida pelo digest):
-                     aprovado (APRO), recusado (OTHE), automatica (a do sandbox: pendente com o checkout do MP) e apk_antigo
+  --local --sandbox  (F3) a MESMA função local com o MP de VERDADE em SANDBOX: o VENDEDOR DE TESTE (--vendedor oauth, o padrão: o par de
+                     ~/.physiq-mp-vendedor-teste-oauth.json — o caminho da W2; app: a aplicação PRÓPRIA dele, ~/.physiq-mp-vendedor-teste-app.json)
+                     no MP do Physiq (o token dele no Deno local: nada da conta real do Physiq) e no do personal (a integração cifrada com a
+                     chave da rodada), o COMPRADOR de teste e o cartão de teste (a bandeira que a chave acha pelo BIN) → aluno_mp_cartao com o
+                     titular, o CPF de teste e o id do aparelho (o de verdade do security.js; sem ele, um no formato). O sandbox NÃO paga
+                     (15/10: o par da W2 → 2034; a aplicação própria → 401): a prova é a recusa — nunca 500, sem o texto do MP na resposta,
+                     o motivo no log do Deno (mp_cartao_falhou com as causas e com/sem device) e nada pago. Se o MP um dia aprovar: o GET do
+                     pagamento mostra o item (5 campos), o descritor e o tipo do documento, e o pagamento volta (o estorno)
+  (sem --local)      (F5, da sessão principal — NÃO roda na etapa 1; a revisão mpc 🟡1) a pagamentos-aluno PUBLICADA no staging com o par
+                     do OAuth da W2 (a integração cifrada com a MP_TOKENS_CHAVE das funções, lida do cofre só na memória, conferida pelo digest):
+                     recusado_com_device (o titular + o aparelho), recusado_sem_device (o corpo do APK de antes) e automatica — nunca 500, o
+                     log PUBLICADO (o endpoint de logs, até 150 s) com mp_cartao_falhou/mp_assinatura_falhou, as causas do sandbox (2034 com
+                     o par da W2; outra = anotar) e com/sem device; nada pago; a automática criada no MP cancelada na hora
   --limpar           só desfaz uma rodada que caiu no meio (pelo arquivo de estado)
 Desfazer (o do e2e/w2/api.py — W2.desfazer): ANTES de gravar, a foto (a matrícula do aluno2, a conta do prof2 — modo e bloqueio —, as
 flags, as mensalidades e automáticas de antes e os 2 jobs do MP) vai para ~/projetos/physiqcalc-scratch/hml/mpc/local/api-estado.json (600);
@@ -44,7 +47,8 @@ Precisa: ~/.pc-pat, as senhas das contas de TESTE, o ~/.deno/bin/deno e as porta
 vendedor e do comprador de teste (a W2) e o Playwright (--canal msedge).
 Uso: python3 e2e/mpc/api.py --seco
      python3 e2e/mpc/api.py --local [--casos physiq_avista,...]
-     python3 e2e/mpc/api.py --local --sandbox [--canal msedge] [--sem-device-real]
+     python3 e2e/mpc/api.py --local --sandbox [--vendedor oauth|app] [--canal msedge] [--sem-device-real]
+     python3 e2e/mpc/api.py [--casos recusado_com_device,...]                (F5: a função PUBLICADA no staging)
      python3 e2e/mpc/api.py --limpar
 """
 from __future__ import annotations
@@ -101,9 +105,10 @@ CHAVES_CARTAO = {"transaction_amount", "token", "description", "installments", "
                  "additional_info", "statement_descriptor", "payment_method_id", "issuer_id"}
 CHAVES_AUTOMATICA = {"reason", "external_reference", "payer_email", "auto_recurring", "back_url", "notification_url", "card_token_id", "status"}
 CASOS_LOCAL = ("physiq_avista", "physiq_automatica", "conta_avista", "conta_automatica", "sem_device", "device_ruim", "dv_errado", "apk_antigo",
-               "recusa_seguranca", "automatica_recusa")
+               "avulsa", "recusa_seguranca", "automatica_recusa", "renova_com_device")
 CASOS_SANDBOX = ("sandbox_physiq", "sandbox_conta")
-CASOS_STAGING = ("aprovado", "recusado", "automatica", "apk_antigo")
+# revisão mpc 🟡1 (o roteiro da F5): com a função PUBLICADA e o sandbox que NÃO paga, prova-se o caminho da recusa — nunca 500, o motivo no log
+CASOS_STAGING = ("recusado_com_device", "recusado_sem_device", "automatica")
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
 
 B = None   # a base dos E2E (e2e/w06/_base.py), carregada no main (o --seco não carrega: nada de rede)
@@ -171,6 +176,9 @@ def problemas_do_cartao(pedido: dict | None, *, titular: bool, documento: bool, 
         erros.append(f"o additional_info com {sorted(set(info) - {'items', 'payer'})}")
     if c.get("statement_descriptor") != DESCRITOR:
         erros.append(f"o descritor {c.get('statement_descriptor')!r}")
+    # revisão mpc ⚪8e: o valor do pagamento = o do item × a quantidade (hoje o código usa o mesmo número nos 2)
+    if len(itens) == 1 and isinstance(itens[0], dict) and c.get("transaction_amount") != (itens[0].get("unit_price") or 0) * (itens[0].get("quantity") or 0):
+        erros.append("o transaction_amount ≠ unit_price × quantity")
     if set(c) - CHAVES_CARTAO:
         erros.append(f"campos a mais no pedido: {sorted(set(c) - CHAVES_CARTAO)}")
     return erros
@@ -547,26 +555,58 @@ def local_recusa_seguranca() -> None:
 def local_automatica_recusa() -> None:
     print("\n── automatica_recusa: o POST /preapproval 400 com o código SÓ na mensagem (o retrato de 14/10) → o código no log e na resposta")
     garantir_integracao()
+    # revisão mpc 🟡2: a mensagem do cc_rejected_… e a da validação do cartão ("CC_VAL_433 Credit card validation has failed" → cc_val_433)
+    for mensagem, codigo in (("cc_rejected_high_risk", "cc_rejected_high_risk"), ("CC_VAL_433 Credit card validation has failed", "cc_val_433")):
+        base_do_caso("mercadopago_conta")
+        W2.sim_cenario(preapproval_recusa=mensagem)
+        (st, r), pedidos, log = janela(lambda: pedir(ALUNO, "aluno_mp_assinar", {"paciente_id": CTX["pac"], "card_token": "sim-card-APRO",
+                                                                                "device_id": CTX["device"]}))
+        post = ultimo_pedido(pedidos, "POST", "/preapproval")
+        falhou = [x for x in linhas_do_log(log) if x.get("codigo") == "mp_assinatura_falhou"]
+        p.check(st == 400 and r.get("erro") == "cartao_recusado" and r.get("status_detail") == codigo and "detalhe" not in r
+                and bool((post or {}).get("device")) and sem_valores(r),
+                f"[automatica_recusa · {codigo}] 400 cartao_recusado com status_detail {codigo} e SEM o texto do MP (o detalhe saiu); o POST "
+                f"/preapproval levou o cabeçalho ({st} {r.get('erro')} {r.get('status_detail')})")
+        p.check(len(falhou) == 1 and falhou[0].get("status") == 400 and falhou[0].get("resultado") == "com_device"
+                and falhou[0].get("externo") == {"mp_status_detail": codigo},
+                f"[automatica_recusa · {codigo}] o log: mp_assinatura_falhou 400, com_device e o mp_status_detail tirado da mensagem (14/10 "
+                f"ficou {{}}) ({[{k: x.get(k) for k in ('status', 'resultado', 'externo')} for x in falhou]})")
+
+
+def local_avulsa() -> None:
+    print("\n── avulsa: a cobrança avulsa no cartão → o item com o id \"avulsa\" e o valor dela (revisão mpc ⚪8e)")
+    garantir_integracao()
     base_do_caso("mercadopago_conta")
-    W2.sim_cenario(preapproval_recusa="cc_rejected_high_risk")
-    (st, r), pedidos, log = janela(lambda: pedir(ALUNO, "aluno_mp_assinar", {"paciente_id": CTX["pac"], "card_token": "sim-card-APRO",
-                                                                            "device_id": CTX["device"]}))
-    post = ultimo_pedido(pedidos, "POST", "/preapproval")
-    falhou = [x for x in linhas_do_log(log) if x.get("codigo") == "mp_assinatura_falhou"]
-    p.check(st == 400 and r.get("erro") == "cartao_recusado" and r.get("status_detail") == "cc_rejected_high_risk" and bool((post or {}).get("device"))
-            and sem_valores(r),
-            f"[automatica_recusa] 400 cartao_recusado com status_detail cc_rejected_high_risk; o POST /preapproval levou o cabeçalho ({st} "
-            f"{r.get('erro')} {r.get('status_detail')})")
-    p.check(len(falhou) == 1 and falhou[0].get("status") == 400 and falhou[0].get("resultado") == "com_device"
-            and falhou[0].get("externo") == {"mp_status_detail": "cc_rejected_high_risk"},
-            f"[automatica_recusa] o log: mp_assinatura_falhou 400, com_device e o mp_status_detail tirado da mensagem (14/10 ficou {{}}) "
-            f"({[{k: x.get(k) for k in ('status', 'resultado', 'externo')} for x in falhou]})")
+    av = W2.um(f"""insert into {S}.cobrancas (paciente_id, conta_id, nutricionista_id, criado_por, descricao, valor, vencimento, tipo, status, origem)
+                    values ('{CTX['pac']}', '{CTX['conta']}', '{W2.CTX['dono_uid']}', '{W2.CTX['dono_uid']}', 'mpc e2e avulsa', 7.5, current_date,
+                            'avulsa', 'aberta', 'teste_mpc_api') returning id::text as id""")["id"]
+    (st, r), pedidos, _ = janela(lambda: pedir(ALUNO, "aluno_mp_cartao", {**corpo_cartao(CTX["pac"], device=CTX["device"]), "cobranca_id": av}))
+    post = ultimo_pedido(pedidos, "POST", "/v1/payments")
+    erros = problemas_do_cartao(post, titular=True, documento=True, device=True, item_id="avulsa", valor=7.5)
+    p.check(st == 200 and r.get("status") == "paga" and not erros,
+            f"[avulsa] paga; o item com id avulsa e unit_price = o valor da avulsa (= transaction_amount) ({st} {r.get('status') or r.get('erro')}; "
+            f"{'; '.join(erros) or 'certo'})")
+
+
+def local_renova_com_device() -> None:
+    print("\n── renova_com_device: o 401 da hora do uso → /users/me → renova → a nova tentativa leva o cabeçalho de novo (revisão mpc ⚪8e)")
+    W2.integracao(SIM.VENDEDOR_A, origem="oauth")
+    CTX["integracao"] = True
+    base_do_caso("mercadopago_conta")
+    W2.sim_post("/_expirar", {"vendedor": SIM.VENDEDOR_A})
+    (st, r), pedidos, _ = janela(lambda: pedir(ALUNO, "aluno_mp_cartao", corpo_cartao(CTX["pac"], device=CTX["device"])))
+    posts = [x for x in pedidos if x.get("metodo") == "POST" and str(x.get("caminho") or "").split("?")[0] == "/v1/payments"]
+    renovou = any(str(x.get("caminho") or "").split("?")[0] == "/oauth/token" and x.get("status") == 200 for x in pedidos)
+    p.check(st == 200 and r.get("status") == "paga" and renovou and len(posts) == 2 and [x.get("token") for x in posts] == ["morto", "vivo"]
+            and all(x.get("device") for x in posts) and [x.get("status") for x in posts] == [401, 201],
+            f"[renova_com_device] 401 → renova → o 2º POST /v1/payments com o token novo E o cabeçalho ({st} {r.get('status') or r.get('erro')}; "
+            f"os POSTs {[(x.get('token'), x.get('status'), x.get('device')) for x in posts]}; renovou {renovou})")
 
 
 FUNCOES_LOCAL = {"physiq_avista": local_physiq_avista, "physiq_automatica": local_physiq_automatica, "conta_avista": local_conta_avista,
                  "conta_automatica": local_conta_automatica, "sem_device": local_sem_device, "device_ruim": local_device_ruim,
-                 "dv_errado": local_dv_errado, "apk_antigo": local_apk_antigo, "recusa_seguranca": local_recusa_seguranca,
-                 "automatica_recusa": local_automatica_recusa}
+                 "dv_errado": local_dv_errado, "apk_antigo": local_apk_antigo, "avulsa": local_avulsa, "recusa_seguranca": local_recusa_seguranca,
+                 "automatica_recusa": local_automatica_recusa, "renova_com_device": local_renova_com_device}
 
 
 def conferir_log_da_rodada() -> None:
@@ -592,17 +632,18 @@ def ler_600(nome: str) -> dict:
     return json.loads(arq.read_text(encoding="utf-8"))
 
 
-def vendedor_de_teste() -> dict:
-    """As credenciais do vendedor de TESTE: as de PRODUÇÃO da aplicação PRÓPRIA dele (o painel dele, 15/10 — "use test users with
-    production credentials"; o user id pelo /users/me) ou, sem elas, o par do OAuth pela aplicação real (a W2 — o MP recusa com 2034).
-    Nada aqui é a credencial da conta real do Physiq."""
-    if (CASA / ARQ_VENDEDOR_APP).exists():
+def vendedor_de_teste(fonte: str = "oauth") -> dict:
+    """As credenciais do vendedor de TESTE. "oauth" (o padrão — a revisão mpc 🟡1: o do roteiro da F5): o par do OAuth pela aplicação real (a
+    W2; o sandbox recusa com 2034 "Invalid users involved", medido em 15/10). "app": as de PRODUÇÃO da aplicação PRÓPRIA dele (o painel dele,
+    15/10; o user id pelo /users/me — o MP recusa com 401 "Unauthorized use of live credentials" até alguém ativar). Nada aqui é a credencial
+    da conta real do Physiq."""
+    if fonte == "app":
         d = ler_600(ARQ_VENDEDOR_APP)
         st, eu, _ = W2.rede("GET", f"{MP}/users/me", None, {"Authorization": f"Bearer {d['access_token']}"}, timeout=60)
         if st != 200 or not isinstance(eu, dict) or not eu.get("id"):
             raise RuntimeError(f"/users/me com o token da aplicação do vendedor de teste: {st}")
         return {"token": d["access_token"], "refresh": None, "user_id": int(eu["id"]), "public_key": d["public_key"], "par": "aplicacao_propria"}
-    d = ler_600(ARQ_VENDEDOR_OAUTH)
+    d = ler_600(ARQ_VENDEDOR_OAUTH)   # o "oauth"
     for chave in ("teste", "producao"):
         par = d.get(chave) or {}
         if par.get("access_token") and par.get("public_key") and par.get("user_id"):
@@ -718,91 +759,118 @@ def estornar(pid: str) -> None:
     p.check(st in (200, 201) and depois.get("status") == "refunded", f"o estorno pelo token do vendedor de TESTE: {st} → {depois.get('status')}")
 
 
-def _sandbox(modo: str, rotulo: str) -> None:
-    print(f"\n── {rotulo}: o MP de VERDADE (sandbox) aceita o corpo novo no {'MP do Physiq' if modo == 'mercadopago' else 'MP do personal'} — APRO com "
-          "o titular, o CPF de teste, o item, o descritor e o aparelho")
+def log_publicado(desde: str, acao: str, codigos: tuple[str, ...], esperar_s: float = 150) -> list[dict]:
+    """O log da pagamentos-aluno PUBLICADA (o endpoint de logs da Management API, só leitura; o molde do prova_real.py): as linhas do schema
+    staging com a ação e os códigos, desde `desde` (UTC). O log chega com atraso: tenta a cada 15 s até `esperar_s`."""
+    fim = time.time() + esperar_s
+    while True:
+        sql = ("SELECT timestamp AS t, event_message FROM logs WHERE source = 'function_logs' AND "
+               "positionCaseInsensitive(event_message, '\"funcao\":\"pagamentos-aluno\"') > 0 ORDER BY t DESC LIMIT 200")
+        q = urllib.parse.urlencode({"sql": sql, "iso_timestamp_start": desde, "iso_timestamp_end": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+        st, r, _ = W2.rede("GET", f"https://api.supabase.com/v1/projects/{B.PRINCIPAL_REF}/analytics/endpoints/logs?{q}", None,
+                           {"Authorization": f"Bearer {B.ler('.pc-pat')}"}, timeout=90)
+        texto = "\n".join(str(x.get("event_message") or "") for x in ((r or {}).get("result") or [])) if isinstance(r, dict) else ""
+        linhas = [x for x in linhas_do_log(texto) if x.get("schema") == S and x.get("acao") == acao and x.get("codigo") in codigos]
+        if linhas or time.time() >= fim:
+            return linhas
+        time.sleep(15)
+
+
+def pagas_na_rodada() -> int:
+    return W2.um(f"""select count(*)::int as n from {S}.cobrancas where paciente_id = '{CTX['pac']}' and status = 'paga'
+                       and created_at >= {W2.lit(CTX['t0'])}::timestamptz""")["n"]
+
+
+def caso_mp_real(modo: str, rotulo: str, *, device: bool = True, antigo: bool = False) -> None:
+    """O cartão com o MP de VERDADE (sandbox): a função local (--local --sandbox) ou a PUBLICADA (F5). O que se prova com o sandbox que NÃO
+    paga (15/10: o par do OAuth da W2 → 2034; a aplicação própria → 401) — a revisão mpc 🟡1: a função nunca responde 500 (cartao_recusado
+    400 ou mp_error 502), o motivo vai ao log (mp_cartao_falhou com as causas do sandbox e com/sem device) e nada fica pago. Se o MP um dia
+    aprovar, vale o aceite inteiro: o GET mostra os campos novos e o pagamento volta (o estorno pelo token do vendedor)."""
+    print(f"\n── {rotulo}: o cartão no MP de VERDADE ({'o MP do Physiq' if modo == 'mercadopago' else 'o MP do personal'}; "
+          f"{'o corpo de antes (o APK antigo)' if antigo else 'o titular, o CPF de teste e ' + ('o aparelho' if device else 'SEM o aparelho')})")
     base_do_caso(modo)
     tok = token_do_cartao(CTX["vendedor"]["public_key"])
     if not tok:
-        p.check(False, "o card token do cartão de teste (a chave pública do vendedor) não saiu — o caso para aqui")
+        p.check(False, f"[{rotulo}] o card token do cartão de teste (a chave pública do vendedor) não saiu — o caso para aqui")
         return
-    titular = ("APRO", "Mpcteste")
+    desde = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 5))
     pos = tamanho_do_log() if CTX["modo"] != "staging" else 0
-    st, r = pedir(ALUNO, "aluno_mp_cartao", corpo_cartao(CTX["pac"], cartao=tok, titular=titular, device=CTX["device"], metodo=CTX.get("metodo") or METODO_TESTE))
-    log = log_desde(pos) if CTX["modo"] != "staging" else ""
-    cid = (r.get("cobranca") or {}).get("id")
-    pid = pagamento_da_rodada(cid, log)
-    codigos = [{k: x.get(k) for k in ("codigo", "status", "resultado", "externo")} for x in linhas_do_log(log)]
-    p.check(st == 200 and r.get("status") == "paga",
-            f"[{rotulo}] aluno_mp_cartao no sandbox: {st} {r.get('status') or r.get('erro')} (status_detail {r.get('status_detail')}; o log da "
-            f"função: {codigos or 'nada'})")
-    if not pid:
-        p.check(False, f"sem o id do pagamento (a função: {st} {r.get('erro')}; detalhe {str(r.get('detalhe', ''))[:120]!r})")
+    st, r = pedir(ALUNO, "aluno_mp_cartao", corpo_cartao(CTX["pac"], cartao=tok, titular=("APRO", "Mpcteste"), device=CTX["device"] if device else None,
+                                                        antigo=antigo, metodo=CTX.get("metodo") or METODO_TESTE))
+    pago = st == 200 and r.get("status") == "paga"
+    if pago:
+        pid = pagamento_da_rodada((r.get("cobranca") or {}).get("id"), "")
+        stg, pay = mp_vendedor("GET", f"/v1/payments/{pid}") if pid else (0, {})
+        res = resumo_do_pagamento(pay)
+        CTX.setdefault("evidencia_sandbox", {})[rotulo] = {"http_get": stg, **res}
+        p.check(stg == 200 and (aceite_ok(res) if not antigo else res.get("itens") == 1 and res.get("statement_descriptor") == DESCRITOR),
+                f"[{rotulo}] o MP APROVOU: o GET (token do vendedor) mostra o item ({res['item_5_campos']}), o descritor "
+                f"{res['statement_descriptor']!r} e o tipo do documento {res['payer_identification_type']!r} (o número não impresso)")
+        if pid:
+            estornar(pid)
         return
-    stg, pay = mp_vendedor("GET", f"/v1/payments/{pid}")
-    res = resumo_do_pagamento(pay)
-    CTX.setdefault("evidencia_sandbox", {})[rotulo] = {"http_get": stg, **res}
-    p.check(stg == 200 and aceite_ok(res),
-            f"[{rotulo}] o GET do pagamento (token do vendedor): additional_info.items[0] com {len(res['item_5_campos'])}/5 campos ({res['item_5_campos']}; "
-            f"categoria {res['item_categoria']!r}; quantidade 1 {res['item_quantidade_1']}; valor {res['item_valor_certo']}), statement_descriptor "
-            f"{res['statement_descriptor']!r}, payer.identification.type {res['payer_identification_type']!r} (o número com 11 dígitos "
-            f"{res['payer_identification_11_digitos']}, não impresso), additional_info.payer.first_name {res['additional_info_payer_first_name']}; "
-            f"status {res['status']}/{res['status_detail']}; live_mode {res['live_mode']}")
-    estornar(pid)
+    resultado = "com_device" if device else "sem_device"
+    linhas = (linhas_do_log(log_desde(pos)) if CTX["modo"] != "staging"
+              else log_publicado(desde, "aluno_mp_cartao", ("mp_cartao_falhou", "mp_cartao_modo_errado", "mp_cartao_recusado", "excecao")))
+    falhou = [x for x in linhas if x.get("codigo") == "mp_cartao_falhou"]
+    causas = (falhou[-1].get("externo") or {}).get("mp_causas") if falhou else None
+    p.check(st != 500 and r.get("erro") in ("cartao_recusado", "mp_error") and "detalhe" not in r and pagas_na_rodada() == 0,
+            f"[{rotulo}] o sandbox recusou e a função NÃO deu 500: {st} {r.get('erro')} (status_detail {r.get('status_detail')}); sem o texto do "
+            f"MP na resposta; nada pago na rodada")
+    p.check(bool(falhou) and falhou[-1].get("resultado") == resultado and bool(causas) and not [x for x in linhas if x.get("codigo") == "excecao"],
+            f"[{rotulo}] o log: mp_cartao_falhou com {resultado} e as causas do sandbox {causas} "
+            f"({'= o 2034 esperado com o par da W2' if causas == [2034] else 'OUTRA causa — anotar' if causas else 'sem a linha'}; "
+            f"{len(linhas)} linha(s) da ação)")
+
+
+def caso_automatica_real(rotulo: str = "automatica") -> None:
+    """A automática com cartão no MP de VERDADE (a função publicada, F5): só o cabeçalho a mais (decisão 6). O sandbox não tem automática com
+    cartão: o pendente (o checkout do MP — a rede do sandbox) ou cartao_recusado — nunca 500; o log com o resultado; o pendente criado no MP é
+    cancelado na hora pelo token do vendedor."""
+    print(f"\n── {rotulo}: a automática com cartão no MP de VERDADE (o cabeçalho do aparelho; o corpo de antes)")
+    base_do_caso("mercadopago_conta")
+    tok = token_do_cartao(CTX["vendedor"]["public_key"])
+    desde = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 5))
+    pos = tamanho_do_log() if CTX["modo"] != "staging" else 0
+    st, r = pedir(ALUNO, "aluno_mp_assinar", {"paciente_id": CTX["pac"], "card_token": tok or "sem-token", "device_id": CTX["device"]})
+    a = W2.assinatura_viva()
+    if a.get("mp_preapproval_id"):
+        stc, c = mp_vendedor("PUT", f"/preapproval/{a['mp_preapproval_id']}", {"status": "cancelled"})
+        print(f"   a automática criada no MP (status {a.get('status')}) cancelada pelo token do vendedor: {stc} {c.get('status')}", flush=True)
+    p.check(st != 500 and (st == 200 or r.get("erro") in ("cartao_recusado", "mp_error")),
+            f"[{rotulo}] nunca 500: {st} {r.get('erro') or a.get('status')} (sandbox {r.get('sandbox')}; status_detail {r.get('status_detail')})")
+    if st != 200:
+        linhas = (linhas_do_log(log_desde(pos)) if CTX["modo"] != "staging"
+                  else log_publicado(desde, "aluno_mp_assinar", ("mp_assinatura_falhou", "excecao")))
+        falhou = [x for x in linhas if x.get("codigo") == "mp_assinatura_falhou"]
+        p.check(bool(falhou) and falhou[-1].get("resultado") == "com_device",
+                f"[{rotulo}] o log: mp_assinatura_falhou com_device ({[{k: x.get(k) for k in ('status', 'resultado', 'externo')} for x in falhou][-1:]})")
 
 
 def sandbox_physiq() -> None:
-    _sandbox("mercadopago", "sandbox_physiq")
+    caso_mp_real("mercadopago", "sandbox_physiq")
 
 
 def sandbox_conta() -> None:
-    _sandbox("mercadopago_conta", "sandbox_conta")
+    caso_mp_real("mercadopago_conta", "sandbox_conta")
 
 
-# ───────────────────────── F5 (a função PUBLICADA) ─────────────────────────
+# ───────────────────────── F5 (a função PUBLICADA) — o roteiro da revisão mpc 🟡1 ─────────────────────────
 
-def staging_aprovado() -> None:
-    _sandbox("mercadopago_conta", "aprovado")
+def staging_recusado_com_device() -> None:
+    caso_mp_real("mercadopago_conta", "recusado_com_device")
 
 
-def staging_recusado() -> None:
-    print("\n── recusado (F5): OTHE → 200 cancelada com o status_detail (o log da função publicada fica com a sessão principal)")
-    base_do_caso("mercadopago_conta")
-    tok = token_do_cartao(CTX["vendedor"]["public_key"], titular="OTHE")
-    st, r = pedir(ALUNO, "aluno_mp_cartao", corpo_cartao(CTX["pac"], cartao=tok or "sem-token", titular=("OTHE", "Mpcteste"), device=CTX["device"],
-                                                        metodo=CTX.get("metodo") or METODO_TESTE))
-    p.check(st == 200 and r.get("status") in ("cancelada", "aberta") and bool(r.get("status_detail")),
-            f"[recusado] {st} {r.get('status') or r.get('erro')} {r.get('status_detail')}")
+def staging_recusado_sem_device() -> None:
+    caso_mp_real("mercadopago_conta", "recusado_sem_device", device=False, antigo=True)
 
 
 def staging_automatica() -> None:
-    print("\n── automatica (F5): o cabeçalho na automática do vendedor de teste (o sandbox: authorized ou o pendente com o checkout do MP)")
-    base_do_caso("mercadopago_conta")
-    tok = token_do_cartao(CTX["vendedor"]["public_key"])
-    st, r = pedir(ALUNO, "aluno_mp_assinar", {"paciente_id": CTX["pac"], "card_token": tok or "sem-token", "device_id": CTX["device"]})
-    a = W2.assinatura_viva()
-    p.check(st == 200 and a.get("status") in ("authorized", "pending"),
-            f"[automatica] {st} {r.get('erro') or a.get('status')} (sandbox {r.get('sandbox')}; init_point {'sim' if r.get('init_point') else 'não'})")
-    if a.get("mp_preapproval_id"):
-        W2.anotar_criado_no_mp("preapproval", a["mp_preapproval_id"])
-        stc, c = mp_vendedor("PUT", f"/preapproval/{a['mp_preapproval_id']}", {"status": "cancelled"})
-        p.check(stc == 200, f"[automatica] cancelada no MP pelo token do vendedor de teste ({stc} {c.get('status')})")
+    caso_automatica_real("automatica")
 
 
-def staging_apk_antigo() -> None:
-    print("\n── apk_antigo (F5): o corpo de antes → paga, e o GET mostra o item e o descritor (sem o documento)")
-    base_do_caso("mercadopago_conta")
-    tok = token_do_cartao(CTX["vendedor"]["public_key"])
-    st, r = pedir(ALUNO, "aluno_mp_cartao", corpo_cartao(CTX["pac"], cartao=tok or "sem-token", antigo=True, metodo=CTX.get("metodo") or METODO_TESTE))
-    pid = pagamento_da_rodada((r.get("cobranca") or {}).get("id"), "")
-    res = resumo_do_pagamento(mp_vendedor("GET", f"/v1/payments/{pid}")[1]) if pid else {}
-    p.check(st == 200 and r.get("status") == "paga" and res.get("itens") == 1 and res.get("statement_descriptor") == DESCRITOR,
-            f"[apk_antigo] {st} {r.get('status') or r.get('erro')}; o item {res.get('itens')} e o descritor {res.get('statement_descriptor')!r}")
-    if pid:
-        estornar(pid)
-
-
-FUNCOES_STAGING = {"aprovado": staging_aprovado, "recusado": staging_recusado, "automatica": staging_automatica, "apk_antigo": staging_apk_antigo}
+FUNCOES_STAGING = {"recusado_com_device": staging_recusado_com_device, "recusado_sem_device": staging_recusado_sem_device,
+                   "automatica": staging_automatica}
 
 
 # ───────────────────────── seco ─────────────────────────
@@ -830,6 +898,7 @@ def seco() -> int:
                                                                                              "unit_price": 10}], "payer": {"first_name": OCULTO, "last_name": OCULTO}}}},
         "CPF fora": {**bom, "corpo": {**bom["corpo"], "payer": {"email": PAGADOR_SIM, "first_name": OCULTO, "last_name": OCULTO}}},
         "campo a mais": {**bom, "corpo": {**bom["corpo"], "device_id": "x"}},
+        "valor ≠ item × quantidade": {**bom, "corpo": {**bom["corpo"], "transaction_amount": 11}},
     }
     p.check(problemas_do_cartao(bom, titular=True, documento=True, device=True) == []
             and all(problemas_do_cartao(v, titular=True, documento=True, device=True) for v in ruins.values())
@@ -882,6 +951,8 @@ def main() -> int:
     ap.add_argument("--casos", default=None, help="lista separada por vírgula (padrão: todos do modo)")
     ap.add_argument("--canal", default="msedge", help="--sandbox: o navegador do id do aparelho de verdade")
     ap.add_argument("--sem-device-real", action="store_true", help="--sandbox: um id no formato em vez do de verdade do security.js")
+    ap.add_argument("--vendedor", choices=("oauth", "app"), default="oauth",
+                    help="o vendedor de teste do MP de verdade: o par do OAuth da W2 (o padrão; 2034) ou a aplicação própria dele (401)")
     ap.add_argument("--sinal", default=None, help="o arquivo-sinal da trava do banco do staging (sem ele não começa; sumiu → para antes do caso)")
     modo_ = ap.add_mutually_exclusive_group()
     modo_.add_argument("--seco", action="store_true")
@@ -922,7 +993,7 @@ def main() -> int:
     pagador = PAGADOR_SIM
     try:
         if CTX["modo"] in ("sandbox", "staging"):
-            CTX["vendedor"] = vendedor_de_teste()
+            CTX["vendedor"] = vendedor_de_teste(a.vendedor)
             pagador = conferir_vendedor()
             if not a.sem_device_real:
                 real = device_de_verdade(a.canal)

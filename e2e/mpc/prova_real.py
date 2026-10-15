@@ -7,8 +7,10 @@ API do Mercado Pago e sem login — a linha da cobrança e o log novo da pagamen
            SQL SÓ LEITURA (a Management API com read_only, o molde do hml/sqlro.py): as cobranças de CARTÃO do MP desde a hora (forma mp,
            metodo cartao) por conta que recebe no MP — status, mp_status e se tem o pagamento e o collector (contagens; nenhum id, nome ou
            e-mail); as automáticas criadas desde a hora (status); e o LOG das funções (o endpoint de logs da Management API, só leitura): as
-           linhas mp_cartao_recusado, mp_cartao_falhou e mp_assinatura_falhou da pagamentos-aluno com o resultado (com/sem device) e o
-           mp_status_detail — a prova se lê sem a API do MP
+           linhas mp_cartao_recusado, mp_cartao_falhou, mp_assinatura_falhou e mp_cartao_modo_errado da pagamentos-aluno com o resultado
+           (com/sem device) e o mp_status_detail; e (a revisão mpc 🟡3) a excecao, o mp_indisponivel, o mp_conta_indisponivel e o
+           mp_tokens_chave_ausente das ações do cartão (aluno_mp_cartao e aluno_mp_assinar: o 500, o 502 e o 409 que o cartão pode dar logo
+           depois de publicar) + a contagem de TODA linha de erro da pagamentos-aluno desde a hora, por código — a prova se lê sem a API do MP
   --seco   sem rede: as conferências puras (a leitura das linhas do log e o resumo)
 Precisa: ~/.pc-pat. Nunca imprime id, e-mail, nome, CPF ou token.
 Uso: python3 e2e/mpc/prova_real.py conferir --desde "2026-10-15 18:00"
@@ -29,6 +31,9 @@ sys.dont_write_bytecode = True
 REF = "hkxvtsbwctxkrqzkkdoz"            # o banco principal (public e staging)
 UA = "physiq-mpc/1.0 (prova_real)"
 CODIGOS = ("mp_cartao_recusado", "mp_cartao_falhou", "mp_assinatura_falhou", "mp_cartao_modo_errado")
+# revisão mpc 🟡3: o que o cartão pode dar logo depois de publicar sem cair nos 4 de cima — só nas ações do cartão
+CODIGOS_DA_ACAO = ("excecao", "mp_indisponivel", "mp_conta_indisponivel", "mp_tokens_chave_ausente")
+ACOES_DO_CARTAO = ("aluno_mp_cartao", "aluno_mp_assinar")
 BRT = dt.timezone(dt.timedelta(hours=-3))
 
 
@@ -58,8 +63,9 @@ def quando(t: object) -> str:
         return "?"
 
 
-def linhas_do_log(eventos: list[dict]) -> list[dict]:
-    """As mensagens do log das funções → as linhas JSON do _shared/log.ts da pagamentos-aluno com os códigos da W (só os campos do formato)."""
+def linhas_do_log(eventos: list[dict], todas: bool = False) -> list[dict]:
+    """As mensagens do log das funções → as linhas JSON do _shared/log.ts da pagamentos-aluno com os códigos da W e os das ações do cartão
+    (só os campos do formato). todas=True: toda linha da pagamentos-aluno (a contagem dos erros)."""
     saida = []
     for e in eventos:
         msg = str(e.get("event_message") or "")
@@ -70,9 +76,21 @@ def linhas_do_log(eventos: list[dict]) -> list[dict]:
             d = json.loads(msg[i:])
         except ValueError:
             continue
-        if isinstance(d, dict) and d.get("funcao") == "pagamentos-aluno" and d.get("codigo") in CODIGOS:
+        if not isinstance(d, dict) or d.get("funcao") != "pagamentos-aluno":
+            continue
+        if todas or d.get("codigo") in CODIGOS or (d.get("codigo") in CODIGOS_DA_ACAO and d.get("acao") in ACOES_DO_CARTAO):
             saida.append({"quando": e.get("quando"), **{k: d.get(k) for k in ("nivel", "codigo", "schema", "acao", "status", "resultado", "externo")}})
     return saida
+
+
+def erros_por_codigo(linhas: list[dict]) -> dict[str, int]:
+    """Toda linha nivel "erro" da pagamentos-aluno, contada por código (a 1ª leitura depois de publicar: nenhum erro novo do cartão)."""
+    contagem: dict[str, int] = {}
+    for x in linhas:
+        if x.get("nivel") == "erro":
+            chave = f"{x.get('codigo')}/{x.get('acao') or '-'}"
+            contagem[chave] = contagem.get(chave, 0) + 1
+    return contagem
 
 
 def conferir(a) -> int:
@@ -95,16 +113,19 @@ def conferir(a) -> int:
     fim = dt.datetime.now(dt.timezone.utc)
     # o molde do ~/projetos/physiqcalc-scratch/w2/fim/logs_cartao.py (14/10, o mesmo endpoint e a mesma tabela)
     sql = ("SELECT timestamp AS t, event_message FROM logs WHERE source = 'function_logs' AND "
-           "positionCaseInsensitive(event_message, 'pagamentos-aluno') > 0 AND ("
-           + " OR ".join(f"positionCaseInsensitive(event_message, '{c}') > 0" for c in CODIGOS) + ") ORDER BY t DESC LIMIT 100")
+           "positionCaseInsensitive(event_message, '\"funcao\":\"pagamentos-aluno\"') > 0 AND (positionCaseInsensitive(event_message, '\"nivel\":\"erro\"') > 0 OR "
+           + " OR ".join(f"positionCaseInsensitive(event_message, '{c}') > 0" for c in CODIGOS + CODIGOS_DA_ACAO) + ") ORDER BY t DESC LIMIT 500")
     q = urllib.parse.urlencode({"sql": sql, "iso_timestamp_start": ini.strftime("%Y-%m-%dT%H:%M:%SZ"), "iso_timestamp_end": fim.strftime("%Y-%m-%dT%H:%M:%SZ")})
     r = api("GET", f"/v1/projects/{REF}/analytics/endpoints/logs?{q}")
     eventos = [{"quando": quando(x.get("t")), "event_message": x.get("event_message")}
                for x in ((r or {}).get("result") or [])] if isinstance(r, dict) else []
     linhas = [x for x in linhas_do_log(eventos) if x.get("schema") == s]
-    print(f"   log da pagamentos-aluno ({len(linhas)} linha(s) dos códigos da W):")
+    print(f"   log da pagamentos-aluno ({len(linhas)} linha(s) dos códigos da W e das ações do cartão):")
     for x in linhas:
         print("     ", json.dumps(x, ensure_ascii=False))
+    erros = erros_por_codigo([x for x in linhas_do_log(eventos, todas=True) if x.get("schema") == s])
+    print(f"   TODA linha de erro da pagamentos-aluno desde a hora ({sum(erros.values())}): {erros or 'nenhuma'}"
+          + (" (o teto de 500 linhas da consulta: pode haver mais)" if len(eventos) >= 500 else ""))
     return 0
 
 
@@ -114,11 +135,24 @@ def seco() -> int:
                                                                       "externo": {"mp_status_detail": "cc_rejected_high_risk"}})},
           {"quando": "x", "event_message": "texto solto"},
           {"quando": "y", "event_message": json.dumps({"funcao": "outra", "codigo": "mp_cartao_recusado"})}]
+    ev += [{"quando": "z1", "event_message": json.dumps({"nivel": "erro", "funcao": "pagamentos-aluno", "codigo": "excecao", "schema": "public",
+                                                        "acao": "aluno_mp_cartao", "msg": "x"})},
+           {"quando": "z2", "event_message": json.dumps({"nivel": "erro", "funcao": "pagamentos-aluno", "codigo": "excecao", "schema": "public",
+                                                        "acao": "aluno_status"})},
+           {"quando": "z3", "event_message": json.dumps({"nivel": "aviso", "funcao": "pagamentos-aluno", "codigo": "mp_conta_indisponivel",
+                                                        "schema": "public", "acao": "aluno_mp_assinar", "resultado": "acesso_recusado"})},
+           {"quando": "z4", "event_message": json.dumps({"nivel": "erro", "funcao": "pagamentos-aluno", "codigo": "mp_indisponivel", "schema": "public",
+                                                        "acao": "aluno_mp_cartao", "status": 599})}]
     lido = linhas_do_log(ev)
-    ok = (len(lido) == 1 and lido[0]["resultado"] == "com_device" and lido[0]["externo"] == {"mp_status_detail": "cc_rejected_high_risk"}
-          and "ref" not in lido[0])
-    print(("✅ " if ok else "❌ ") + "seco: o log lido só com as linhas da pagamentos-aluno e os campos do formato (sem o ref)")
-    return 0 if ok else 1
+    ok = ([x["codigo"] for x in lido] == ["mp_cartao_recusado", "excecao", "mp_conta_indisponivel", "mp_indisponivel"]
+          and lido[0]["resultado"] == "com_device" and lido[0]["externo"] == {"mp_status_detail": "cc_rejected_high_risk"} and "ref" not in lido[0]
+          and "msg" not in lido[1])
+    print(("✅ " if ok else "❌ ") + "seco: o log lido só com as linhas da pagamentos-aluno: os 4 códigos da W + a excecao/mp_indisponivel/"
+          "mp_conta_indisponivel SÓ das ações do cartão (a excecao do aluno_status fica fora) e os campos do formato (sem o ref nem a msg)")
+    erros = erros_por_codigo(linhas_do_log(ev, todas=True))
+    ok2 = erros == {"excecao/aluno_mp_cartao": 1, "excecao/aluno_status": 1, "mp_indisponivel/aluno_mp_cartao": 1}
+    print(("✅ " if ok2 else "❌ ") + f"seco: a contagem de TODA linha de erro da pagamentos-aluno por código ({erros})")
+    return 0 if ok and ok2 else 1
 
 
 def main() -> int:

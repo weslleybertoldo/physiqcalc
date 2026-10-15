@@ -566,6 +566,16 @@ class MpCartaoTest(SimuladorBase):
         st, r, _ = self.pedir("POST", "/preapproval", {**base, "status": "pending"}, token=tok)
         self.assertEqual((st, r["status"]), (201, "pending"))   # o pendente (sem cartão) não muda
 
+    def test_cenario_preapproval_recusa_com_a_validacao_do_cartao(self) -> None:
+        """A revisão mpc (🟡2): a recusa da validação do cartão só no texto, sem nenhum cc_rejected_* ("CC_VAL_433 …")."""
+        tok = self.par()["access_token"]
+        self.adm("/_cenario", {"preapproval_recusa": "CC_VAL_433 Credit card validation has failed"})
+        corpo = {"reason": "Physiq", "payer_email": "c@example.com", "back_url": "https://exemplo", "external_reference": "x", "status": "authorized",
+                 "card_token_id": "sim-card-APRO", "auto_recurring": {"frequency": 1, "frequency_type": "months", "transaction_amount": 10,
+                                                                      "currency_id": "BRL"}}
+        st, r, _ = self.pedir("POST", "/preapproval", corpo, token=tok)
+        self.assertEqual((st, r), (400, {"message": "CC_VAL_433 Credit card validation has failed", "status": 400}))
+
 
 class GeralTest(SimuladorBase):
     def test_cenario_troca_so_as_chaves_e_guarda_os_recursos(self) -> None:

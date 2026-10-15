@@ -31,7 +31,8 @@
   mp-cartao (15/10/2026): o /_pedidos diz SE veio o cabeçalho X-meli-session-id (`device`: true/false — nunca o valor) e o corpo sai com
   `number`, `first_name` e `last_name` mascarados (o documento e o nome do titular nunca vão ao /_pedidos); cenários "cartao_status_detail"
   (o cartão recusado com esse status_detail — ex.: cc_rejected_high_risk) e "preapproval_recusa" (o POST /preapproval com cartão → 400 com o
-  código só na mensagem, sem error, cause nem status_detail — o retrato das automáticas recusadas de 14/10)
+  valor do cenário como a mensagem, sem error, cause nem status_detail — o retrato das automáticas recusadas de 14/10: "cc_rejected_high_risk"
+  ou, a revisão mpc, "CC_VAL_433 Credit card validation has failed")
   Administração (só o e2e): /_zerar (tudo do começo) · /_token {vendedor} (um par vivo sem o OAuth — a integração gravada pelo e2e) ·
   /_expirar {vendedor, refresh?} · /_pagamento · /_preapproval · /_status {tipo, id, status} · /_cobranca_mensal {preapproval_id} ·
   /_token_info {token} (vivo? de quem?) — POST, sempre em 127.0.0.1.
