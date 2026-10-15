@@ -28,6 +28,7 @@ import {
   carregarMatricula,
   espelhoAssinaturaAluno,
   registrarPagamentoAvulsoDoMp,
+  registrarRecusaDoAviso,
   type Cobranca,
   type Matricula,
 } from "../_shared/financeiro-mp.ts";
@@ -310,6 +311,7 @@ async function cobrancaDaConta(t: Trato, m: Matricula, pay: PagamentoDaConta, co
   }
   if (c.mp_payment_id !== String(pay.id)) return "cobranca_de_outro_pagamento";
   const r = await aplicarPagamentoMp(t.db, c, pay, m, t.log, t.schema);
+  registrarRecusaDoAviso(t.log, t.schema, pay, r, "aviso_mp_conta");
   return `cobranca_${r.status}${r.pagou ? "_paga" : ""}`;
 }
 
@@ -317,6 +319,7 @@ async function cobrancaDaConta(t: Trato, m: Matricula, pay: PagamentoDaConta, co
 async function recorrenteDaConta(t: Trato, m: Matricula, pay: PagamentoDaConta, preId: string | null): Promise<string> {
   const r = await registrarPagamentoAvulsoDoMp(t.db, m, pay, { preapprovalId: preId, origem: "assinatura",
     colunasW2: await comCollector(t.db, t.schema, t.integ.mp_user_id) }, t.log, t.schema);
+  registrarRecusaDoAviso(t.log, t.schema, pay, r, "aviso_mp_conta");
   return r ? `recorrente_${r.status}` : "recorrente_sem_valor";
 }
 

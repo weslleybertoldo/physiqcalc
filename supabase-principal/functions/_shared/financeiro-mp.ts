@@ -8,7 +8,7 @@
 // entra pelo COLUNAS_COBRANCA_W2 e pelo `colunasW2` que quem chama monta com o comCollector do _shared/mp-conta.ts (vazio no schema sem a
 // migration da W2). Este arquivo nunca escreve a coluna por conta própria (e não importa o mp-conta.ts: nada de import circular).
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import type { AssinaturaMp, PagamentoMp } from "./cobranca-regras.ts";
+import { codigosDoMp, type AssinaturaMp, type PagamentoMp } from "./cobranca-regras.ts";
 import { cobrancaDoStatusMp, descricaoMensalidade, diaSP, mesRefDe, mpEmAberto, type Schema } from "./financeiro-regras.ts";
 import type { Log } from "./log.ts";
 import { retratoDoPlano, type Modalidade } from "./planos-regras.ts";
@@ -232,6 +232,17 @@ export async function aplicarPagamentoMp(
     await avisar(db, mat?.user_id, "pagamento_confirmado", `Pagamento confirmado · ${reais(c.valor)}`, "/perfil/pagamentos", log, schema);
   }
   return { status, mudou: true, pagou };
+}
+
+/**
+ * mpc-b (15/10/2026): a recusa que chega pelo AVISO do MP vai ao log com o motivo, como o `mp_cartao_recusado` da pagamentos-aluno. O POST
+ * do cartão pode voltar "em análise" (`in_process`) e o MP recusar segundos depois: aí quem grava a recusa é o aviso, e o log só dizia
+ * "cobranca_cancelada" (a prova de 15/10 06:48). SÓ os códigos (codigosDoMp: o `status_detail`; nunca o corpo — a resposta do MP traz
+ * nome, e-mail e documento de quem paga) e 1 vez por pagamento: só na virada (`mudou`), não a cada aviso repetido do mesmo id.
+ */
+export function registrarRecusaDoAviso(log: Log, schema: Schema, pay: PagamentoMp, r: ResultadoMp | null, acao: string): void {
+  if (!r?.mudou || pay?.status !== "rejected") return;
+  log.aviso({ codigo: "mp_cartao_recusado", schema, acao, ref: String(pay.id), externo: codigosDoMp(pay) });
 }
 
 /**

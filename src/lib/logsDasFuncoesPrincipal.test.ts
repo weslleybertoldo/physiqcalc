@@ -247,6 +247,8 @@ describe("hml-10 (D2): do Mercado Pago, só os códigos", () => {
       "mp_cartao_recusado"]) {
       expect(contar("pagamentos-aluno/index.ts", codigo), codigo).toBe(1);
     }
+    // mpc-b: a recusa que chega pelo AVISO do MP (o POST "em análise", recusado depois) — o mesmo código, com o status_detail
+    expect(contar("_shared/financeiro-mp.ts", "mp_cartao_recusado")).toBe(1);
     expect(contar("_shared/app-sem-profissional.ts", "mp_cancelar_falhou")).toBe(1);
     expect(contar("_shared/exclusao-profissional.ts", "mp_cancelar_falhou")).toBe(1);
   });

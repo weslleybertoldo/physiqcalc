@@ -44,6 +44,7 @@ import {
   carregarMatricula,
   espelhoAssinaturaAluno,
   registrarPagamentoAvulsoDoMp,
+  registrarRecusaDoAviso,
   type Cobranca,
   type Matricula,
 } from "../_shared/financeiro-mp.ts";
@@ -127,6 +128,7 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null, p: Prazo
       }
       if (c.mp_payment_id !== String(pay.id)) return "cobranca_de_outro_pagamento";
       const r = await aplicarPagamentoMp(db, c, pay, null, log, schema);
+      registrarRecusaDoAviso(log, schema, pay, r, "aviso_mp");
       return `cobranca_${r.status}${r.pagou ? "_paga" : ""}`;
     }
     // W1b M4 (revisão da W1b, aplicada na W2): mensalidade/avulsa SEM o id da cobrança não é referência nossa desde a W6 — a conferência
@@ -136,6 +138,7 @@ async function tratarPagamento(id: string, schemaPedido: Schema | null, p: Prazo
     const m = await carregarMatricula(db, ref.pacienteId);
     if (!m) return "matricula_inexistente";
     const r = await registrarPagamentoAvulsoDoMp(db, m, pay, { preapprovalId: preapprovalDoPagamento(pay), origem: "assinatura" }, log, schema);
+    registrarRecusaDoAviso(log, schema, pay, r, "aviso_mp");
     await cancelarSeSaiuDoApp(db, schema, m, preapprovalDoPagamento(pay), p);
     return r ? `recorrente_${r.status}` : "recorrente_sem_valor";
   }
