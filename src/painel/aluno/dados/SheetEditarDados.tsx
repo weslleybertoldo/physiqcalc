@@ -9,14 +9,20 @@ import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { camposDoErro, DICA_REPETIDO, MENSAGEM_REPETIDO, precisaConferir, type CampoRepetido } from "@/nucleo/dadoRepetido";
 import { conferirDadoLivre } from "@/nucleo/dadoLivre";
 import { ErroPerfil, salvarDadosAluno, salvarNoTreino } from "./api";
-import { cadastroParaTreino, formDoPerfil, formatarCPF, formatarTelefone, GENEROS, hojeSP, mensagemErroPerfil, mudancas, validarForm } from "./regras";
+import { cadastroParaTreino, formDoPerfil, formatarCPF, formatarTelefone, GENEROS, hojeSP, mensagemErroPerfil, mesclarForm, mudancas, validarForm } from "./regras";
 import type { FormDadosAluno, Genero, PerfilAluno, PerfilTreinoAluno } from "./tipos";
 import { useAtualizarAluno, useTreinoPronto } from "./usePerfilAluno";
+
+// a altura e o peso não chegaram ao Banco do Treino (o salvarNoTreino falhou, ou a sessão de lá saiu de "pronto" com a folha aberta)
+const MENSAGEM_SEM_TREINO = "O cadastro foi salvo, mas a altura e o peso não chegaram ao treino. Tente de novo.";
 
 /**
  * "Editar dados" do aluno (C33 + N-27): o cadastro fica no banco principal e vai para o Banco do Treino pelo espelho (nome, sexo
  * e nascimento); altura e peso de quem tem treino gravam lá (o mesmo que o "Dados Gerais" do Configurar aluno antigo) — quem não
  * tem treino tem a altura e o peso da antropometria (aba Avaliação). A folha abre pelo card "Dados do aluno" e pelo ⋯ do cabeçalho.
+ * hml-25 (H-137): o formulário, a base, o erro e os avisos de repetido voltam ao cadastro SÓ quando a folha abre. Com ela aberta, o
+ * `inicial` novo (a troca do Treino que terminou, a rebusca do perfil) vira a base e só chega aos campos que a pessoa não tocou — o
+ * que ela digitou fica, e o Salvar manda só os campos tocados que diferem da base.
  */
 export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: {
   aberto: boolean;
@@ -32,22 +38,58 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
   const comTreino = !!perfil.treino_user_id && treinoPronto && !!treino;
   const inicial = useMemo(() => formDoPerfil(perfil, comTreino ? treino : null), [perfil, treino, comTreino]);
   const [f, setF] = useState<FormDadosAluno>(inicial);
+  // hml-25: o cadastro com que o Salvar e a conferência do repetido comparam (o da abertura; com a folha aberta, o mais novo que chegou)
+  const [base, setBase] = useState<FormDadosAluno>(inicial);
   const [erro, setErro] = useState("");
   // W16b: e-mail/CPF de outro aluno (em qualquer conta) → mensagem vermelha embaixo do campo
   const [repetidos, setRepetidos] = useState<CampoRepetido[]>([]);
   const atual = useRef(inicial);
+  // hml-25: os campos que a pessoa mudou desde que a folha abriu e que ainda diferem da base e do valor de onde ela partiu — o `muda`
+  // marca e desmarca, com a comparação exata (o espaço no fim do nome segue tocado). Devolveu ao valor da base ou ao de onde partiu =
+  // não tocado: a mescla traz o novo e o Salvar não mexe no campo
+  const tocados = useRef(new Set<keyof FormDadosAluno>());
+  // hml-25: o valor de onde a pessoa partiu em cada campo (o do 1º `muda` dele desde a abertura, ou desde que a mescla trocou o valor
+  // dele na tela)
+  const origem = useRef<Partial<FormDadosAluno>>({});
+  const estavaAberta = useRef(false);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    if (aberto) {
+    if (!aberto) {
+      estavaAberta.current = false;
+      return;
+    }
+    if (!estavaAberta.current) {
+      // abriu: tudo volta ao cadastro
+      estavaAberta.current = true;
+      tocados.current = new Set();
+      origem.current = {};
       setF(inicial);
       atual.current = inicial;
+      setBase(inicial);
       setErro("");
       setRepetidos([]);
+      return;
     }
+    // aberta: o inicial novo mescla (os avisos de repetido ficam; só o `muda` do campo os tira). O campo não tocado cujo valor na tela
+    // muda para o da base nova passa a partir dele: a origem desse campo zera
+    for (const k of Object.keys(inicial) as (keyof FormDadosAluno)[]) {
+      if (!tocados.current.has(k) && atual.current[k] !== inicial[k]) delete origem.current[k];
+    }
+    setF((x) => {
+      const novo = mesclarForm(x, inicial, tocados.current);
+      atual.current = novo;
+      return novo;
+    });
+    setBase(inicial);
   }, [aberto, inicial]);
 
   const muda = <K extends keyof FormDadosAluno>(k: K, v: FormDadosAluno[K]) => {
+    origem.current[k] ??= f[k];
+    // o tocado só vale enquanto o valor difere da base e do valor de onde a pessoa partiu (exato, sem trim: a mescla não troca o texto
+    // no meio da digitação)
+    if (v === base[k] || v === origem.current[k]) tocados.current.delete(k);
+    else tocados.current.add(k);
     setF((x) => {
       const novo = { ...x, [k]: v };
       atual.current = novo;
@@ -58,7 +100,7 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
 
   const conferir = async (campo: CampoRepetido) => {
     const valor = f[campo];
-    if (!precisaConferir(campo, valor, inicial[campo])) return;
+    if (!precisaConferir(campo, valor, base[campo])) return;
     const r = await conferirDadoLivre({ [campo]: valor, pacienteId: perfil.paciente_id });
     // só vale se o campo ainda tem o mesmo valor (a pessoa pode ter continuado digitando)
     if (!r || atual.current[campo] !== valor) return;
@@ -71,7 +113,9 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
     const msg = validarForm(f);
     if (msg) return setErro(msg);
     if (repetidos.length) return;
-    const { principal: p, treino: t } = mudancas(f, inicial);
+    // o campo não tocado nunca muda no servidor: o Salvar usa a base nele (a tela fica com o que a pessoa deixou)
+    const g = mesclarForm(f, base, tocados.current);
+    const { principal: p, treino: t } = mudancas(g, base);
     const cadastroMudou = ["nome", "genero", "nascimento"].some((k) => k in p);
     if (!Object.keys(p).length && !Object.keys(t).length) {
       aoFechar();
@@ -84,10 +128,13 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
       // Banco do Treino: altura/peso e o cadastro já (o espelho também leva, mas só para quem já entrou no Physiq)
       if (comTreino && (cadastroMudou || Object.keys(t).length)) {
         try {
-          await salvarNoTreino(perfil.treino_user_id!, cadastroParaTreino(f, hojeSP()));
+          await salvarNoTreino(perfil.treino_user_id!, cadastroParaTreino(g, hojeSP()));
         } catch {
-          toast.error("O cadastro foi salvo, mas a altura e o peso não chegaram ao treino. Tente de novo.");
+          toast.error(MENSAGEM_SEM_TREINO);
         }
+      } else if (!comTreino && Object.keys(t).length) {
+        // hml-25: a altura/peso mudaram e a sessão do Treino saiu de "pronto" com a folha aberta (a troca refeita): não foram para lá
+        toast.error(MENSAGEM_SEM_TREINO);
       }
       await atualizar(novo);
       toast.success("Dados salvos.");
