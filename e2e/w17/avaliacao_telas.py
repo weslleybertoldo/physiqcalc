@@ -15,10 +15,13 @@
               action "avaliacoes") caindo na rede (page.route → abort; nunca 5xx) — primeiro a série inteira (o número "certo"); depois,
               recarregada com as 3 primeiras leituras caindo (a do carregamento + 2 novas tentativas), "—" + "dado parcial" nos 2 e nenhum
               número, e a 3ª nova tentativa passa sozinha → o número certo (4 pedidos; nunca o número da metade da série no caminho); por
-              fim, com TODAS caindo, o "—" fica com 1 + 3 pedidos e nenhum depois (sem laço) e, solta a rota + o foco, o número certo
+              fim, com TODAS caindo, o "—" fica com 1 + 3 pedidos e nenhum depois (sem laço) e, solta a rota + o foco, o número certo.
+              A ampliação da hml-26: o card Evolução do Resumo na mesma recarga — "—" + "dado parcial" sem gráfico enquanto a parte não
+              volta (nunca os números antes) e, quando ela volta, os números e o gráfico da série inteira
 No fim tudo volta ao que era (o perfil do Treino do Diego é guardado antes e restaurado).
 --seco: sem navegador e sem rede (o socket fica bloqueado) — a rota que derruba a parte do Treino com páginas falsas, a leitura dos 2 KPIs
-(parcial × número × nada × o misto), o "nunca o número da metade", o --canal no lançamento e os seletores, o texto e as 3 tentativas nas telas.
+(parcial × número × nada × o misto), o "nunca o número da metade", o card Evolução (a leitura, a ordem depois da recarga e a regra no
+CardEvolucao.tsx), o --canal no lançamento e os seletores, o texto e as 3 tentativas nas telas.
 
 Uso: python3 e2e/w17/avaliacao_telas.py --base http://localhost:5173 --prefixo local   (staging: --base https://physiqcalc-staging.vercel.app --prefixo staging)
      [--casos personal,nutri,resumo,kpi_parcial,app,fotos,excluir,negativos] [--canal msedge]
@@ -101,13 +104,22 @@ class FalhaDaParte:
 
 
 # os 2 números do cabeçalho, como a página está agora (o KpiPeso e o KpiGordura: o número em [data-kpi-peso|gordura]; a série incompleta em
-# [data-kpi-parcial]; o texto do cartão [data-kpi-compacto])
-JS_KPIS = """() => Object.fromEntries([['peso', 'Peso'], ['gordura', 'Gordura']].map(([m, r]) => {
-  const n = document.querySelector(`[data-kpi-${m}]`);
-  const k = document.querySelector(`[data-kpi-compacto="${r}"]`);
-  return [m, { parcial: !!document.querySelector(`[data-kpi-parcial="${m}"]`), texto: k ? (k.textContent || '') : null,
-    numero: n ? { valor: n.getAttribute(`data-kpi-${m}`), variacao: n.getAttribute(`data-kpi-${m}-variacao`) } : null }];
-}))"""
+# [data-kpi-parcial]; o texto do cartão [data-kpi-compacto]) e, em "card", o card Evolução do Resumo (a ampliação da hml-26: o "dado parcial"
+# em [data-card-evolucao-parcial], os números em [data-card-evolucao-numeros], o gráfico em [data-card-evolucao-grafico])
+JS_KPIS = """() => {
+  const r = Object.fromEntries([['peso', 'Peso'], ['gordura', 'Gordura']].map(([m, rot]) => {
+    const n = document.querySelector(`[data-kpi-${m}]`);
+    const k = document.querySelector(`[data-kpi-compacto="${rot}"]`);
+    return [m, { parcial: !!document.querySelector(`[data-kpi-parcial="${m}"]`), texto: k ? (k.textContent || '') : null,
+      numero: n ? { valor: n.getAttribute(`data-kpi-${m}`), variacao: n.getAttribute(`data-kpi-${m}-variacao`) } : null }];
+  }));
+  const t = (s) => { const e = document.querySelector(s); return e ? (e.textContent || '') : null; };
+  const g = document.querySelector('[data-card-evolucao-grafico]');
+  r.card = document.querySelector('[data-card-evolucao]') ? { parcial: t('[data-card-evolucao-parcial]'),
+    numeros: !!document.querySelector('[data-card-evolucao-numeros]'), peso: t('[data-card-evolucao-numero="peso"] b'),
+    musculo: t('[data-card-evolucao-numero="musculo"] b'), grafico: g ? g.getAttribute('data-card-evolucao-grafico') : null } : null;
+  return r;
+}"""
 
 
 def estado_kpi(k: dict) -> str:
@@ -133,6 +145,29 @@ def numeros_errados(vistos: list[dict], certo: dict) -> list[str]:
             if n and n != (certo.get(m) or {}).get("numero"):
                 errados.append(f"{m} {n.get('valor')} ({n.get('variacao')})")
     return errados
+
+
+def estado_card(k: dict | None) -> str:
+    """O card Evolução do Resumo: 'parcial' (o "dado parcial", "—" no Peso e no Músculo, sem os números nem o gráfico), 'numero' (os números
+    da série, sem o "dado parcial"), 'nada' (carregando, ou sem o card) ou 'misto' (o defeito)."""
+    if not k:
+        return "nada"
+    aviso, numeros = k.get("parcial"), bool(k.get("numeros"))
+    if aviso is not None and not numeros:
+        ok = "dado parcial" in aviso and k.get("peso") == "—" and k.get("musculo") == "—" and not k.get("grafico")
+        return "parcial" if ok else "misto"
+    if numeros and aviso is None:
+        return "numero"
+    return "nada" if aviso is None and not numeros else "misto"
+
+
+def comprimir(seq: list[str]) -> list[str]:
+    """A sequência sem as repetições seguidas (nada, nada, parcial, parcial, numero → nada, parcial, numero)."""
+    return [x for i, x in enumerate(seq) if i == 0 or x != seq[i - 1]]
+
+
+# o card depois da recarga com a parte do Treino caindo: (carregando →) "dado parcial" → os números quando a parte volta; nunca os números antes
+CARD_CERTO = (["nada", "parcial", "numero"], ["parcial", "numero"])
 
 
 def q(sql: str) -> list:
@@ -349,18 +384,21 @@ def caso_kpi_parcial(nav) -> None:
     c = abrir(nav, "kpi_parcial", "w7-personal", f"/painel/alunos/{DIEGO}")
     falhas: list[FalhaDaParte] = []
     try:
-        # 1. a série inteira (nada cai): o número "certo" dos 2
-        ok = c.esperar(lambda: estados(kpis(c)) == ("numero", "numero"), 90)
+        # 1. a série inteira (nada cai): o número "certo" dos 2 (e os números do card Evolução)
+        def inteira(k: dict) -> bool:
+            return estados(k) == ("numero", "numero") and estado_card(k.get("card")) == "numero"
+
+        ok = c.esperar(lambda: inteira(kpis(c)), 90)
         certo = kpis(c)
         p.check(ok, f"[kpi_parcial] a série inteira: Peso e Gordura com o número ({certo.get('peso', {}).get('numero')}, "
-                    f"{certo.get('gordura', {}).get('numero')})")
+                    f"{certo.get('gordura', {}).get('numero')}) e o card Evolução com os números ({(certo.get('card') or {}).get('peso')})")
         if not ok:
             return
         # 2. a mesma tela recarregada com a leitura da parte do Treino caindo SÓ naquele carregamento (a dele + as 2 primeiras novas tentativas)
         f = FalhaDaParte(c.pg, vezes=TENTATIVAS_DA_PARTE)
         falhas.append(f)
         c.pg.reload(wait_until="domcontentloaded")
-        vistos = acompanhar(c, lambda k: estados(k) == ("numero", "numero") and f.passou >= 1, 90)
+        vistos = acompanhar(c, lambda k: inteira(k) and f.passou >= 1, 90)
         viu_parcial = any(estados(k) == ("parcial", "parcial") for k in vistos)
         p.check(viu_parcial, f"[kpi_parcial] a parte do Treino caiu: '—' + 'dado parcial' nos 2, nenhum número ({f.caiu} leitura(s) caída(s))")
         p.check(not any("misto" in estados(k) for k in vistos), "[kpi_parcial] nunca o número junto com o 'dado parcial'")
@@ -369,6 +407,11 @@ def caso_kpi_parcial(nav) -> None:
         final = vistos[-1] if vistos else {}
         p.check(estados(final) == ("numero", "numero") and numeros_errados([final], certo) == [],
                 "[kpi_parcial] a nova tentativa passou sozinha: o número certo (o da série inteira) voltou nos 2")
+        seq_card = comprimir([estado_card(k.get("card")) for k in vistos])
+        card_final = final.get("card") or {}
+        p.check(seq_card in CARD_CERTO and card_final.get("peso") == (certo.get("card") or {}).get("peso") and bool(card_final.get("grafico")),
+                f"[kpi_parcial] o card Evolução do Resumo também: '—' + 'dado parcial' sem gráfico enquanto a parte não volta, e os números e o "
+                f"gráfico da série inteira quando ela volta ({' → '.join(seq_card)})")
         c.pg.wait_for_timeout(1500)
         p.check((f.caiu, f.passou) == (TENTATIVAS_DA_PARTE, 1),
                 f"[kpi_parcial] a parte do Treino foi buscada de novo SOZINHA: {f.caiu} caídas + {f.passou} que passou (= 1 + {TENTATIVAS_DA_PARTE})")
@@ -628,6 +671,20 @@ def seco() -> int:
             "seco: a leitura dos KPIs — número, '—' + 'dado parcial' (sem dígito), não apareceu, e o misto (número com 'dado parcial', dígito no parcial)")
     p.check(numeros_errados([{}, parcial, certo], certo) == [] and numeros_errados([parcial, metade, certo], certo) == ["peso 81.8 (-0.9)", "gordura 19.3 (-1)"],
             "seco: 'nunca o número da metade' — o parcial e o certo passam; a conta com metade da série no caminho é pega (nos 2)")
+    card_parcial = {"parcial": "dado parcial", "numeros": False, "peso": "—", "musculo": "—", "grafico": None}
+    card_numeros = {"parcial": None, "numeros": True, "peso": "81,8 kg", "musculo": "64,3 kg", "grafico": "4"}
+    card_mistos = [{**card_parcial, "numeros": True}, {**card_parcial, "peso": "81,8 kg"}, {**card_parcial, "grafico": "2"}, {**card_numeros, "parcial": "dado parcial"}]
+    sequencias = {"certa": ["nada", "nada", "parcial", "parcial", "numero"], "sem_carregar": ["parcial", "numero", "numero"],
+                  "a_de_antes": ["nada", "numero", "numero"], "numero_antes": ["nada", "numero", "parcial", "numero"]}
+    cartao = (REPO / "src/painel/aluno/resumo/CardEvolucao.tsx").read_text(encoding="utf-8")
+    p.check(estado_card(card_parcial) == "parcial" and estado_card(card_numeros) == "numero" and estado_card(None) == "nada"
+            and estado_card({"parcial": None, "numeros": False}) == "nada" and all(estado_card(x) == "misto" for x in card_mistos)
+            and [comprimir(s) in CARD_CERTO for s in sequencias.values()] == [True, True, False, False]
+            and all(x in cartao for x in ('<Numero rotulo="Peso" valor="—" marca="peso" />', '<Numero rotulo="Músculo" valor="—" marca="musculo" />',
+                                          "data-card-evolucao-parcial>{DETALHE_KPI_PARCIAL}", "data-card-evolucao-numeros", "data-card-evolucao-grafico=",
+                                          "data-card-evolucao-numero={marca}", "if (!serie || ev.parcial) return null;")),
+            "seco: o card Evolução — a leitura (o 'dado parcial' com '—' e sem gráfico × os números × nada × o misto), a ordem certa depois da recarga "
+            "(nunca os números antes do 'dado parcial': a de antes da hml-26 cai) e os seletores e a regra no CardEvolucao.tsx")
     pw = _PlaywrightFalso()
     abrir_navegador(pw, opcoes(["--seco", "--canal", "msedge"]).canal)
     p.check(pw.lancamentos == [{"channel": "msedge", "args": ARGS_NAVEGADOR}] and opcoes(["--seco"]).canal == "chromium"
