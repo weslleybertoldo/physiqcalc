@@ -8,6 +8,7 @@ import type { PerfilAluno, PerfilTreinoAluno } from "./tipos";
 // hml-25 (H-137): a folha "Editar dados" repunha o formulário (e limpava os avisos de e-mail/CPF repetidos) a cada `inicial` novo —
 // a troca do Treino que terminava com a folha aberta, a rebusca do perfil — e o Salvar, sem diferença, fechava sem gravar. Agora repõe
 // tudo só quando a folha ABRE; com ela aberta, o `inicial` novo mescla (o campo tocado fica, o não tocado recebe o valor novo).
+// O tocado só vale enquanto o valor difere da base: o campo mexido e devolvido ao valor da base recebe o novo (revisão da hml-25).
 
 const h = vi.hoisted(() => ({
   estado: "trocando",
@@ -144,5 +145,47 @@ describe("Editar dados › o dado que chega com a folha aberta (hml-25, H-137)",
     salvar();
     expect(h.dados).not.toHaveBeenCalled();
     expect(aoFechar).not.toHaveBeenCalled();
+  });
+
+  it("(f) a data mexida e apagada antes da troca do Treino: a data do Treino aparece e o Salvar manda SÓ o nome (não apaga a data de lá)", async () => {
+    const aoFechar = vi.fn();
+    const p = perfil({ treino_user_id: "t1", nascimento: null });
+    const r = montar(folha({ perfil: p, treino: null, aoFechar }));
+    expect(campo("nascimento")).toHaveValue("");
+    digitar("nascimento", "1999-01-01");
+    digitar("nascimento", "");
+    h.estado = "pronto";
+    r.rerender(folha({ perfil: p, treino: TREINO, aoFechar }));
+    await waitFor(() => expect(campo("altura")).toHaveValue("178"));
+    // voltou ao valor da base: não é mais tocado e recebe a data do Treino (o principal sem data → a do Treino, no formDoPerfil)
+    expect(campo("nascimento")).toHaveValue("1998-03-10");
+    digitar("nome", "Rafael Moura Silva");
+    h.dados.mockResolvedValue(perfil({ treino_user_id: "t1", nascimento: null, nome: "Rafael Moura Silva" }));
+    h.noTreino.mockResolvedValue(undefined);
+    salvar();
+    await waitFor(() => expect(aoFechar).toHaveBeenCalledTimes(1));
+    expect(h.dados).toHaveBeenCalledTimes(1);
+    expect(h.dados).toHaveBeenCalledWith("p1", { nome: "Rafael Moura Silva" });
+    expect(h.noTreino).toHaveBeenCalledTimes(1);
+    expect(h.noTreino).toHaveBeenCalledWith("t1", expect.objectContaining({ nome: "Rafael Moura Silva", data_nascimento: "1998-03-10" }));
+  });
+
+  it("(g) o apelido mexido e devolvido ao original: a rebusca traz o apelido novo e o Salvar manda SÓ o nome", async () => {
+    h.estado = "desnecessario";
+    const aoFechar = vi.fn();
+    const r = montar(folha({ perfil: perfil(), treino: null, aoFechar }));
+    digitar("nome", "Rafael Moura Silva");
+    digitar("apelido", "Rafa M");
+    digitar("apelido", "Rafa");
+    // o apelido gravado em outro lugar chega com a folha aberta
+    r.rerender(folha({ perfil: perfil({ apelido: "Rafinha", agora: "2026-09-30T19:47:00Z" }), treino: null, aoFechar }));
+    expect(campo("apelido")).toHaveValue("Rafinha");
+    expect(campo("nome")).toHaveValue("Rafael Moura Silva");
+    h.dados.mockResolvedValue(perfil({ nome: "Rafael Moura Silva", apelido: "Rafinha" }));
+    salvar();
+    await waitFor(() => expect(aoFechar).toHaveBeenCalledTimes(1));
+    expect(h.dados).toHaveBeenCalledTimes(1);
+    expect(h.dados).toHaveBeenCalledWith("p1", { nome: "Rafael Moura Silva" });
+    expect(h.noTreino).not.toHaveBeenCalled();
   });
 });

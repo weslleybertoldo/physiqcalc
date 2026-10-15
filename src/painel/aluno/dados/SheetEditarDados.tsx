@@ -41,7 +41,8 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
   // W16b: e-mail/CPF de outro aluno (em qualquer conta) → mensagem vermelha embaixo do campo
   const [repetidos, setRepetidos] = useState<CampoRepetido[]>([]);
   const atual = useRef(inicial);
-  // hml-25: os campos que a pessoa mudou (passaram pelo `muda`) desde que a folha abriu
+  // hml-25: os campos que a pessoa mudou desde que a folha abriu e que ainda diferem da base — o `muda` marca e desmarca, com a
+  // comparação exata (o espaço no fim do nome segue tocado); mexeu e devolveu ao valor da base = não tocado, e a mescla traz o novo
   const tocados = useRef(new Set<keyof FormDadosAluno>());
   const estavaAberta = useRef(false);
   const [salvando, setSalvando] = useState(false);
@@ -72,7 +73,9 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
   }, [aberto, inicial]);
 
   const muda = <K extends keyof FormDadosAluno>(k: K, v: FormDadosAluno[K]) => {
-    tocados.current.add(k);
+    // o tocado só vale enquanto o valor difere da base (exato, sem trim: a mescla não troca o texto no meio da digitação)
+    if (v === base[k]) tocados.current.delete(k);
+    else tocados.current.add(k);
     setF((x) => {
       const novo = { ...x, [k]: v };
       atual.current = novo;
