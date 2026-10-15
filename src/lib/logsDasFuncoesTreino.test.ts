@@ -34,13 +34,14 @@ const PUBLICADAS = [
   "delete-my-account",
   "treino-acessos", // W-A P2 (nova): a linha "Treino — séries" da aba Acessos, com o login do principal — nasce com o log da hml-10
   "treinos", // hml-21d (nova): o jeito 2 do Treino (a porta _shared/porta-treino.ts) — nasce com o log da hml-10 e o catch final no index.ts
+  "admin-semana-treinos", // hml-24 (H-127): o catch final com o log.excecao e os 2 console (b) viraram log.aviso, só com o código
 ] as const;
 
 /** hml-14 (D10): respondem 410 {"error":"migrado"} a qualquer pedido (fora o preflight, com o CORS de antes). */
 const CASCAS = ["master-financeiro", "master-planos"] as const;
 
 /**
- * As 10 do Treino que esta W NÃO publica (P4, spec §2 D1): só têm console com a mensagem do erro (b: nada de corpo de resposta,
+ * As 10 do Treino que esta W NÃO publica (P4, spec §2 D1) — 9 desde a hml-24 (a admin-semana-treinos foi para as PUBLICADAS): só têm console com a mensagem do erro (b: nada de corpo de resposta,
  * objeto inteiro ou dado pessoal) e o app as chama — o 5xx delas chega pelo aviso do app (D5). Ficam fora da guarda até a W que
  * as publicar; aí elas trocam o console pelo log e vêm para a lista de cima.
  */
@@ -50,7 +51,6 @@ const FORA: Record<string, string> = {
   "admin-get-user": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
   "admin-get-workout-plan": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
   "admin-relatorio": "2 console (b): a mensagem do erro das RPCs pode_ver_aluno_treino_por e contas_onde_sou_dono_treino",
-  "admin-semana-treinos": "2 console (b): a mensagem do erro das RPCs pode_ver_aluno_treino_por e contas_onde_sou_dono_treino",
   "admin-tags": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
   "admin-update-user": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
   "painel-resumo-treino": "1 console (b): a mensagem do erro do catch final, cortada em 300",
@@ -76,6 +76,7 @@ const RESPOSTA_DO_CATCH_FINAL: Record<(typeof PUBLICADAS)[number], string> = {
   "delete-my-account": 'return jsonServidor({ ok: false, erro: "interno" }, 500);',
   "treino-acessos": 'return json({ ok: false, erro: "erro_interno" }, 500, origin);',
   treinos: 'return json({ ok: false, erro: "erro_interno" }, 500, origin);',
+  "admin-semana-treinos": 'return jsonErr("internal", 500, origin);',
 };
 
 // ───────────────────────── o leitor ─────────────────────────
