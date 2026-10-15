@@ -5,14 +5,15 @@
                   outra conta) → mensagem vermelha embaixo do campo ao sair dele; "Cadastrar" não grava; e-mail único → some
   dados           Perfil do aluno › Editar dados (Rafael Moura): hml-25 (H-137) primeiro "a troca do Treino atrasada com a folha
                   aberta" — a trocar-token fica segurada (page.route) até a pessoa digitar o objetivo; solta, a altura/peso do Treino
-                  aparecem na folha, o digitado FICA e o "Salvar" grava (o banco confere; o objetivo volta ao que era no fim). Depois,
+                  aparecem na folha, o digitado FICA e o "Salvar" grava (o banco confere; o objetivo volta ao que era no fim; a sobra
+                  de uma rodada cortada — o objetivo já igual ao do teste — volta a null antes, para o caso nunca passar no vazio). Depois,
                   CPF e e-mail de outras pessoas → as 2 mensagens embaixo dos campos; "Salvar" não grava; voltar ao que era → somem
   cadastro_link   /c/<código do Lucas> (público, celular): e-mail que já é de um aluno → enviado como os outros, sem frase
                   (hml-05b, H-18: o aviso vai para o profissional ao aprovar); o pendente criado é apagado no fim
 Prints: ~/projetos/physiqcalc-scratch/prints/w16b/<prefixo>_trava_email.png, _troca_atrasada.png, _trava_cpf.png, _trava_cadastro_link.png
 Pré-requisito: e2e/w16b/causa.py (a conta w16b-app com a matrícula do app no staging) e a massa da W13 (e2e/w13/massa.py).
 --seco: sem navegador e sem rede (o socket fica bloqueado) — o "segura" da troca com páginas falsas, o SQL que devolve o objetivo (só
-o staging) e os seletores e a correção nas telas.
+o staging), a sobra de uma rodada cortada e os seletores e a correção nas telas.
 Uso: python3 e2e/w16b/telas.py --base http://localhost:5173 --prefixo local [--casos novo_email,dados,cadastro_link]
      python3 e2e/w16b/telas.py --seco
 """
@@ -92,6 +93,17 @@ def sql_voltar_objetivo(pid: str, valor: str | None, schema: str = S) -> str:
     return f"update {schema}.pacientes set objetivo = {v} where id = '{pid}'"
 
 
+def sem_sobra(ler, executar) -> dict:
+    """O aluno de teste antes do caso da troca atrasada. Uma rodada cortada entre o Salvar e o finally deixa o objetivo igual ao OBJETIVO:
+    aí o fill não muda nada, o Salvar fecha sem gravar e o caso passaria no vazio. Essa sobra volta a null (pelo sql_voltar_objetivo: só o
+    staging, só o uuid dele) e o aluno é lido de novo."""
+    r = ler()
+    if r["objetivo"] == OBJETIVO:
+        executar(sql_voltar_objetivo(r["id"], None))
+        r = ler()
+    return r
+
+
 def q(sql: str) -> list:
     return B.sql_principal(sql)
 
@@ -167,7 +179,10 @@ def novo_email(nav, base, pref):
 
 def dados(nav, base, pref):
     conta = B.conta_w13()
-    raf = q(f"select id::text, email, cpf, objetivo from {S}.pacientes where conta_id = '{conta}' and nome = 'Rafael Moura' and deleted_at is null limit 1")[0]
+    raf = sem_sobra(lambda: q(f"select id::text, email, cpf, objetivo from {S}.pacientes where conta_id = '{conta}' and nome = 'Rafael Moura' "
+                              "and deleted_at is null limit 1")[0], q)
+    p.check(raf["objetivo"] != OBJETIVO,
+            "[dados] hml-25: o objetivo de antes não é o do teste (a sobra de uma rodada cortada volta a null) — o Salvar do caso tem o que gravar")
     nutri2 = q("select id::text from auth.users where lower(email) = 'teste@physiqnutri.app'")[0]["id"]
     q(f"delete from {S}.pacientes where nome = $n${NOME_CPF}$n$")
     q(f"insert into {S}.pacientes (nutricionista_id, nome, cpf) values ('{nutri2}', $n${NOME_CPF}$n$, '{CPF_OUTRO}')")
@@ -278,7 +293,8 @@ class _PaginaFalsa:
 
 
 def seco() -> int:
-    """Sem navegador e sem rede (o socket fica bloqueado): o "segura" da troca, o SQL do objetivo e os seletores/a correção nas telas."""
+    """Sem navegador e sem rede (o socket fica bloqueado): o "segura" da troca, o SQL do objetivo, a sobra de uma rodada cortada e os
+    seletores/a correção nas telas."""
     def sem_rede(*_a, **_k):
         raise RuntimeError("--seco não usa a rede")
 
@@ -308,6 +324,12 @@ def seco() -> int:
     p.check(sql_voltar_objetivo(pid, "definição") == f"update staging.pacientes set objetivo = $o$definição$o$ where id = '{pid}'"
             and sql_voltar_objetivo(pid, None).endswith(f"set objetivo = null where id = '{pid}'") and recusas == 3,
             "seco: o objetivo volta só no staging e só na linha do aluno de teste (o public, o id que não é uuid e o valor com $o$ são recusados)")
+    sobra, sqls = [{"id": pid, "objetivo": OBJETIVO}, {"id": pid, "objetivo": None}], []
+    sem = [{"id": pid, "objetivo": "definição"}, {"id": pid, "objetivo": "x"}]
+    r1 = sem_sobra(lambda: sobra.pop(0), sqls.append)
+    r2 = sem_sobra(lambda: sem.pop(0), sqls.append)
+    p.check(r1["objetivo"] is None and not sobra and r2["objetivo"] == "definição" and len(sem) == 1 and sqls == [sql_voltar_objetivo(pid, None)],
+            "seco: a sobra de uma rodada cortada (o objetivo já é o do teste) volta a null e o aluno é lido de novo; outro objetivo fica (0 SQL, 1 leitura)")
     fontes = {rel: (REPO / rel).read_text(encoding="utf-8") for rel in (
         "src/painel/aluno/dados/SheetEditarDados.tsx", "src/painel/aluno/resumo/CardDadosAluno.tsx", "src/nucleo/trocaToken.ts")}
     folha = fontes["src/painel/aluno/dados/SheetEditarDados.tsx"]
