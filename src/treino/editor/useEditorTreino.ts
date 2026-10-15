@@ -52,7 +52,9 @@ export const chaveEditor = (treinoUserId: string | null) => ["treino-editor", tr
 //   "<aluno>|semana:<DIA>|treinos"   a lista de treinos do dia         (setDia — apaga e grava a lista inteira)
 //   "<aluno>|semana:<DIA>|alternado" o alternado do dia e os extras    (setDiaConfig + setExtras: desligar o alternado apaga os extras,
 //                                                                       então os 2 andam na MESMA fila — nunca 2 no ar do mesmo dia)
-// As ações pontuais (adicionar/tirar exercício, usar modelo, criar e tirar treino, a config, o padrão N) seguem pelo rodar.
+//   "<aluno>|config"                 a config do aluno, campo a campo  (setConfig: o modo das séries, a data da troca, o descanso padrão
+//                                                                       — cada envio leva só os campos que mudaram)
+// As ações pontuais (adicionar/tirar exercício, usar modelo, criar e tirar treino, ordenar, o padrão N) seguem pelo rodar.
 
 type AlvoTreino = { grupo_id?: string; grupo_usuario_id?: string };
 type IdsExercicio = { exercicio_id: string | null; exercicio_usuario_id: string | null };
@@ -61,7 +63,8 @@ type Meta =
   | { tipo: "prescricao"; alvo: AlvoTreino; ex: IdsExercicio }
   | { tipo: "observacao"; alvo: AlvoTreino }
   | { tipo: "dia"; dia: string }
-  | { tipo: "alternado"; dia: string };
+  | { tipo: "alternado"; dia: string }
+  | { tipo: "config" };
 /** O que estava salvo na chave (o "voltar ao salvo" do erro): a linha do aluno (prescrição e observação) ou o valor do dia (a semana). */
 type Retrato = { linha: DadosEditor["seriesPadrao"][number] | null } | { valor: Valor };
 
@@ -76,6 +79,12 @@ export const chaveDaPrescricao = (treinoUserId: string, t: Pick<TreinoEditor, "c
 export const chaveDaObservacao = (treinoUserId: string, t: Pick<TreinoEditor, "chave">) => `${treinoUserId}|${t.chave}|geral`;
 export const chaveDoDia = (treinoUserId: string, dia: string) => `${treinoUserId}|semana:${dia}|treinos`;
 export const chaveDoAlternado = (treinoUserId: string, dia: string) => `${treinoUserId}|semana:${dia}|alternado`;
+export const chaveDaConfig = (treinoUserId: string) => `${treinoUserId}|config`;
+
+/** Os campos da config que a setConfig grava (cada um é o valor inteiro dele: a fila junta por campo). */
+const CAMPOS_CONFIG = ["tempo_descanso_segundos", "series_travadas", "series_padrao_qtd", "series_modo", "proxima_troca_treino"] as const;
+const soCampos = (v: Valor | Record<string, unknown> | null | undefined, chaves: readonly string[] = CAMPOS_CONFIG): Valor =>
+  Object.fromEntries(chaves.filter((c) => (CAMPOS_CONFIG as readonly string[]).includes(c) && v != null && c in v).map((c) => [c, (v as Valor)[c]]));
 
 // na semana, as listas vão como TEXTO (JSON) no valor da fila: a fila compara campo a campo, e a mesma lista não conta como mudança
 const valorDoDia = (chaves: string[]): Valor => ({ chaves: JSON.stringify(chaves) });
@@ -97,6 +106,9 @@ const aplicarMeta = (d: DadosEditor, m: Meta, v: Valor): DadosEditor => {
       return comDia(d, m.dia, chavesDoValor(v));
     case "alternado":
       return comAlternadoDoDia(d, m.dia, { alternado: v.alternado === true, inicio: (v.inicio as string | null) ?? null, extras: extrasDoValor(v) });
+    case "config":
+      // só os campos que a chave mexeu (o desejado da config só tem os campos tocados)
+      return { ...d, config: { ...(d.config ?? ({} as ConfigTreinoAluno)), ...soCampos(v) } as ConfigTreinoAluno };
   }
 };
 
@@ -107,12 +119,14 @@ function valorDaSemana(d: DadosEditor, m: Extract<Meta, { tipo: "dia" | "alterna
 
 function retrato(d: DadosEditor | undefined, m: Meta): Retrato | null {
   if (m.tipo === "prescricao" || m.tipo === "observacao") return { linha: linhaDaChave(d, m.alvo, m.tipo === "prescricao" ? m.ex : null) };
+  if (m.tipo === "config") return d ? { valor: soCampos(d.config as unknown as Record<string, unknown> | null) } : null;
   return d ? { valor: valorDaSemana(d, m) } : null;
 }
 
-function voltar(d: DadosEditor, m: Meta, r: Retrato): DadosEditor {
+/** Volta a chave ao retrato salvo; na config, só os campos que o envio que falhou mexia (`chaves`) — os outros podem ter mudado por outro caminho. */
+function voltar(d: DadosEditor, m: Meta, r: Retrato, chaves?: readonly string[]): DadosEditor {
   if ("linha" in r) return m.tipo === "prescricao" || m.tipo === "observacao" ? comLinha(d, m.alvo, m.tipo === "prescricao" ? m.ex : null, r.linha) : d;
-  return aplicarMeta(d, m, r.valor);
+  return aplicarMeta(d, m, m.tipo === "config" && chaves ? soCampos(r.valor, chaves) : r.valor);
 }
 
 /**
@@ -337,12 +351,15 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
             // a semana muda o "N de M" e o volume (o depois "semana" de antes)
             void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
             void qc.invalidateQueries({ queryKey: ["treino-semana-atual", treinoUserId] });
-          } else if (envio.campos.has("series")) void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
+          } else if (envio.campos.has("series") || envio.campos.has("series_padrao_qtd")) {
+            // as séries do exercício (prescrição) ou o nº padrão do aluno (config): o volume muda
+            void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
+          }
         },
-        aoErro: (e) => {
+        aoErro: (e, desejado) => {
           // só esta chave volta ao que o servidor tinha; as outras pendentes seguem por cima da releitura
           const salva = salvas.get(chaveFila) ?? (meta.tipo === "prescricao" || meta.tipo === "observacao" ? { linha: null } : null);
-          if (salva) qc.setQueryData<DadosEditor>(chave, (d) => (d ? voltar(d, meta, salva) : d));
+          if (salva) qc.setQueryData<DadosEditor>(chave, (d) => (d ? voltar(d, meta, salva, Object.keys(desejado)) : d));
           salvas.delete(chaveFila);
           toast.error(mensagemDoErro(e), { id: `fila:${chaveFila}`, action: { label: "Tentar de novo", onClick: tentarDeNovo } });
           void recarregar();
@@ -379,14 +396,29 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
     [gravarNaFila, treinoUserId],
   );
 
+  /**
+   * Ampliação 2 da hml-24 (🟡A): a config do aluno pela fila, na chave "<aluno>|config", campo a campo — o modo das séries, a data da
+   * troca e o descanso padrão (cada campo é o valor inteiro dele: 2 toques seguidos não chegam mais fora de ordem). O envio leva só os
+   * campos que mudaram (todos os tocados, no "Tentar de novo"); a base é o que a tela mostra de cada campo (o desejado pendente ou o cache).
+   */
   const configurar = useCallback(
-    (campos: Partial<ConfigTreinoAluno>, ok?: string) =>
-      rodar(`cfg:${Object.keys(campos).join(",")}`, () => salvarConfig(treinoUserId!, campos as never), {
-        ok,
-        depois: "series_padrao_qtd" in campos ? "volume" : "nada",
-        otimista: (d) => ({ ...d, config: { ...(d.config ?? ({} as ConfigTreinoAluno)), ...campos } }),
-      }),
-    [rodar, treinoUserId],
+    (campos: Partial<ConfigTreinoAluno>, ok?: string) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const k = chaveDaConfig(treinoUserId);
+      const pendente = filaDoEditor.pendente(k);
+      const atual = (qc.getQueryData<DadosEditor>(chave)?.config ?? null) as unknown as Record<string, unknown> | null;
+      const novo: Valor = {};
+      const base: Valor = {};
+      for (const [c, v] of Object.entries(campos)) {
+        novo[c] = v ?? null;
+        base[c] = pendente && c in pendente ? pendente[c] : (atual?.[c] ?? null);
+      }
+      return gravarNaFila(k, { tipo: "config" }, base, novo, (v, mudados) => {
+        const chaves = mudados.size ? [...mudados] : Object.keys(v);
+        return salvarConfig(treinoUserId, soCampos(v, chaves) as never);
+      }, ok);
+    },
+    [gravarNaFila, qc, chave, treinoUserId],
   );
 
   const avisoCopia = (r: { personalizado?: boolean } | null, nome: string) => {

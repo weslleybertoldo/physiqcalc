@@ -61,6 +61,7 @@ vi.mock("@/treino/ui/MiniaturaGif", () => ({ MiniaturaGif: ({ nome }: { nome: st
 
 import { EditorTreino } from "./EditorTreino";
 import { SemanaDoAluno } from "./SemanaDoAluno";
+import { SeriesETroca } from "./Secoes";
 import { filaDoEditor } from "./useEditorTreino";
 import CardTreino from "@/painel/aluno/resumo/CardTreino";
 import AbaTreino from "@/painel/aluno/abas/Treino";
@@ -602,6 +603,136 @@ describe("ampliação da hml-24 — a semana do aluno pela fila por chave (o est
     expect(h.salvarAlternado.mock.calls[0].slice(1, 3)).toEqual(["SEG", false]);
     expect(h.salvarExtras).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(document.querySelector('[data-semana-extra]')).toBeNull());
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+});
+
+describe("ampliação 2 da hml-24 — desligar e religar o alternado rápido, e a config do aluno pela fila (campo a campo)", () => {
+  const tique = () =>
+    act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+  it("⚪C desligar e religar o alternado rápido: 2 pedidos, um por vez; religado e SEM o extra (o banco já não o tem)", async () => {
+    const desligar = adiada();
+    h.salvarAlternado.mockReturnValueOnce(desligar.promessa).mockResolvedValue({ ok: true });
+    const segAeCcomExtra = [...dados().semana.filter((r) => r.dia_semana !== "SEG"),
+      { dia_semana: "SEG", slot_idx: 0, grupo_id: "gA", grupo_usuario_id: null, extra: false },
+      { dia_semana: "SEG", slot_idx: 1, grupo_id: "gC", grupo_usuario_id: null, extra: false },
+      { dia_semana: "SEG", slot_idx: 100, grupo_id: "gB", grupo_usuario_id: null, extra: true, extra_atrelado_grupo_id: null, extra_atrelado_grupo_usuario_id: null }];
+    h.carregarEditor.mockResolvedValue(dados({ semana: segAeCcomExtra, diasConfig: [{ dia_semana: "SEG", alternado: true, alternado_inicio: "2026-10-12" }] }));
+    montar(<SemanaDoAluno treinoUserId="t1" somenteLeitura={false} />);
+    await waitFor(() => expect(document.querySelector("[data-semana-extra]")).not.toBeNull());
+    const botao = document.querySelector('[data-semana-alternar="SEG"]') as HTMLButtonElement;
+    fireEvent.click(botao); // desliga (o pedido fica no ar)
+    await tique();
+    await waitFor(() => expect(botao.getAttribute("aria-pressed")).toBe("false"));
+    fireEvent.click(botao); // religa com o desligar ainda no ar
+    await tique();
+    expect(h.salvarAlternado).toHaveBeenCalledTimes(1);
+    await act(async () => desligar.soltar({ ok: true }));
+    await waitFor(() => expect(h.salvarAlternado).toHaveBeenCalledTimes(2));
+    expect(h.salvarAlternado.mock.calls.map((c) => c[2])).toEqual([false, true]);
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+    expect(botao.getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector("[data-semana-extra]")).toBeNull();
+    expect(h.salvarExtras).not.toHaveBeenCalled();
+  });
+
+  /** Um servidor da config que aplica cada pedido quando responde — e responde do mais NOVO para o mais velho (fora de ordem). */
+  function servidorDaConfig(inicial: Record<string, unknown>) {
+    const banco: Record<string, unknown> = { ...inicial };
+    const pedidos: { feito: boolean; soltar: () => void }[] = [];
+    h.salvarConfig.mockImplementation(
+      (_u: string, campos: Record<string, unknown>) =>
+        new Promise((ok) => {
+          const p = { feito: false, soltar: () => {} };
+          p.soltar = () => {
+            p.feito = true;
+            Object.assign(banco, campos);
+            ok({ ok: true, config: { ...banco } });
+          };
+          pedidos.push(p);
+        }),
+    );
+    const responderForaDeOrdem = async () => {
+      for (let volta = 0; volta < 10; volta++) {
+        const abertos = pedidos.filter((x) => !x.feito).reverse();
+        if (!abertos.length) return;
+        for (const x of abertos) await act(async () => x.soltar());
+        await tique();
+      }
+    };
+    return { banco, responderForaDeOrdem };
+  }
+
+  it("🟡A o modo das séries: 2 toques com o 1º no ar → 1 pedido por vez; o 2º leva o valor final; a resposta velha não desfaz a tela nem o banco", async () => {
+    const s = servidorDaConfig({ series_modo: "personalizada" });
+    montar(<SeriesETroca treinoUserId="t1" somenteLeitura={false} />);
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Padrão para todos" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("radio", { name: "Padrão para todos" }));
+    await tique();
+    fireEvent.click(screen.getByRole("radio", { name: "Por exercício" }));
+    await tique();
+    expect(h.salvarConfig).toHaveBeenCalledTimes(1);
+    expect(h.salvarConfig.mock.calls[0][1]).toEqual({ series_modo: "padrao" });
+    expect(screen.getByRole("radio", { name: "Por exercício" }).getAttribute("aria-checked")).toBe("true");
+    await s.responderForaDeOrdem();
+    expect(h.salvarConfig).toHaveBeenCalledTimes(2);
+    expect(h.salvarConfig.mock.calls[1][1]).toEqual({ series_modo: "personalizada" });
+    expect(s.banco.series_modo).toBe("personalizada");
+    expect(screen.getByRole("radio", { name: "Por exercício" }).getAttribute("aria-checked")).toBe("true");
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("🟡A junta por campo: com o modo no ar, 2 datas da troca seguidas viram 1 pedido só com a data final (o modo não vai de novo)", async () => {
+    const s = servidorDaConfig({ series_modo: "personalizada", proxima_troca_treino: null });
+    montar(<SeriesETroca treinoUserId="t1" somenteLeitura={false} />);
+    await waitFor(() => expect(document.querySelector("[data-troca-data]")).not.toBeNull());
+    fireEvent.click(screen.getByRole("radio", { name: "Padrão para todos" }));
+    await tique();
+    fireEvent.change(document.querySelector("[data-troca-data]")!, { target: { value: "2026-10-19" } });
+    await tique();
+    fireEvent.change(document.querySelector("[data-troca-data]")!, { target: { value: "2026-10-26" } });
+    await tique();
+    expect(h.salvarConfig).toHaveBeenCalledTimes(1);
+    await s.responderForaDeOrdem();
+    expect(h.salvarConfig.mock.calls.map((c) => c[1])).toEqual([{ series_modo: "padrao" }, { proxima_troca_treino: "2026-10-26" }]);
+    expect(s.banco).toEqual({ series_modo: "padrao", proxima_troca_treino: "2026-10-26" });
+    expect((document.querySelector("[data-troca-data]") as HTMLInputElement).value).toBe("2026-10-26");
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("🟡A o erro da config → só o campo volta ao salvo e o aviso traz 'Tentar de novo'; o botão reenvia o campo", async () => {
+    h.salvarConfig.mockRejectedValueOnce(new Error("internal")).mockResolvedValue({ ok: true, config: {} });
+    montar(<SeriesETroca treinoUserId="t1" somenteLeitura={false} />);
+    await waitFor(() => expect(document.querySelector("[data-troca-data]")).not.toBeNull());
+    const data = document.querySelector("[data-troca-data]") as HTMLInputElement;
+    fireEvent.change(data, { target: { value: "2026-10-19" } });
+    await waitFor(() => expect(h.toastErro).toHaveBeenCalled());
+    const [texto, opcoes] = h.toastErro.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
+    expect(texto).toBe("Não deu para salvar agora. Tente de novo.");
+    expect(opcoes.action.label).toBe("Tentar de novo");
+    await waitFor(() => expect(data.value).toBe(""));
+    expect(screen.getByRole("radio", { name: "Por exercício" }).getAttribute("aria-checked")).toBe("true");
+    act(() => opcoes.action.onClick());
+    await waitFor(() => expect(h.salvarConfig).toHaveBeenCalledTimes(2));
+    expect(h.salvarConfig.mock.calls[1][1]).toEqual({ proxima_troca_treino: "2026-10-19" });
+    await waitFor(() => expect(data.value).toBe("2026-10-19"));
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("🟡A o descanso padrão pela folha vai pela fila (só o campo dele) e a folha fecha no ok", async () => {
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    fireEvent.click(document.querySelector("[data-chip-descanso]")!);
+    await waitFor(() => expect(document.body.querySelector('[data-descanso-atalho="90"]')).not.toBeNull());
+    fireEvent.click(document.body.querySelector('[data-descanso-atalho="90"]')!);
+    fireEvent.click(document.body.querySelector("[data-descanso-salvar]")!);
+    await waitFor(() => expect(h.salvarConfig).toHaveBeenCalledTimes(1));
+    expect(h.salvarConfig.mock.calls[0][1]).toEqual({ tempo_descanso_segundos: 90 });
+    await waitFor(() => expect(document.body.querySelector("[data-descanso-salvar]")).toBeNull());
+    await waitFor(() => expect(screen.getByText(/DESCANSO PADRÃO 90 S/)).toBeInTheDocument());
     await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
   });
 });
