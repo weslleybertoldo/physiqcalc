@@ -19,7 +19,8 @@
 //                     mp-cartao: + pagador? { nome?, documento?: { tipo: "CPF"|"CNPJ", numero } } (o titular do formulário do cartão)
 //                     e device_id? (o MP_DEVICE_SESSION_ID do security.js) → o payer completo, 1 item, o descritor "PHYSIQ" e o cabeçalho
 //                     X-meli-session-id (_shared/mp-pagador-regras.ts); recusado → 200 com status_detail (o de sempre) e o log
-//                     mp_cartao_recusado; a recusa 400 → cartao_recusado com status_detail (só o código) e o detalhe sem número longo
+//                     mp_cartao_recusado; a recusa 400 → cartao_recusado com status_detail (só o código; o texto do MP não volta mais —
+//                     revisão mpc ⚪7: nenhuma tela nem APK lia o `detalhe`)
 //   aluno_mp_assinar  { paciente_id, card_token, device_id? }  cobrança automática mensal no cartão (W-P: não no período todo); mp-cartao:
 //                                                            só o cabeçalho do aparelho (o corpo é o de antes)
 //   aluno_mp_cancelar { paciente_id }                        cancela a própria assinatura
@@ -143,8 +144,7 @@ import {
   codigosDoMp, erroDeCartao, hojeSP, modoConfere, preapprovalDoPagamento, recusaDoSandbox, type AssinaturaMp, type PagamentoMp,
 } from "../_shared/cobranca-regras.ts";
 import {
-  DESCRITOR_FATURA, cabecalhosDoDevice, codigoDaRecusa, detalheSemDado, deviceDoPedido, infoAdicionalDoPedido, itemDoPedido, pagadorDoPedido,
-  resultadoDoDevice,
+  DESCRITOR_FATURA, cabecalhosDoDevice, codigoDaRecusa, deviceDoPedido, infoAdicionalDoPedido, itemDoPedido, pagadorDoPedido, resultadoDoDevice,
 } from "../_shared/mp-pagador-regras.ts";
 import {
   MpIndisponivel, credencialDoSchema, mpFetch, schemaDaCredencialMp, tokenMp, type CredencialMp, type RespostaMp,
@@ -1465,7 +1465,7 @@ Deno.serve(async (req) => {
         log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: linha.id, status: st, resultado: comAparelho, externo: codigosDoMp(pay) });
         await desfazerLinha(linha);
         return erro(erroDeCartao(st, pay) ? "cartao_recusado" : "mp_error", erroDeCartao(st, pay) ? 400 : 502, origin,
-          { detalhe: detalheSemDado(pay), status_detail: codigoDaRecusa(pay) });
+          { status_detail: codigoDaRecusa(pay) });
       }
       // MENOR 20: o pagamento tem de ser do mundo do schema — o de sandbox no public (ou um de verdade no staging) nunca vale: nada aplicado e a
       // linha desfeita; o Weslley é avisado com o id do pagamento (para conferir/devolver no MP)
@@ -1540,7 +1540,7 @@ Deno.serve(async (req) => {
         // mp-cartao: + o resultado com/sem aparelho; o codigosDoMp tira o cc_rejected_… da mensagem (14/10: 400 sem códigos — o log ficou {})
         log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, resultado: comAparelho, externo: codigosDoMp(pre) });
         if (erroDeCartao(st, pre)) {
-          falhar("cartao_recusado", 400, { detalhe: detalheSemDado(pre), status_detail: codigoDaRecusa(pre) });
+          falhar("cartao_recusado", 400, { status_detail: codigoDaRecusa(pre) });
         }
         falhar("mp_error", 502, { status_mp: st });
       }

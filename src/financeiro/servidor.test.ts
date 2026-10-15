@@ -1055,11 +1055,12 @@ describe("mp-cartao — o pedido de cartão leva o aparelho, o titular, o item e
 
   it("aluno_mp_cartao: a recusa (201 rejected) vai ao log como aviso com o resultado e só os códigos; o 400 devolve o código e o detalhe sem dado", () => {
     ordem(cartao(), 'log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: linha.id, status: st, resultado: comAparelho, externo: codigosDoMp(pay) });',
-      "{ detalhe: detalheSemDado(pay), status_detail: codigoDaRecusa(pay) }", 'log.erro({ codigo: "mp_cartao_modo_errado"',
+      "{ status_detail: codigoDaRecusa(pay) }", 'log.erro({ codigo: "mp_cartao_modo_errado"',
       'if (pay.status === "rejected") {',
       'log.aviso({ codigo: "mp_cartao_recusado", schema, acao, ref: String(pay.id), resultado: comAparelho, externo: codigosDoMp(pay) });',
       'update({ mp_payment_id: String(pay.id) })', "aplicarPagamentoMp(", "status_detail: pay.status_detail ?? null");
     expect(f).not.toContain("?.message ?? \"\").slice(0, 200)");   // o detalhe cru saiu das 2 recusas
+    expect(f).not.toMatch(/\bdetalhe:/);                               // revisão mpc ⚪7: nenhuma resposta leva o texto do MP
   });
 
   it("aluno_mp_assinar: SÓ o cabeçalho no POST authorized (o corpo de antes); o pendente sem; o log com o resultado; a recusa com o código", () => {
@@ -1067,7 +1068,7 @@ describe("mp-cartao — o pedido de cartão leva o aparelho, o titular, o item e
     ordem(b, "const aparelho = deviceDoPedido(body.device_id);", "const comAparelho = resultadoDoDevice(aparelho);",
       ': await mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, card_token_id: cardToken, status: "authorized" }), headers: cabecalhosDoDevice(aparelho) });',
       'log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, resultado: comAparelho, externo: codigosDoMp(pre) });',
-      'falhar("cartao_recusado", 400, { detalhe: detalheSemDado(pre), status_detail: codigoDaRecusa(pre) });');
+      'falhar("cartao_recusado", 400, { status_detail: codigoDaRecusa(pre) });');
     expect(b).toContain('const pendente = () => mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, status: "pending" }) });');
     expect(b.replace(/^\s*\/\/.*$/gm, "")).not.toMatch(/pagadorDoPedido|body\.pagador|additional_info|statement_descriptor|itemDoPedido/);
     expect(b.match(/cabecalhosDoDevice\(/g)).toHaveLength(1);

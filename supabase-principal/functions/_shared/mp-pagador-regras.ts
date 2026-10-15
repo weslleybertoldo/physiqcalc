@@ -141,13 +141,6 @@ export function infoAdicionalDoPedido(item: ItemMp, pagador: PagadorMp): InfoAdi
 /** O desfecho do aparelho para o campo `resultado` do log (nunca o id). */
 export const resultadoDoDevice = (d: string | null): "com_device" | "sem_device" => (d ? "com_device" : "sem_device");
 
-/** O texto do MP que volta na resposta de erro (`detalhe`, até 200): sequências de 5+ dígitos e endereços de e-mail viram "…" — o documento
- *  do titular, que agora vai no pedido, nunca volta por aqui. */
-export function detalheSemDado(corpo: unknown): string {
-  const msg = String((corpo as { message?: unknown } | null)?.message ?? "");
-  return msg.replace(/[^\s@]+@[^\s@]+/g, "…").replace(/\d{5,}/g, "…").slice(0, 200);
-}
-
 /** O código da recusa para a resposta de erro (`status_detail` do cartao_recusado — a tela escolhe o texto, §7.7): o status_detail do MP ou o
  *  cc_rejected_… do texto (codigosDoMp), SÓ no formato de código ([a-z0-9_], até 64); senão null. */
 export function codigoDaRecusa(corpo: unknown): string | null {

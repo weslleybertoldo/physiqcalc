@@ -5,8 +5,8 @@
 import { describe, expect, it } from "vitest";
 import { codigosDoMp, recusaNoTexto } from "../../supabase-principal/functions/_shared/cobranca-regras";
 import {
-  CABECALHO_DEVICE, CATEGORIA_DO_ITEM, DESCRITOR_FATURA, DEVICE_RX, cabecalhosDoDevice, cnpjValido, codigoDaRecusa, cpfValido, detalheSemDado,
-  deviceDoPedido, infoAdicionalDoPedido, itemDoPedido, pagadorDoPedido, resultadoDoDevice,
+  CABECALHO_DEVICE, CATEGORIA_DO_ITEM, DESCRITOR_FATURA, DEVICE_RX, cabecalhosDoDevice, cnpjValido, codigoDaRecusa, cpfValido, deviceDoPedido,
+  infoAdicionalDoPedido, itemDoPedido, pagadorDoPedido, resultadoDoDevice,
 } from "../../supabase-principal/functions/_shared/mp-pagador-regras";
 import { validarCPF } from "@/publico/cadastro/regras";
 
@@ -117,9 +117,9 @@ describe("mp-cartao — o item, o additional_info e o descritor", () => {
 });
 
 describe("mp-cartao — o motivo da recusa (codigosDoMp, a resposta de erro)", () => {
-  it("cc_rejected_high_risk na mensagem → o código (minúsculo); texto livre → nada", () => {
+  it("cc_rejected_high_risk na mensagem → o código; texto livre → nada", () => {
     expect(recusaNoTexto({ message: "cc_rejected_high_risk" })).toBe("cc_rejected_high_risk");
-    expect(recusaNoTexto({ message: "Card rejected: CC_REJECTED_HIGH_RISK (try another)" })).toBe("cc_rejected_high_risk");
+    expect(recusaNoTexto({ message: "Card rejected: cc_rejected_high_risk (try another)" })).toBe("cc_rejected_high_risk");
     expect(recusaNoTexto({ code: "cc_rejected_bad_filled_security_code", message: "x" })).toBe("cc_rejected_bad_filled_security_code");
     expect(recusaNoTexto({ message: "Invalid card_token_id" })).toBeNull();
     expect(recusaNoTexto(null)).toBeNull();
@@ -132,14 +132,24 @@ describe("mp-cartao — o motivo da recusa (codigosDoMp, a resposta de erro)", (
     expect(codigosDoMp({ error: "bad_request", cause: [{ code: 2067 }], message: "cc_rejected_call_for_authorize" }))
       .toEqual({ mp_erro: "bad_request", mp_causas: [2067], mp_status_detail: "cc_rejected_call_for_authorize" });
   });
-  it("o código para a tela: só no formato de código; o detalhe sem número longo nem e-mail", () => {
+  it("revisão mpc (🟡2, ⚪6): o CC_VAL_<n> da validação do cartão (em minúsculas), o fim obrigatório do cc_rejected_… e o `code` como mp_erro", () => {
+    expect(recusaNoTexto({ message: "CC_VAL_433 Credit card validation has failed" })).toBe("cc_val_433");
+    expect(codigosDoMp({ message: "CC_VAL_433 Credit card validation has failed", status: 400 })).toEqual({ mp_status_detail: "cc_val_433" });
+    // nada colado depois do código entra (o fuzz da revisão gravava cc_rejected_high_risk_maria) e as maiúsculas não são o código do MP
+    expect(recusaNoTexto({ message: "cc_rejected_high_risk_Maria" })).toBeNull();
+    expect(recusaNoTexto({ message: "cc_rejected_high_riskMaria" })).toBeNull();
+    expect(recusaNoTexto({ message: "CC_REJECTED_HIGH_RISK" })).toBeNull();
+    expect(recusaNoTexto({ message: "xCC_VAL_433 e CC_VAL_12345" })).toBeNull();
+    // sem `error`, o `code` com formato de código vai como mp_erro; com `error`, vale o `error`; fora do formato, nada
+    expect(codigosDoMp({ code: "bad_request", message: "x" })).toEqual({ mp_erro: "bad_request" });
+    expect(codigosDoMp({ error: "bad_request", code: "outro_codigo" })).toEqual({ mp_erro: "bad_request" });
+    expect(codigosDoMp({ code: "Bad Request!" })).toEqual({});
+    expect(codigosDoMp({ code: 400 })).toEqual({});
+  });
+  it("o código para a tela: só no formato de código (o texto do MP não volta na resposta)", () => {
     expect(codigoDaRecusa({ status: "rejected", status_detail: "cc_rejected_high_risk" })).toBe("cc_rejected_high_risk");
-    expect(codigoDaRecusa({ message: "CC_REJECTED_HIGH_RISK" })).toBe("cc_rejected_high_risk");
+    expect(codigoDaRecusa({ message: "CC_VAL_433 Credit card validation has failed" })).toBe("cc_val_433");
     expect(codigoDaRecusa({ status_detail: "Texto Livre com espaço" })).toBeNull();
     expect(codigoDaRecusa({ message: "nada" })).toBeNull();
-    const d = detalheSemDado({ message: `Invalid user identification number ${CPF_OK} of pagador@exemplo.com` });
-    expect(d).toBe("Invalid user identification number … of …");
-    expect(detalheSemDado({ message: "x".repeat(300) })).toHaveLength(200);
-    expect(detalheSemDado(null)).toBe("");
   });
 });

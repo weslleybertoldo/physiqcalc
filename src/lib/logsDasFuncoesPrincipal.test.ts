@@ -264,14 +264,14 @@ describe("hml-10 (D2): do Mercado Pago, só os códigos", () => {
     log.aviso({ codigo: "mp_cartao_recusado", schema: "public", acao: "aluno_mp_cartao", ref: String(recusado.id), resultado: "com_device",
       externo: codigosDoMp(recusado) });
     log.erro({ codigo: "mp_assinatura_falhou", schema: "public", acao: "aluno_mp_assinar", ref: "0b9c6f1e-2a3b-4c5d-8e9f-001122334455", status: 400,
-      resultado: "sem_device", externo: codigosDoMp({ message: "CC_REJECTED_HIGH_RISK for pagador@exemplo.com 12345678909", status: 400 }) });
+      resultado: "sem_device", externo: codigosDoMp({ message: "CC_VAL_433 Credit card validation has failed for pagador@exemplo.com 12345678909", status: 400 }) });
     expect(linhas.map((l) => JSON.parse(l))).toEqual([
       { nivel: "aviso", funcao: "pagamentos-aluno", codigo: "mp_cartao_recusado", schema: "public", acao: "aluno_mp_cartao", ref: "70000000123",
         resultado: "com_device", externo: { mp_status_detail: "cc_rejected_high_risk" } },
       { nivel: "erro", funcao: "pagamentos-aluno", codigo: "mp_assinatura_falhou", schema: "public", acao: "aluno_mp_assinar",
-        ref: "0b9c6f1e-2a3b-4c5d-8e9f-001122334455", status: 400, resultado: "sem_device", externo: { mp_status_detail: "cc_rejected_high_risk" } },
+        ref: "0b9c6f1e-2a3b-4c5d-8e9f-001122334455", status: 400, resultado: "sem_device", externo: { mp_status_detail: "cc_val_433" } },
     ]);
-    expect(linhas.join("\n")).not.toMatch(/pagador|Maria|Pagadora|12345678909|for /);
+    expect(linhas.join("\n")).not.toMatch(/pagador|Maria|Pagadora|12345678909|for |Credit card/);
   });
 
   it("espelho-enviar: a recusa da espelho-nucleo vira espelho_nucleo_<status>, sem o corpo dela", () => {

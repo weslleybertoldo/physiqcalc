@@ -206,15 +206,21 @@ export interface CodigosDoMp {
   mp_status_detail?: unknown;
 }
 
+/** O código `cc_rejected_…` do MP (minúsculas, como o MP escreve): fim obrigatório — nada colado depois entra (revisão mpc ⚪6). */
+const RECUSA_NO_TEXTO = /\bcc_rejected_[a-z_]{1,48}(?![A-Za-z0-9_])/;
+/** A recusa da validação do cartão ao criar a automática ("CC_VAL_433 Credit card validation has failed" — revisão mpc 🟡2). */
+const VALIDACAO_NO_TEXTO = /\bCC_VAL_\d{1,4}\b/;
+
 /**
  * mp-cartao (contrato §2.2): o código da recusa do cartão quando ele vem só no TEXTO da resposta do MP (`message`, ou `code`) — as 5
- * automáticas recusadas de 14/10/2026 voltaram 400 sem `error`, `cause` nem `status_detail` (o log ficou `{}`). Só o código
- * `cc_rejected_…`, em minúsculas; o texto livre nunca sai daqui. Sem código → null.
+ * automáticas recusadas de 14/10/2026 voltaram 400 sem `error`, `cause` nem `status_detail` (o log ficou `{}`). Só o código: o
+ * `cc_rejected_…` (como veio) ou o `CC_VAL_<n>` (em minúsculas: `cc_val_433`); o texto livre nunca sai daqui. Sem código → null.
  */
 export function recusaNoTexto(corpo: unknown): string | null {
   const c = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as Record<string, unknown>) : {};
   for (const campo of [c.message, c.code]) {
-    const achado = typeof campo === "string" ? /cc_rejected_[a-z_]{1,48}/i.exec(campo) : null;
+    if (typeof campo !== "string") continue;
+    const achado = RECUSA_NO_TEXTO.exec(campo) ?? VALIDACAO_NO_TEXTO.exec(campo);
     if (achado) return achado[0].toLowerCase();
   }
   return null;
@@ -223,7 +229,8 @@ export function recusaNoTexto(corpo: unknown): string | null {
 /**
  * hml-10 (H-24) — o MP recusou: para o log vão SÓ os códigos da resposta (`error`, os `cause[].code` e o `status_detail`),
  * nunca o corpo (a resposta do MP pode trazer e-mail, nome e documento de quem paga). O log confere o formato de cada um.
- * mp-cartao: sem `status_detail`, o código `cc_rejected_…` que vier no texto (recusaNoTexto) vai como `mp_status_detail`.
+ * mp-cartao: sem `status_detail`, o código que vier no texto (recusaNoTexto: `cc_rejected_…` ou `cc_val_<n>`) vai como `mp_status_detail`;
+ * sem `error`, o `code` da resposta com formato de código (`^[a-z_]{1,40}$`) vai como `mp_erro` (revisão mpc 🟡2).
  */
 export function codigosDoMp(corpo: unknown): CodigosDoMp {
   const c = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as Record<string, unknown>) : {};
@@ -231,8 +238,10 @@ export function codigosDoMp(corpo: unknown): CodigosDoMp {
     .map((x) => (x && typeof x === "object" ? (x as { code?: unknown }).code : null))
     .filter((x) => x !== null && x !== undefined);
   const detalhe = c.status_detail !== undefined && c.status_detail !== null ? c.status_detail : recusaNoTexto(c);
+  const erro = c.error !== undefined && c.error !== null ? c.error
+    : typeof c.code === "string" && /^[a-z_]{1,40}$/.test(c.code) ? c.code : null;
   return {
-    ...(c.error !== undefined && c.error !== null ? { mp_erro: c.error } : {}),
+    ...(erro !== null ? { mp_erro: erro } : {}),
     ...(causas.length ? { mp_causas: causas } : {}),
     ...(detalhe !== undefined && detalhe !== null ? { mp_status_detail: detalhe } : {}),
   };
