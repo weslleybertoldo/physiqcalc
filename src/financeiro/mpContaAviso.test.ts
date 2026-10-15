@@ -492,6 +492,27 @@ describe("tratarDaConta — o pagamento (o aviso nunca é a verdade: o recurso c
     expect((await tratar(db)).r).toEqual({ http: 200, resultado: "cobranca_paga_paga" });
     expect(db.tabelas.cobrancas[0].status).toBe("paga");
   });
+  it("mpc-b: o cartão EM ANÁLISE e, logo depois, RECUSADO pelo aviso → a recusa gravada + 1 linha mp_cartao_recusado com o motivo (sem dado pessoal); o aviso repetido não repete a linha", async () => {
+    const recusas = (linhas: LinhaLog[]) => linhas.filter((l) => l.campos.codigo === "mp_cartao_recusado");
+    const cartao = { date_approved: null, payment_method_id: "master" };
+    const m = mundo({ pagamentos: { 123: pagamento({ ...cartao, status: "in_process", status_detail: "pending_review_manual" }) } });
+    mpFalso(m);
+    const db = await cenario();
+    const r1 = await tratar(db);
+    expect(r1.r).toEqual({ http: 200, resultado: "cobranca_aguardando_confirmacao" });
+    expect(recusas(r1.linhas)).toEqual([]);
+    m.pagamentos[123] = pagamento({ ...cartao, status: "rejected", status_detail: "cc_rejected_high_risk",
+      payer: { email: "fulana@exemplo.com", first_name: "Fulana", last_name: "Tal", identification: { type: "CPF", number: "12345678909" } } });
+    const r2 = await tratar(db);
+    expect(r2.r).toEqual({ http: 200, resultado: "cobranca_aberta" }); // a avulsa recusada volta a ficar em aberto (paga-se de novo)
+    expect(db.tabelas.cobrancas[0]).toMatchObject({ status: "aberta", mp_status: "rejected" });
+    expect(recusas(r2.linhas)).toEqual([{ nivel: "aviso", campos: expect.objectContaining({
+      codigo: "mp_cartao_recusado", schema: "staging", acao: "aviso_mp_conta", ref: "123", externo: { mp_status_detail: "cc_rejected_high_risk" } }) }]);
+    expect(JSON.stringify(r2.linhas)).not.toMatch(/Fulana|fulana@|12345678909/);
+    const r3 = await tratar(db);
+    expect(r3.r).toEqual({ http: 200, resultado: "cobranca_aberta" });
+    expect(recusas(r3.linhas)).toEqual([]);
+  });
   it("de OUTRO vendedor (a conta leu o pagamento como quem pagou) → 200 collector_diferente e nada gravado", async () => {
     mpFalso(mundo({ pagamentos: { 123: pagamento({ collector_id: OUTRO_VENDEDOR, leitores: [VENDEDOR] }) } }));
     const db = await cenario();
@@ -539,6 +560,18 @@ describe("tratarDaConta — o pagamento (o aviso nunca é a verdade: o recurso c
     // o mesmo aviso de novo: nada dobra (mp_payment_id — a mesma linha)
     expect((await tratar(db, aviso({ id: "321" }))).r.resultado).toBe("recorrente_paga");
     expect(db.tabelas.cobrancas.filter((c) => c.mp_payment_id === "321")).toHaveLength(1);
+  });
+  it("mpc-b: a cobrança do mês da automática RECUSADA → a linha nova recusada + 1 linha mp_cartao_recusado com o motivo; o aviso repetido não repete", async () => {
+    mpFalso(mundo({ pagamentos: { 321: pagamento({ id: 321, payment_method_id: "visa", status: "rejected", status_detail: "cc_rejected_insufficient_amount",
+      date_approved: null, external_reference: `physiq:staging:aluno:${P1}:recorrente`, metadata: { preapproval_id: "pre9" } }) } }));
+    const db = await cenario();
+    const r1 = await tratar(db, aviso({ id: "321" }));
+    expect(r1.r).toEqual({ http: 200, resultado: "recorrente_cancelada" });
+    expect(r1.linhas.filter((l) => l.campos.codigo === "mp_cartao_recusado")).toEqual([{ nivel: "aviso", campos: expect.objectContaining({
+      codigo: "mp_cartao_recusado", acao: "aviso_mp_conta", ref: "321", externo: { mp_status_detail: "cc_rejected_insufficient_amount" } }) }]);
+    const r2 = await tratar(db, aviso({ id: "321" }));
+    expect(r2.r.resultado).toBe("recorrente_cancelada");
+    expect(r2.linhas.filter((l) => l.campos.codigo === "mp_cartao_recusado")).toEqual([]);
   });
   it("sem a referência: pelo preapproval guardado (a automática DESTA conta) → registra; a de outro collector → ignora", async () => {
     const sem = { external_reference: null, metadata: { preapproval_id: "pre9" } };
@@ -891,6 +924,20 @@ describe("contrato do código — a index.ts da mp-webhook-aluno (o Deno.serve n
     const m4 = corpo.indexOf('if (ref.tipo !== "recorrente") return "referencia_sem_cobranca";');
     expect(m4).toBeGreaterThan(corpo.indexOf("if (ref.cobrancaId)"));
     expect(m4).toBeLessThan(corpo.indexOf("await carregarMatricula(db, ref.pacienteId)"));
+  });
+  it("mpc-b: em TODA gravação de pagamento do aviso (o MP do Physiq, a do personal e a conferência do app) a recusa vai ao log com o motivo, logo depois", () => {
+    const depois = (fonteTs: string, alvo: RegExp) => [...fonteTs.matchAll(alvo)].map((x) => x[1]);
+    // index.ts: a cobrança, a recorrente, a automática sem a referência nova e o Calc antigo (o MP do Physiq) — 4 gravações, 4 linhas
+    const doIndex = depois(index, /const r = await (?:aplicarPagamentoMp|registrarPagamentoAvulsoDoMp)\([^;]*?\);\n([^\n]*)/g);
+    expect(doIndex).toHaveLength(4);
+    for (const l of doIndex) expect(l).toMatch(/^\s+registrarRecusaDoAviso\(log, schema, pay, r, "aviso_mp"\);$/);
+    // conta.ts: a cobrança e a recorrente (o MP do personal)
+    const daConta = depois(fonte("mp-webhook-aluno/conta.ts"), /const r = await (?:aplicarPagamentoMp|registrarPagamentoAvulsoDoMp)\([^;]*?\);\n([^\n]*)/g);
+    expect(daConta).toHaveLength(2);
+    for (const l of daConta) expect(l).toMatch(/^\s+registrarRecusaDoAviso\(t\.log, t\.schema, pay, r, "aviso_mp_conta"\);$/);
+    // a conferência do app (pagamentos-aluno): pode ver a recusa antes do aviso
+    expect(fonte("pagamentos-aluno/index.ts")).toContain(
+      'registrarRecusaDoAviso(log, schema, r.pay, await aplicarPagamentoMp(db, c, r.pay, m, log, schema), "aluno_conferir");');
   });
   it("I4: sem cache de \"repetido\" (nem na index.ts, nem no conta.ts)", () => {
     for (const f of ["mp-webhook-aluno/index.ts", "mp-webhook-aluno/conta.ts"]) expect(fonte(f), f).not.toMatch(/recente\(|repetido_/);

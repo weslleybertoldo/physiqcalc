@@ -8,7 +8,8 @@ API do Mercado Pago e sem login — a linha da cobrança e o log novo da pagamen
            metodo cartao) por conta que recebe no MP — status, mp_status e se tem o pagamento e o collector (contagens; nenhum id, nome ou
            e-mail); as automáticas criadas desde a hora (status); e o LOG das funções (o endpoint de logs da Management API, só leitura): as
            linhas mp_cartao_recusado, mp_cartao_falhou, mp_assinatura_falhou e mp_cartao_modo_errado da pagamentos-aluno com o resultado
-           (com/sem device) e o mp_status_detail; e (a revisão mpc 🟡3) a excecao, o mp_indisponivel, o mp_conta_indisponivel e o
+           (com/sem device) e o mp_status_detail (mpc-b: + a mp_cartao_recusado do mp-webhook-aluno — a recusa que chega pelo aviso do
+           MP); e (a revisão mpc 🟡3) a excecao, o mp_indisponivel, o mp_conta_indisponivel e o
            mp_tokens_chave_ausente das ações do cartão (aluno_mp_cartao e aluno_mp_assinar: o 500, o 502 e o 409 que o cartão pode dar logo
            depois de publicar) + a contagem de TODA linha de erro da pagamentos-aluno desde a hora, por código — a prova se lê sem a API do MP
   --seco   sem rede: as conferências puras (a leitura das linhas do log e o resumo)
@@ -76,7 +77,16 @@ def linhas_do_log(eventos: list[dict], todas: bool = False) -> list[dict]:
             d = json.loads(msg[i:])
         except ValueError:
             continue
-        if not isinstance(d, dict) or d.get("funcao") != "pagamentos-aluno":
+        if not isinstance(d, dict):
+            continue
+        # mpc-b: a recusa que chega pelo AVISO do MP (o POST ficou "em análise" e o MP recusou depois) sai no log do mp-webhook-aluno
+        do_aviso = d.get("funcao") == "mp-webhook-aluno" and d.get("codigo") == "mp_cartao_recusado"
+        if do_aviso:
+            if not todas:
+                saida.append({"quando": e.get("quando"), "funcao": "mp-webhook-aluno",
+                              **{k: d.get(k) for k in ("nivel", "codigo", "schema", "acao", "status", "resultado", "externo")}})
+            continue
+        if d.get("funcao") != "pagamentos-aluno":
             continue
         if todas or d.get("codigo") in CODIGOS or (d.get("codigo") in CODIGOS_DA_ACAO and d.get("acao") in ACOES_DO_CARTAO):
             saida.append({"quando": e.get("quando"), **{k: d.get(k) for k in ("nivel", "codigo", "schema", "acao", "status", "resultado", "externo")}})
@@ -113,14 +123,15 @@ def conferir(a) -> int:
     fim = dt.datetime.now(dt.timezone.utc)
     # o molde do ~/projetos/physiqcalc-scratch/w2/fim/logs_cartao.py (14/10, o mesmo endpoint e a mesma tabela)
     sql = ("SELECT timestamp AS t, event_message FROM logs WHERE source = 'function_logs' AND "
-           "positionCaseInsensitive(event_message, '\"funcao\":\"pagamentos-aluno\"') > 0 AND (positionCaseInsensitive(event_message, '\"nivel\":\"erro\"') > 0 OR "
+           "(positionCaseInsensitive(event_message, '\"funcao\":\"pagamentos-aluno\"') > 0 OR "
+           "positionCaseInsensitive(event_message, '\"funcao\":\"mp-webhook-aluno\"') > 0) AND (positionCaseInsensitive(event_message, '\"nivel\":\"erro\"') > 0 OR "
            + " OR ".join(f"positionCaseInsensitive(event_message, '{c}') > 0" for c in CODIGOS + CODIGOS_DA_ACAO) + ") ORDER BY t DESC LIMIT 500")
     q = urllib.parse.urlencode({"sql": sql, "iso_timestamp_start": ini.strftime("%Y-%m-%dT%H:%M:%SZ"), "iso_timestamp_end": fim.strftime("%Y-%m-%dT%H:%M:%SZ")})
     r = api("GET", f"/v1/projects/{REF}/analytics/endpoints/logs?{q}")
     eventos = [{"quando": quando(x.get("t")), "event_message": x.get("event_message")}
                for x in ((r or {}).get("result") or [])] if isinstance(r, dict) else []
     linhas = [x for x in linhas_do_log(eventos) if x.get("schema") == s]
-    print(f"   log da pagamentos-aluno ({len(linhas)} linha(s) dos códigos da W e das ações do cartão):")
+    print(f"   log da pagamentos-aluno e do aviso do MP ({len(linhas)} linha(s) dos códigos da W e das ações do cartão):")
     for x in linhas:
         print("     ", json.dumps(x, ensure_ascii=False))
     erros = erros_por_codigo([x for x in linhas_do_log(eventos, todas=True) if x.get("schema") == s])
@@ -134,7 +145,13 @@ def seco() -> int:
                                                                       "schema": "public", "acao": "aluno_mp_cartao", "ref": "123", "resultado": "com_device",
                                                                       "externo": {"mp_status_detail": "cc_rejected_high_risk"}})},
           {"quando": "x", "event_message": "texto solto"},
-          {"quando": "y", "event_message": json.dumps({"funcao": "outra", "codigo": "mp_cartao_recusado"})}]
+          {"quando": "y", "event_message": json.dumps({"funcao": "outra", "codigo": "mp_cartao_recusado"})},
+          {"quando": "w1", "event_message": json.dumps({"nivel": "aviso", "funcao": "mp-webhook-aluno", "codigo": "mp_cartao_recusado", "schema": "public",
+                                                        "acao": "aviso_mp_conta", "ref": "123", "externo": {"mp_status_detail": "cc_rejected_high_risk"}})},
+          {"quando": "w2", "event_message": json.dumps({"nivel": "info", "funcao": "mp-webhook-aluno", "codigo": "aviso_mp_conta", "schema": "public",
+                                                        "acao": "payment", "resultado": "cobranca_cancelada"})},
+          {"quando": "w3", "event_message": json.dumps({"nivel": "erro", "funcao": "mp-webhook-aluno", "codigo": "excecao", "schema": "public",
+                                                        "acao": "aluno_mp_cartao"})}]
     ev += [{"quando": "z1", "event_message": json.dumps({"nivel": "erro", "funcao": "pagamentos-aluno", "codigo": "excecao", "schema": "public",
                                                         "acao": "aluno_mp_cartao", "msg": "x"})},
            {"quando": "z2", "event_message": json.dumps({"nivel": "erro", "funcao": "pagamentos-aluno", "codigo": "excecao", "schema": "public",
@@ -144,14 +161,16 @@ def seco() -> int:
            {"quando": "z4", "event_message": json.dumps({"nivel": "erro", "funcao": "pagamentos-aluno", "codigo": "mp_indisponivel", "schema": "public",
                                                         "acao": "aluno_mp_cartao", "status": 599})}]
     lido = linhas_do_log(ev)
-    ok = ([x["codigo"] for x in lido] == ["mp_cartao_recusado", "excecao", "mp_conta_indisponivel", "mp_indisponivel"]
+    ok = ([x["codigo"] for x in lido] == ["mp_cartao_recusado", "mp_cartao_recusado", "excecao", "mp_conta_indisponivel", "mp_indisponivel"]
           and lido[0]["resultado"] == "com_device" and lido[0]["externo"] == {"mp_status_detail": "cc_rejected_high_risk"} and "ref" not in lido[0]
-          and "msg" not in lido[1])
+          and "funcao" not in lido[0] and lido[1]["funcao"] == "mp-webhook-aluno" and lido[1]["acao"] == "aviso_mp_conta"
+          and lido[1]["externo"] == {"mp_status_detail": "cc_rejected_high_risk"} and "ref" not in lido[1] and "msg" not in lido[2])
     print(("✅ " if ok else "❌ ") + "seco: o log lido só com as linhas da pagamentos-aluno: os 4 códigos da W + a excecao/mp_indisponivel/"
-          "mp_conta_indisponivel SÓ das ações do cartão (a excecao do aluno_status fica fora) e os campos do formato (sem o ref nem a msg)")
+          "mp_conta_indisponivel SÓ das ações do cartão (a excecao do aluno_status fica fora) e os campos do formato (sem o ref nem a msg); "
+          "do aviso do MP SÓ a mp_cartao_recusado (mpc-b), marcada com a funcao")
     erros = erros_por_codigo(linhas_do_log(ev, todas=True))
     ok2 = erros == {"excecao/aluno_mp_cartao": 1, "excecao/aluno_status": 1, "mp_indisponivel/aluno_mp_cartao": 1}
-    print(("✅ " if ok2 else "❌ ") + f"seco: a contagem de TODA linha de erro da pagamentos-aluno por código ({erros})")
+    print(("✅ " if ok2 else "❌ ") + f"seco: a contagem de TODA linha de erro da pagamentos-aluno por código, sem o aviso do MP ({erros})")
     return 0 if ok and ok2 else 1
 
 
