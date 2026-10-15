@@ -67,6 +67,16 @@ def garantir_usuario_treino(email: str, senha: str, nome: str) -> str:
     return r["id"]
 
 
+def sql_carlos(conta: str) -> str:
+    """hml-24 (F5): a matrícula do "Carlos Souza" da W25 — a da conta de TESTE, SEM login no principal (user_id nulo), a mais antiga.
+    Desde 02/10 a conta tem 2 com esse nome (a de 30/09 sem login, a que a W25 sempre usou, e uma com login de TESTE de outra W, que a
+    massa não apaga nem muda); antes a consulta pegava a 1ª sem ORDER BY e às vezes vinha a com login (a trava parava a massa).
+    Determinística: o filtro tira a que tem login e o ORDER BY escolhe sempre a mesma."""
+    return (f"select id::text, treino_user_id::text as tid, user_id::text, personal_id::text from {S}.pacientes "
+            f"where conta_id = '{conta}' and nome = 'Carlos Souza' and deleted_at is null and user_id is null "
+            "order by created_at, id limit 1")
+
+
 def sql_treino_do_carlos(grupo: str, carlos: str, d10: str, d20: str) -> str:
     """hml-24: o treino do Carlos no grupo PRÓPRIO da W25 (o supino), a semana seg/qua/sex nele, os 2 treinos feitos e o supino de
     65 → 70 kg; a ligação velha com o treino A da W15 sai. Só linhas do Carlos e do grupo da W25."""
@@ -99,7 +109,10 @@ def montar() -> dict:
     B.saude_ok("massa W25 (treino)")
 
     # ── Carlos Souza: o treino dele no Banco do Treino ──
-    carlos = q(f"select id::text, treino_user_id::text as tid, user_id::text, personal_id::text from {S}.pacientes where conta_id = '{conta}' and nome = 'Carlos Souza' and deleted_at is null")[0]
+    achados = q(sql_carlos(conta))
+    if not achados:
+        raise SystemExit("PARADO: nenhuma matrícula do Carlos Souza SEM login na conta de teste W13 (a massa não mexe na que tem login)")
+    carlos = achados[0]
     assert carlos["user_id"] is None, "o Carlos tem login no principal: a massa não mexe"
     # o personal dele no Treino (o professor_id do perfil): o mesmo responsável da matrícula (o Bruno, na massa da W13)
     prof_t = qt(f"select treino_user_id::text as tid from {S}.physiq_identidades where principal_user_id = '{carlos['personal_id']}'")[0]["tid"]
@@ -253,7 +266,17 @@ def seco() -> int:
     so_grupo = bool(grupo) and "/auth/v1/admin/users/" not in grupo and "treino_user_id" not in grupo and "tb_grupos_treino where id" in grupo
     ok2 = login and so_grupo
     print(("✅ " if ok2 else "❌ ") + "seco: o --limpar volta a matrícula e apaga o login de teste no bloco do carlos_treino; o do grupo_w25 só apaga o grupo")
-    return 0 if ok and ok2 else 1
+    # hml-24 (F5): a escolha do Carlos — o filtro (sem login) e o ORDER BY (a mais antiga, sempre a mesma), só leitura; e o montar usa ela
+    sel = sql_carlos("00000000-0000-4000-8000-0000000000c3")
+    filtro = all(x in sel for x in ("conta_id = '00000000-0000-4000-8000-0000000000c3'", "nome = 'Carlos Souza'", "deleted_at is null",
+                                     "and user_id is null"))
+    ordem = sel.endswith("order by created_at, id limit 1")
+    so_leitura = sel.startswith("select ") and not any(f" {w} " in f" {sel.lower()} " for w in ("insert", "update", "delete"))
+    montar_ = ast.unparse(next(n for n in arvore.body if isinstance(n, ast.FunctionDef) and n.name == "montar"))
+    usa = "q(sql_carlos(conta))" in montar_ and "Carlos Souza' and deleted_at is null" not in montar_
+    ok3 = filtro and ordem and so_leitura and usa
+    print(("✅ " if ok3 else "❌ ") + "seco: o Carlos da massa é a matrícula SEM login e a mais antiga (o filtro e o ORDER BY, só leitura); o montar usa essa consulta")
+    return 0 if ok and ok2 and ok3 else 1
 
 
 if __name__ == "__main__":
