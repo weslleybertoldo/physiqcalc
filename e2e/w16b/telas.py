@@ -13,8 +13,9 @@
 Prints: ~/projetos/physiqcalc-scratch/prints/w16b/<prefixo>_trava_email.png, _troca_atrasada.png, _trava_cpf.png, _trava_cadastro_link.png
 Pré-requisito: e2e/w16b/causa.py (a conta w16b-app com a matrícula do app no staging) e a massa da W13 (e2e/w13/massa.py).
 --seco: sem navegador e sem rede (o socket fica bloqueado) — o "segura" da troca com páginas falsas, o SQL que devolve o objetivo (só
-o staging), a sobra de uma rodada cortada e os seletores e a correção nas telas.
-Uso: python3 e2e/w16b/telas.py --base http://localhost:5173 --prefixo local [--casos novo_email,dados,cadastro_link]
+o staging), a sobra de uma rodada cortada, o --canal no lançamento do navegador e os seletores e a correção nas telas.
+--canal: o navegador (o molde da e2e/w15/telas.py; o padrão é o chromium do Playwright). No notebook, SEMPRE --canal msedge.
+Uso: python3 e2e/w16b/telas.py --base http://localhost:5173 --prefixo local [--casos novo_email,dados,cadastro_link] [--canal msedge]
      python3 e2e/w16b/telas.py --seco
 """
 from __future__ import annotations
@@ -292,9 +293,21 @@ class _PaginaFalsa:
         self.rotas.remove((padrao, f))
 
 
+class _PlaywrightFalso:
+    """O sync_playwright falso do --seco: guarda o que o lançamento do navegador recebeu."""
+
+    def __init__(self) -> None:
+        self.chromium = self
+        self.lancamentos: list[dict] = []
+
+    def launch(self, **k):
+        self.lancamentos.append(k)
+        return self
+
+
 def seco() -> int:
-    """Sem navegador e sem rede (o socket fica bloqueado): o "segura" da troca, o SQL do objetivo, a sobra de uma rodada cortada e os
-    seletores/a correção nas telas."""
+    """Sem navegador e sem rede (o socket fica bloqueado): o "segura" da troca, o SQL do objetivo, a sobra de uma rodada cortada, o
+    --canal no lançamento do navegador e os seletores/a correção nas telas."""
     def sem_rede(*_a, **_k):
         raise RuntimeError("--seco não usa a rede")
 
@@ -330,6 +343,10 @@ def seco() -> int:
     r2 = sem_sobra(lambda: sem.pop(0), sqls.append)
     p.check(r1["objetivo"] is None and not sobra and r2["objetivo"] == "definição" and len(sem) == 1 and sqls == [sql_voltar_objetivo(pid, None)],
             "seco: a sobra de uma rodada cortada (o objetivo já é o do teste) volta a null e o aluno é lido de novo; outro objetivo fica (0 SQL, 1 leitura)")
+    pw = _PlaywrightFalso()
+    abrir_navegador(pw, opcoes(["--casos", "dados", "--canal", "msedge"]).canal)
+    p.check(pw.lancamentos == [{"channel": "msedge", "args": ARGS_NAVEGADOR}] and opcoes([]).canal == "chromium",
+            "seco: o --canal msedge chega ao lançamento do navegador (sem ele, o chromium do Playwright, como na w15)")
     fontes = {rel: (REPO / rel).read_text(encoding="utf-8") for rel in (
         "src/painel/aluno/dados/SheetEditarDados.tsx", "src/painel/aluno/resumo/CardDadosAluno.tsx", "src/nucleo/trocaToken.ts")}
     folha = fontes["src/painel/aluno/dados/SheetEditarDados.tsx"]
@@ -353,17 +370,31 @@ def seco() -> int:
     return p.fim()
 
 
-def main() -> int:
+ARGS_NAVEGADOR = ["--no-sandbox", "--disable-dev-shm-usage"]
+
+
+def opcoes(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:5173")
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
-    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: o segura da troca, o SQL do objetivo e os seletores")
-    a = ap.parse_args()
+    # hml-25: o E2E de tela com o Edge no notebook (o molde da e2e/w15/telas.py — o Chromium do Playwright cai nas páginas longas)
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
+    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: o segura da troca, o SQL do objetivo, o --canal e os seletores")
+    return ap.parse_args(argv)
+
+
+def abrir_navegador(pw, canal: str):
+    """O navegador dos casos, no canal do --canal."""
+    return pw.chromium.launch(channel=canal, args=ARGS_NAVEGADOR)
+
+
+def main() -> int:
+    a = opcoes()
     if a.seco:
         return seco()
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+        nav = abrir_navegador(pw, a.canal)
         for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
             print(f"\n── {nome} ──", flush=True)
             B.saude_ok(nome)
