@@ -59,8 +59,8 @@ class SimuladorBase(unittest.TestCase):
         SIM.zerar()
 
     def pedir(self, metodo: str, caminho: str, corpo=None, token: str | None = None, form: bool = False,
-              bruto: bytes | None = None) -> tuple[int, object, dict]:
-        cab = {}
+              bruto: bytes | None = None, cab_extra: dict | None = None) -> tuple[int, object, dict]:
+        cab = dict(cab_extra or {})
         if token:
             cab["Authorization"] = f"Bearer {token}"
         if bruto is not None:
@@ -506,6 +506,85 @@ class AvisarTest(SimuladorBase):
         self.assertEqual((st, r["message"]), (400, "webhook só em http://127.0.0.1:<porta>"))
         st, r, _ = self.pedir("POST", "/_avisar", {"webhook": "http://127.0.0.1:19/x", "tipo": "payment", "id": "1"})
         self.assertEqual((st, r["status"]), (200, 599))   # nada escutando: sem cair
+
+
+class MpCartaoTest(SimuladorBase):
+    """mp-cartao: SE veio o cabeçalho do aparelho (nunca o valor), o titular e o documento mascarados no /_pedidos e os 2 cenários da recusa."""
+    DEVICE = "armor.4f1c2e3d5a6b7c8d9e0f1a2b3c4d5e6f.1760500000"
+    CPF = "12345678909"
+
+    def cartao(self, token: str, device: str | None = None, **extra) -> tuple[int, dict]:
+        corpo = {"transaction_amount": 10, "token": "sim-card-APRO", "installments": 1, "description": "Mensalidade",
+                 "payer": {"email": "c@example.com", "first_name": "Maria", "last_name": "da Silva", "identification": {"type": "CPF", "number": self.CPF}},
+                 "additional_info": {"items": [{"id": "mensalidade", "title": "Mensalidade", "category_id": "services", "quantity": 1, "unit_price": 10}],
+                                     "payer": {"first_name": "Maria", "last_name": "da Silva"}},
+                 "statement_descriptor": "PHYSIQ", **extra}
+        st, r, _ = self.pedir("POST", "/v1/payments", corpo, token=token, cab_extra={"X-meli-session-id": device} if device else None)
+        return st, r
+
+    def test_device_so_se_veio_e_nunca_o_valor(self) -> None:
+        tok = self.par()["access_token"]
+        self.assertEqual(self.cartao(tok, self.DEVICE)[0], 201)
+        self.assertEqual(self.cartao(tok)[0], 201)
+        self.pedir("GET", "/users/me", token=tok)
+        self.assertEqual([x["device"] for x in self.pedidos()], [True, False, False])
+        self.assertNotIn(self.DEVICE, json.dumps(self.pedidos()))
+
+    def test_titular_e_documento_mascarados_o_resto_do_corpo_fica(self) -> None:
+        self.cartao(self.par()["access_token"], self.DEVICE)
+        c = self.pedidos()[-1]["corpo"]
+        self.assertEqual(c["payer"], {"email": "c@example.com", "first_name": SIM.OCULTO, "last_name": SIM.OCULTO,
+                                      "identification": {"type": "CPF", "number": SIM.OCULTO}})
+        self.assertEqual(c["additional_info"]["payer"], {"first_name": SIM.OCULTO, "last_name": SIM.OCULTO})
+        self.assertEqual(c["additional_info"]["items"][0], {"id": "mensalidade", "title": "Mensalidade", "category_id": "services", "quantity": 1,
+                                                           "unit_price": 10})
+        self.assertEqual(c["statement_descriptor"], "PHYSIQ")
+        texto = json.dumps(self.pedidos())
+        for dado in (self.CPF, "Maria", "da Silva"):
+            self.assertNotIn(dado, texto)
+
+    def test_cenario_cartao_status_detail(self) -> None:
+        tok = self.par()["access_token"]
+        self.adm("/_cenario", {"cartao_status_detail": "cc_rejected_high_risk"})
+        st, r = self.cartao(tok)
+        self.assertEqual((st, r["status"], r["status_detail"]), (201, "rejected", "cc_rejected_high_risk"))
+        st, r, _ = self.pedir("POST", "/v1/payments", {"transaction_amount": 10, "payment_method_id": "pix", "payer": {"email": "c@example.com"}},
+                              token=tok)
+        self.assertEqual((st, r["status"]), (201, "pending"))   # o Pix não muda
+        self.adm("/_cenario", {})
+        self.assertEqual(self.cartao(tok)[1]["status"], "approved")
+
+    def test_cenario_preapproval_recusa_so_o_codigo_na_mensagem(self) -> None:
+        tok = self.par()["access_token"]
+        self.adm("/_cenario", {"preapproval_recusa": "cc_rejected_high_risk"})
+        base = {"reason": "Physiq", "auto_recurring": {"frequency": 1, "frequency_type": "months", "transaction_amount": 10, "currency_id": "BRL"},
+                "payer_email": "c@example.com", "back_url": "https://exemplo", "external_reference": "x"}
+        st, r, _ = self.pedir("POST", "/preapproval", {**base, "card_token_id": "sim-card-APRO", "status": "authorized"}, token=tok,
+                              cab_extra={"X-meli-session-id": self.DEVICE})
+        self.assertEqual((st, r), (400, {"message": "cc_rejected_high_risk", "status": 400}))   # sem error, cause nem status_detail
+        self.assertTrue(self.pedidos()[-1]["device"])
+        st, r, _ = self.pedir("POST", "/preapproval", {**base, "status": "pending"}, token=tok)
+        self.assertEqual((st, r["status"]), (201, "pending"))   # o pendente (sem cartão) não muda
+
+    def test_cenario_preapproval_recusa_com_a_validacao_do_cartao(self) -> None:
+        """A revisão mpc (🟡2): a recusa da validação do cartão só no texto, sem nenhum cc_rejected_* ("CC_VAL_433 …")."""
+        tok = self.par()["access_token"]
+        self.adm("/_cenario", {"preapproval_recusa": "CC_VAL_433 Credit card validation has failed"})
+        corpo = {"reason": "Physiq", "payer_email": "c@example.com", "back_url": "https://exemplo", "external_reference": "x", "status": "authorized",
+                 "card_token_id": "sim-card-APRO", "auto_recurring": {"frequency": 1, "frequency_type": "months", "transaction_amount": 10,
+                                                                      "currency_id": "BRL"}}
+        st, r, _ = self.pedir("POST", "/preapproval", corpo, token=tok)
+        self.assertEqual((st, r), (400, {"message": "CC_VAL_433 Credit card validation has failed", "status": 400}))
+
+    def test_cenario_preapproval_recusa_so_com_texto(self) -> None:
+        """O achado da F5 (15/10 04:50): a automática recusada no sandbox com o 400 só com o texto "Invalid users involved" (sem código)."""
+        tok = self.par()["access_token"]
+        self.adm("/_cenario", {"preapproval_recusa": "Invalid users involved"})
+        corpo = {"reason": "Physiq", "payer_email": "c@example.com", "back_url": "https://exemplo", "external_reference": "x", "status": "authorized",
+                 "card_token_id": "sim-card-APRO", "auto_recurring": {"frequency": 1, "frequency_type": "months", "transaction_amount": 10,
+                                                                      "currency_id": "BRL"}}
+        st, r, _ = self.pedir("POST", "/preapproval", corpo, token=tok)
+        self.assertEqual((st, r), (400, {"message": "Invalid users involved", "status": 400}))   # sem error, cause, status_detail nem code
 
 
 class GeralTest(SimuladorBase):

@@ -75,6 +75,17 @@ describe("hml-06: a leitura vem ANTES do POST ao MP", () => {
     expect(corpo.indexOf("if (error) throw error;")).toBeGreaterThan(-1);
     expect(corpo.indexOf("if (error) throw error;")).toBeLessThan(post);
   });
+  it("mp-cartao: o POST do cartão (com o cabeçalho do aparelho) e o da automática authorized também vêm DEPOIS das leituras", () => {
+    const cartao = acao(ALUNO, "aluno_mp_pix");
+    const post = cartao.indexOf('"/v1/payments", { method: "POST", body: JSON.stringify(pedido), headers: cabecalhosDoDevice(aparelho) }');
+    expect(post).toBeGreaterThan(-1);
+    expect(cartao.indexOf("await assinaturaDe(m.id)")).toBeLessThan(post);
+    expect(cartao.indexOf("if (error) throw error;")).toBeLessThan(post);
+    const assinar = acao(ALUNO, "aluno_mp_assinar");
+    const autorizada = assinar.indexOf('status: "authorized" }), headers: cabecalhosDoDevice(aparelho) }');
+    expect(autorizada).toBeGreaterThan(-1);
+    expect(assinar.indexOf("await assinaturaDe(m.id)")).toBeLessThan(autorizada);
+  });
   it("cobranca-conta assinar: buscarAssinatura (que lança) antes do POST /preapproval", () => {
     const corpo = acao(CONTA, "assinar");
     expect(corpo.indexOf("await buscarAssinatura()")).toBeGreaterThan(-1);

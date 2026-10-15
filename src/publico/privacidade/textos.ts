@@ -74,12 +74,17 @@ export const SERVICOS_TERCEIROS: readonly ServicoTerceiro[] = [
     nome: "Resend",
     texto: "envia os e-mails do Physiq (convites, consulta marcada e treino ou plano alimentar atualizado). Recebe o nome e o e-mail de quem recebe e o texto da mensagem.",
   },
-  // src/painel/configuracoes/plano/CartaoPagamento.tsx (Card Payment Brick: só o token volta) · src/components/pagamentos/mpInit.ts ·
-  // supabase-principal/functions/pagamentos-aluno, cobranca-conta e mp-assinar · supabase/functions/mp-payments (api.mercadopago.com)
+  // src/painel/configuracoes/plano/CartaoPagamento.tsx (Card Payment Brick: o token e, no cartão do aluno, o titular e o documento) ·
+  // src/components/pagamentos/mpInit.ts e mpDevice.ts (o security.js: o id do aparelho na folha de pagar do aluno) ·
+  // supabase-principal/functions/pagamentos-aluno (_shared/mp-pagador-regras.ts: o titular e o documento só no pedido ao MP, nada gravado
+  // nem no log), cobranca-conta e mp-assinar · supabase/functions/mp-payments (api.mercadopago.com)
+  // mp-cartao (15/10/2026, decisão 8 — correção de FATO, o molde da hml-11; a base legal e a Política nova seguem com o advogado: H-28/H-30):
+  // o nome e o CPF/CNPJ do titular passam pelo servidor só para ir com o pagamento, e o MP identifica o aparelho na tela de pagar (revisão mpc
+  // ⚪8c: o código do aparelho também passa pelo servidor — vai no cabeçalho X-meli-session-id —, só para ir com o pagamento).
   {
     id: "mercado-pago",
     nome: "Mercado Pago",
-    texto: "processa os pagamentos com cartão e os Pix do Mercado Pago. Recebe o e-mail de quem paga (às vezes também o nome), o valor e a descrição; o número do cartão é digitado no formulário do próprio Mercado Pago e não passa pelo Physiq.",
+    texto: "processa os pagamentos com cartão e os Pix do Mercado Pago. Recebe o e-mail de quem paga (às vezes também o nome), o valor e a descrição. No pagamento com cartão do aluno (à vista ou parcelado), o nome e o CPF (ou CNPJ) do titular, digitados no formulário do próprio Mercado Pago, passam pelo servidor do Physiq só para ir junto com o pagamento, sem ficar guardados. Na tela de pagar, o Mercado Pago identifica o aparelho, para prevenir fraudes; esse código do aparelho também passa pelo servidor do Physiq só para ir junto com o pagamento, sem ficar guardado. O número do cartão é digitado no formulário do próprio Mercado Pago e não passa pelo Physiq.",
   },
   // supabase-principal/functions/whatsapp-conectar e whatsapp-agente · infra/agente-whatsapp/agente.js (a conexão do próprio
   // profissional por QR code) · supabase-principal/migrations/20260920200000_whatsapp_disparos.sql (os momentos) ·

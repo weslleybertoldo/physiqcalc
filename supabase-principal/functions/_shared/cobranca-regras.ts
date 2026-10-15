@@ -206,19 +206,68 @@ export interface CodigosDoMp {
   mp_status_detail?: unknown;
 }
 
+/** O código `cc_rejected_…` do MP (minúsculas, como o MP escreve): fim obrigatório — nada colado depois entra (revisão mpc ⚪6). */
+const RECUSA_NO_TEXTO = /\bcc_rejected_[a-z_]{1,48}(?![A-Za-z0-9_])/;
+/** A recusa da validação do cartão ao criar a automática ("CC_VAL_433 Credit card validation has failed" — revisão mpc 🟡2). */
+const VALIDACAO_NO_TEXTO = /\bCC_VAL_\d{1,4}\b/;
+
+/**
+ * mp-cartao (contrato §2.2): o código da recusa do cartão quando ele vem só no TEXTO da resposta do MP (`message`, ou `code`) — as 5
+ * automáticas recusadas de 14/10/2026 voltaram 400 sem `error`, `cause` nem `status_detail` (o log ficou `{}`). Só o código: o
+ * `cc_rejected_…` (como veio) ou o `CC_VAL_<n>` (em minúsculas: `cc_val_433`); o texto livre nunca sai daqui. Sem código → null.
+ */
+export function recusaNoTexto(corpo: unknown): string | null {
+  const c = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as Record<string, unknown>) : {};
+  for (const campo of [c.message, c.code]) {
+    if (typeof campo !== "string") continue;
+    const achado = RECUSA_NO_TEXTO.exec(campo) ?? VALIDACAO_NO_TEXTO.exec(campo);
+    if (achado) return achado[0].toLowerCase();
+  }
+  return null;
+}
+
+/**
+ * mp-cartao (o achado da F5, 15/10 04:50: a automática recusada no sandbox chegou ao log com `externo {}`): o motivo quando a resposta do MP
+ * só traz TEXTO — um slug seguro da `message`, `msg_<slug>` (ex.: "Invalid users involved" → `msg_invalid_users_involved`). SÓ para o log do
+ * mp_assinatura_falhou (e o aviso dessa linha; a automática: o pedido do /preapproval não leva nome nem CPF — decisão 6) e só quando o
+ * codigosDoMp vem vazio — nunca no codigosDoMp compartilhado (os outros logs e avisos) nem na resposta (a conferência do aa0599b0, 05:02).
+ * A mensagem é descartada INTEIRA (null) se tiver `@`, `%40`, a palavra "at" (o e-mail disfarçado), 4 ou mais dígitos seguidos, número
+ * formatado (dígito, separador, dígito: CPF, CNPJ, telefone, CEP e data com ponto, hífen, barra ou espaço), mais de 160 caracteres ou
+ * caractere de controle. O slug: sem acento, minúsculo, só [a-z0-9_], os `_` colapsados e aparados e no máximo 60 depois do `msg_` (cabe no
+ * `^[a-z0-9_]{1,64}$` do log).
+ */
+export function slugDaMensagem(corpo: unknown): string | null {
+  const msg = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as { message?: unknown }).message : null;
+  if (typeof msg !== "string" || !msg.trim() || msg.length > 160 || msg.includes("@") || msg.includes("%40") || /\bat\b/i.test(msg)
+      || /\d{4,}/.test(msg) || /\d[\s.\-/]+\d/.test(msg)
+      // eslint-disable-next-line no-control-regex -- o caractere de controle descarta a mensagem inteira
+      || /[\u0000-\u001f\u007f]/.test(msg)) {
+    return null;
+  }
+  const slug = msg.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
+    .slice(0, 60).replace(/_+$/g, "");
+  return slug ? `msg_${slug}` : null;
+}
+
 /**
  * hml-10 (H-24) — o MP recusou: para o log vão SÓ os códigos da resposta (`error`, os `cause[].code` e o `status_detail`),
  * nunca o corpo (a resposta do MP pode trazer e-mail, nome e documento de quem paga). O log confere o formato de cada um.
+ * mp-cartao: sem `status_detail`, o código que vier no texto (recusaNoTexto: `cc_rejected_…` ou `cc_val_<n>`) vai como `mp_status_detail`;
+ * sem `error`, o `code` da resposta com formato de código (`^[a-z_]{1,40}$`) vai como `mp_erro` (revisão mpc 🟡2). O texto livre nunca:
+ * o slug da mensagem fica só no log da automática (slugDaMensagem — a conferência do aa0599b0).
  */
 export function codigosDoMp(corpo: unknown): CodigosDoMp {
   const c = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as Record<string, unknown>) : {};
   const causas = (Array.isArray(c.cause) ? c.cause : [])
     .map((x) => (x && typeof x === "object" ? (x as { code?: unknown }).code : null))
     .filter((x) => x !== null && x !== undefined);
+  const detalhe = c.status_detail !== undefined && c.status_detail !== null ? c.status_detail : recusaNoTexto(c);
+  const erro = c.error !== undefined && c.error !== null ? c.error
+    : typeof c.code === "string" && /^[a-z_]{1,40}$/.test(c.code) ? c.code : null;
   return {
-    ...(c.error !== undefined && c.error !== null ? { mp_erro: c.error } : {}),
+    ...(erro !== null ? { mp_erro: erro } : {}),
     ...(causas.length ? { mp_causas: causas } : {}),
-    ...(c.status_detail !== undefined && c.status_detail !== null ? { mp_status_detail: c.status_detail } : {}),
+    ...(detalhe !== undefined && detalhe !== null ? { mp_status_detail: detalhe } : {}),
   };
 }
 

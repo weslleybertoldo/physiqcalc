@@ -28,6 +28,11 @@
                                   data.id, user_id}; com o segredo, a x-signature "ts=…,v1=…" do manifesto "id:…;request-id:…;ts:…;") — os
                                   casos created/updated (I4) e sem conta (I1)
   cenário "expirar_token" → o access token atual do vendedor passa a dar 401 (o 401 da hora do uso; o refresh segue vivo)
+  mp-cartao (15/10/2026): o /_pedidos diz SE veio o cabeçalho X-meli-session-id (`device`: true/false — nunca o valor) e o corpo sai com
+  `number`, `first_name` e `last_name` mascarados (o documento e o nome do titular nunca vão ao /_pedidos); cenários "cartao_status_detail"
+  (o cartão recusado com esse status_detail — ex.: cc_rejected_high_risk) e "preapproval_recusa" (o POST /preapproval com cartão → 400 com o
+  valor do cenário como a mensagem, sem error, cause nem status_detail — o retrato das automáticas recusadas de 14/10: "cc_rejected_high_risk"
+  ou, a revisão mpc, "CC_VAL_433 Credit card validation has failed")
   Administração (só o e2e): /_zerar (tudo do começo) · /_token {vendedor} (um par vivo sem o OAuth — a integração gravada pelo e2e) ·
   /_expirar {vendedor, refresh?} · /_pagamento · /_preapproval · /_status {tipo, id, status} · /_cobranca_mensal {preapproval_id} ·
   /_token_info {token} (vivo? de quem?) — POST, sempre em 127.0.0.1.
@@ -68,10 +73,13 @@ VENDEDOR_A, VENDEDOR_B, VENDEDOR_C = 9000000001, 9000000002, 9000000003
 EXPIRA_S = 15_552_000          # 180 dias (a doc do /oauth/token)
 CODE_S = 600                   # o code vale 10 min
 OCULTO = "‹oculto›"
-SENSIVEIS = {"access_token", "refresh_token", "client_secret", "code", "code_verifier", "token", "card_token", "card_token_id"}
+SENSIVEIS = {"access_token", "refresh_token", "client_secret", "code", "code_verifier", "token", "card_token", "card_token_id",
+             "number", "first_name", "last_name"}   # mp-cartao: o documento e o nome do titular (o pagador do cartão)
+CABECALHO_DEVICE = "X-meli-session-id"
 PADRAO: dict = {"vendedor": VENDEDOR_A, "negar": False, "troca_status": None, "renovar_status": None, "renovar_formato": False,
                 "sem_public_key": False, "sem_refresh": False, "live_mode": False, "alheio_401": False, "cartao_status": None,
-                "pix_sem_chave": False, "preapproval_cartao_sandbox": False, "cancelar_preapproval_status": None, "users_me_status": None}
+                "pix_sem_chave": False, "preapproval_cartao_sandbox": False, "cancelar_preapproval_status": None, "users_me_status": None,
+                "cartao_status_detail": None, "preapproval_recusa": None}
 ACOES_DO_CENARIO = ("expirar_token", "cobranca_mensal")
 CENARIO: dict = dict(PADRAO)
 TRAVA = threading.RLock()
@@ -203,6 +211,8 @@ def criar_pagamento(collector: int, corpo: dict, **extra) -> dict:
         nome = str(corpo.get("token") or "")
         st = CENARIO["cartao_status"] or ("rejected" if "OTHE" in nome else "in_process" if "CONT" in nome else "approved")
         detalhe = {"approved": "accredited", "rejected": "cc_rejected_other_reason", "in_process": "pending_contingency"}.get(st, st)
+        if CENARIO["cartao_status_detail"] and nome != "cobranca-mensal":   # mp-cartao: a recusa com o motivo pedido (ex.: o antifraude)
+            st, detalhe = "rejected", str(CENARIO["cartao_status_detail"])
         pay.update(status=st, status_detail=detalhe, payment_method_id=corpo.get("payment_method_id") or "master",
                    payment_type_id="credit_card", card={"last_four_digits": "6351", "cardholder": {"name": "APRO"}})
         if st == "approved":
@@ -293,7 +303,9 @@ class Tratar(BaseHTTPRequestHandler):
             ESTADO["pedidos"].append({
                 "n": len(ESTADO["pedidos"]), "metodo": self.command, "caminho": caminho or self.path, "token": q["estado"],
                 "token_nome": q["nome"], "token_de": q["de"], "recurso_de": recurso_de, "status": status,
-                "corpo": limpo(corpo) if corpo is not None else None, **(extra or {})})
+                "corpo": limpo(corpo) if corpo is not None else None,
+                "device": bool(self.headers.get(CABECALHO_DEVICE)),   # mp-cartao: SE veio o cabeçalho do aparelho (nunca o valor)
+                **(extra or {})})
 
     def _json(self, status: int, corpo, recurso_de: int | None = None, extra: dict | None = None, pedido=None, caminho: str | None = None) -> None:
         self._registrar(status, recurso_de, extra, pedido, caminho)
@@ -540,6 +552,8 @@ class Tratar(BaseHTTPRequestHandler):
         cartao = bool(c.get("card_token_id"))
         if cartao and CENARIO["preapproval_cartao_sandbox"]:
             return self._json(404, {"message": "Card token service not found", "status": 404}, recurso_de=quem["de"], pedido=c)
+        if cartao and CENARIO["preapproval_recusa"]:   # mp-cartao: o 400 de 14/10 — o código só na mensagem
+            return self._json(400, {"message": str(CENARIO["preapproval_recusa"]), "status": 400}, recurso_de=quem["de"], pedido=c)
         if not isinstance((c.get("auto_recurring") or {}).get("transaction_amount"), (int, float)):
             return self._json(400, {"message": "auto_recurring.transaction_amount is required", "status": 400}, pedido=c)
         pre = criar_preapproval(quem["de"], c, "authorized" if cartao else str(c.get("status") or "pending"))

@@ -109,6 +109,12 @@ test("os hosts das constantes do app estão na CSP", () => {
   tem("script-src", turnstile);
   tem("frame-src", turnstile);
   tem("script-src", origem(constante("node_modules/@mercadopago/sdk-js/dist/index.js", "SDK_MERCADOPAGO_URL")));
+  // mp-cartao: o script de segurança do Mercado Pago (o id do aparelho — src/components/pagamentos/mpDevice.ts), com o nonce de sempre
+  const seguranca = constante("src/components/pagamentos/mpDevice.ts", "MP_SECURITY_JS");
+  assert.equal(new URL(seguranca).protocol, "https:", "o security.js do MP é https");
+  tem("script-src", origem(seguranca));
+  // as 2 chamadas dele (web_device e anonymous_device_session) vão à API do MP, que já está no connect-src
+  tem("connect-src", "https://api.mercadopago.com");
 });
 
 test("o nonce do script-src é o MP_CSP_NONCE do mpInit.ts (o antifraude do Mercado Pago)", () => {

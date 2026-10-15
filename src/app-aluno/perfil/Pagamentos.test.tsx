@@ -20,11 +20,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CobrancaVista, MatriculaPagamentos, ReciboVista, StatusAluno } from "@/financeiro/tipos";
 import { ProvedorConfirmar } from "@/ui/premium/Confirmar";
 
-type BrickFalso = { customization: { paymentMethods: { maxInstallments: number } }; onSubmit: (form: unknown) => Promise<void> };
+type BrickFalso = { customization: { paymentMethods: { maxInstallments: number } }; onSubmit: (form: unknown, extra?: unknown) => Promise<void> };
 const h = vi.hoisted(() => ({
   status: vi.fn(), historico: vi.fn(), acao: vi.fn(), brick: [] as BrickFalso[],
   volta: vi.fn(), conferir: vi.fn(), link: vi.fn(), abrir: vi.fn(), recibo: vi.fn(),
-  init: vi.fn(), statusPlano: vi.fn(),
+  init: vi.fn(), statusPlano: vi.fn(), seguranca: vi.fn(), device: vi.fn(),
 }));
 vi.mock("@/lib/distribuicao", () => ({ ehLoja: false, DISTRIBUICAO: "site" }));
 vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: () => false, getPlatform: () => "web" }, registerPlugin: () => ({}) }));
@@ -49,6 +49,12 @@ vi.mock("@/financeiro/abrirPagamento", () => ({
 vi.mock("@mercadopago/sdk-react", () => ({ CardPayment: (p: BrickFalso) => { h.brick.push(p); return null; }, initMercadoPago: (...a: unknown[]) => h.init(...a) }));
 // W2: o ensureMpInit de verdade (por chave) sobre o initMercadoPago falso; a chave do Physiq do build fica fixa
 vi.mock("@/components/pagamentos/mpInit", async (orig) => ({ ...(await orig<typeof import("@/components/pagamentos/mpInit")>()), MP_PUBLIC_KEY: "TEST-chave" }));
+// mp-cartao: o security.js e o id do aparelho falsos (o pagadorDoBrick é o de verdade); sem id, o deviceIdMp falso responde na hora
+vi.mock("@/components/pagamentos/mpDevice", async (orig) => ({
+  ...(await orig<typeof import("@/components/pagamentos/mpDevice")>()),
+  carregarSegurancaMp: () => h.seguranca(),
+  deviceIdMp: (...a: unknown[]) => h.device(...a),
+}));
 // W2: o plano do personal (Configurações › Plano, a assinatura do Physiq) — o status da cobrança da conta é falso
 vi.mock("@/painel/configuracoes/plano/api", async (orig) => ({
   ...(await orig<typeof import("@/painel/configuracoes/plano/api")>()),
@@ -107,6 +113,9 @@ beforeEach(() => {
   h.brick.length = 0;
   h.init.mockReset();
   h.statusPlano.mockReset();
+  h.seguranca.mockReset();
+  h.device.mockReset();
+  h.device.mockResolvedValue(undefined);
   h.status.mockResolvedValue(status([matricula()]));
   h.historico.mockImplementation(async (_p: string, tipo: "cobrancas" | "recibos", pagina: number) => {
     const todas = tipo === "cobrancas" ? COBRANCAS : RECIBOS;
@@ -526,5 +535,97 @@ describe("Perfil › Pagamentos — o Mercado Pago do personal (W2: o cartão co
     fireEvent.click(cartao);
     await waitFor(() => expect(brickChave()).toBe("physiq"));
     expect(h.init.mock.calls.every((c) => c[0] === "TEST-chave")).toBe(true);
+  });
+});
+
+describe("Perfil › Pagamentos — mp-cartao: o aparelho, o titular e o texto da recusa por segurança", () => {
+  const DEVICE = "armor.4f1c2e3d5a6b7c8d9e0f1a2b3c4d5e6f.1760500000";
+  const MES_A_MES = { valor: 83.33, modalidade: "mensal" as const, automatica: true, parcela: { num: 4, total: 12 } };
+  const FORM = { token: "tok", payment_method_id: "master", issuer_id: "24", installments: 1, transaction_amount: 83.33,
+    payer: { email: "aluno2@teste.com", identification: { type: "CPF", number: "123.456.789-09" } } };
+  const EXTRA = { bin: "503143", lastFourDigits: "6351", cardholderName: "Maria  da Silva" };
+
+  it("abrir com cartão põe o security.js na página (decisão 2: só na folha de pagar do aluno, com cartão)", async () => {
+    h.status.mockResolvedValue(status([PLANO_MP(MES_A_MES)]));
+    await abrirPagarMp();
+    expect(h.seguranca).toHaveBeenCalled();
+  });
+
+  it.each([
+    { caso: "só Pix (sem a chave do personal)", mp: { disponivel: true, chave_publica: null } },
+    { caso: "a conexão do personal caída", mp: { disponivel: false, chave_publica: null } },
+  ])("$caso: sem cartão, o security.js não carrega", async ({ mp }) => {
+    h.status.mockResolvedValue(status([{ ...PLANO(MES_A_MES), chave: null, mp,
+      conta: { id: "c1", nome: "Consultoria", modo: "mercadopago_conta" as const, bloquear: false, profissional: "Lucas Ferreira" } }]));
+    montar();
+    await waitFor(() => expect(document.querySelector("[data-pagar-mensalidade]")).not.toBeNull());
+    fireEvent.click(document.querySelector("[data-pagar-mensalidade]")!);
+    await waitFor(() => expect(document.body.querySelector("[data-pagar-mp]")).not.toBeNull());
+    expect(document.body.querySelector("[data-mp-cartao]")).toBeNull();
+    expect(h.seguranca).not.toHaveBeenCalled();
+  });
+
+  it("o cartão à vista: o corpo de sempre + pagador (o titular e o CPF só com os dígitos) + device_id", async () => {
+    h.status.mockResolvedValue(status([PLANO_MP(MES_A_MES)]));
+    h.device.mockResolvedValue(DEVICE);
+    h.acao.mockResolvedValueOnce({ status: "paga" });
+    fireEvent.click(await abrirPagarMp());
+    await waitFor(() => expect(h.brick.length).toBeGreaterThan(0));
+    await act(() => h.brick.at(-1)!.onSubmit(FORM, EXTRA));
+    expect(h.acao).toHaveBeenCalledWith("aluno_mp_cartao", {
+      paciente_id: "p1", card_token: "tok", payment_method_id: "master", issuer_id: "24", installments: 1,
+      pagador: { nome: "Maria da Silva", documento: { tipo: "CPF", numero: "12345678909" } }, device_id: DEVICE,
+    });
+  });
+
+  it("a automática: só o device_id (o titular e o CPF não saem do aparelho — o /preapproval leva só o cabeçalho)", async () => {
+    h.status.mockResolvedValue(status([PLANO_MP(MES_A_MES)]));
+    h.device.mockResolvedValue(DEVICE);
+    h.acao.mockResolvedValueOnce({ primeira_cobranca: null, sandbox: false, init_point: null });
+    await abrirPagarMp();
+    fireEvent.click(document.body.querySelector("[data-mp-assinar]")!);
+    await waitFor(() => expect(h.brick.length).toBeGreaterThan(0));
+    await act(() => h.brick.at(-1)!.onSubmit(FORM, EXTRA));
+    expect(h.acao).toHaveBeenCalledWith("aluno_mp_assinar", { paciente_id: "p1", card_token: "tok", device_id: DEVICE });
+  });
+
+  it("sem o id e sem o titular (o Brick antigo, o script bloqueado): o corpo IGUAL ao de antes", async () => {
+    h.status.mockResolvedValue(status([PLANO_MP(MES_A_MES)]));
+    fireEvent.click(await abrirPagarMp());
+    await waitFor(() => expect(h.brick.length).toBeGreaterThan(0));
+    await act(() => h.brick.at(-1)!.onSubmit({ token: "tok", payment_method_id: "visa", issuer_id: "25" }));
+    expect(h.acao.mock.calls.at(-1)).toStrictEqual(["aluno_mp_cartao", { paciente_id: "p1", card_token: "tok", payment_method_id: "visa", issuer_id: "25", installments: 1 }]);
+  });
+
+  it("a recusa do antifraude do MP (cc_rejected_high_risk) tem o texto próprio; outra recusa, o texto de sempre", async () => {
+    const erro = vi.spyOn(toast, "error");
+    h.status.mockResolvedValue(status([PLANO_MP(MES_A_MES)]));
+    h.acao.mockResolvedValueOnce({ status: "cancelada", status_detail: "cc_rejected_high_risk" });
+    fireEvent.click(await abrirPagarMp());
+    await waitFor(() => expect(h.brick.length).toBeGreaterThan(0));
+    await act(() => h.brick.at(-1)!.onSubmit(FORM, EXTRA));
+    expect(erro).toHaveBeenLastCalledWith("O Mercado Pago recusou este pagamento por segurança. Tente o Pix ou outro cartão.");
+    h.acao.mockResolvedValueOnce({ status: "cancelada", status_detail: "cc_rejected_insufficient_amount" });
+    fireEvent.click(document.body.querySelector("[data-mp-cartao]")!);
+    await waitFor(() => expect(h.brick.length).toBeGreaterThan(1));
+    await act(() => h.brick.at(-1)!.onSubmit(FORM, EXTRA));
+    expect(erro).toHaveBeenLastCalledWith("Pagamento recusado pelo cartão.");
+    erro.mockRestore();
+  });
+
+  it("a automática recusada pela função (400 cartao_recusado com o código): o texto por segurança; sem o código, o de sempre", async () => {
+    const { ErroFinanceiro } = await import("@/financeiro/api");
+    const erro = vi.spyOn(toast, "error");
+    h.status.mockResolvedValue(status([PLANO_MP(MES_A_MES)]));
+    h.acao.mockRejectedValueOnce(new ErroFinanceiro("cartao_recusado", { ok: false, erro: "cartao_recusado", status_detail: "cc_rejected_high_risk" }));
+    await abrirPagarMp();
+    fireEvent.click(document.body.querySelector("[data-mp-assinar]")!);
+    await waitFor(() => expect(h.brick.length).toBeGreaterThan(0));
+    await expect(h.brick.at(-1)!.onSubmit(FORM, EXTRA)).rejects.toBeInstanceOf(ErroFinanceiro);
+    expect(erro).toHaveBeenLastCalledWith("O Mercado Pago recusou este pagamento por segurança. Tente o Pix ou outro cartão.");
+    h.acao.mockRejectedValueOnce(new ErroFinanceiro("cartao_recusado", { ok: false, erro: "cartao_recusado", status_detail: null }));
+    await expect(h.brick.at(-1)!.onSubmit(FORM, EXTRA)).rejects.toBeInstanceOf(ErroFinanceiro);
+    expect(erro).toHaveBeenLastCalledWith("Pagamento recusado pelo cartão.");
+    erro.mockRestore();
   });
 });

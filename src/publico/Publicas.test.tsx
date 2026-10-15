@@ -51,7 +51,7 @@ describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)"
   it("a data nova e os 10 serviços conferidos no código, cada um com o que recebe", () => {
     abrir(<Privacidade />, "/privacidade");
     // hml-11 (A2): as correções de fato entraram em 8/10/2026
-    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 8 de outubro de 2026");
+    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 15 de outubro de 2026");
     expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp", "telegram", "github"]);
     const t = document.querySelector("[data-servicos-terceiros]")?.textContent ?? "";
     for (const nome of ["Supabase", "PowerSync", "Cloudflare", "Vercel", "Google", "Resend", "Mercado Pago", "WhatsApp", "Telegram", "GitHub"]) expect(t).toContain(nome);

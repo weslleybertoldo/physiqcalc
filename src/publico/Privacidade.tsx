@@ -7,7 +7,7 @@ import { Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { FRASE_BACKUPS, abertaPeloApp, servicosDaVersao } from "./privacidade/textos";
 
-const ATUALIZADA_EM = "8 de outubro de 2026";
+const ATUALIZADA_EM = "15 de outubro de 2026";
 
 const CLASSE_VOLTAR = "inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-texto-3 transition-colors hover:text-texto-2";
 
