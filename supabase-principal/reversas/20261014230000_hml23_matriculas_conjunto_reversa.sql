@@ -1,6 +1,8 @@
 -- Reversa da hml-23 (supabase-principal/migrations/20261014230000_hml23_matriculas_conjunto.sql). Idempotente: roda com ou sem a
 -- migration aplicada. Devolve o "hoje" — as policies do aluno com UMA matrícula (a escalar, sem ordem): reabre o H-115. Só numa
 -- emergência, com o OK do Weslley.
+-- ⚠️ AVISO: só vale enquanto nenhuma migration mais nova mexer nas 4 funções, nas 15 policies ou nas 2 escalares — ela regrava o
+-- texto de 14/10/2026 e desfaria, calada, a mudança mais nova (antes de rodar: git log das migrations depois de 20261014230000).
 -- Ordem: (1) as 15 policies com o texto de antes (elas dependem das funções novas: o pg_depend impede apagá-las antes); (2) os 4 corpos
 -- de antes; (3) as escalares de antes; (4) só então o drop das 2 novas; (5) a conferência e o notify.
 -- Os textos abaixo são cópia letra por letra dos de antes: 20260920070000_paciente_acesso.sql:44-48 e :54-58 (as escalares) e
