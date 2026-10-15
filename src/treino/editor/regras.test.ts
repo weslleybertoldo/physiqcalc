@@ -3,10 +3,18 @@ import type { VolumeBloco } from "@/lib/volumeSemanal";
 import { BLOCOS_MUSCULARES } from "@/lib/gruposMusculares";
 import {
   GRUPOS_VOLUME,
+  alternadoDoDia,
+  comAlternadoDoDia,
+  comDia,
+  comLinha,
+  comObservacao,
+  comPrescricao,
   diasAte,
+  extrasParaGravar,
   extrasPorDia,
   idsDaChave,
   lerCarga,
+  linhaDaChave,
   lerDescanso,
   lerReps,
   linhaDoAluno,
@@ -223,5 +231,64 @@ describe("W15 — troca do treino (NF7)", () => {
     expect(diasAte("2026-10-19", hoje)).toBe(19);
     expect(diasAte("2026-09-30", hoje)).toBe(0);
     expect(diasAte("2026-09-29", hoje)).toBe(-1);
+  });
+});
+
+describe("hml-24 (H-127): a linha do aluno no que a tela mostra (o otimista, a fila e o voltar ao salvo)", () => {
+  const A = { grupo_id: "gA" };
+  const e1 = { exercicio_id: "e1", exercicio_usuario_id: null };
+  const e2 = { exercicio_id: "e2", exercicio_usuario_id: null };
+
+  it("comPrescricao troca só a linha do exercício (a observação dela fica) e cria a que não existe", () => {
+    const d = comPrescricao(dados(), A, e1, { series: 5, reps: "8-12", descanso: null, carga: 22.5 });
+    expect(linhaDaChave(d, A, e1)).toMatchObject({ num_series: 5, reps_alvo: "8-12", descanso_segundos: null, carga_sugerida_kg: 22.5 });
+    expect(d.seriesPadrao).toHaveLength(2);
+    const novo = comPrescricao(d, A, e2, { series: 3, reps: "10", descanso: 45, carga: null });
+    expect(novo.seriesPadrao).toHaveLength(3);
+    expect(montarTreinos(novo)[0].exercicios.find((x) => x.exercicio_id === "e2")).toMatchObject({ series: 3, reps: "10", descanso: 45 });
+    expect(linhaDaChave(novo, A, null)?.observacao).toBe("Desça a barra em 3 s.");
+  });
+
+  it("comObservacao troca o texto da geral que existe; sem ela, cria com o padrão do aluno (1–10) e o vazio não cria", () => {
+    expect(linhaDaChave(comObservacao(dados(), A, "Outro."), A, null)).toMatchObject({ num_series: 3, observacao: "Outro." });
+    const semGeral = dados({ seriesPadrao: [], config: { ...dados().config!, series_padrao_qtd: 12 } });
+    expect(linhaDaChave(comObservacao(semGeral, { grupo_id: "gB" }, "Nova."), { grupo_id: "gB" }, null)).toMatchObject({ num_series: 10, observacao: "Nova." });
+    expect(comObservacao(semGeral, { grupo_id: "gB" }, null)).toBe(semGeral);
+  });
+
+  it("comLinha volta a linha da chave ao que estava (e tira a que não existia) sem mexer nas outras", () => {
+    const antes = linhaDaChave(dados(), A, e1);
+    const mudado = comPrescricao(comPrescricao(dados(), A, e1, { series: 9, reps: null, descanso: null, carga: null }), A, e2, { series: 2, reps: "5", descanso: null, carga: null });
+    const volta = comLinha(comLinha(mudado, A, e1, antes), A, e2, null);
+    expect(linhaDaChave(volta, A, e1)).toEqual(antes);
+    expect(linhaDaChave(volta, A, e2)).toBeNull();
+    expect(linhaDaChave(volta, A, null)?.observacao).toBe("Desça a barra em 3 s.");
+  });
+});
+
+describe("ampliação da hml-24: a semana no que a tela mostra (o otimista e o voltar ao salvo da fila)", () => {
+  it("comDia troca a lista do dia na ordem e deixa os outros dias e os extras do dia", () => {
+    const comExtra = comAlternadoDoDia(dados(), "SEX", { alternado: true, inicio: "2026-10-12", extras: [{ chave: "catalogo:gC", atrelado: null }] });
+    const d = comDia(comExtra, "SEX", ["catalogo:gC", "pessoal:pX"]);
+    expect(treinosPorDia(d).SEX).toEqual(["catalogo:gC", "pessoal:pX"]);
+    expect(treinosPorDia(d).SEG).toEqual(["catalogo:gA"]);
+    expect(extrasPorDia(d).SEX).toEqual([{ chave: "catalogo:gC", atrelado: null }]);
+    expect(treinosPorDia(comDia(d, "SEX", [])).SEX).toBeUndefined();
+  });
+
+  it("alternadoDoDia lê a config e os extras; comAlternadoDoDia grava os 2 e, desligado, tira o início e os extras (como o banco)", () => {
+    const ligado = comAlternadoDoDia(dados(), "SEG", { alternado: true, inicio: "2026-10-12", extras: [{ chave: "catalogo:gB", atrelado: "catalogo:gA" }] });
+    expect(alternadoDoDia(ligado, "SEG")).toEqual({ alternado: true, inicio: "2026-10-12", extras: [{ chave: "catalogo:gB", atrelado: "catalogo:gA" }] });
+    const desligado = comAlternadoDoDia(ligado, "SEG", { alternado: false, inicio: "2026-10-12", extras: [{ chave: "catalogo:gB", atrelado: null }] });
+    expect(alternadoDoDia(desligado, "SEG")).toEqual({ alternado: false, inicio: null, extras: [] });
+    expect(treinosPorDia(desligado).SEG).toEqual(["catalogo:gA"]);
+    expect(alternadoDoDia(dados(), "TER")).toEqual({ alternado: false, inicio: null, extras: [] });
+  });
+
+  it("extrasParaGravar monta o corpo do setExtras (o treino e o atrelado, de catálogo ou pessoal)", () => {
+    expect(extrasParaGravar([{ chave: "catalogo:gB", atrelado: null }, { chave: "pessoal:pX", atrelado: "catalogo:gA" }])).toEqual([
+      { grupo_id: "gB" },
+      { grupo_usuario_id: "pX", atrelado_grupo_id: "gA" },
+    ]);
   });
 });

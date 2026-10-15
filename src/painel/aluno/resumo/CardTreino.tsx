@@ -27,7 +27,8 @@ function Conteudo({ alunoId, treinoUserId, leitura }: { alunoId: string; treinoU
   const dados = useDadosEditor(treinoUserId, leituraAluno);
   const semana = useSemanaAtual(treinoUserId, undefined, leituraAluno);
   const volume = useVolumeDoAluno(treinoUserId, leituraAluno);
-  const resumo = useMemo(() => (dados.data ? resumoSemanaDoAluno(dados.data, semana.data) : null), [dados.data, semana.data]);
+  // hml-24 (H-131): o "N de M" só com a semana carregada — carregando ou com erro, a conta dava 0 feitos ("0 DE 5" de mentira)
+  const resumo = useMemo(() => (dados.data && semana.data ? resumoSemanaDoAluno(dados.data, semana.data) : null), [dados.data, semana.data]);
   const grupos = useMemo(() => volumePorGrupo(volume.data ?? []), [volume.data]);
   const comLetra = dados.treinos.filter((t) => t.letra);
   const chips = (comLetra.length ? comLetra : dados.treinos).slice(0, 4);

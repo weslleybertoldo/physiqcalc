@@ -7,7 +7,9 @@ Cada conferência roda numa transação só leitura pela Management API (~/.pc-p
   principal  visitante sem privilégio em tabela; logado sem TRUNCATE; as funções internas só para o servidor; as 2 funções de
              acesso do aluno com a guarda nova (conta qualquer → sem_acesso); sem a policy que entregava o perfil da nutricionista;
   treino     visitante só nos 2 catálogos (e só o global); conta qualquer não lê treino montado, pasta nem vínculo de pasta;
-             funções de servidor fechadas; guarda das colunas de controle do aluno.
+             funções de servidor fechadas; guarda das colunas de controle do aluno; hml-24 (H-127): as 2 RPCs da prescrição
+             (prescricao_salvar, observacao_salvar) só para o servidor e INVOKER, e o árbitro do ON CONFLICT delas = o índice da
+             chave tb_series_padrao_<schema>_alvo_uidx (o EXPLAIN sem ANALYZE como a service_role, nada executa).
 
 Uso: python3 e2e/hml01/banco.py --schema staging|public
 """
@@ -100,6 +102,27 @@ def treino(S: str, p: Placar) -> None:
     st, r = ler(TREINO_REF, f"select position('admin_locked' in p.prosrc) > 0 as ok from pg_proc p join pg_namespace n on n.oid = p.pronamespace "
                             f"where n.nspname = '{S}' and p.proname = 'physiq_profiles_guard'")
     p.check(st in (200, 201) and r and r[0]["ok"], f"[treino/{S}] guarda das colunas de controle do aluno")
+    # hml-24 (H-127): a prescrição do editor grava pelas 2 RPCs (a função admin-semana-treinos com a chave de serviço) — só o servidor
+    # executa, INVOKER (o RLS de quem chamar, se um dia não for o servidor), e o ON CONFLICT delas acha o índice da chave
+    st, r = ler(TREINO_REF, f"""
+      select count(*) as n,
+             count(*) filter (where has_function_privilege('public', p.oid, 'EXECUTE') or has_function_privilege('anon', p.oid, 'EXECUTE')
+                                 or has_function_privilege('authenticated', p.oid, 'EXECUTE')) as abertas,
+             count(*) filter (where has_function_privilege('service_role', p.oid, 'EXECUTE')) as servidor,
+             count(*) filter (where p.prosecdef) as definer
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = '{S}' and p.proname in ('prescricao_salvar', 'observacao_salvar')""")
+    p.check(st in (200, 201) and r[0]["n"] == 2 and r[0]["abertas"] == 0 and r[0]["servidor"] == 2 and r[0]["definer"] == 0,
+            f"[treino/{S}] hml-24: prescricao_salvar e observacao_salvar só para o servidor e INVOKER ({r[0] if st in (200, 201) else r})")
+    st, r = ler(TREINO_REF, "select set_config('role', 'service_role', true);\n"
+                f"""explain (costs off) insert into {S}.tb_series_padrao_usuario as t
+                      (user_id, grupo_id, grupo_usuario_id, exercicio_id, exercicio_usuario_id, num_series, updated_at)
+                    values ('{UUID_FALSO}', '{UUID_FALSO}', null, '{UUID_FALSO}', null, 3, now())
+                    on conflict (user_id, (coalesce(grupo_id::text, '')), (coalesce(grupo_usuario_id::text, '')), (coalesce(exercicio_id::text, '')),
+                                 (coalesce(exercicio_usuario_id::text, ''))) do update set updated_at = excluded.updated_at""")
+    plano = " ".join(str(x.get("QUERY PLAN", "")) for x in r) if st in (200, 201) and isinstance(r, list) else str(r)[:200]
+    p.check(f"Conflict Arbiter Indexes: tb_series_padrao_{S}_alvo_uidx" in plano,
+            f"[treino/{S}] hml-24: o árbitro do ON CONFLICT das RPCs = tb_series_padrao_{S}_alvo_uidx (EXPLAIN como a service_role, nada executa)")
 
 
 def main() -> int:

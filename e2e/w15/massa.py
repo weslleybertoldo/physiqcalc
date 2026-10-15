@@ -10,13 +10,18 @@
   --prescricao depois de montar, grava a prescrição e a observação da tela 8 no treino A (o que o E2E digitaria) — a massa
                que a W16 ("Editar treino e dieta") usa nos prints
   --limpar     apaga tudo o que a W15 criou no staging (treinos, semana, séries, concluídos) e devolve a config do Rafael
+  --seco       sem rede (o socket fica bloqueado): monta o SQL do hml-24 (o treino A só do Rafael) com ids de mentira e confere
 
-Uso: python3 e2e/w15/massa.py [--prescricao | --limpar] [--hoje]
+hml-24: o treino A ("Peito e tríceps") é SÓ do Rafael (a tela 8: "a lista muda direto") — a massa tira dele quem mais o receber (a
+massa da W25 punha o aluno de teste dela aqui; agora ela tem o treino próprio) e a semana dessas contas com ele.
+
+Uso: python3 e2e/w15/massa.py [--prescricao | --limpar | --seco] [--hoje]
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import socket
 import sys
 from pathlib import Path
 
@@ -40,6 +45,12 @@ def ids() -> dict:
     lucas, rafael = B.treino_id("w13-dono"), B.treino_id("w13-aluno")
     assert lucas and rafael, "rode antes o e2e/w13/massa.py e entre uma vez com o Lucas e o Rafael no staging"
     return {"lucas": lucas, "rafael": rafael}
+
+
+def sql_so_do_rafael(a: str, rafael: str) -> list[str]:
+    """hml-24: o treino A só do Rafael — sai a semana e o "recebe" de quem mais o tem (nada de outro treino nem de outra pessoa)."""
+    return [f"delete from {S}.tb_semana_treinos where grupo_id = '{a}' and user_id <> '{rafael}'",
+            f"delete from {S}.tb_grupos_treino_perfis where grupo_id = '{a}' and user_id <> '{rafael}'"]
 
 
 def segunda(hoje: dt.date) -> dt.date:
@@ -93,6 +104,11 @@ def montar(hoje_feito: bool) -> None:
     exercicios(b, B.TREINO_B)
     exercicios(c, B.TREINO_C)
     ex(f"delete from {S}.tb_grupos_treino_perfis where user_id = '{rafael}'")
+    outros = q(f"select count(*)::int as n from {S}.tb_grupos_treino_perfis where grupo_id = '{a}' and user_id <> '{rafael}'")[0]["n"]
+    for sql in sql_so_do_rafael(a, rafael):
+        ex(sql)
+    if outros:
+        print("hml-24: o treino A deixou de ir para", outros, "outra(s) conta(s) de teste (a lista dele muda direto, só do Rafael)")
     recebe(a, rafael)
     recebe(b, rafael, lucas)  # "Costas" também é do Lucas → compartilhado
     recebe(c, rafael)
@@ -170,12 +186,31 @@ def limpar() -> None:
     print("massa W15 apagada do staging")
 
 
+def seco() -> int:
+    def sem_rede(*_a, **_k):
+        raise RuntimeError("--seco não usa a rede")
+
+    socket.socket.connect = sem_rede  # type: ignore[method-assign]
+    a, rafael = "00000000-0000-4000-8000-0000000000a1", "00000000-0000-4000-8000-0000000000b1"
+    sqls = sql_so_do_rafael(a, rafael)
+    ok = (len(sqls) == 2 and all(s.startswith(f"delete from {S}.") and f"grupo_id = '{a}' and user_id <> '{rafael}'" in s for s in sqls)
+          and S == "staging")
+    print(("✅ " if ok else "❌ ") + "seco: o treino A só do Rafael — 2 deletes, só no staging, só o treino A e só quem não é o Rafael")
+    fonte = Path(__file__).read_text(encoding="utf-8")
+    ordem = fonte.index("for sql in sql_so_do_rafael(a, rafael):") < fonte.index("    recebe(a, rafael)\n")
+    print(("✅ " if ordem else "❌ ") + "seco: o montar tira os outros do A antes de dar o A ao Rafael")
+    return 0 if ok and ordem else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--prescricao", action="store_true")
     ap.add_argument("--limpar", action="store_true")
     ap.add_argument("--hoje", action="store_true")
+    ap.add_argument("--seco", action="store_true")
     a = ap.parse_args()
+    if a.seco:
+        return seco()
     if not B.saude_treino():
         raise SystemExit("PARADO: Banco do Treino não está saudável — não mexo em nada")
     if a.limpar:

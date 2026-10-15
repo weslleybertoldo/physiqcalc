@@ -255,6 +255,111 @@ export function idsDaChave(chave: string): { grupo_id?: string; grupo_usuario_id
   return tipo === "pessoal" ? { grupo_usuario_id: id } : { grupo_id: id };
 }
 
+// ───────────────────────── hml-24 (H-127): a linha do aluno no que a tela mostra (o otimista, a fila e o "voltar ao salvo") ─────────
+
+type LinhaDoCache = DadosEditor["seriesPadrao"][number];
+type AlvoDaLinha = { grupo_id?: string | null; grupo_usuario_id?: string | null };
+type ExercicioDaLinha = { exercicio_id: string | null; exercicio_usuario_id: string | null };
+
+const doTreino = (r: LinhaDoCache, alvo: AlvoDaLinha) =>
+  (r.grupo_id ?? null) === (alvo.grupo_id ?? null) && (r.grupo_usuario_id ?? null) === (alvo.grupo_usuario_id ?? null);
+const daChave = (r: LinhaDoCache, alvo: AlvoDaLinha, ex: ExercicioDaLinha | null) =>
+  doTreino(r, alvo) && (r.exercicio_id ?? null) === (ex?.exercicio_id ?? null) && (r.exercicio_usuario_id ?? null) === (ex?.exercicio_usuario_id ?? null);
+
+/** A linha do aluno na chave (treino + exercício; `ex` null = a linha geral do treino), ou null. */
+export function linhaDaChave(d: Pick<DadosEditor, "seriesPadrao"> | null | undefined, alvo: AlvoDaLinha, ex: ExercicioDaLinha | null): LinhaDoCache | null {
+  return d?.seriesPadrao.find((r) => daChave(r, alvo, ex)) ?? null;
+}
+
+/** A tela com a linha da chave trocada por `linha` (null = sem a linha) — o "voltar ao salvo" do erro. */
+export function comLinha(d: DadosEditor, alvo: AlvoDaLinha, ex: ExercicioDaLinha | null, linha: LinhaDoCache | null): DadosEditor {
+  return { ...d, seriesPadrao: [...d.seriesPadrao.filter((r) => !daChave(r, alvo, ex)), ...(linha ? [linha] : [])] };
+}
+
+/** A tela com a prescrição de um exercício (séries, repetições, descanso, carga); a observação da linha fica (o otimista de hoje). */
+export function comPrescricao(d: DadosEditor, alvo: AlvoDaLinha, ex: ExercicioDaLinha, p: PrescricaoEditavel): DadosEditor {
+  const atual = linhaDaChave(d, alvo, ex);
+  return comLinha(d, alvo, ex, {
+    grupo_id: alvo.grupo_id ?? null, grupo_usuario_id: alvo.grupo_usuario_id ?? null, exercicio_id: ex.exercicio_id,
+    exercicio_usuario_id: ex.exercicio_usuario_id, num_series: p.series, reps_alvo: p.reps, descanso_segundos: p.descanso,
+    carga_sugerida_kg: p.carga, observacao: atual?.observacao ?? null,
+  });
+}
+
+// ───────────────────────── a ampliação da hml-24: a semana do aluno pela fila (o estado inteiro de cada dia) ─────────
+
+/** Um extra do alternado como a tela guarda: o treino e o treino a que ele vai junto (null = toda semana). */
+export type ExtraDoDia = { chave: string; atrelado: string | null };
+
+/** O alternado de um dia como um valor só — ligado, o início e os extras (o que o setDiaConfig e o setExtras gravam). */
+export interface AlternadoDoDia {
+  alternado: boolean;
+  inicio: string | null;
+  extras: ExtraDoDia[];
+}
+
+/** A tela com a lista de treinos do dia (os de toda semana, na ordem marcada; os extras do alternado ficam) — o otimista do salvarDia. */
+export function comDia(d: DadosEditor, dia: string, chaves: string[]): DadosEditor {
+  return {
+    ...d,
+    semana: [
+      ...d.semana.filter((r) => r.dia_semana !== dia || r.extra),
+      ...chaves.map((k, i) => ({ dia_semana: dia, slot_idx: i, grupo_id: idsDaChave(k).grupo_id ?? null, grupo_usuario_id: idsDaChave(k).grupo_usuario_id ?? null, extra: false })),
+    ],
+  };
+}
+
+/** O alternado do dia no que a tela mostra (a config do dia e os extras dele). */
+export function alternadoDoDia(d: Pick<DadosEditor, "diasConfig" | "semana">, dia: string): AlternadoDoDia {
+  const c = d.diasConfig.find((x) => x.dia_semana === dia);
+  return { alternado: !!c?.alternado, inicio: c?.alternado_inicio ?? null, extras: extrasPorDia(d)[dia] ?? [] };
+}
+
+/**
+ * A tela com o alternado do dia: a config (ligado e o início; desligado = sem início) e os extras do dia (desligado = sem extras, como
+ * o setDiaConfig faz no banco) — o otimista do salvarAlternado e do salvarExtras.
+ */
+export function comAlternadoDoDia(d: DadosEditor, dia: string, v: AlternadoDoDia): DadosEditor {
+  const extras = v.alternado ? v.extras : [];
+  return {
+    ...d,
+    diasConfig: [...d.diasConfig.filter((c) => c.dia_semana !== dia), { dia_semana: dia, alternado: v.alternado, alternado_inicio: v.alternado ? v.inicio : null }],
+    semana: [
+      ...d.semana.filter((r) => r.dia_semana !== dia || !r.extra),
+      ...extras.map((e, i) => {
+        const k = idsDaChave(e.chave);
+        const at = e.atrelado ? idsDaChave(e.atrelado) : {};
+        return {
+          dia_semana: dia, slot_idx: 100 + i, extra: true, grupo_id: k.grupo_id ?? null, grupo_usuario_id: k.grupo_usuario_id ?? null,
+          extra_atrelado_grupo_id: at.grupo_id ?? null, extra_atrelado_grupo_usuario_id: at.grupo_usuario_id ?? null,
+        };
+      }),
+    ],
+  };
+}
+
+/** Os extras do dia no corpo do setExtras (os ids do treino e do treino a que ele vai junto). */
+export function extrasParaGravar(extras: ExtraDoDia[]): ({ grupo_id?: string; grupo_usuario_id?: string; atrelado_grupo_id?: string; atrelado_grupo_usuario_id?: string })[] {
+  return extras.map((e) => {
+    const at = e.atrelado ? idsDaChave(e.atrelado) : {};
+    return { ...idsDaChave(e.chave), ...(at.grupo_id ? { atrelado_grupo_id: at.grupo_id } : {}), ...(at.grupo_usuario_id ? { atrelado_grupo_usuario_id: at.grupo_usuario_id } : {}) };
+  });
+}
+
+/**
+ * A tela com a observação do treino na linha geral: a que existe troca o texto; sem ela, o texto cria a linha com o nº de séries
+ * padrão do aluno (a mesma conta da RPC observacao_salvar) e o vazio não cria nada.
+ */
+export function comObservacao(d: DadosEditor, alvo: AlvoDaLinha, obs: string | null): DadosEditor {
+  const atual = linhaDaChave(d, alvo, null);
+  if (atual) return comLinha(d, alvo, null, { ...atual, observacao: obs });
+  if (!obs) return d;
+  return comLinha(d, alvo, null, {
+    grupo_id: alvo.grupo_id ?? null, grupo_usuario_id: alvo.grupo_usuario_id ?? null, exercicio_id: null, exercicio_usuario_id: null,
+    num_series: padraoDoAluno(d), observacao: obs,
+  });
+}
+
 /**
  * "N de M na semana" — a MESMA conta do app do aluno (faixa Seg–Dom da aba Treino e card do Início, W8/W12): os treinos de cada
  * dia vêm da troca do dia (quando existe) ou da semana com o alternado; N = dias com treino feito, M = dias com treino.

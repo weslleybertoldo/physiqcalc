@@ -8,16 +8,24 @@ treino compartilhado a lista vira cópia só do Rafael; Modelos dá e tira trein
 das séries saiu do editor — vai para a aba Acessos, e2e/wa/telas_acessos.py),
 semana (dias, alternado), padrão N (a prescrição fica), troca do treino (NF7), volume, histórico, relatório (PDF e Excel) e PDF
 do treino baixam. O card Treino do Resumo mostra o MESMO "N de M na semana" do app e as MESMAS séries por grupo da aba.
-Negativo: o Bruno (2º personal, não é o responsável) não abre o Rafael; a Camila (nutricionista) vê a aba como "do módulo
-Treino"; valor inválido não grava; aluno sem login mostra "o treino nasce no 1º acesso".
+Negativo: o Bruno (2º personal, não é o responsável) não abre o Rafael; a Camila (nutricionista, desde a W16) vê o treino SÓ PARA
+LER (o aviso "quem muda é o personal" + o editor somente leitura, sem campo nem "+"); valor inválido não grava; aluno sem login
+mostra "o treino nasce no 1º acesso".
+hml-24 (H-127/H-131): em cada caso, 0 resposta 500 da admin-semana-treinos (o c.rede); a RAJADA (os 4 campos de 1 exercício sem a
+espera → o banco com os 4 e nunca 2 pedidos da mesma linha no ar, pelos eventos request/requestfinished); o "N de M" do card espera o
+valor da conta (até 30 s) e anota a sequência vista (nunca o 0 DE M de mentira). --seco: sem navegador e sem rede (as peças puras e
+os seletores nas telas).
 
 Uso: python3 e2e/w15/telas.py --base http://localhost:5173 --prefixo local   (staging: --base https://physiqcalc-staging.vercel.app
      --prefixo staging). Contexto limpo por caso, painel 1280 × 883 × 2 (as telas 7 e 8). A massa volta ao começo no fim.
+     python3 e2e/w15/telas.py --seco
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import re
+import socket
 import subprocess
 import sys
 import time
@@ -32,6 +40,78 @@ S = "staging"
 B.ESTADO["schema"] = S
 p = B.p
 DOWNLOADS = B.SCRATCH / "downloads"
+REPO = Path(__file__).resolve().parents[2]
+FUNCAO = "admin-semana-treinos"
+# hml-24: a rajada (os 4 campos de 1 exercício sem a espera) — valores diferentes dos da tela 8 (o laço normal põe os de lá depois)
+RAJADA = ("Crucifixo com Halteres", 5, "8-12", 90, 16)
+
+
+# ───────────────────────── hml-24 (H-127/H-131): peças puras (o --seco confere) ─────────────────────────
+def quinhentos(rede: list[str], funcao: str = FUNCAO) -> int:
+    """As respostas 500 da função no c.rede ("<status> <método> <o fim da URL>")."""
+    return sum(1 for r in rede if r.startswith("500 ") and r.rstrip().endswith(f"/functions/v1/{funcao}"))
+
+
+def chamadas(rede: list[str], funcao: str = FUNCAO) -> int:
+    return sum(1 for r in rede if r.rstrip().endswith(f"/functions/v1/{funcao}"))
+
+
+class EmVoo:
+    """Os pedidos que gravam uma LINHA (setPrescricao e setObservacao) em voo por linha, pelos eventos request → requestfinished/
+    requestfailed: o máximo da mesma linha no ar e quantos foram. A chave da linha fica só aqui (nunca é impressa)."""
+
+    def __init__(self) -> None:
+        self.no_ar: dict[str, int] = {}
+        self.maximo: dict[str, int] = {}
+        self.total: dict[str, int] = {}
+        self._pedidos: dict[object, str] = {}
+
+    @staticmethod
+    def linha(corpo) -> str | None:
+        if not isinstance(corpo, dict) or corpo.get("action") not in ("setPrescricao", "setObservacao"):
+            return None
+        chave = "|".join(str(corpo.get(k) or "") for k in ("userId", "grupo_id", "grupo_usuario_id", "exercicio_id", "exercicio_usuario_id"))
+        return chave + ("|geral" if corpo["action"] == "setObservacao" else "")
+
+    def saiu(self, pedido: object, corpo) -> None:
+        l = self.linha(corpo)
+        if not l:
+            return
+        self._pedidos[pedido] = l
+        self.no_ar[l] = self.no_ar.get(l, 0) + 1
+        self.maximo[l] = max(self.maximo.get(l, 0), self.no_ar[l])
+        self.total[l] = self.total.get(l, 0) + 1
+
+    def voltou(self, pedido: object) -> None:
+        l = self._pedidos.pop(pedido, None)
+        if l:
+            self.no_ar[l] -= 1
+
+    def pior(self) -> int:
+        return max(self.maximo.values(), default=0)
+
+    def ligar(self, pg) -> None:
+        def corpo_de(r):
+            if r.method != "POST" or not r.url.split("?")[0].endswith(f"/functions/v1/{FUNCAO}"):
+                return None
+            try:
+                return r.post_data_json
+            except Exception:  # noqa: BLE001 — corpo que não é JSON
+                return None
+
+        pg.on("request", lambda r: self.saiu(r, corpo_de(r)))
+        pg.on("requestfinished", lambda r: self.voltou(r))
+        pg.on("requestfailed", lambda r: self.voltou(r))
+
+
+def chip_ok(vistos: list[str], esperado: str) -> bool:
+    """H-131: o chip "N de M" nasce já com o valor da conta — a sequência vista é só ele (o 0 DE M de mentira não aparece antes)."""
+    return vistos == [esperado]
+
+
+def checar_sem_500(c, rotulo: str) -> None:
+    n = quinhentos(c.rede)
+    p.check(n == 0, f"[{rotulo}] hml-24: 0 resposta 500 da {FUNCAO} ({n} em {chamadas(c.rede)} chamadas)")
 
 
 def rota_do(nome: str, conta: str) -> str:
@@ -141,6 +221,25 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
         p.check(c.pg.locator('[data-exercicio-editor] [data-miniatura]').count() >= 5, "miniatura do GIF em cada exercício")
         # começa vazio (como hoje): o descanso mostra o padrão apagado, reps e carga com "—"
         p.check(linha(c, "Supino Reto com Barra").locator('[data-campo-input="reps"]').input_value() == "", "sem prescrição: REPS vazio (como hoje)")
+
+        # ── hml-24 (H-127): a RAJADA — os 4 campos de 1 exercício sem a espera (quem tabula rápido): o banco com os 4 e nunca 2
+        # pedidos da mesma linha no ar (a fila por linha do editor). O laço de baixo põe depois os valores da tela 8 ──
+        voo = EmVoo()
+        voo.ligar(c.pg)
+        nome_r, s_r, r_r, d_r, kg_r = RAJADA
+        for campo, valor in (("series", str(s_r)), ("reps", r_r), ("descanso", str(d_r)), ("carga", str(kg_r))):
+            inp = linha(c, nome_r).locator(f'[data-campo-input="{campo}"]')
+            inp.click()
+            inp.fill(valor)
+            inp.press("Enter")
+        ex_r = B.exercicio_id(nome_r)
+        ok = B.esperar(lambda: (lambda x: bool(x) and (x["num_series"], x["reps_alvo"], x["descanso_segundos"], x["carga"]) == (s_r, r_r, d_r, float(kg_r)))(
+            presc(rafael, A, ex_r)), 40, 1.5)
+        c.esperar(lambda: not any(voo.no_ar.values()), 30)
+        p.check(bool(ok), f"RAJADA (os 4 campos sem esperar): o banco ({S}) com os 4 — {nome_r} = {s_r} × {r_r} · {d_r} s · {kg_r} kg")
+        p.check(voo.pior() == 1 and 1 <= sum(voo.total.values()) <= 4,
+                f"RAJADA: nunca 2 pedidos da mesma linha no ar (máximo {voo.pior()}; {sum(voo.total.values())} pedido(s) para os 4 campos)")
+        time.sleep(0.6)
 
         # ── o professor digita a prescrição dos 5 exercícios (NF1) ──
         for nome, s, r, d, kg in B.TREINO_A:
@@ -266,7 +365,9 @@ def caso_editor(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
             c.pg.locator("[data-treino-tirar]").click()
             p.check(c.confirmar_no_app(), "Tirar do aluno (treino novo): a confirmação do app (hml-18a)")
             p.check(c.esperar(lambda: not c.tem(novo), 30), "o treino novo sai do aluno (Tirar do aluno)")
+        p.check(voo.pior() == 1, f"a fila por linha no caso inteiro: nunca 2 pedidos da mesma linha no ar (máximo {voo.pior()})")
     finally:
+        checar_sem_500(c, "editor")
         c.fim()
 
 
@@ -331,7 +432,11 @@ def caso_semana_series(nav, base: str, prefixo: str, m: dict, rota: str) -> None
         B.saude_ok("volume/histórico/relatório")
         p.check(c.esperar(lambda: c.pg.locator("[data-volume-aluno] [data-volume-grupo]").count() >= 3, 30), "volume semanal por grupo")
         p.check(c.esperar(lambda: c.pg.locator("[data-historico-item]").count() >= len(m["feitos"]), 30), f"histórico do mês com {len(m['feitos'])} treinos")
-        c.pg.locator("[data-historico-item]").first.click()
+        # hml-24 (F5): abre um treino feito DA MASSA DA W15 (o dia mais recente dos "feitos", com exercício), não o 1º da lista — a massa
+        # da W25 (que voltou a montar no F5) põe no mesmo aluno um "Treino A" de HOJE com 0 exercício, que fica em 1º e não tem série
+        feito = c.pg.locator(f'[data-historico-item="{max(m["feitos"])}"]').filter(has_text=re.compile(r"[1-9]\d* exercício"))
+        if c.esperar(lambda: feito.count() > 0, 30):
+            feito.first.click()
         p.check(c.esperar(lambda: c.pg.locator("[data-historico-detalhe] li").count() > 0, 30), "histórico: o treino feito abre com as séries")
         c.pg.keyboard.press("Escape")
         c.pg.wait_for_timeout(500)
@@ -346,6 +451,7 @@ def caso_semana_series(nav, base: str, prefixo: str, m: dict, rota: str) -> None
         p.check(bool(ptreino) and b"Supino" in corpo and b"60 kg" in corpo, f"PDF do treino com a prescrição ({ptreino.name if ptreino else '-'})")
         c.print("aba_treino_fim")
     finally:
+        checar_sem_500(c, "semana")
         c.fim()
 
 
@@ -356,15 +462,27 @@ def caso_resumo(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
     try:
         c.entrar("w13-dono", f"/painel/alunos/{rota}")
         c.fechar_avisos()
-        ok = c.esperar(lambda: c.tem("[data-card-treino-semana]") and c.pg.locator("[data-card-treino] [data-volume-grupo]").count() > 0, 120)
-        p.check(ok, "card Treino do Resumo com a semana e as séries por grupo")
         # o MESMO "N de M" do app do aluno: dias com treino feito / dias com treino na semana (a semana da massa: 5 dias)
         hoje = B.B5.hoje()
         seg = hoje - dt.timedelta(days=hoje.weekday())
         feitos = len([d for d in m["feitos"] if seg.isoformat() <= d <= (seg + dt.timedelta(days=6)).isoformat()])
         esperado = f"{feitos}/5"
-        valor = c.pg.locator("[data-card-treino-semana]").get_attribute("data-card-treino-semana")
+        # hml-24 (H-131): a sequência do chip desde que ele aparece (o chip só nasce com a semana; antes vinha "0/5" e depois o certo)
+        vistos: list[str] = []
+
+        def ver() -> bool:
+            loc = c.pg.locator("[data-card-treino-semana]")
+            v = loc.first.get_attribute("data-card-treino-semana") if loc.count() else None
+            if v and (not vistos or vistos[-1] != v):
+                vistos.append(v)
+            return v is not None
+
+        ok = c.esperar(lambda: ver() and c.pg.locator("[data-card-treino] [data-volume-grupo]").count() > 0, 120, 0.2)
+        p.check(ok, "card Treino do Resumo com a semana e as séries por grupo")
+        c.esperar(lambda: ver() and vistos[-1] == esperado, 30, 0.2)
+        valor = vistos[-1] if vistos else None
         p.check(valor == esperado, f"'N de M na semana' = a conta do app ({valor} × {esperado})")
+        p.check(chip_ok(vistos, esperado), f"H-131: o chip nasce com o valor da conta, nunca o 0 DE M de mentira (sequência vista {vistos})")
         chips = [c.pg.locator("[data-card-treino-treino]").nth(i).get_attribute("data-card-treino-treino") for i in range(c.pg.locator("[data-card-treino-treino]").count())]
         p.check(chips[:3] == ["A · Peito e tríceps", "B · Costas", "C · Pernas"], f"treinos A/B/C no card ({chips})")
         card = {c.pg.locator("[data-card-treino] [data-volume-grupo]").nth(i).get_attribute("data-volume-grupo"):
@@ -381,6 +499,7 @@ def caso_resumo(nav, base: str, prefixo: str, m: dict, rota: str) -> None:
         p.check(bool(card) and all(aba.get(k) == v for k, v in card.items()), f"séries por grupo: card = aba ({card} × {aba})")
         p.check(c.caminho().startswith(f"/painel/alunos/{rota}/treino"), "Abrir leva à aba Treino")
     finally:
+        checar_sem_500(c, "resumo")
         c.fim()
 
 
@@ -394,16 +513,22 @@ def caso_negativos(nav, base: str, prefixo: str, m: dict, rota: str, rota_sem_lo
         p.check(not c.tem("[data-editor-treino]"), "Bruno (outro personal) não abre o treino do Rafael")
         c.print("negativo_outro_personal")
     finally:
+        checar_sem_500(c, "bruno")
         c.fim()
     time.sleep(2)
     c = B.Caso(nav, base, prefixo, "camila")
     try:
         c.entrar("w13-nutri", f"/painel/alunos/{rota}/treino")
         c.fechar_avisos()
-        ok = c.esperar(lambda: c.tem('[data-sem-treino="sem-papel"]'), 60)
-        p.check(ok and not c.tem("[data-editor-treino]"), "Camila (nutricionista) vê a aba como 'do módulo Treino', sem editor")
+        # hml-24: desde a W16 a nutricionista VÊ o treino só para ler (painel/aluno/abas/Treino.tsx, est.tipo "leitura", pelo principal)
+        ok = c.esperar(lambda: c.tem("[data-treino-so-ver]") and c.tem("[data-editor-treino][data-somente-leitura]")
+                       and c.pg.locator("[data-exercicio-editor]").count() > 0, 60)
+        n_campos, n_novo = c.pg.locator("[data-campo-input]").count(), c.pg.locator("[data-treino-novo]").count()
+        p.check(ok and n_campos == 0 and n_novo == 0,
+                f"Camila (nutricionista): vê o treino só para ler (o aviso + o editor somente leitura com os exercícios), 0 campo e 0 '+' ({n_campos}, {n_novo})")
         c.print("negativo_nutricionista")
     finally:
+        checar_sem_500(c, "camila")
         c.fim()
     time.sleep(2)
     c = B.Caso(nav, base, prefixo, "sem_login")
@@ -413,7 +538,51 @@ def caso_negativos(nav, base: str, prefixo: str, m: dict, rota: str, rota_sem_lo
         ok = c.esperar(lambda: "O treino nasce no 1º acesso do aluno" in c.texto(), 60)
         p.check(ok, "aluno sem login: 'O treino nasce no 1º acesso do aluno'")
     finally:
+        checar_sem_500(c, "sem_login")
         c.fim()
+
+
+def seco() -> int:
+    """Sem navegador e sem rede (o socket fica bloqueado): as peças do hml-24 e os seletores nas telas."""
+    def sem_rede(*_a, **_k):
+        raise RuntimeError("--seco não usa a rede")
+
+    socket.socket.connect = sem_rede  # type: ignore[method-assign]
+    url = "ps://api.physiqcalc.com.br/functions/v1/admin-semana-treinos"
+    rede = [f"200 POST {url}", f"500 POST {url}", "500 POST ps://api.physiqcalc.com.br/functions/v1/treinos", "200 POST x/rest/v1/rpc/f"]
+    p.check(quinhentos(rede) == 1 and chamadas(rede) == 2, "seco: o contador de 500 só conta a admin-semana-treinos")
+    v = EmVoo()
+    x = {"action": "setPrescricao", "userId": "u", "grupo_id": "g", "exercicio_id": "e1"}
+    y = {**x, "exercicio_id": "e2"}
+    v.saiu(1, x), v.saiu(2, y), v.voltou(1), v.saiu(3, x), v.voltou(2), v.voltou(3), v.saiu(4, {"action": "get", "userId": "u"})
+    um = v.pior() == 1 and sum(v.total.values()) == 3
+    v.saiu(5, x), v.saiu(6, x)
+    p.check(um and v.pior() == 2 and EmVoo.linha({**x, "action": "setObservacao"}) != EmVoo.linha(x),
+            "seco: a rajada — 1 por vez por linha passa; 2 da mesma linha no ar são acusados; a observação é outra linha; o 'get' não conta")
+    p.check(chip_ok(["2/5"], "2/5") and not chip_ok(["0/5", "2/5"], "2/5") and not chip_ok([], "2/5") and not chip_ok(["1/5"], "2/5"),
+            "seco: H-131 — só a sequência com o valor certo passa (o 0 DE M antes é acusado)")
+    nome_r, s_r, r_r, d_r, kg_r = RAJADA
+    tela8 = {n: (s, r, d, kg) for n, s, r, d, kg in B.TREINO_A}
+    p.check(nome_r in tela8 and tela8[nome_r] != (s_r, r_r, d_r, kg_r) and 1 <= s_r <= 10 and 5 <= d_r <= 900,
+            "seco: a rajada num exercício do treino A, com valores válidos e diferentes dos da tela 8 (o laço normal os põe depois)")
+    fontes = {rel: (REPO / rel).read_text(encoding="utf-8") for rel in (
+        "src/painel/aluno/abas/Treino.tsx", "src/treino/editor/EditorTreino.tsx", "src/treino/editor/LinhaExercicioEditor.tsx",
+        "src/painel/aluno/resumo/CardTreino.tsx")}
+    tudo = "".join(fontes.values())
+    p.check(all(s in tudo for s in ("data-treino-so-ver", "data-somente-leitura", "data-editor-treino", "data-campo-input", "data-treino-novo",
+                                    "data-card-treino-semana", "data-exercicio-nome", "data-exercicio-editor")),
+            "seco: os seletores do teste existem nas telas (o só ver da nutricionista, o editor, os campos, o chip)")
+    p.check("dados.data && semana.data ? resumoSemanaDoAluno" in fontes["src/painel/aluno/resumo/CardTreino.tsx"],
+            "seco: o card monta o 'N de M' só com a semana carregada (H-131, CardTreino.tsx)")
+    try:
+        socket.create_connection(("127.0.0.1", 9), timeout=1)
+        bloqueado = False
+    except RuntimeError:
+        bloqueado = True
+    except OSError:
+        bloqueado = False
+    p.check(bloqueado, "seco: a rede fica bloqueada (nada foi ao banco, à função nem ao site)")
+    return p.fim()
 
 
 def main() -> int:
@@ -422,7 +591,10 @@ def main() -> int:
     ap.add_argument("--prefixo", default="local")
     # hml-18a: o E2E de tela sempre com o Edge no notebook (o Chromium do Playwright cai nas páginas longas — hml-11/hml-16)
     ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
+    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: as peças do hml-24 e os seletores")
     a = ap.parse_args()
+    if a.seco:
+        return seco()
     B.saude_ok("a massa")
     r = subprocess.run([sys.executable, str(Path(__file__).parent / "massa.py")], capture_output=True, text=True)
     print(r.stdout[-400:], r.stderr[-400:])

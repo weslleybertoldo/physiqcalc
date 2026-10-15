@@ -496,3 +496,38 @@ select 'funcao', p.proname || '(' || pg_get_function_identity_arguments(p.oid) |
 6. **`httpOnly`** só se o login for para o servidor (hoje o supabase-js guarda a sessão no `localStorage`); sem isso, o passo 4 é "sem
    `rest`", não o cookie.
 7. **A guarda da 21e vira a lista do que revogar**; o `anonimo.py`/`matriz.py` da skill de homologação provam o fechamento.
+
+## Treino: a prescrição do editor gravada na chave, pelas RPCs (hml-24, H-127)
+- **O que muda:** o editor do treino do aluno (Painel › Alunos › Treino: os campos SÉRIES/REPS/DESCANSO/CARGA, a folha "Editar" e a
+  observação) grava pela função `admin-semana-treinos` como antes (a porta `requireAdmin` + a regra `pode_ver_aluno_treino_por`, com a
+  chave de serviço — desvio 22), mas as ações `setPrescricao` e `setObservacao` gravam numa chamada só, na chave da linha de
+  `tb_series_padrao_usuario`, em vez de "ler e depois atualizar ou inserir" (2 gravações da mesma linha nova ao mesmo tempo inseriam as 2 e
+  a 2ª batia no índice único `tb_series_padrao_<schema>_alvo_uidx` → 500, sem log). As respostas e os códigos de erro são os de antes.
+- **2 RPCs novas** (migration `20261015100000_hml24_prescricao_atomica` do Treino, aplicada com `set physiq.schemas = 'staging'` e
+  `'public'` ANTES de publicar a função — ela é UMA para os 2 schemas; reversa em `supabase/reversas/`, só depois de a função voltar):
+  `SECURITY INVOKER`, `VOLATILE`, `search_path = ''`, o 1º jeito da tabela "Funções" (`revoke all … from public, anon, authenticated` +
+  `grant execute … to service_role`) — só o servidor executa; o `anon` e o `authenticated` recebem 42501 no `EXECUTE`. INVOKER de propósito:
+  com a `service_role` da função, o RLS fica de fora como hoje; se um dia a função chamar COMO A PESSOA, o RLS da tabela decide sozinho (o
+  personal não grava a linha do aluno — "Usuario gerencia suas series padrao" e "admin_all_series_padrao") e a RPC não precisa mudar.
+  - `prescricao_salvar(p_aluno, p_grupo, p_grupo_usuario, p_exercicio, p_exercicio_usuario, p_num_series, p_reps, p_descanso, p_carga) →
+    jsonb`: `INSERT … ON CONFLICT` nas 5 expressões do índice (o `coalesce` de cada id — o `.upsert` do PostgREST não serve: o índice é de
+    expressão e não é constraint, 42P10); existe → troca os 4 campos e o `updated_at` (o id e a observação ficam). Devolve as chaves do
+    `prescricao` que a função já respondia.
+  - `observacao_salvar(p_aluno, p_grupo, p_grupo_usuario, p_observacao) → jsonb`: a linha geral do treino (os 2 exercícios nulos); com texto,
+    a linha nova nasce com o `series_padrao_qtd` do aluno (1 a 10; fora disso ou sem perfil, 3) e a que existe só troca o texto; sem texto,
+    só limpa a que existe.
+  - A forma da CHAVE (o aluno; exatamente 1 treino; na prescrição, exatamente 1 exercício) ou `dados_invalidos` (22023) antes de tocar na
+    tabela; o resto a função já validou e a tabela confere (séries 1–10 → 23514; as FKs → 23503).
+- **A conferência da migration** para tudo se: as 2 não forem INVOKER/VOLATILE/`search_path` vazio; alguém além da `service_role`
+  executar; a falta do aluno não recusar; ou o `EXPLAIN` (sem ANALYZE — nada executa) do mesmo `ON CONFLICT` não tiver como árbitro SÓ o
+  `tb_series_padrao_<schema>_alvo_uidx` (o índice renomeado, com outra expressão, sumido ou duplicado). O `e2e/hml01/banco.py` confere o
+  mesmo, só leitura, nos 2 schemas.
+- **Nenhuma tabela, índice, policy, gatilho ou grant de tabela muda.** O app do aluno (PowerSync, pelo `id`) segue igual: o envio dele que
+  bate na linha criada pelo personal ainda dá 23505 e é descartado, como antes.
+- **O log:** o catch final da `admin-semana-treinos` passa a chamar o `log.excecao` (o name, o código do Postgres e a mensagem limpa —
+  nunca o `details`, onde vai o valor da chave) com a ação em `snake_case` (`acaoDoLog`) e a MESMA resposta 500; os 2 `console.error`
+  viraram `log.aviso` só com o código. A função entrou nas PUBLICADAS da guarda do log (`src/lib/logsDasFuncoesTreino.test.ts`).
+- **Ficam como estavam** (o mesmo "lê e depois insere", hoje sem chamada do front ou com pouca concorrência; o log novo do catch mostra se
+  derem 500): `setSeriesPadrao`, `aplicarSeriesTreino` e `aplicarPrescricaoDoModelo`.
+- Prova: um Postgres local com o DDL e as policies do catálogo do Treino (a corrida N = 2, 5 e 8 × 50 rodadas → 0 erro e 1 linha; o
+  caminho de antes → 23505 em toda rodada), `e2e/hml24/corrida.py` (o staging: `--antes` × o verde) e o `e2e/hml01/banco.py`.

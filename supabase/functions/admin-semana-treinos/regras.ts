@@ -106,3 +106,26 @@ export function listaQuemRecebe(
   const { itens, total } = fatiar(filtrados, pagina);
   return { itens, total, total_recebem: alunos.filter((a) => a.recebe).length, total_alunos: alunos.length };
 }
+
+// ───────────────────────── hml-24 (H-127): a ação no log do catch final ─────────────────────────
+
+/**
+ * hml-24: as ações da função (o `action` do corpo), na ordem do index.ts. A guarda de fonte (src/lib/adminSemanaTreinosRegras.test.ts)
+ * confere que são exatamente as do index.ts — ação nova sem entrar aqui sai no log como "desconhecida".
+ */
+export const ACOES = [
+  "resolverAluno", "quemRecebe", "quemRecebeLista", "get", "semanaAtual", "setDia", "volume", "getSeriesPadrao", "exerciciosTreino",
+  "setSeriesPadrao", "aplicarSeriesTreino", "limparSeriesAluno", "setDiaConfig", "setExtras", "volumePraticado", "setPrescricao",
+  "setObservacao", "setConfig", "modelos", "novoTreino", "usarTreino", "aplicarModelo", "tirarTreino", "adicionarExercicio",
+  "removerExercicio", "ordenarExercicios",
+] as const;
+
+/**
+ * hml-24 (H-127): o `acao` do log do catch final — o formato fixo do log ([a-z0-9_], até 48: _shared/erros.ts; "setPrescricao" lá
+ * viraria "?"). A ação conhecida em snake_case ("setPrescricao" → "set_prescricao"); qualquer outra coisa (a que não existe, número,
+ * texto livre, ausente) → "desconhecida": o corpo do pedido nunca vai para o log.
+ */
+export function acaoDoLog(acao: unknown): string {
+  if (typeof acao !== "string" || !(ACOES as readonly string[]).includes(acao)) return "desconhecida";
+  return acao.replace(/[A-Z]/g, (l) => `_${l.toLowerCase()}`);
+}

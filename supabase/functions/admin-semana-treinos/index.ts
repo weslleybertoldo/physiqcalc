@@ -5,9 +5,9 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
-import { fatiar, filtrarPorNome, listaQuemRecebe, paginaPedida, periodoDoVolumeValido, respostaDoResolver } from "./regras.ts";
-// hml-14 (H-51 item 5): log em JSON sem dado pessoal (_shared/log.ts) — por enquanto só o resolver_sem_acesso (os console.error
-// de antes ficam para o resto do H-48)
+import { acaoDoLog, fatiar, filtrarPorNome, listaQuemRecebe, paginaPedida, periodoDoVolumeValido, respostaDoResolver } from "./regras.ts";
+// hml-14 (H-51 item 5): log em JSON sem dado pessoal (_shared/log.ts) — o resolver_sem_acesso; hml-24 (H-127): + o catch final
+// (log.excecao, que avisa) e os 2 avisos que eram console.error (pode_ver_aluno_falhou, contas_dono_falhou) — nenhum console aqui
 const log = criarLog("admin-semana-treinos", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
@@ -100,7 +100,8 @@ async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise
   const { data, error } = await admin.rpc("pode_ver_aluno_treino_por", { p_aluno: alunoId, p_usuario: user.id });
   if (error) {
     // schema ainda sem a função da W3 (a migração entra 1 schema de cada vez): vale a regra de antes
-    console.error("pode_ver_aluno_treino_por", error.message);
+    // hml-24: o aviso vai pelo log em JSON, só com o código (antes um console com a mensagem)
+    log.aviso({ codigo: "pode_ver_aluno_falhou", schema: currentSchema(), pg: error.code });
     const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
     return (perfil as { professor_id?: string } | null)?.professor_id === user.id;
   }
@@ -412,7 +413,8 @@ async function aplicarPrescricaoDoModelo(admin: any, aluno: string, gid: string)
 async function contasOndeSouDono(admin: any, userId: string): Promise<string[]> {
   const { data, error } = await admin.rpc("contas_onde_sou_dono_treino", { p_usuario: userId });
   if (error) {
-    console.error("contas_onde_sou_dono_treino", error.message);
+    // hml-24: o aviso vai pelo log em JSON, só com o código (antes um console com a mensagem)
+    log.aviso({ codigo: "contas_dono_falhou", schema: currentSchema(), pg: error.code });
     return [];
   }
   return ((data as unknown[]) || [])
@@ -978,23 +980,15 @@ Deno.serve(async (req) => {
       if (!lista.some((e) => (exid ? e.exercicio_id === exid && !e.exercicio_usuario_id : e.exercicio_usuario_id === exuid))) {
         return jsonErr("exercicio_fora_do_treino", 400, origin);
       }
-      let q = admin.from("tb_series_padrao_usuario").select("id").eq("user_id", userId);
-      q = alvo.gid ? q.eq("grupo_id", alvo.gid) : q.eq("grupo_usuario_id", alvo.guid);
-      q = exid ? q.eq("exercicio_id", exid) : q.is("exercicio_id", null);
-      q = exuid ? q.eq("exercicio_usuario_id", exuid) : q.is("exercicio_usuario_id", null);
-      const atual = await q.maybeSingle();
-      if (atual.error) throw atual.error;
-      const linha = { num_series: n, reps_alvo: reps.valor, descanso_segundos: desc.valor, carga_sugerida_kg: carga.valor, updated_at: new Date().toISOString() };
-      if (atual.data?.id) {
-        const up = await admin.from("tb_series_padrao_usuario").update(linha).eq("id", atual.data.id);
-        if (up.error) throw up.error;
-      } else {
-        const ins = await admin.from("tb_series_padrao_usuario").insert({
-          user_id: userId, grupo_id: alvo.gid, grupo_usuario_id: alvo.guid, exercicio_id: exid, exercicio_usuario_id: exuid, ...linha,
-        });
-        if (ins.error) throw ins.error;
-      }
-      return okJson({ ok: true, prescricao: { grupo_id: alvo.gid, grupo_usuario_id: alvo.guid, exercicio_id: exid, exercicio_usuario_id: exuid, ...linha } }, origin);
+      // hml-24 (H-127): a linha do aluno numa gravação só, na chave (a RPC prescricao_salvar: INSERT … ON CONFLICT no índice
+      // tb_series_padrao_<schema>_alvo_uidx). Antes: lia a linha e depois atualizava ou inseria — 2 gravações da mesma linha nova ao
+      // mesmo tempo inseriam as 2 e a 2ª dava chave duplicada (500). A resposta é a de antes (as mesmas chaves do "prescricao").
+      const { data, error } = await admin.rpc("prescricao_salvar", {
+        p_aluno: userId, p_grupo: alvo.gid, p_grupo_usuario: alvo.guid, p_exercicio: exid, p_exercicio_usuario: exuid, p_num_series: n,
+        p_reps: reps.valor, p_descanso: desc.valor, p_carga: carga.valor,
+      });
+      if (error) throw error;
+      return okJson({ ok: true, prescricao: data }, origin);
     }
 
     if (action === "setObservacao") {
@@ -1007,25 +1001,11 @@ Deno.serve(async (req) => {
       if (obs && obs.length > 1000) return jsonErr("observacao_longa", 400, origin);
       const { catalogo, pessoal } = await gruposDisponiveis(admin, userId);
       if ((alvo.gid && !catalogo.has(alvo.gid)) || (alvo.guid && !pessoal.has(alvo.guid))) return jsonErr("grupo_nao_disponivel", 400, origin);
-      let q = admin.from("tb_series_padrao_usuario").select("id").eq("user_id", userId).is("exercicio_id", null).is("exercicio_usuario_id", null);
-      q = alvo.gid ? q.eq("grupo_id", alvo.gid) : q.eq("grupo_usuario_id", alvo.guid);
-      const atual = await q.maybeSingle();
-      if (atual.error) throw atual.error;
-      const agora = new Date().toISOString();
-      if (atual.data?.id) {
-        const up = await admin.from("tb_series_padrao_usuario").update({ observacao: obs, updated_at: agora }).eq("id", atual.data.id);
-        if (up.error) throw up.error;
-      } else if (obs) {
-        // linha geral nova: o nº de séries dela é o padrão do aluno (o que já valia pra quem não tem nº próprio)
-        const { data: perfil, error: pe } = await admin.from("physiq_profiles").select("series_padrao_qtd").eq("id", userId).maybeSingle();
-        if (pe) throw pe;
-        const qtd = Number((perfil as any)?.series_padrao_qtd);
-        const ins = await admin.from("tb_series_padrao_usuario").insert({
-          user_id: userId, grupo_id: alvo.gid, grupo_usuario_id: alvo.guid, exercicio_id: null, exercicio_usuario_id: null,
-          num_series: Number.isInteger(qtd) && qtd >= 1 ? Math.min(10, qtd) : 3, observacao: obs, updated_at: agora,
-        });
-        if (ins.error) throw ins.error;
-      }
+      // hml-24 (H-127): a linha geral numa gravação só, na chave (a RPC observacao_salvar: com texto, INSERT … ON CONFLICT — a linha
+      // nova com o nº de séries padrão do aluno, a que existe só troca o texto; sem texto, só limpa a que existe). Antes: lia e depois
+      // inseria — 2 gravações seguidas no treino ainda sem a linha geral davam chave duplicada (500).
+      const { error } = await admin.rpc("observacao_salvar", { p_aluno: userId, p_grupo: alvo.gid, p_grupo_usuario: alvo.guid, p_observacao: obs });
+      if (error) throw error;
       return okJson({ ok: true, observacao: obs }, origin);
     }
 
@@ -1211,5 +1191,10 @@ Deno.serve(async (req) => {
     }
 
     return jsonErr("invalid_action", 400, origin);
-  } catch (_e) { return jsonErr("internal", 500, origin); }
+  } catch (e) {
+    // hml-24 (H-127): o 500 agora fica no log (o name, o código do Postgres e a mensagem limpa — nunca o details, onde vai o valor
+    // da chave) e avisa; antes saía calado. A resposta é a MESMA de antes
+    log.excecao(e, { acao: acaoDoLog(body?.action), schema: currentSchema() });
+    return jsonErr("internal", 500, origin);
+  }
 });

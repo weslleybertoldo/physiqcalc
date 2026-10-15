@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { chaveData, datasDaSemana } from "@/treino/datas";
@@ -25,10 +25,130 @@ import {
   tirarTreino,
   usarTreino,
 } from "./api";
-import { idsDaChave, montarTreinos } from "./regras";
+import { criarFila, vigiarSaida, type Valor } from "./filaDaLinha";
+import {
+  alternadoDoDia,
+  comAlternadoDoDia,
+  comDia,
+  comLinha,
+  comObservacao,
+  comPrescricao,
+  extrasParaGravar,
+  idsDaChave,
+  linhaDaChave,
+  montarTreinos,
+  treinosPorDia,
+  type ExtraDoDia,
+} from "./regras";
 import type { ConfigTreinoAluno, DadosEditor, ExercicioEditor, PrescricaoEditavel, TreinoEditor } from "./tipos";
 
 export const chaveEditor = (treinoUserId: string | null) => ["treino-editor", treinoUserId] as const;
+
+// ───────────────────────── hml-24 (H-127): a fila por chave das gravações que mandam o estado INTEIRO ─────────────────────────
+// FORA do React (o módulo): a gravação de uma chave termina mesmo saindo da tela, dentro do app; com algo pendente, o navegador
+// pergunta antes de fechar ou recarregar a aba. As chaves:
+//   "<aluno>|<treino>|<exercício>"   a prescrição de um exercício      (setPrescricao)
+//   "<aluno>|<treino>|geral"         a observação do treino            (setObservacao)
+//   "<aluno>|semana:<DIA>|treinos"   a lista de treinos do dia         (setDia — apaga e grava a lista inteira)
+//   "<aluno>|semana:<DIA>|alternado" o alternado do dia e os extras    (setDiaConfig + setExtras: desligar o alternado apaga os extras,
+//                                                                       então os 2 andam na MESMA fila — nunca 2 no ar do mesmo dia)
+//   "<aluno>|config"                 a config do aluno, campo a campo  (setConfig: o modo das séries, a data da troca, o descanso padrão
+//                                                                       — cada envio leva só os campos que mudaram)
+// As ações pontuais (adicionar/tirar exercício, usar modelo, criar e tirar treino, ordenar, o padrão N) seguem pelo rodar.
+
+type AlvoTreino = { grupo_id?: string; grupo_usuario_id?: string };
+type IdsExercicio = { exercicio_id: string | null; exercicio_usuario_id: string | null };
+/** O que a tela precisa para mostrar a chave pendente por cima do que o servidor devolveu (e refazer o "Tentar de novo"). */
+type Meta =
+  | { tipo: "prescricao"; alvo: AlvoTreino; ex: IdsExercicio }
+  | { tipo: "observacao"; alvo: AlvoTreino }
+  | { tipo: "dia"; dia: string }
+  | { tipo: "alternado"; dia: string }
+  | { tipo: "config" };
+/** O que estava salvo na chave (o "voltar ao salvo" do erro): a linha do aluno (prescrição e observação) ou o valor do dia (a semana). */
+type Retrato = { linha: DadosEditor["seriesPadrao"][number] | null } | { valor: Valor };
+
+export const filaDoEditor = criarFila<Valor, unknown>();
+const metas = new Map<string, Meta>();
+/** O retrato do servidor (o último confirmado) de cada chave com algo pendente: o "voltar ao salvo" do erro. */
+const salvas = new Map<string, Retrato>();
+if (typeof window !== "undefined") vigiarSaida(filaDoEditor, window);
+
+export const chaveDaPrescricao = (treinoUserId: string, t: Pick<TreinoEditor, "chave">, ex: Pick<ExercicioEditor, "chave">) =>
+  `${treinoUserId}|${t.chave}|${ex.chave}`;
+export const chaveDaObservacao = (treinoUserId: string, t: Pick<TreinoEditor, "chave">) => `${treinoUserId}|${t.chave}|geral`;
+export const chaveDoDia = (treinoUserId: string, dia: string) => `${treinoUserId}|semana:${dia}|treinos`;
+export const chaveDoAlternado = (treinoUserId: string, dia: string) => `${treinoUserId}|semana:${dia}|alternado`;
+export const chaveDaConfig = (treinoUserId: string) => `${treinoUserId}|config`;
+
+/** Os campos da config que a setConfig grava (cada um é o valor inteiro dele: a fila junta por campo). */
+const CAMPOS_CONFIG = ["tempo_descanso_segundos", "series_travadas", "series_padrao_qtd", "series_modo", "proxima_troca_treino"] as const;
+const soCampos = (v: Valor | Record<string, unknown> | null | undefined, chaves: readonly string[] = CAMPOS_CONFIG): Valor =>
+  Object.fromEntries(chaves.filter((c) => (CAMPOS_CONFIG as readonly string[]).includes(c) && v != null && c in v).map((c) => [c, (v as Valor)[c]]));
+
+// na semana, as listas vão como TEXTO (JSON) no valor da fila: a fila compara campo a campo, e a mesma lista não conta como mudança
+const valorDoDia = (chaves: string[]): Valor => ({ chaves: JSON.stringify(chaves) });
+const valorDoAlternado = (a: { alternado: boolean; inicio: string | null; extras: ExtraDoDia[] }): Valor => ({
+  alternado: a.alternado,
+  inicio: a.inicio,
+  extras: JSON.stringify(a.extras),
+});
+const chavesDoValor = (v: Valor): string[] => JSON.parse(String(v.chaves ?? "[]")) as string[];
+const extrasDoValor = (v: Valor): ExtraDoDia[] => JSON.parse(String(v.extras ?? "[]")) as ExtraDoDia[];
+
+const aplicarMeta = (d: DadosEditor, m: Meta, v: Valor): DadosEditor => {
+  switch (m.tipo) {
+    case "prescricao":
+      return comPrescricao(d, m.alvo, m.ex, v as unknown as PrescricaoEditavel);
+    case "observacao":
+      return comObservacao(d, m.alvo, (v.observacao as string | null) ?? null);
+    case "dia":
+      return comDia(d, m.dia, chavesDoValor(v));
+    case "alternado":
+      return comAlternadoDoDia(d, m.dia, { alternado: v.alternado === true, inicio: (v.inicio as string | null) ?? null, extras: extrasDoValor(v) });
+    case "config":
+      // só os campos que a chave mexeu (o desejado da config só tem os campos tocados)
+      return { ...d, config: { ...(d.config ?? ({} as ConfigTreinoAluno)), ...soCampos(v) } as ConfigTreinoAluno };
+  }
+};
+
+/** O valor da chave da semana no que a tela mostra (a lista do dia; o alternado e os extras do dia). */
+function valorDaSemana(d: DadosEditor, m: Extract<Meta, { tipo: "dia" | "alternado" }>): Valor {
+  return m.tipo === "dia" ? valorDoDia(treinosPorDia(d)[m.dia] ?? []) : valorDoAlternado(alternadoDoDia(d, m.dia));
+}
+
+function retrato(d: DadosEditor | undefined, m: Meta): Retrato | null {
+  if (m.tipo === "prescricao" || m.tipo === "observacao") return { linha: linhaDaChave(d, m.alvo, m.tipo === "prescricao" ? m.ex : null) };
+  if (m.tipo === "config") return d ? { valor: soCampos(d.config as unknown as Record<string, unknown> | null) } : null;
+  return d ? { valor: valorDaSemana(d, m) } : null;
+}
+
+/** Volta a chave ao retrato salvo; na config, só os campos que o envio que falhou mexia (`chaves`) — os outros podem ter mudado por outro caminho. */
+function voltar(d: DadosEditor, m: Meta, r: Retrato, chaves?: readonly string[]): DadosEditor {
+  if ("linha" in r) return m.tipo === "prescricao" || m.tipo === "observacao" ? comLinha(d, m.alvo, m.tipo === "prescricao" ? m.ex : null, r.linha) : d;
+  return aplicarMeta(d, m, m.tipo === "config" && chaves ? soCampos(r.valor, chaves) : r.valor);
+}
+
+/**
+ * A chave do alternado do dia grava em até 2 ações, só o que o envio mudou: o alternado (ligado e o início — setDiaConfig; desligar
+ * apaga os extras no banco) e, com o alternado ligado, os extras (setExtras). O "Tentar de novo" leva todos os campos: as 2.
+ */
+async function enviarAlternado(treinoUserId: string, dia: string, v: Valor, campos: ReadonlySet<string>): Promise<{ ok: true }> {
+  const ligado = v.alternado === true;
+  if (campos.has("alternado") || campos.has("inicio")) await salvarAlternado(treinoUserId, dia, ligado, (v.inicio as string | null) ?? "");
+  if (campos.has("extras") && ligado) await salvarExtras(treinoUserId, dia, extrasParaGravar(extrasDoValor(v)));
+  return { ok: true };
+}
+
+/** O que o servidor devolveu + as linhas deste aluno com gravação pendente por cima (uma releitura no meio não apaga o que grava). */
+function comPendentes(d: DadosEditor, treinoUserId: string, pendentes: ReadonlyArray<readonly [string, Valor]>): DadosEditor {
+  let saida = d;
+  for (const [chave, desejado] of pendentes) {
+    const m = chave.startsWith(`${treinoUserId}|`) ? metas.get(chave) : undefined;
+    if (m) saida = aplicarMeta(saida, m, desejado);
+  }
+  return saida;
+}
 
 /** Frases das recusas das funções do Treino (o resto vira "Não deu para salvar"). */
 export function mensagemDoErro(e: unknown): string {
@@ -84,8 +204,14 @@ export function useDadosEditor(treinoUserId: string | null, leituraAluno?: strin
     retry: (n, e) => !(e instanceof ErroTreinoPainel && ["forbidden", "invalid_token"].includes(e.codigo)) && n < 1,
     networkMode: "online",
   });
-  const treinos = useMemo(() => montarTreinos(q.data), [q.data]);
-  return { ...q, treinos };
+  // hml-24: as linhas com gravação pendente na fila aparecem com o valor que a pessoa quer (o servidor ainda não tem)
+  const pendentes = useSyncExternalStore(filaDoEditor.assinar, filaDoEditor.pendentes, filaDoEditor.pendentes);
+  const data = useMemo(
+    () => (q.data && treinoUserId && !leituraAluno && pendentes.length ? comPendentes(q.data, treinoUserId, pendentes) : q.data),
+    [q.data, treinoUserId, leituraAluno, pendentes],
+  );
+  const treinos = useMemo(() => montarTreinos(data), [data]);
+  return { ...q, data, treinos };
 }
 
 /** A semana de hoje (Seg–Dom): trocas do dia e treinos feitos — o "N de M na semana". */
@@ -149,7 +275,9 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
       if (!treinoUserId) return null;
       await qc.cancelQueries({ queryKey: chave });
       const antes = qc.getQueryData<DadosEditor>(chave);
-      if (opts.otimista && antes) qc.setQueryData<DadosEditor>(chave, opts.otimista(antes));
+      // revisão hml-24 (⚪3): sem otimista, o retrato volta igual — o cancelamento de uma leitura cujo "voltar" um setQueryData no meio
+      // apagou (o aoOk da fila) deixaria a consulta em erro, e a tela em "Não deu para abrir o treino" até a releitura do fim
+      if (antes) qc.setQueryData<DadosEditor>(chave, opts.otimista ? opts.otimista(antes) : antes);
       setOcupado(rotulo);
       try {
         const r = await fn();
@@ -175,55 +303,122 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
     [qc, chave, treinoUserId, recarregar, onMudou],
   );
 
-  const prescrever = useCallback(
-    (t: TreinoEditor, ex: ExercicioEditor, p: PrescricaoEditavel) =>
-      rodar(`presc:${t.chave}:${ex.chave}`, () => salvarPrescricao(treinoUserId!, alvoDoTreino(t), ex, p), {
-        depois: p.series !== ex.series ? "volume" : "nada",
-        otimista: (d) => {
-          const alvo = alvoDoTreino(t);
-          const mesma = (r: DadosEditor["seriesPadrao"][number]) =>
-            (r.grupo_id ?? null) === (alvo.grupo_id ?? null) && (r.grupo_usuario_id ?? null) === (alvo.grupo_usuario_id ?? null)
-            && (r.exercicio_id ?? null) === ex.exercicio_id && (r.exercicio_usuario_id ?? null) === ex.exercicio_usuario_id;
-          const linha = {
-            grupo_id: alvo.grupo_id ?? null, grupo_usuario_id: alvo.grupo_usuario_id ?? null, exercicio_id: ex.exercicio_id,
-            exercicio_usuario_id: ex.exercicio_usuario_id, num_series: p.series, reps_alvo: p.reps, descanso_segundos: p.descanso,
-            carga_sugerida_kg: p.carga, observacao: d.seriesPadrao.find(mesma)?.observacao ?? null,
-          };
-          return { ...d, seriesPadrao: [...d.seriesPadrao.filter((r) => !mesma(r)), linha] };
+  /**
+   * hml-24 (H-127): a prescrição e a observação vão pela FILA POR LINHA (filaDaLinha.ts) — 1 pedido por vez por linha, juntando os
+   * campos que chegarem enquanto ele voa; a tela troca na hora (o otimista de hoje). Ok → o onMudou e o volume quando as séries
+   * mudaram. Erro → só aquela linha volta ao salvo, o aviso com "Tentar de novo" e a releitura (as outras linhas pendentes ficam por
+   * cima). A promessa resolve com o envio que levou a mudança (a folha espera e fecha no ok) ou null.
+   */
+  const gravarNaFila = useCallback(
+    (
+      chaveFila: string,
+      meta: Meta,
+      base: Valor,
+      novo: Valor,
+      enviar: (v: Valor, campos: ReadonlySet<string>) => Promise<unknown>,
+      ok?: string,
+    ): Promise<unknown | null> => {
+      if (!treinoUserId) return Promise.resolve(null);
+      metas.set(chaveFila, meta);
+      const guardar = () => {
+        const r = retrato(qc.getQueryData<DadosEditor>(chave), meta);
+        if (r) salvas.set(chaveFila, r);
+        else salvas.delete(chaveFila);
+      };
+      // o retrato do servidor antes do 1º pendente (o "voltar ao salvo"); com algo pendente, ele já está guardado
+      if (!filaDoEditor.pendente(chaveFila)) guardar();
+      void qc.cancelQueries({ queryKey: chave });
+      const tentarDeNovo = () => {
+        if (!filaDoEditor.temErro(chaveFila)) return;
+        guardar();
+        void filaDoEditor.tentarDeNovo(chaveFila);
+        const v = filaDoEditor.pendente(chaveFila);
+        if (v) qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, v) : d));
+      };
+      const promessa = filaDoEditor.mudar(chaveFila, base, novo, {
+        enviar,
+        aoOk: (_r, envio) => {
+          // o servidor tem o valor: o cache também e este vira o retrato salvo
+          qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, envio.valor) : d));
+          guardar();
+          // revisão hml-24 (🟡1): uma releitura que começou ANTES desta confirmação traria o valor velho e apagaria o confirmado (a linha
+          // já saiu da fila: a sobreposição não a cobre; a próxima mudança da linha regravaria os outros campos com o velho). Ela é
+          // cancelada em silêncio (o cancelRefetch do invalidate) e a leitura sai de novo, depois da gravação — ativa ou não
+          if (qc.isFetching({ queryKey: chave }) > 0) void qc.invalidateQueries({ queryKey: chave, refetchType: "all" });
+          if (ok) toast.success(ok);
+          onMudou?.();
+          if (meta.tipo === "dia" || meta.tipo === "alternado") {
+            // a semana muda o "N de M" e o volume (o depois "semana" de antes)
+            void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
+            void qc.invalidateQueries({ queryKey: ["treino-semana-atual", treinoUserId] });
+          } else if (envio.campos.has("series") || envio.campos.has("series_padrao_qtd")) {
+            // as séries do exercício (prescrição) ou o nº padrão do aluno (config): o volume muda
+            void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
+          }
         },
-      }),
-    [rodar, treinoUserId],
+        aoErro: (e, desejado) => {
+          // só esta chave volta ao que o servidor tinha; as outras pendentes seguem por cima da releitura
+          const salva = salvas.get(chaveFila) ?? (meta.tipo === "prescricao" || meta.tipo === "observacao" ? { linha: null } : null);
+          if (salva) qc.setQueryData<DadosEditor>(chave, (d) => (d ? voltar(d, meta, salva, Object.keys(desejado)) : d));
+          salvas.delete(chaveFila);
+          toast.error(mensagemDoErro(e), { id: `fila:${chaveFila}`, action: { label: "Tentar de novo", onClick: tentarDeNovo } });
+          void recarregar();
+        },
+        aoDescartar: () => salvas.delete(chaveFila),
+      });
+      const v = filaDoEditor.pendente(chaveFila);
+      if (v) qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, v) : d));
+      return promessa;
+    },
+    [qc, chave, treinoUserId, recarregar, onMudou],
+  );
+
+  const prescrever = useCallback(
+    (t: TreinoEditor, ex: ExercicioEditor, p: PrescricaoEditavel) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const alvo = alvoDoTreino(t);
+      const ids = { exercicio_id: ex.exercicio_id, exercicio_usuario_id: ex.exercicio_usuario_id };
+      const base = { series: ex.series, reps: ex.reps, descanso: ex.descanso, carga: ex.carga };
+      return gravarNaFila(chaveDaPrescricao(treinoUserId, t, ex), { tipo: "prescricao", alvo, ex: ids }, base, { ...p },
+        (v) => salvarPrescricao(treinoUserId, alvo, ids, v as unknown as PrescricaoEditavel));
+    },
+    [gravarNaFila, treinoUserId],
   );
 
   const observar = useCallback(
     (t: TreinoEditor, texto: string) => {
+      if (!treinoUserId) return Promise.resolve(null);
       const obs = texto.trim() ? texto.trim() : null;
-      return rodar(`obs:${t.chave}`, () => salvarObservacao(treinoUserId!, alvoDoTreino(t), obs), {
-        ok: "Observação salva.",
-        depois: "nada",
-        otimista: (d) => {
-          const alvo = alvoDoTreino(t);
-          const geral = (r: DadosEditor["seriesPadrao"][number]) =>
-            (r.grupo_id ?? null) === (alvo.grupo_id ?? null) && (r.grupo_usuario_id ?? null) === (alvo.grupo_usuario_id ?? null) && !r.exercicio_id && !r.exercicio_usuario_id;
-          const atual = d.seriesPadrao.find(geral);
-          if (atual) return { ...d, seriesPadrao: d.seriesPadrao.map((r) => (geral(r) ? { ...r, observacao: obs } : r)) };
-          if (!obs) return d;
-          const n = Number(d.config?.series_padrao_qtd) || 3;
-          return { ...d, seriesPadrao: [...d.seriesPadrao, { grupo_id: alvo.grupo_id ?? null, grupo_usuario_id: alvo.grupo_usuario_id ?? null, exercicio_id: null, exercicio_usuario_id: null, num_series: n, observacao: obs }] };
-        },
-      });
+      const alvo = alvoDoTreino(t);
+      return gravarNaFila(chaveDaObservacao(treinoUserId, t), { tipo: "observacao", alvo }, { observacao: t.observacao ?? null }, { observacao: obs },
+        (v) => salvarObservacao(treinoUserId, alvo, (v.observacao as string | null) ?? null), "Observação salva.");
     },
-    [rodar, treinoUserId],
+    [gravarNaFila, treinoUserId],
   );
 
+  /**
+   * Ampliação 2 da hml-24 (🟡A): a config do aluno pela fila, na chave "<aluno>|config", campo a campo — o modo das séries, a data da
+   * troca e o descanso padrão (cada campo é o valor inteiro dele: 2 toques seguidos não chegam mais fora de ordem). O envio leva só os
+   * campos que mudaram (todos os tocados, no "Tentar de novo"); a base é o que a tela mostra de cada campo (o desejado pendente ou o cache).
+   */
   const configurar = useCallback(
-    (campos: Partial<ConfigTreinoAluno>, ok?: string) =>
-      rodar(`cfg:${Object.keys(campos).join(",")}`, () => salvarConfig(treinoUserId!, campos as never), {
-        ok,
-        depois: "series_padrao_qtd" in campos ? "volume" : "nada",
-        otimista: (d) => ({ ...d, config: { ...(d.config ?? ({} as ConfigTreinoAluno)), ...campos } }),
-      }),
-    [rodar, treinoUserId],
+    (campos: Partial<ConfigTreinoAluno>, ok?: string) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const k = chaveDaConfig(treinoUserId);
+      const pendente = filaDoEditor.pendente(k);
+      const atual = (qc.getQueryData<DadosEditor>(chave)?.config ?? null) as unknown as Record<string, unknown> | null;
+      const novo: Valor = {};
+      const base: Valor = {};
+      for (const [c, v] of Object.entries(campos)) {
+        novo[c] = v ?? null;
+        base[c] = pendente && c in pendente ? pendente[c] : (atual?.[c] ?? null);
+      }
+      return gravarNaFila(k, { tipo: "config" }, base, novo, (v, mudados) => {
+        const chaves = mudados.size ? [...mudados] : Object.keys(v);
+        return salvarConfig(treinoUserId, soCampos(v, chaves) as never);
+      }, ok);
+    },
+    [gravarNaFila, qc, chave, treinoUserId],
   );
 
   const avisoCopia = (r: { personalizado?: boolean } | null, nome: string) => {
@@ -241,6 +436,8 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
       return r;
     },
     remover: async (t: TreinoEditor, ex: ExercicioEditor) => {
+      // hml-24: o exercício que sai leva a fila dele (o que ainda ia gravar nele não vai mais)
+      if (treinoUserId) filaDoEditor.descartar(chaveDaPrescricao(treinoUserId, t, ex));
       const r = await rodar(`rem:${t.chave}:${ex.chave}`, () => removerExercicio(treinoUserId!, t.id, ex.exercicio_id!), { ok: "Exercício tirado do treino." });
       avisoCopia(r, t.nome);
       return r;
@@ -259,56 +456,34 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
     criarTreino: (nome: string) => rodar("novo", () => novoTreino(treinoUserId!, nome), { ok: "Treino criado." }),
     usarModelo: (grupoId: string) => rodar(`usar:${grupoId}`, () => usarTreino(treinoUserId!, grupoId), { ok: "Treino dado ao aluno." }),
     tirar: (t: TreinoEditor) => rodar(`tirar:${t.chave}`, () => tirarTreino(treinoUserId!, t.id), { ok: `"${t.nome}" saiu do aluno.` }),
-    salvarDia: (dia: string, chaves: string[]) =>
-      rodar(`dia:${dia}`, () => salvarDia(treinoUserId!, dia, chaves.map(idsDaChave)), {
-        depois: "semana",
-        otimista: (d) => ({
-          ...d,
-          semana: [
-            ...d.semana.filter((r) => r.dia_semana !== dia || r.extra),
-            ...chaves.map((k, i) => ({ dia_semana: dia, slot_idx: i, grupo_id: idsDaChave(k).grupo_id ?? null, grupo_usuario_id: idsDaChave(k).grupo_usuario_id ?? null, extra: false })),
-          ],
-        }),
-      }),
-    salvarAlternado: (dia: string, ligar: boolean, inicio: string) =>
-      rodar(`alt:${dia}`, () => salvarAlternado(treinoUserId!, dia, ligar, inicio), {
-        depois: "semana",
-        otimista: (d) => ({
-          ...d,
-          diasConfig: [...d.diasConfig.filter((c) => c.dia_semana !== dia), { dia_semana: dia, alternado: ligar, alternado_inicio: ligar ? inicio : null }],
-          semana: ligar ? d.semana : d.semana.filter((r) => r.dia_semana !== dia || !r.extra),
-        }),
-      }),
-    salvarExtras: (dia: string, extras: { chave: string; atrelado: string | null }[]) =>
-      rodar(
-        `ext:${dia}`,
-        () =>
-          salvarExtras(
-            treinoUserId!,
-            dia,
-            extras.map((e) => {
-              const at = e.atrelado ? idsDaChave(e.atrelado) : {};
-              return { ...idsDaChave(e.chave), ...(at.grupo_id ? { atrelado_grupo_id: at.grupo_id } : {}), ...(at.grupo_usuario_id ? { atrelado_grupo_usuario_id: at.grupo_usuario_id } : {}) };
-            }),
-          ),
-        {
-          depois: "semana",
-          otimista: (d) => ({
-            ...d,
-            semana: [
-              ...d.semana.filter((r) => r.dia_semana !== dia || !r.extra),
-              ...extras.map((e, i) => {
-                const k = idsDaChave(e.chave);
-                const at = e.atrelado ? idsDaChave(e.atrelado) : {};
-                return {
-                  dia_semana: dia, slot_idx: 100 + i, extra: true, grupo_id: k.grupo_id ?? null, grupo_usuario_id: k.grupo_usuario_id ?? null,
-                  extra_atrelado_grupo_id: at.grupo_id ?? null, extra_atrelado_grupo_usuario_id: at.grupo_usuario_id ?? null,
-                };
-              }),
-            ],
-          }),
-        },
-      ),
+    // a semana (ampliação da hml-24): cada ação manda o estado INTEIRO de uma chave do dia → pela fila (1 no ar por chave; o desejado
+    // mais novo; o "Tentar de novo"). A base é o que a tela mostra da chave (o desejado pendente ou o cache)
+    salvarDia: (dia: string, chaves: string[]) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const k = chaveDoDia(treinoUserId, dia);
+      const meta = { tipo: "dia" as const, dia };
+      const d = qc.getQueryData<DadosEditor>(chave);
+      const base = filaDoEditor.pendente(k) ?? (d ? valorDaSemana(d, meta) : valorDoDia([]));
+      return gravarNaFila(k, meta, base, valorDoDia(chaves), (v) => salvarDia(treinoUserId, dia, chavesDoValor(v).map(idsDaChave)));
+    },
+    salvarAlternado: (dia: string, ligar: boolean, inicio: string) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const k = chaveDoAlternado(treinoUserId, dia);
+      const meta = { tipo: "alternado" as const, dia };
+      const d = qc.getQueryData<DadosEditor>(chave);
+      const base = filaDoEditor.pendente(k) ?? (d ? valorDaSemana(d, meta) : valorDoAlternado({ alternado: false, inicio: null, extras: [] }));
+      // desligar o alternado apaga os extras do dia (o setDiaConfig faz) — o desejado já vai sem eles
+      const novo = { ...base, alternado: ligar, inicio: ligar ? inicio : null, ...(ligar ? {} : { extras: "[]" }) };
+      return gravarNaFila(k, meta, base, novo, (v, campos) => enviarAlternado(treinoUserId, dia, v, campos));
+    },
+    salvarExtras: (dia: string, extras: ExtraDoDia[]) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const k = chaveDoAlternado(treinoUserId, dia);
+      const meta = { tipo: "alternado" as const, dia };
+      const d = qc.getQueryData<DadosEditor>(chave);
+      const base = filaDoEditor.pendente(k) ?? (d ? valorDaSemana(d, meta) : valorDoAlternado({ alternado: true, inicio: null, extras: [] }));
+      return gravarNaFila(k, meta, base, { ...base, extras: JSON.stringify(extras) }, (v, campos) => enviarAlternado(treinoUserId, dia, v, campos));
+    },
     aplicarPadrao: (n: number) =>
       rodar("padrao", () => aplicarPadraoATodos(treinoUserId!, n), { ok: `${n} ${n === 1 ? "série" : "séries"} em todos os exercícios (a prescrição fica).` }),
   };
