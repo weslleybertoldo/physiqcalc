@@ -338,8 +338,10 @@ def seco() -> int:
             and "data-dados-editar" in fontes["src/painel/aluno/resumo/CardDadosAluno.tsx"]
             and bool(do_app and padrao.search(do_app.group(1))),
             "seco: os seletores do teste existem nas telas e a rota pega a URL da troca que o app chama")
-    p.check("mesclarForm(x, inicial, tocados.current)" in folha and "mudancas(f, base)" in folha and "precisaConferir(campo, valor, base[campo])" in folha,
-            "seco: a folha mescla o inicial novo com ela aberta e o Salvar/o repetido comparam com a base (H-137, SheetEditarDados.tsx)")
+    salvar_so_tocados = all(x in folha for x in ("const g = mesclarForm(f, base, tocados.current)", "mudancas(g, base)", "cadastroParaTreino(g, hojeSP())"))
+    p.check("mesclarForm(x, inicial, tocados.current)" in folha and salvar_so_tocados and "precisaConferir(campo, valor, base[campo])" in folha,
+            "seco: a folha mescla o inicial novo com ela aberta, o Salvar manda só os campos tocados (o resto vai com a base) e o repetido compara com a base "
+            "(H-137, SheetEditarDados.tsx)")
     try:
         socket.create_connection(("127.0.0.1", 9), timeout=1)
         bloqueado = False

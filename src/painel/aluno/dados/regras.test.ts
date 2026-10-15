@@ -73,7 +73,7 @@ describe("W14 — Editar dados (C33)", () => {
     const digitado = { ...antes, nome: "Rafael Moura Silva" };
     expect(mesclarForm(digitado, novo, new Set(["nome"]))).toEqual({ ...novo, nome: "Rafael Moura Silva" });
     expect(mesclarForm(digitado, novo, new Set(["nome"]))).toMatchObject({ apelido: "Rafinha", altura: "178", peso: "84,2" });
-    // tocado = passou pelo `muda`, mesmo que tenha voltado ao valor de antes
+    // o mesclarForm mantém todo campo do conjunto, mesmo o que voltou ao valor de antes (quem tira do conjunto é o `muda` da folha)
     expect(mesclarForm(antes, { ...novo, nome: "Outro Nome" }, new Set(["nome"])).nome).toBe("Rafael Moura");
     expect(mesclarForm(digitado, novo, new Set())).toEqual(novo);
     expect(digitado.nome).toBe("Rafael Moura Silva");

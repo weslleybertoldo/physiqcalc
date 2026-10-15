@@ -22,7 +22,7 @@ const MENSAGEM_SEM_TREINO = "O cadastro foi salvo, mas a altura e o peso não ch
  * tem treino tem a altura e o peso da antropometria (aba Avaliação). A folha abre pelo card "Dados do aluno" e pelo ⋯ do cabeçalho.
  * hml-25 (H-137): o formulário, a base, o erro e os avisos de repetido voltam ao cadastro SÓ quando a folha abre. Com ela aberta, o
  * `inicial` novo (a troca do Treino que terminou, a rebusca do perfil) vira a base e só chega aos campos que a pessoa não tocou — o
- * que ela digitou fica e o Salvar compara com a base.
+ * que ela digitou fica, e o Salvar manda só os campos tocados que diferem da base.
  */
 export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: {
   aberto: boolean;
@@ -44,9 +44,12 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
   // W16b: e-mail/CPF de outro aluno (em qualquer conta) → mensagem vermelha embaixo do campo
   const [repetidos, setRepetidos] = useState<CampoRepetido[]>([]);
   const atual = useRef(inicial);
-  // hml-25: os campos que a pessoa mudou desde que a folha abriu e que ainda diferem da base — o `muda` marca e desmarca, com a
-  // comparação exata (o espaço no fim do nome segue tocado); mexeu e devolveu ao valor da base = não tocado, e a mescla traz o novo
+  // hml-25: os campos que a pessoa mudou desde que a folha abriu e que ainda diferem da base e do valor de onde ela partiu — o `muda`
+  // marca e desmarca, com a comparação exata (o espaço no fim do nome segue tocado). Devolveu ao valor da base ou ao de onde partiu =
+  // não tocado: a mescla traz o novo e o Salvar não mexe no campo
   const tocados = useRef(new Set<keyof FormDadosAluno>());
+  // hml-25: o valor de onde a pessoa partiu em cada campo (o do 1º `muda` dele desde a abertura)
+  const origem = useRef<Partial<FormDadosAluno>>({});
   const estavaAberta = useRef(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -59,6 +62,7 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
       // abriu: tudo volta ao cadastro
       estavaAberta.current = true;
       tocados.current = new Set();
+      origem.current = {};
       setF(inicial);
       atual.current = inicial;
       setBase(inicial);
@@ -76,8 +80,10 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
   }, [aberto, inicial]);
 
   const muda = <K extends keyof FormDadosAluno>(k: K, v: FormDadosAluno[K]) => {
-    // o tocado só vale enquanto o valor difere da base (exato, sem trim: a mescla não troca o texto no meio da digitação)
-    if (v === base[k]) tocados.current.delete(k);
+    origem.current[k] ??= f[k];
+    // o tocado só vale enquanto o valor difere da base e do valor de onde a pessoa partiu (exato, sem trim: a mescla não troca o texto
+    // no meio da digitação)
+    if (v === base[k] || v === origem.current[k]) tocados.current.delete(k);
     else tocados.current.add(k);
     setF((x) => {
       const novo = { ...x, [k]: v };
@@ -102,7 +108,9 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
     const msg = validarForm(f);
     if (msg) return setErro(msg);
     if (repetidos.length) return;
-    const { principal: p, treino: t } = mudancas(f, base);
+    // o campo não tocado nunca muda no servidor: o Salvar usa a base nele (a tela fica com o que a pessoa deixou)
+    const g = mesclarForm(f, base, tocados.current);
+    const { principal: p, treino: t } = mudancas(g, base);
     const cadastroMudou = ["nome", "genero", "nascimento"].some((k) => k in p);
     if (!Object.keys(p).length && !Object.keys(t).length) {
       aoFechar();
@@ -115,7 +123,7 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
       // Banco do Treino: altura/peso e o cadastro já (o espelho também leva, mas só para quem já entrou no Physiq)
       if (comTreino && (cadastroMudou || Object.keys(t).length)) {
         try {
-          await salvarNoTreino(perfil.treino_user_id!, cadastroParaTreino(f, hojeSP()));
+          await salvarNoTreino(perfil.treino_user_id!, cadastroParaTreino(g, hojeSP()));
         } catch {
           toast.error(MENSAGEM_SEM_TREINO);
         }

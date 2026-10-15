@@ -235,7 +235,8 @@ export function mudancas(f: FormDadosAluno, inicial: FormDadosAluno): { principa
 /**
  * hml-25 (H-137): o `inicial` novo que chega com a folha "Editar dados" aberta (a troca do Treino que terminou, a rebusca do perfil):
  * o campo tocado fica com o que a pessoa digitou; o resto recebe o valor novo (a altura e o peso que aparecem com o Treino, também).
- * Quem marca o tocado é a folha: o campo que a pessoa mudou e que ainda difere da base (mexeu e devolveu ao valor da base = não tocado).
+ * No Salvar, com a base: o campo não tocado vai com o valor da base (nunca muda no servidor). Quem marca o tocado é a folha: o campo
+ * que a pessoa mudou e que ainda difere da base e do valor de onde ela partiu (devolveu a um dos dois = não tocado).
  */
 export function mesclarForm(f: FormDadosAluno, novo: FormDadosAluno, tocados: ReadonlySet<keyof FormDadosAluno>): FormDadosAluno {
   const r = { ...novo };

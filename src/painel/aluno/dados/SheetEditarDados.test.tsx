@@ -8,7 +8,8 @@ import type { PerfilAluno, PerfilTreinoAluno } from "./tipos";
 // hml-25 (H-137): a folha "Editar dados" repunha o formulário (e limpava os avisos de e-mail/CPF repetidos) a cada `inicial` novo —
 // a troca do Treino que terminava com a folha aberta, a rebusca do perfil — e o Salvar, sem diferença, fechava sem gravar. Agora repõe
 // tudo só quando a folha ABRE; com ela aberta, o `inicial` novo mescla (o campo tocado fica, o não tocado recebe o valor novo).
-// O tocado só vale enquanto o valor difere da base: o campo mexido e devolvido ao valor da base recebe o novo (revisão da hml-25).
+// O tocado só vale enquanto o valor difere da base e do valor de onde a pessoa partiu; o Salvar manda só os campos tocados (revisão
+// da hml-25).
 
 const h = vi.hoisted(() => ({
   estado: "trocando",
@@ -213,15 +214,63 @@ describe("Editar dados › o dado que chega com a folha aberta (hml-25, H-137)",
     expect(h.sucesso).toHaveBeenCalledWith("Dados salvos.");
   });
 
-  it("(i) abrir a folha zera os tocados: o nome mexido antes de fechar recebe o cadastro novo que chega com ela aberta de novo", () => {
+  it("(i) abrir a folha zera os tocados e o valor de onde a pessoa partiu: o nome mexido antes de fechar recebe o cadastro novo", async () => {
     h.estado = "desnecessario";
-    const r = montar(folha({ perfil: perfil(), treino: null }));
+    const aoFechar = vi.fn();
+    const r = montar(folha({ perfil: perfil(), treino: null, aoFechar }));
     digitar("nome", "Rafael Moura Silva");
-    r.rerender(folha({ perfil: perfil(), treino: null, aberto: false }));
-    r.rerender(folha({ perfil: perfil(), treino: null, aberto: true }));
+    r.rerender(folha({ perfil: perfil(), treino: null, aberto: false, aoFechar }));
+    r.rerender(folha({ perfil: perfil(), treino: null, aberto: true, aoFechar }));
     expect(campo("nome")).toHaveValue("Rafael Moura");
     // o nome gravado em outro lugar chega com a folha aberta de novo
-    r.rerender(folha({ perfil: perfil({ nome: "Rafael Souza", agora: "2026-09-30T19:47:00Z" }), treino: null }));
+    r.rerender(folha({ perfil: perfil({ nome: "Rafael Souza", agora: "2026-09-30T19:47:00Z" }), treino: null, aoFechar }));
     expect(campo("nome")).toHaveValue("Rafael Souza");
+    // ela troca para o nome de antes de fechar: parte do que está na tela agora, então o Salvar manda
+    digitar("nome", "Rafael Moura");
+    h.dados.mockResolvedValue(perfil());
+    salvar();
+    await waitFor(() => expect(aoFechar).toHaveBeenCalledTimes(1));
+    expect(h.dados).toHaveBeenCalledWith("p1", { nome: "Rafael Moura" });
+  });
+
+  it("(j) a data digitada → a troca do Treino chega → a pessoa apaga a data: o Salvar manda SÓ o nome e o Treino fica com a data de lá", async () => {
+    const aoFechar = vi.fn();
+    const p = perfil({ treino_user_id: "t1", nascimento: null });
+    const r = montar(folha({ perfil: p, treino: null, aoFechar }));
+    digitar("nascimento", "1999-01-01");
+    h.estado = "pronto";
+    r.rerender(folha({ perfil: p, treino: TREINO, aoFechar }));
+    await waitFor(() => expect(campo("altura")).toHaveValue("178"));
+    expect(campo("nascimento")).toHaveValue("1999-01-01");
+    // ela volta ao valor de onde partiu (vazio): a tela fica com o que ela deixou e o Salvar não mexe no nascimento
+    digitar("nascimento", "");
+    expect(campo("nascimento")).toHaveValue("");
+    digitar("nome", "Rafael Moura Silva");
+    h.dados.mockResolvedValue(perfil({ treino_user_id: "t1", nascimento: null, nome: "Rafael Moura Silva" }));
+    h.noTreino.mockResolvedValue(undefined);
+    salvar();
+    await waitFor(() => expect(aoFechar).toHaveBeenCalledTimes(1));
+    expect(h.dados).toHaveBeenCalledTimes(1);
+    expect(h.dados).toHaveBeenCalledWith("p1", { nome: "Rafael Moura Silva" });
+    expect(h.noTreino).toHaveBeenCalledTimes(1);
+    expect(h.noTreino).toHaveBeenCalledWith("t1", expect.objectContaining({ nome: "Rafael Moura Silva", data_nascimento: "1998-03-10" }));
+  });
+
+  it("(k) o apelido mexido → a rebusca traz outro → a pessoa devolve o da abertura: o Salvar manda SÓ o nome (não desfaz o de outro lugar)", async () => {
+    h.estado = "desnecessario";
+    const aoFechar = vi.fn();
+    const r = montar(folha({ perfil: perfil(), treino: null, aoFechar }));
+    digitar("nome", "Rafael Moura Silva");
+    digitar("apelido", "Rafa M");
+    // o apelido gravado em outro lugar chega com a folha aberta; o digitado fica
+    r.rerender(folha({ perfil: perfil({ apelido: "Rafinha", agora: "2026-09-30T19:47:00Z" }), treino: null, aoFechar }));
+    expect(campo("apelido")).toHaveValue("Rafa M");
+    digitar("apelido", "Rafa");
+    expect(campo("apelido")).toHaveValue("Rafa");
+    h.dados.mockResolvedValue(perfil({ nome: "Rafael Moura Silva", apelido: "Rafinha" }));
+    salvar();
+    await waitFor(() => expect(aoFechar).toHaveBeenCalledTimes(1));
+    expect(h.dados).toHaveBeenCalledTimes(1);
+    expect(h.dados).toHaveBeenCalledWith("p1", { nome: "Rafael Moura Silva" });
   });
 });
