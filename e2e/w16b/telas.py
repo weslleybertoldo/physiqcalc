@@ -3,17 +3,24 @@
 
   novo_email      Painel › Alunos › Novo aluno › Cadastrar (Lucas, dono): o e-mail de OUTRO aluno (o w16b-app, aluno do app em
                   outra conta) → mensagem vermelha embaixo do campo ao sair dele; "Cadastrar" não grava; e-mail único → some
-  dados           Perfil do aluno › Editar dados (Rafael Moura): CPF e e-mail de outras pessoas → as 2 mensagens embaixo dos campos;
-                  "Salvar" não grava; voltar ao que era → somem
+  dados           Perfil do aluno › Editar dados (Rafael Moura): hml-25 (H-137) primeiro "a troca do Treino atrasada com a folha
+                  aberta" — a trocar-token fica segurada (page.route) até a pessoa digitar o objetivo; solta, a altura/peso do Treino
+                  aparecem na folha, o digitado FICA e o "Salvar" grava (o banco confere; o objetivo volta ao que era no fim). Depois,
+                  CPF e e-mail de outras pessoas → as 2 mensagens embaixo dos campos; "Salvar" não grava; voltar ao que era → somem
   cadastro_link   /c/<código do Lucas> (público, celular): e-mail que já é de um aluno → enviado como os outros, sem frase
                   (hml-05b, H-18: o aviso vai para o profissional ao aprovar); o pendente criado é apagado no fim
-Prints: ~/projetos/physiqcalc-scratch/prints/w16b/<prefixo>_trava_email.png, _trava_cpf.png, _trava_cadastro_link.png
+Prints: ~/projetos/physiqcalc-scratch/prints/w16b/<prefixo>_trava_email.png, _troca_atrasada.png, _trava_cpf.png, _trava_cadastro_link.png
 Pré-requisito: e2e/w16b/causa.py (a conta w16b-app com a matrícula do app no staging) e a massa da W13 (e2e/w13/massa.py).
+--seco: sem navegador e sem rede (o socket fica bloqueado) — o "segura" da troca com páginas falsas, o SQL que devolve o objetivo (só
+o staging) e os seletores e a correção nas telas.
 Uso: python3 e2e/w16b/telas.py --base http://localhost:5173 --prefixo local [--casos novo_email,dados,cadastro_link]
+     python3 e2e/w16b/telas.py --seco
 """
 from __future__ import annotations
 
 import argparse
+import re
+import socket
 import sys
 import time
 from pathlib import Path
@@ -30,6 +37,59 @@ MSG_EMAIL, MSG_CPF = "Já existe um aluno com este e-mail.", "Já existe um alun
 DICA = "Para trazer essa pessoa, use o convite ou o seu código."
 CPF_OUTRO = "529.982.247-25"
 NOME_CPF = "W16b CPF de Outra Pessoa"
+REPO = Path(__file__).resolve().parents[2]
+# hml-25 (H-137): o que a pessoa digita com a troca do Treino no ar (o objetivo volta ao que era no fim do caso)
+OBJETIVO = "hipertrofia (troca atrasada hml-25)"
+TROCA_MAX_S = 38  # o app desiste da trocar-token aos 40 s (src/nucleo/trocaToken.ts, TEMPO_TROCA_MS)
+
+
+# ───────────────────────── hml-25 (H-137): peças puras (o --seco confere) ─────────────────────────
+class Segura:
+    """Segura os POST de uma função (page.route) até o soltar() — a troca do Treino que chega com a folha aberta. O preflight
+    (OPTIONS) passa; depois de solto, tudo passa direto e a rota sai da página."""
+
+    def __init__(self, pg, funcao: str) -> None:
+        self.pg = pg
+        self.padrao = re.compile(rf"/functions/v1/{re.escape(funcao)}(\?|$)")
+        self.presos: list = []
+        self.n = 0
+        self.desde: float | None = None
+        self.solto = False
+        self._f = self._pegar
+        pg.route(self.padrao, self._f)
+
+    def _pegar(self, route) -> None:
+        if self.solto or route.request.method != "POST":
+            route.continue_()
+            return
+        self.n += 1
+        self.desde = self.desde or time.time()
+        self.presos.append(route)
+
+    def soltar(self) -> float:
+        """Solta os pedidos segurados (idempotente). Devolve quantos segundos o 1º ficou segurado."""
+        espera = time.time() - self.desde if self.desde and not self.solto else 0.0
+        self.solto = True
+        for r in self.presos:
+            try:
+                r.continue_()
+            except Exception:  # noqa: BLE001 — o app já desistiu (40 s) ou a página fechou
+                pass
+        self.presos.clear()
+        try:
+            self.pg.unroute(self.padrao, self._f)
+        except Exception:  # noqa: BLE001
+            pass
+        return espera
+
+
+def sql_voltar_objetivo(pid: str, valor: str | None, schema: str = S) -> str:
+    """O objetivo do aluno de teste de volta ao que era antes do caso — SÓ no staging, só a linha dele (o id é um uuid)."""
+    assert schema == "staging", "o objetivo só volta no staging"
+    assert re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", pid), "id inválido"
+    assert valor is None or "$o$" not in valor, "valor inválido"
+    v = "null" if valor is None else f"$o${valor}$o$"
+    return f"update {schema}.pacientes set objetivo = {v} where id = '{pid}'"
 
 
 def q(sql: str) -> list:
@@ -44,8 +104,10 @@ def texto(c, sel: str) -> str:
         return ""
 
 
-def caso(nav, base: str, pref: str, nome: str, conta: str | None, rota: str, desktop: bool = True, esperar: str | None = None):
+def caso(nav, base: str, pref: str, nome: str, conta: str | None, rota: str, desktop: bool = True, esperar: str | None = None, antes=None):
     c = B.Caso(nav, base, pref, nome, desktop=desktop)
+    if antes:
+        antes(c)  # hml-25: o que precisa estar na página antes de entrar (o page.route da troca do Treino)
     if conta:
         c.entrar(conta, rota, zerar=True)
         c.fechar_avisos()
@@ -105,12 +167,32 @@ def novo_email(nav, base, pref):
 
 def dados(nav, base, pref):
     conta = B.conta_w13()
-    raf = q(f"select id::text, email, cpf from {S}.pacientes where conta_id = '{conta}' and nome = 'Rafael Moura' and deleted_at is null limit 1")[0]
+    raf = q(f"select id::text, email, cpf, objetivo from {S}.pacientes where conta_id = '{conta}' and nome = 'Rafael Moura' and deleted_at is null limit 1")[0]
     nutri2 = q("select id::text from auth.users where lower(email) = 'teste@physiqnutri.app'")[0]["id"]
     q(f"delete from {S}.pacientes where nome = $n${NOME_CPF}$n$")
     q(f"insert into {S}.pacientes (nutricionista_id, nome, cpf) values ('{nutri2}', $n${NOME_CPF}$n$, '{CPF_OUTRO}')")
-    c = caso(nav, base, pref, "dados", "w13-dono", f"/painel/alunos/{raf['id']}", esperar="[data-dados-editar]")
+    troca: list[Segura] = []
+    c = caso(nav, base, pref, "dados", "w13-dono", f"/painel/alunos/{raf['id']}", esperar="[data-dados-editar]",
+             antes=lambda x: troca.append(Segura(x.pg, "trocar-token")))
     try:
+        # hml-25 (H-137): a troca do Treino atrasada com a folha aberta — a trocar-token fica no ar até a pessoa digitar
+        t = troca[0]
+        c.pg.click("[data-dados-editar]")
+        ok = c.esperar(lambda: c.tem("[data-editar-dados]") and t.n >= 1, 15)
+        p.check(ok and t.n >= 1 and not c.tem("[data-editar-altura]"),
+                f"[dados] hml-25: a troca do Treino segurada ({t.n} pedido) e a folha aberta sem a altura/peso do Treino")
+        c.pg.fill("[data-editar-objetivo]", OBJETIVO)
+        espera = t.soltar()
+        ok = c.esperar(lambda: c.tem("[data-editar-altura]") and c.tem("[data-editar-peso]"), 45)
+        p.check(ok and espera < TROCA_MAX_S,
+                f"[dados] hml-25: a troca do Treino chegou com a folha aberta (segurada {espera:.1f} s) — a altura e o peso do Treino apareceram")
+        p.check(c.pg.input_value("[data-editar-objetivo]") == OBJETIVO, "[dados] hml-25 (H-137): o que a pessoa digitou FICA depois da troca do Treino")
+        foto(c, "troca_atrasada")
+        c.pg.click("[data-editar-salvar]")
+        ok = c.esperar(lambda: not c.tem("[data-editar-dados]"), 30)
+        gravado = q(f"select objetivo from {S}.pacientes where id = '{raf['id']}'")[0]["objetivo"]
+        p.check(ok and gravado == OBJETIVO, "[dados] hml-25 (H-137): o 'Salvar' gravou o que a pessoa digitou (a folha fechou e o banco confere)")
+        # a trava do e-mail/CPF repetido (W16b), com a troca do Treino já feita
         c.pg.click("[data-dados-editar]")
         ok = c.esperar(lambda: c.tem("[data-editar-dados]"), 15)
         p.check(ok, "[dados] a folha Editar dados abriu")
@@ -135,8 +217,11 @@ def dados(nav, base, pref):
         p.check(ok, "[dados] (positivo) voltar ao CPF/e-mail que ele já tinha → as mensagens somem")
         c.pg.keyboard.press("Escape")
     finally:
+        for t in troca:
+            t.soltar()
         c.fim()
         q(f"delete from {S}.pacientes where nome = $n${NOME_CPF}$n$")
+        q(sql_voltar_objetivo(raf["id"], raf["objetivo"]))
 
 
 def captcha(ligado: bool) -> None:
@@ -170,12 +255,89 @@ def cadastro_link(nav, base, pref):
 CASOS = {"novo_email": novo_email, "dados": dados, "cadastro_link": cadastro_link}
 
 
+class _RotaFalsa:
+    def __init__(self, url: str, metodo: str = "POST", falha: bool = False) -> None:
+        self.request = type("Pedido", (), {"url": url, "method": metodo})()
+        self.seguiu, self.falha = 0, falha
+
+    def continue_(self) -> None:
+        self.seguiu += 1
+        if self.falha:
+            raise RuntimeError("o app já desistiu")
+
+
+class _PaginaFalsa:
+    def __init__(self) -> None:
+        self.rotas: list = []
+
+    def route(self, padrao, f) -> None:
+        self.rotas.append((padrao, f))
+
+    def unroute(self, padrao, f) -> None:
+        self.rotas.remove((padrao, f))
+
+
+def seco() -> int:
+    """Sem navegador e sem rede (o socket fica bloqueado): o "segura" da troca, o SQL do objetivo e os seletores/a correção nas telas."""
+    def sem_rede(*_a, **_k):
+        raise RuntimeError("--seco não usa a rede")
+
+    socket.socket.connect = sem_rede  # type: ignore[method-assign]
+    url = "https://treino.exemplo.invalid/functions/v1/trocar-token"
+    pg = _PaginaFalsa()
+    s = Segura(pg, "trocar-token")
+    padrao, pegar = pg.rotas[0]
+    p.check(padrao.search(url) and padrao.search(url + "?x=1") and not padrao.search(url + "-x")
+            and not padrao.search("https://treino.exemplo.invalid/functions/v1/admin-get-user"),
+            "seco: a rota pega só a trocar-token (com ou sem ?; não a admin-get-user nem outro nome que comece igual)")
+    pre, um, dois = _RotaFalsa(url, "OPTIONS"), _RotaFalsa(url), _RotaFalsa(url, falha=True)
+    pegar(pre), pegar(um), pegar(dois)
+    segurou = pre.seguiu == 1 and um.seguiu == 0 and dois.seguiu == 0 and s.n == 2
+    espera = s.soltar()
+    depois = _RotaFalsa(url)
+    pegar(depois)
+    p.check(segurou and um.seguiu == 1 and dois.seguiu == 1 and depois.seguiu == 1 and not pg.rotas and espera >= 0 and s.soltar() == 0.0,
+            "seco: segura os POST (o preflight passa) até o soltar(); solta todos (o que o app já largou não derruba), sai da página e depois passa direto")
+    pid = "00000000-0000-4000-8000-0000000000aa"
+    recusas = 0
+    for args in ((pid, "x", "public"), ("1; drop table x", "x", S), (pid, "a$o$b", S)):
+        try:
+            sql_voltar_objetivo(*args)
+        except AssertionError:
+            recusas += 1
+    p.check(sql_voltar_objetivo(pid, "definição") == f"update staging.pacientes set objetivo = $o$definição$o$ where id = '{pid}'"
+            and sql_voltar_objetivo(pid, None).endswith(f"set objetivo = null where id = '{pid}'") and recusas == 3,
+            "seco: o objetivo volta só no staging e só na linha do aluno de teste (o public, o id que não é uuid e o valor com $o$ são recusados)")
+    fontes = {rel: (REPO / rel).read_text(encoding="utf-8") for rel in (
+        "src/painel/aluno/dados/SheetEditarDados.tsx", "src/painel/aluno/resumo/CardDadosAluno.tsx", "src/nucleo/trocaToken.ts")}
+    folha = fontes["src/painel/aluno/dados/SheetEditarDados.tsx"]
+    do_app = re.search(r"\$\{[^}]*\}(/functions/v1/trocar-token)`", fontes["src/nucleo/trocaToken.ts"])
+    p.check(all(f"data-editar-{x}" in folha for x in ("dados", "objetivo", "altura", "peso", "salvar", "cpf", "email"))
+            and "data-dados-editar" in fontes["src/painel/aluno/resumo/CardDadosAluno.tsx"]
+            and bool(do_app and padrao.search(do_app.group(1))),
+            "seco: os seletores do teste existem nas telas e a rota pega a URL da troca que o app chama")
+    p.check("mesclarForm(x, inicial, tocados.current)" in folha and "mudancas(f, base)" in folha and "precisaConferir(campo, valor, base[campo])" in folha,
+            "seco: a folha mescla o inicial novo com ela aberta e o Salvar/o repetido comparam com a base (H-137, SheetEditarDados.tsx)")
+    try:
+        socket.create_connection(("127.0.0.1", 9), timeout=1)
+        bloqueado = False
+    except RuntimeError:
+        bloqueado = True
+    except OSError:
+        bloqueado = False
+    p.check(bloqueado, "seco: a rede fica bloqueada (nada foi ao banco nem ao site)")
+    return p.fim()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:5173")
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: o segura da troca, o SQL do objetivo e os seletores")
     a = ap.parse_args()
+    if a.seco:
+        return seco()
     with sync_playwright() as pw:
         nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
         for nome in [x.strip() for x in a.casos.split(",") if x.strip()]:
