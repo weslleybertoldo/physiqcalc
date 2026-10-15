@@ -26,32 +26,105 @@ import {
   usarTreino,
 } from "./api";
 import { criarFila, vigiarSaida, type Valor } from "./filaDaLinha";
-import { comLinha, comObservacao, comPrescricao, idsDaChave, linhaDaChave, montarTreinos } from "./regras";
+import {
+  alternadoDoDia,
+  comAlternadoDoDia,
+  comDia,
+  comLinha,
+  comObservacao,
+  comPrescricao,
+  extrasParaGravar,
+  idsDaChave,
+  linhaDaChave,
+  montarTreinos,
+  treinosPorDia,
+  type ExtraDoDia,
+} from "./regras";
 import type { ConfigTreinoAluno, DadosEditor, ExercicioEditor, PrescricaoEditavel, TreinoEditor } from "./tipos";
 
 export const chaveEditor = (treinoUserId: string | null) => ["treino-editor", treinoUserId] as const;
 
-// ───────────────────────── hml-24 (H-127): a fila por linha da prescrição e da observação ─────────────────────────
-// FORA do React (o módulo): a gravação de uma linha termina mesmo saindo da tela, dentro do app; com algo pendente, o navegador
-// pergunta antes de fechar ou recarregar a aba. Chave = "<aluno do Treino>|<treino>|<exercício>" (a observação: "…|geral").
+// ───────────────────────── hml-24 (H-127): a fila por chave das gravações que mandam o estado INTEIRO ─────────────────────────
+// FORA do React (o módulo): a gravação de uma chave termina mesmo saindo da tela, dentro do app; com algo pendente, o navegador
+// pergunta antes de fechar ou recarregar a aba. As chaves:
+//   "<aluno>|<treino>|<exercício>"   a prescrição de um exercício      (setPrescricao)
+//   "<aluno>|<treino>|geral"         a observação do treino            (setObservacao)
+//   "<aluno>|semana:<DIA>|treinos"   a lista de treinos do dia         (setDia — apaga e grava a lista inteira)
+//   "<aluno>|semana:<DIA>|alternado" o alternado do dia e os extras    (setDiaConfig + setExtras: desligar o alternado apaga os extras,
+//                                                                       então os 2 andam na MESMA fila — nunca 2 no ar do mesmo dia)
+// As ações pontuais (adicionar/tirar exercício, usar modelo, criar e tirar treino, a config, o padrão N) seguem pelo rodar.
 
 type AlvoTreino = { grupo_id?: string; grupo_usuario_id?: string };
 type IdsExercicio = { exercicio_id: string | null; exercicio_usuario_id: string | null };
-/** O que a tela precisa para mostrar a linha pendente por cima do que o servidor devolveu (e refazer o "Tentar de novo"). */
-type Meta = { tipo: "prescricao"; alvo: AlvoTreino; ex: IdsExercicio } | { tipo: "observacao"; alvo: AlvoTreino };
+/** O que a tela precisa para mostrar a chave pendente por cima do que o servidor devolveu (e refazer o "Tentar de novo"). */
+type Meta =
+  | { tipo: "prescricao"; alvo: AlvoTreino; ex: IdsExercicio }
+  | { tipo: "observacao"; alvo: AlvoTreino }
+  | { tipo: "dia"; dia: string }
+  | { tipo: "alternado"; dia: string };
+/** O que estava salvo na chave (o "voltar ao salvo" do erro): a linha do aluno (prescrição e observação) ou o valor do dia (a semana). */
+type Retrato = { linha: DadosEditor["seriesPadrao"][number] | null } | { valor: Valor };
 
 export const filaDoEditor = criarFila<Valor, unknown>();
 const metas = new Map<string, Meta>();
-/** A linha do servidor (a última confirmada) de cada linha com algo pendente: o "voltar ao salvo" do erro. */
-const salvas = new Map<string, DadosEditor["seriesPadrao"][number] | null>();
+/** O retrato do servidor (o último confirmado) de cada chave com algo pendente: o "voltar ao salvo" do erro. */
+const salvas = new Map<string, Retrato>();
 if (typeof window !== "undefined") vigiarSaida(filaDoEditor, window);
 
 export const chaveDaPrescricao = (treinoUserId: string, t: Pick<TreinoEditor, "chave">, ex: Pick<ExercicioEditor, "chave">) =>
   `${treinoUserId}|${t.chave}|${ex.chave}`;
 export const chaveDaObservacao = (treinoUserId: string, t: Pick<TreinoEditor, "chave">) => `${treinoUserId}|${t.chave}|geral`;
+export const chaveDoDia = (treinoUserId: string, dia: string) => `${treinoUserId}|semana:${dia}|treinos`;
+export const chaveDoAlternado = (treinoUserId: string, dia: string) => `${treinoUserId}|semana:${dia}|alternado`;
 
-const aplicarMeta = (d: DadosEditor, m: Meta, v: Valor): DadosEditor =>
-  m.tipo === "prescricao" ? comPrescricao(d, m.alvo, m.ex, v as unknown as PrescricaoEditavel) : comObservacao(d, m.alvo, (v.observacao as string | null) ?? null);
+// na semana, as listas vão como TEXTO (JSON) no valor da fila: a fila compara campo a campo, e a mesma lista não conta como mudança
+const valorDoDia = (chaves: string[]): Valor => ({ chaves: JSON.stringify(chaves) });
+const valorDoAlternado = (a: { alternado: boolean; inicio: string | null; extras: ExtraDoDia[] }): Valor => ({
+  alternado: a.alternado,
+  inicio: a.inicio,
+  extras: JSON.stringify(a.extras),
+});
+const chavesDoValor = (v: Valor): string[] => JSON.parse(String(v.chaves ?? "[]")) as string[];
+const extrasDoValor = (v: Valor): ExtraDoDia[] => JSON.parse(String(v.extras ?? "[]")) as ExtraDoDia[];
+
+const aplicarMeta = (d: DadosEditor, m: Meta, v: Valor): DadosEditor => {
+  switch (m.tipo) {
+    case "prescricao":
+      return comPrescricao(d, m.alvo, m.ex, v as unknown as PrescricaoEditavel);
+    case "observacao":
+      return comObservacao(d, m.alvo, (v.observacao as string | null) ?? null);
+    case "dia":
+      return comDia(d, m.dia, chavesDoValor(v));
+    case "alternado":
+      return comAlternadoDoDia(d, m.dia, { alternado: v.alternado === true, inicio: (v.inicio as string | null) ?? null, extras: extrasDoValor(v) });
+  }
+};
+
+/** O valor da chave da semana no que a tela mostra (a lista do dia; o alternado e os extras do dia). */
+function valorDaSemana(d: DadosEditor, m: Extract<Meta, { tipo: "dia" | "alternado" }>): Valor {
+  return m.tipo === "dia" ? valorDoDia(treinosPorDia(d)[m.dia] ?? []) : valorDoAlternado(alternadoDoDia(d, m.dia));
+}
+
+function retrato(d: DadosEditor | undefined, m: Meta): Retrato | null {
+  if (m.tipo === "prescricao" || m.tipo === "observacao") return { linha: linhaDaChave(d, m.alvo, m.tipo === "prescricao" ? m.ex : null) };
+  return d ? { valor: valorDaSemana(d, m) } : null;
+}
+
+function voltar(d: DadosEditor, m: Meta, r: Retrato): DadosEditor {
+  if ("linha" in r) return m.tipo === "prescricao" || m.tipo === "observacao" ? comLinha(d, m.alvo, m.tipo === "prescricao" ? m.ex : null, r.linha) : d;
+  return aplicarMeta(d, m, r.valor);
+}
+
+/**
+ * A chave do alternado do dia grava em até 2 ações, só o que o envio mudou: o alternado (ligado e o início — setDiaConfig; desligar
+ * apaga os extras no banco) e, com o alternado ligado, os extras (setExtras). O "Tentar de novo" leva todos os campos: as 2.
+ */
+async function enviarAlternado(treinoUserId: string, dia: string, v: Valor, campos: ReadonlySet<string>): Promise<{ ok: true }> {
+  const ligado = v.alternado === true;
+  if (campos.has("alternado") || campos.has("inicio")) await salvarAlternado(treinoUserId, dia, ligado, (v.inicio as string | null) ?? "");
+  if (campos.has("extras") && ligado) await salvarExtras(treinoUserId, dia, extrasParaGravar(extrasDoValor(v)));
+  return { ok: true };
+}
 
 /** O que o servidor devolveu + as linhas deste aluno com gravação pendente por cima (uma releitura no meio não apaga o que grava). */
 function comPendentes(d: DadosEditor, treinoUserId: string, pendentes: ReadonlyArray<readonly [string, Valor]>): DadosEditor {
@@ -223,16 +296,27 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
    * cima). A promessa resolve com o envio que levou a mudança (a folha espera e fecha no ok) ou null.
    */
   const gravarNaFila = useCallback(
-    (chaveFila: string, meta: Meta, base: Valor, novo: Valor, enviar: (v: Valor) => Promise<unknown>, ok?: string): Promise<unknown | null> => {
+    (
+      chaveFila: string,
+      meta: Meta,
+      base: Valor,
+      novo: Valor,
+      enviar: (v: Valor, campos: ReadonlySet<string>) => Promise<unknown>,
+      ok?: string,
+    ): Promise<unknown | null> => {
       if (!treinoUserId) return Promise.resolve(null);
       metas.set(chaveFila, meta);
-      const exDaMeta = meta.tipo === "prescricao" ? meta.ex : null;
-      // a linha do servidor antes do 1º pendente (o "voltar ao salvo"); com algo pendente, ela já está guardada
-      if (!filaDoEditor.pendente(chaveFila)) salvas.set(chaveFila, linhaDaChave(qc.getQueryData<DadosEditor>(chave), meta.alvo, exDaMeta));
+      const guardar = () => {
+        const r = retrato(qc.getQueryData<DadosEditor>(chave), meta);
+        if (r) salvas.set(chaveFila, r);
+        else salvas.delete(chaveFila);
+      };
+      // o retrato do servidor antes do 1º pendente (o "voltar ao salvo"); com algo pendente, ele já está guardado
+      if (!filaDoEditor.pendente(chaveFila)) guardar();
       void qc.cancelQueries({ queryKey: chave });
       const tentarDeNovo = () => {
         if (!filaDoEditor.temErro(chaveFila)) return;
-        salvas.set(chaveFila, linhaDaChave(qc.getQueryData<DadosEditor>(chave), meta.alvo, exDaMeta));
+        guardar();
         void filaDoEditor.tentarDeNovo(chaveFila);
         const v = filaDoEditor.pendente(chaveFila);
         if (v) qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, v) : d));
@@ -240,21 +324,25 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
       const promessa = filaDoEditor.mudar(chaveFila, base, novo, {
         enviar,
         aoOk: (_r, envio) => {
-          // o servidor tem o valor: o cache também e esta vira a linha salva
+          // o servidor tem o valor: o cache também e este vira o retrato salvo
           qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, envio.valor) : d));
-          salvas.set(chaveFila, linhaDaChave(qc.getQueryData<DadosEditor>(chave), meta.alvo, exDaMeta));
+          guardar();
           // revisão hml-24 (🟡1): uma releitura que começou ANTES desta confirmação traria o valor velho e apagaria o confirmado (a linha
           // já saiu da fila: a sobreposição não a cobre; a próxima mudança da linha regravaria os outros campos com o velho). Ela é
           // cancelada em silêncio (o cancelRefetch do invalidate) e a leitura sai de novo, depois da gravação — ativa ou não
           if (qc.isFetching({ queryKey: chave }) > 0) void qc.invalidateQueries({ queryKey: chave, refetchType: "all" });
           if (ok) toast.success(ok);
           onMudou?.();
-          if (envio.campos.has("series")) void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
+          if (meta.tipo === "dia" || meta.tipo === "alternado") {
+            // a semana muda o "N de M" e o volume (o depois "semana" de antes)
+            void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
+            void qc.invalidateQueries({ queryKey: ["treino-semana-atual", treinoUserId] });
+          } else if (envio.campos.has("series")) void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
         },
         aoErro: (e) => {
-          // só esta linha volta ao que o servidor tinha; as outras pendentes seguem por cima da releitura
-          const salva = salvas.get(chaveFila) ?? null;
-          qc.setQueryData<DadosEditor>(chave, (d) => (d ? comLinha(d, meta.alvo, exDaMeta, salva) : d));
+          // só esta chave volta ao que o servidor tinha; as outras pendentes seguem por cima da releitura
+          const salva = salvas.get(chaveFila) ?? (meta.tipo === "prescricao" || meta.tipo === "observacao" ? { linha: null } : null);
+          if (salva) qc.setQueryData<DadosEditor>(chave, (d) => (d ? voltar(d, meta, salva) : d));
           salvas.delete(chaveFila);
           toast.error(mensagemDoErro(e), { id: `fila:${chaveFila}`, action: { label: "Tentar de novo", onClick: tentarDeNovo } });
           void recarregar();
@@ -336,56 +424,34 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
     criarTreino: (nome: string) => rodar("novo", () => novoTreino(treinoUserId!, nome), { ok: "Treino criado." }),
     usarModelo: (grupoId: string) => rodar(`usar:${grupoId}`, () => usarTreino(treinoUserId!, grupoId), { ok: "Treino dado ao aluno." }),
     tirar: (t: TreinoEditor) => rodar(`tirar:${t.chave}`, () => tirarTreino(treinoUserId!, t.id), { ok: `"${t.nome}" saiu do aluno.` }),
-    salvarDia: (dia: string, chaves: string[]) =>
-      rodar(`dia:${dia}`, () => salvarDia(treinoUserId!, dia, chaves.map(idsDaChave)), {
-        depois: "semana",
-        otimista: (d) => ({
-          ...d,
-          semana: [
-            ...d.semana.filter((r) => r.dia_semana !== dia || r.extra),
-            ...chaves.map((k, i) => ({ dia_semana: dia, slot_idx: i, grupo_id: idsDaChave(k).grupo_id ?? null, grupo_usuario_id: idsDaChave(k).grupo_usuario_id ?? null, extra: false })),
-          ],
-        }),
-      }),
-    salvarAlternado: (dia: string, ligar: boolean, inicio: string) =>
-      rodar(`alt:${dia}`, () => salvarAlternado(treinoUserId!, dia, ligar, inicio), {
-        depois: "semana",
-        otimista: (d) => ({
-          ...d,
-          diasConfig: [...d.diasConfig.filter((c) => c.dia_semana !== dia), { dia_semana: dia, alternado: ligar, alternado_inicio: ligar ? inicio : null }],
-          semana: ligar ? d.semana : d.semana.filter((r) => r.dia_semana !== dia || !r.extra),
-        }),
-      }),
-    salvarExtras: (dia: string, extras: { chave: string; atrelado: string | null }[]) =>
-      rodar(
-        `ext:${dia}`,
-        () =>
-          salvarExtras(
-            treinoUserId!,
-            dia,
-            extras.map((e) => {
-              const at = e.atrelado ? idsDaChave(e.atrelado) : {};
-              return { ...idsDaChave(e.chave), ...(at.grupo_id ? { atrelado_grupo_id: at.grupo_id } : {}), ...(at.grupo_usuario_id ? { atrelado_grupo_usuario_id: at.grupo_usuario_id } : {}) };
-            }),
-          ),
-        {
-          depois: "semana",
-          otimista: (d) => ({
-            ...d,
-            semana: [
-              ...d.semana.filter((r) => r.dia_semana !== dia || !r.extra),
-              ...extras.map((e, i) => {
-                const k = idsDaChave(e.chave);
-                const at = e.atrelado ? idsDaChave(e.atrelado) : {};
-                return {
-                  dia_semana: dia, slot_idx: 100 + i, extra: true, grupo_id: k.grupo_id ?? null, grupo_usuario_id: k.grupo_usuario_id ?? null,
-                  extra_atrelado_grupo_id: at.grupo_id ?? null, extra_atrelado_grupo_usuario_id: at.grupo_usuario_id ?? null,
-                };
-              }),
-            ],
-          }),
-        },
-      ),
+    // a semana (ampliação da hml-24): cada ação manda o estado INTEIRO de uma chave do dia → pela fila (1 no ar por chave; o desejado
+    // mais novo; o "Tentar de novo"). A base é o que a tela mostra da chave (o desejado pendente ou o cache)
+    salvarDia: (dia: string, chaves: string[]) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const k = chaveDoDia(treinoUserId, dia);
+      const meta = { tipo: "dia" as const, dia };
+      const d = qc.getQueryData<DadosEditor>(chave);
+      const base = filaDoEditor.pendente(k) ?? (d ? valorDaSemana(d, meta) : valorDoDia([]));
+      return gravarNaFila(k, meta, base, valorDoDia(chaves), (v) => salvarDia(treinoUserId, dia, chavesDoValor(v).map(idsDaChave)));
+    },
+    salvarAlternado: (dia: string, ligar: boolean, inicio: string) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const k = chaveDoAlternado(treinoUserId, dia);
+      const meta = { tipo: "alternado" as const, dia };
+      const d = qc.getQueryData<DadosEditor>(chave);
+      const base = filaDoEditor.pendente(k) ?? (d ? valorDaSemana(d, meta) : valorDoAlternado({ alternado: false, inicio: null, extras: [] }));
+      // desligar o alternado apaga os extras do dia (o setDiaConfig faz) — o desejado já vai sem eles
+      const novo = { ...base, alternado: ligar, inicio: ligar ? inicio : null, ...(ligar ? {} : { extras: "[]" }) };
+      return gravarNaFila(k, meta, base, novo, (v, campos) => enviarAlternado(treinoUserId, dia, v, campos));
+    },
+    salvarExtras: (dia: string, extras: ExtraDoDia[]) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const k = chaveDoAlternado(treinoUserId, dia);
+      const meta = { tipo: "alternado" as const, dia };
+      const d = qc.getQueryData<DadosEditor>(chave);
+      const base = filaDoEditor.pendente(k) ?? (d ? valorDaSemana(d, meta) : valorDoAlternado({ alternado: true, inicio: null, extras: [] }));
+      return gravarNaFila(k, meta, base, { ...base, extras: JSON.stringify(extras) }, (v, campos) => enviarAlternado(treinoUserId, dia, v, campos));
+    },
     aplicarPadrao: (n: number) =>
       rodar("padrao", () => aplicarPadraoATodos(treinoUserId!, n), { ok: `${n} ${n === 1 ? "série" : "séries"} em todos os exercícios (a prescrição fica).` }),
   };

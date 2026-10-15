@@ -1,6 +1,7 @@
 /**
- * hml-24 (H-127) — a FILA POR LINHA do editor do treino (Painel › Alunos › Treino): cada linha do banco que o editor grava (a
- * prescrição de um exercício; a observação do treino) tem no máximo 1 pedido em voo. PURA e FORA do React: a gravação termina
+ * hml-24 (H-127) — a FILA POR LINHA do editor do treino (Painel › Alunos › Treino): cada chave que o editor grava com o estado
+ * INTEIRO (a prescrição de um exercício; a observação do treino; na semana, a lista de treinos de um dia e o alternado do dia com
+ * os extras) tem no máximo 1 pedido em voo. PURA e FORA do React: a gravação termina
  * mesmo saindo da tela (dentro do app); quem usa (useEditorTreino.ts) cuida da tela, dos avisos e do cache.
  *
  * Por linha: o DESEJADO (o valor inteiro que a pessoa quer — a prescrição toda), a versão e o envio em voo.
@@ -26,8 +27,11 @@ export interface Envio<V extends Valor> {
 
 /** Como gravar uma linha (o mais novo de cada mudança vale para os próximos envios). */
 export interface Manejo<V extends Valor, R> {
-  /** 1 pedido ao servidor com o valor inteiro da linha. */
-  enviar: (valor: V) => Promise<R>;
+  /**
+   * 1 envio ao servidor com o valor inteiro da linha. `campos` = os campos que as mudanças deste envio trocaram (todos, no "Tentar
+   * de novo") — quem grava a chave em mais de 1 ação (a semana: o alternado e os extras do dia) chama só o que mudou.
+   */
+  enviar: (valor: V, campos: ReadonlySet<string>) => Promise<R>;
   /** o envio voltou ok (chamado antes de as promessas resolverem). */
   aoOk?: (r: R, envio: Envio<V>) => void;
   /** o envio falhou (chamado antes de as promessas darem null): `desejado` = o que a linha queria (o "Tentar de novo"). */
@@ -103,7 +107,7 @@ export function criarFila<V extends Valor, R>(): Fila<V, R> {
     const campos = new Set(l.esperas.filter((w) => w.versao <= versao).flatMap((w) => w.campos));
     let pedido: Promise<R>;
     try {
-      pedido = Promise.resolve(l.manejo.enviar(valor));
+      pedido = Promise.resolve(l.manejo.enviar(valor, campos));
     } catch (e) {
       pedido = Promise.reject(e);
     }

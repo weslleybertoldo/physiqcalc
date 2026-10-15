@@ -3,10 +3,14 @@ import type { VolumeBloco } from "@/lib/volumeSemanal";
 import { BLOCOS_MUSCULARES } from "@/lib/gruposMusculares";
 import {
   GRUPOS_VOLUME,
+  alternadoDoDia,
+  comAlternadoDoDia,
+  comDia,
   comLinha,
   comObservacao,
   comPrescricao,
   diasAte,
+  extrasParaGravar,
   extrasPorDia,
   idsDaChave,
   lerCarga,
@@ -259,5 +263,32 @@ describe("hml-24 (H-127): a linha do aluno no que a tela mostra (o otimista, a f
     expect(linhaDaChave(volta, A, e1)).toEqual(antes);
     expect(linhaDaChave(volta, A, e2)).toBeNull();
     expect(linhaDaChave(volta, A, null)?.observacao).toBe("Desça a barra em 3 s.");
+  });
+});
+
+describe("ampliação da hml-24: a semana no que a tela mostra (o otimista e o voltar ao salvo da fila)", () => {
+  it("comDia troca a lista do dia na ordem e deixa os outros dias e os extras do dia", () => {
+    const comExtra = comAlternadoDoDia(dados(), "SEX", { alternado: true, inicio: "2026-10-12", extras: [{ chave: "catalogo:gC", atrelado: null }] });
+    const d = comDia(comExtra, "SEX", ["catalogo:gC", "pessoal:pX"]);
+    expect(treinosPorDia(d).SEX).toEqual(["catalogo:gC", "pessoal:pX"]);
+    expect(treinosPorDia(d).SEG).toEqual(["catalogo:gA"]);
+    expect(extrasPorDia(d).SEX).toEqual([{ chave: "catalogo:gC", atrelado: null }]);
+    expect(treinosPorDia(comDia(d, "SEX", [])).SEX).toBeUndefined();
+  });
+
+  it("alternadoDoDia lê a config e os extras; comAlternadoDoDia grava os 2 e, desligado, tira o início e os extras (como o banco)", () => {
+    const ligado = comAlternadoDoDia(dados(), "SEG", { alternado: true, inicio: "2026-10-12", extras: [{ chave: "catalogo:gB", atrelado: "catalogo:gA" }] });
+    expect(alternadoDoDia(ligado, "SEG")).toEqual({ alternado: true, inicio: "2026-10-12", extras: [{ chave: "catalogo:gB", atrelado: "catalogo:gA" }] });
+    const desligado = comAlternadoDoDia(ligado, "SEG", { alternado: false, inicio: "2026-10-12", extras: [{ chave: "catalogo:gB", atrelado: null }] });
+    expect(alternadoDoDia(desligado, "SEG")).toEqual({ alternado: false, inicio: null, extras: [] });
+    expect(treinosPorDia(desligado).SEG).toEqual(["catalogo:gA"]);
+    expect(alternadoDoDia(dados(), "TER")).toEqual({ alternado: false, inicio: null, extras: [] });
+  });
+
+  it("extrasParaGravar monta o corpo do setExtras (o treino e o atrelado, de catálogo ou pessoal)", () => {
+    expect(extrasParaGravar([{ chave: "catalogo:gB", atrelado: null }, { chave: "pessoal:pX", atrelado: "catalogo:gA" }])).toEqual([
+      { grupo_id: "gB" },
+      { grupo_usuario_id: "pX", atrelado_grupo_id: "gA" },
+    ]);
   });
 });

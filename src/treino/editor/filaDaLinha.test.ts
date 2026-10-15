@@ -189,6 +189,20 @@ describe("hml-24 — a fila por linha (filaDaLinha)", () => {
     expect(s.enviar).toHaveBeenCalledTimes(1);
   });
 
+  it("o enviar recebe os campos do envio (a chave gravada em mais de 1 ação chama só o que mudou); no Tentar de novo, todos", async () => {
+    const f = criarFila<P, unknown>();
+    const vistos: string[][] = [];
+    let falhar = true;
+    const enviar = (_v: P, campos: ReadonlySet<string>) => {
+      vistos.push([...campos].sort());
+      return falhar ? Promise.reject(new Error("x")) : Promise.resolve("ok");
+    };
+    await f.mudar("k", BASE, { ...BASE, carga: 5 }, { enviar });
+    falhar = false;
+    await f.tentarDeNovo("k");
+    expect(vistos).toEqual([["carga"], ["carga", "descanso", "reps", "series"]]);
+  });
+
   it("assinar avisa a cada mudança e a versão muda; parar de assinar para os avisos", async () => {
     const f = criarFila<P, unknown>();
     const s = servidor();

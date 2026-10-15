@@ -21,6 +21,9 @@ const h = vi.hoisted(() => ({
   toastErro: vi.fn(),
   carregarModelos: vi.fn(),
   exerciciosDaLista: vi.fn(),
+  salvarDia: vi.fn(),
+  salvarAlternado: vi.fn(),
+  salvarExtras: vi.fn(),
 }));
 vi.mock("./api", () => ({
   ErroTreinoPainel: class extends Error {
@@ -47,9 +50,9 @@ vi.mock("./api", () => ({
   novoTreino: vi.fn(),
   usarTreino: vi.fn(),
   tirarTreino: vi.fn(),
-  salvarDia: vi.fn(),
-  salvarAlternado: vi.fn(),
-  salvarExtras: vi.fn(),
+  salvarDia: h.salvarDia,
+  salvarAlternado: h.salvarAlternado,
+  salvarExtras: h.salvarExtras,
   aplicarPadraoATodos: vi.fn(),
 }));
 vi.mock("./useTreinoDoAlunoPainel", async (orig) => ({ ...(await orig<object>()), useTreinoDoAlunoPainel: h.estado }));
@@ -57,6 +60,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: h.toastErro } }));
 vi.mock("@/treino/ui/MiniaturaGif", () => ({ MiniaturaGif: ({ nome }: { nome: string }) => <span data-miniatura={nome} /> }));
 
 import { EditorTreino } from "./EditorTreino";
+import { SemanaDoAluno } from "./SemanaDoAluno";
 import { filaDoEditor } from "./useEditorTreino";
 import CardTreino from "@/painel/aluno/resumo/CardTreino";
 import AbaTreino from "@/painel/aluno/abas/Treino";
@@ -109,6 +113,9 @@ beforeEach(() => {
   h.salvarPrescricao.mockResolvedValue({ ok: true });
   h.salvarObservacao.mockResolvedValue({ ok: true, observacao: "x" });
   h.salvarConfig.mockResolvedValue({ ok: true, config: {} });
+  h.salvarDia.mockResolvedValue({ ok: true });
+  h.salvarAlternado.mockResolvedValue({ ok: true });
+  h.salvarExtras.mockResolvedValue({ ok: true });
   h.carregarSemanaAtual.mockResolvedValue({ overrides: [], concluidos: [] });
   h.carregarVolume.mockResolvedValue([]);
   h.carregarModelos.mockResolvedValue({ modelos: [], total: 0 });
@@ -459,6 +466,143 @@ describe("revisão hml-24 — a releitura no meio da gravação e o cancelamento
     await act(async () => tirar.soltar({ ok: true }));
     await act(async () => leitura.soltar(dados()));
     await waitFor(() => expect(screen.queryByText("Não deu para abrir o treino")).toBeNull());
+  });
+});
+
+describe("ampliação da hml-24 — a semana do aluno pela fila por chave (o estado inteiro de cada dia)", () => {
+  const sexta = () => document.querySelector('[data-semana-dia="SEX"]') as HTMLElement;
+  const marcado = (dia: string, chave: string) =>
+    (document.querySelector(`[data-semana-dia="${dia}"] [data-semana-treino="${chave}"]`) as HTMLElement | null)?.getAttribute("aria-pressed");
+
+  /** Um servidor que aplica cada pedido quando responde — e responde do mais NOVO para o mais velho (fora de ordem). */
+  function servidorDaSemana() {
+    const banco: Record<string, string[]> = { SEX: ["gB"] };
+    const pedidos: { feito: boolean; soltar: () => void }[] = [];
+    h.salvarDia.mockImplementation(
+      (_u: string, dia: string, grupos: { grupo_id?: string }[]) =>
+        new Promise((ok) => {
+          const p = { feito: false, soltar: () => {} };
+          p.soltar = () => {
+            p.feito = true;
+            banco[dia] = grupos.map((g) => g.grupo_id ?? "");
+            ok({ ok: true });
+          };
+          pedidos.push(p);
+        }),
+    );
+    const responderForaDeOrdem = async () => {
+      for (let volta = 0; volta < 10; volta++) {
+        const abertos = pedidos.filter((x) => !x.feito).reverse();
+        if (!abertos.length) return;
+        for (const x of abertos) await act(async () => x.soltar());
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 0));
+        });
+      }
+    };
+    return { banco, responderForaDeOrdem };
+  }
+
+  it("2 cliques no mesmo dia com o 1º no ar → 1 pedido por vez; o 2º leva a lista final; a resposta do 1º não desfaz a tela nem o banco", async () => {
+    const s = servidorDaSemana();
+    montar(<SemanaDoAluno treinoUserId="t1" somenteLeitura={false} />);
+    await waitFor(() => expect(sexta()).not.toBeNull());
+    // sexta: tira o B e põe o C (o caso "semana" do e2e/w15/telas.py)
+    fireEvent.click(sexta().querySelector('[data-semana-treino="catalogo:gB"]')!);
+    fireEvent.click(sexta().querySelector('[data-semana-treino="catalogo:gC"]')!);
+    // um tique: o que tivesse de sair ao mesmo tempo (o rodar de antes chamava a API depois de um await) já teria saído
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(h.salvarDia).toHaveBeenCalledTimes(1);
+    expect(h.salvarDia.mock.calls[0][1]).toBe("SEX");
+    expect(h.salvarDia.mock.calls[0][2]).toEqual([]);
+    expect(marcado("SEX", "catalogo:gC")).toBe("true");
+    expect(marcado("SEX", "catalogo:gB")).toBe("false");
+    await s.responderForaDeOrdem();
+    expect(h.salvarDia).toHaveBeenCalledTimes(2);
+    expect(h.salvarDia.mock.calls[1][2]).toEqual([{ grupo_id: "gC" }]);
+    expect(s.banco.SEX).toEqual(["gC"]);
+    expect(marcado("SEX", "catalogo:gC")).toBe("true");
+    expect(marcado("SEX", "catalogo:gB")).toBe("false");
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("o erro de um dia → o dia volta ao salvo e o aviso traz 'Tentar de novo' (nada reenvia sozinho); o botão reenvia a lista", async () => {
+    h.salvarDia.mockRejectedValueOnce(new Error("internal")).mockResolvedValue({ ok: true });
+    montar(<SemanaDoAluno treinoUserId="t1" somenteLeitura={false} />);
+    await waitFor(() => expect(sexta()).not.toBeNull());
+    fireEvent.click(sexta().querySelector('[data-semana-treino="catalogo:gB"]')!);
+    await waitFor(() => expect(h.toastErro).toHaveBeenCalled());
+    const [texto, opcoes] = h.toastErro.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
+    expect(texto).toBe("Não deu para salvar agora. Tente de novo.");
+    expect(opcoes.action.label).toBe("Tentar de novo");
+    await waitFor(() => expect(marcado("SEX", "catalogo:gB")).toBe("true"));
+    expect(h.salvarDia).toHaveBeenCalledTimes(1);
+    act(() => opcoes.action.onClick());
+    await waitFor(() => expect(h.salvarDia).toHaveBeenCalledTimes(2));
+    expect(h.salvarDia.mock.calls[1][2]).toEqual([]);
+    await waitFor(() => expect(marcado("SEX", "catalogo:gB")).toBe("false"));
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("o alternado: liga e desliga seguidos → 1 pedido por vez, o 2º leva o desligado (e nenhum extra)", async () => {
+    const primeiro = adiada();
+    h.salvarAlternado.mockReturnValueOnce(primeiro.promessa).mockResolvedValue({ ok: true });
+    const segAeC = [...dados().semana.filter((r) => r.dia_semana !== "SEG"), { dia_semana: "SEG", slot_idx: 0, grupo_id: "gA", grupo_usuario_id: null, extra: false },
+      { dia_semana: "SEG", slot_idx: 1, grupo_id: "gC", grupo_usuario_id: null, extra: false }];
+    h.carregarEditor.mockResolvedValue(dados({ semana: segAeC }));
+    montar(<SemanaDoAluno treinoUserId="t1" somenteLeitura={false} />);
+    await waitFor(() => expect(document.querySelector('[data-semana-alternar="SEG"]')).not.toBeNull());
+    const botao = document.querySelector('[data-semana-alternar="SEG"]') as HTMLButtonElement;
+    await waitFor(() => expect(botao.disabled).toBe(false));
+    fireEvent.click(botao);
+    await waitFor(() => expect(botao.getAttribute("aria-pressed")).toBe("true"));
+    fireEvent.click(botao);
+    // um tique: o que tivesse de sair ao mesmo tempo (o rodar de antes chamava a API depois de um await) já teria saído
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(h.salvarAlternado).toHaveBeenCalledTimes(1);
+    expect(h.salvarAlternado.mock.calls[0].slice(1, 3)).toEqual(["SEG", true]);
+    await act(async () => primeiro.soltar({ ok: true }));
+    await waitFor(() => expect(h.salvarAlternado).toHaveBeenCalledTimes(2));
+    expect(h.salvarAlternado.mock.calls[1].slice(1, 3)).toEqual(["SEG", false]);
+    expect(h.salvarExtras).not.toHaveBeenCalled();
+    await waitFor(() => expect(botao.getAttribute("aria-pressed")).toBe("false"));
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("o extra e o alternado do MESMO dia andam na mesma fila: desligar com o extra no ar espera, e o extra não volta depois", async () => {
+    const extra = adiada();
+    h.salvarExtras.mockReturnValueOnce(extra.promessa).mockResolvedValue({ ok: true });
+    const segAeC = [...dados().semana.filter((r) => r.dia_semana !== "SEG"), { dia_semana: "SEG", slot_idx: 0, grupo_id: "gA", grupo_usuario_id: null, extra: false },
+      { dia_semana: "SEG", slot_idx: 1, grupo_id: "gC", grupo_usuario_id: null, extra: false }];
+    h.carregarEditor.mockResolvedValue(dados({ semana: segAeC, diasConfig: [{ dia_semana: "SEG", alternado: true, alternado_inicio: "2026-10-12" }] }));
+    montar(<SemanaDoAluno treinoUserId="t1" somenteLeitura={false} />);
+    await waitFor(() => expect(document.querySelector('[data-extra-novo="SEG"]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-extra-novo="SEG"]')!);
+    fireEvent.change(document.querySelector("[data-extra-treino]")!, { target: { value: "catalogo:gB" } });
+    fireEvent.click(document.querySelector("[data-extra-salvar]")!);
+    // um tique: o que tivesse de sair ao mesmo tempo (o rodar de antes chamava a API depois de um await) já teria saído
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(h.salvarExtras).toHaveBeenCalledTimes(1);
+    expect(h.salvarExtras.mock.calls[0][2]).toEqual([{ grupo_id: "gB" }]);
+    // desliga o alternado com o extra ainda no ar: espera a vez (nunca os 2 do mesmo dia no ar)
+    fireEvent.click(document.querySelector('[data-semana-alternar="SEG"]')!);
+    // um tique: o que tivesse de sair ao mesmo tempo (o rodar de antes chamava a API depois de um await) já teria saído
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(h.salvarAlternado).not.toHaveBeenCalled();
+    await act(async () => extra.soltar({ ok: true }));
+    await waitFor(() => expect(h.salvarAlternado).toHaveBeenCalledTimes(1));
+    expect(h.salvarAlternado.mock.calls[0].slice(1, 3)).toEqual(["SEG", false]);
+    expect(h.salvarExtras).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(document.querySelector('[data-semana-extra]')).toBeNull());
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
   });
 });
 

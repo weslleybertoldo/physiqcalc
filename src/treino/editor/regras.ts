@@ -286,6 +286,66 @@ export function comPrescricao(d: DadosEditor, alvo: AlvoDaLinha, ex: ExercicioDa
   });
 }
 
+// ───────────────────────── a ampliação da hml-24: a semana do aluno pela fila (o estado inteiro de cada dia) ─────────
+
+/** Um extra do alternado como a tela guarda: o treino e o treino a que ele vai junto (null = toda semana). */
+export type ExtraDoDia = { chave: string; atrelado: string | null };
+
+/** O alternado de um dia como um valor só — ligado, o início e os extras (o que o setDiaConfig e o setExtras gravam). */
+export interface AlternadoDoDia {
+  alternado: boolean;
+  inicio: string | null;
+  extras: ExtraDoDia[];
+}
+
+/** A tela com a lista de treinos do dia (os de toda semana, na ordem marcada; os extras do alternado ficam) — o otimista do salvarDia. */
+export function comDia(d: DadosEditor, dia: string, chaves: string[]): DadosEditor {
+  return {
+    ...d,
+    semana: [
+      ...d.semana.filter((r) => r.dia_semana !== dia || r.extra),
+      ...chaves.map((k, i) => ({ dia_semana: dia, slot_idx: i, grupo_id: idsDaChave(k).grupo_id ?? null, grupo_usuario_id: idsDaChave(k).grupo_usuario_id ?? null, extra: false })),
+    ],
+  };
+}
+
+/** O alternado do dia no que a tela mostra (a config do dia e os extras dele). */
+export function alternadoDoDia(d: Pick<DadosEditor, "diasConfig" | "semana">, dia: string): AlternadoDoDia {
+  const c = d.diasConfig.find((x) => x.dia_semana === dia);
+  return { alternado: !!c?.alternado, inicio: c?.alternado_inicio ?? null, extras: extrasPorDia(d)[dia] ?? [] };
+}
+
+/**
+ * A tela com o alternado do dia: a config (ligado e o início; desligado = sem início) e os extras do dia (desligado = sem extras, como
+ * o setDiaConfig faz no banco) — o otimista do salvarAlternado e do salvarExtras.
+ */
+export function comAlternadoDoDia(d: DadosEditor, dia: string, v: AlternadoDoDia): DadosEditor {
+  const extras = v.alternado ? v.extras : [];
+  return {
+    ...d,
+    diasConfig: [...d.diasConfig.filter((c) => c.dia_semana !== dia), { dia_semana: dia, alternado: v.alternado, alternado_inicio: v.alternado ? v.inicio : null }],
+    semana: [
+      ...d.semana.filter((r) => r.dia_semana !== dia || !r.extra),
+      ...extras.map((e, i) => {
+        const k = idsDaChave(e.chave);
+        const at = e.atrelado ? idsDaChave(e.atrelado) : {};
+        return {
+          dia_semana: dia, slot_idx: 100 + i, extra: true, grupo_id: k.grupo_id ?? null, grupo_usuario_id: k.grupo_usuario_id ?? null,
+          extra_atrelado_grupo_id: at.grupo_id ?? null, extra_atrelado_grupo_usuario_id: at.grupo_usuario_id ?? null,
+        };
+      }),
+    ],
+  };
+}
+
+/** Os extras do dia no corpo do setExtras (os ids do treino e do treino a que ele vai junto). */
+export function extrasParaGravar(extras: ExtraDoDia[]): ({ grupo_id?: string; grupo_usuario_id?: string; atrelado_grupo_id?: string; atrelado_grupo_usuario_id?: string })[] {
+  return extras.map((e) => {
+    const at = e.atrelado ? idsDaChave(e.atrelado) : {};
+    return { ...idsDaChave(e.chave), ...(at.grupo_id ? { atrelado_grupo_id: at.grupo_id } : {}), ...(at.grupo_usuario_id ? { atrelado_grupo_usuario_id: at.grupo_usuario_id } : {}) };
+  });
+}
+
 /**
  * A tela com a observação do treino na linha geral: a que existe troca o texto; sem ela, o texto cria a linha com o nº de séries
  * padrão do aluno (a mesma conta da RPC observacao_salvar) e o vazio não cria nada.
