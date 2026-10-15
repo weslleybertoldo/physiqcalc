@@ -291,4 +291,17 @@ describe("hml-26 (H-128) — Peso e Gordura do cabeçalho com uma parte da séri
     expect(idas()).toEqual([expect.arrayContaining(["aluno_perfil", "aluno_evolucao_painel"]), ["aluno_evolucao_painel"], ["aluno_evolucao_painel"]]);
     expect(h.treino).toHaveBeenCalledTimes(3);
   });
+
+  it("a nova tentativa não repete o que não adianta: a 1ª carga do Treino cai na rede e a nova tentativa volta aluno_inexistente → para nela (2 pedidos do Treino, não 4); '—' + 'dado parcial'", async () => {
+    // o aluno_inexistente é o 404 da treino-leitura (o sem_acesso e o sem_login também não se repetem)
+    h.treino.mockRejectedValueOnce(new ErroFonte("treino", "sem_internet")).mockRejectedValue(new ErroFonte("treino", "aluno_inexistente"));
+    montar();
+    await waitFor(() => expect(parciais()).toEqual(["Peso", "Gordura"]));
+    await waitFor(() => expect(h.treino).toHaveBeenCalledTimes(2)); // a carga + a 1ª nova tentativa
+    await new Promise((r) => setTimeout(r, 2800)); // as 2 seguintes sairiam com 1 s entre elas: nenhuma
+    expect(h.treino).toHaveBeenCalledTimes(2);
+    expect(idas()).toHaveLength(1);
+    expect(parciais()).toEqual(["Peso", "Gordura"]);
+    expect(numeros()).toBe(0);
+  }, 10_000);
 });
