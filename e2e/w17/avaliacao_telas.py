@@ -11,15 +11,26 @@
   excluir     a nutri exclui a antropometria e o personal a avaliação física (a composição atual volta à da anterior)
   negativos   outra conta não abre a aba; o dono sem papel de nutri não exclui antropometria
   fotos       o personal sobe e exclui uma foto do mês; Comparar abre com as 2 origens
+  kpi_parcial hml-26 (H-128), só leitura e 1 login: os números Peso e Gordura do cabeçalho com a leitura da parte do Treino (a treino-leitura,
+              action "avaliacoes") caindo na rede (page.route → abort; nunca 5xx) — primeiro a série inteira (o número "certo"); depois,
+              recarregada com as 3 primeiras leituras caindo (a do carregamento + 2 novas tentativas), "—" + "dado parcial" nos 2 e nenhum
+              número, e a 3ª nova tentativa passa sozinha → o número certo (4 pedidos; nunca o número da metade da série no caminho); por
+              fim, com TODAS caindo, o "—" fica com 1 + 3 pedidos e nenhum depois (sem laço) e, solta a rota + o foco, o número certo
 No fim tudo volta ao que era (o perfil do Treino do Diego é guardado antes e restaurado).
+--seco: sem navegador e sem rede (o socket fica bloqueado) — a rota que derruba a parte do Treino com páginas falsas, a leitura dos 2 KPIs
+(parcial × número × nada × o misto), o "nunca o número da metade", o --canal no lançamento e os seletores, o texto e as 3 tentativas nas telas.
 
 Uso: python3 e2e/w17/avaliacao_telas.py --base http://localhost:5173 --prefixo local   (staging: --base https://physiqcalc-staging.vercel.app --prefixo staging)
+     [--casos personal,nutri,resumo,kpi_parcial,app,fotos,excluir,negativos] [--canal msedge]
+     python3 e2e/w17/avaliacao_telas.py --seco
      Contexto limpo por caso, painel 1280 × 883 × 2 (tela 7) e app 390 × 844 × 3,4 (tela 4).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
+import socket
 import sys
 import time
 from pathlib import Path
@@ -36,6 +47,92 @@ DIEGO = B.DIEGO
 ESTADO: dict = {}
 FOTO = Path.home() / "Desktop" / "Physiq Unificado - estrutura" / "Telas premium" / "fonte (gerador)" / "assets" / "fotos" / "fisico1.jpg"
 MARCA = "W17 E2E tela"
+REPO = Path(__file__).resolve().parents[2]
+# hml-26 (H-128): a parte do Treino é buscada de novo sozinha até 3 vezes (NOVAS_TENTATIVAS_DA_PARTE no useAvaliacaoDoAluno.ts; o --seco
+# confere que é o mesmo número) — 1 + 3 pedidos no máximo por leitura da série
+TENTATIVAS_DA_PARTE = 3
+
+
+# ───────────────────────── hml-26 (H-128): peças puras (o --seco confere) ─────────────────────────
+class FalhaDaParte:
+    """Derruba a leitura da parte do Treino da série: o POST da treino-leitura com action "avaliacoes" CAI NA REDE (route.abort — nunca um
+    5xx, que viraria aviso de erro ao Weslley) nas `vezes` primeiras (None = todas) e enquanto não soltar(). O preflight (OPTIONS), as
+    outras ações (get, semanaAtual, volume) e as outras funções passam. Conta os que caíram e os que passaram."""
+
+    def __init__(self, pg, vezes: int | None = None, funcao: str = "treino-leitura", acao: str = "avaliacoes") -> None:
+        self.pg, self.vezes, self.acao = pg, vezes, acao
+        self.padrao = re.compile(rf"/functions/v1/{re.escape(funcao)}(\?|$)")
+        self.caiu = 0
+        self.passou = 0
+        self.solto = False
+        self._f = self._pegar
+        pg.route(self.padrao, self._f)
+
+    @staticmethod
+    def corpo(route) -> dict | None:
+        try:
+            c = route.request.post_data_json
+        except Exception:  # noqa: BLE001 — o corpo que não é JSON
+            return None
+        return c if isinstance(c, dict) else None
+
+    def _pegar(self, route) -> None:
+        c = self.corpo(route) if route.request.method == "POST" else None
+        if not c or c.get("action") != self.acao:
+            route.continue_()
+            return
+        if not self.solto and (self.vezes is None or self.caiu < self.vezes):
+            self.caiu += 1
+            route.abort("failed")
+            return
+        self.passou += 1
+        route.continue_()
+
+    def soltar(self) -> None:
+        """Daqui em diante a leitura passa (idempotente); a rota segue contando."""
+        self.solto = True
+
+    def tirar(self) -> None:
+        self.solto = True
+        try:
+            self.pg.unroute(self.padrao, self._f)
+        except Exception:  # noqa: BLE001 — a página já fechou
+            pass
+
+
+# os 2 números do cabeçalho, como a página está agora (o KpiPeso e o KpiGordura: o número em [data-kpi-peso|gordura]; a série incompleta em
+# [data-kpi-parcial]; o texto do cartão [data-kpi-compacto])
+JS_KPIS = """() => Object.fromEntries([['peso', 'Peso'], ['gordura', 'Gordura']].map(([m, r]) => {
+  const n = document.querySelector(`[data-kpi-${m}]`);
+  const k = document.querySelector(`[data-kpi-compacto="${r}"]`);
+  return [m, { parcial: !!document.querySelector(`[data-kpi-parcial="${m}"]`), texto: k ? (k.textContent || '') : null,
+    numero: n ? { valor: n.getAttribute(`data-kpi-${m}`), variacao: n.getAttribute(`data-kpi-${m}-variacao`) } : null }];
+}))"""
+
+
+def estado_kpi(k: dict) -> str:
+    """'parcial' ("—" + "dado parcial", nenhum dígito), 'numero' (o valor, sem "dado parcial"), 'nada' (não apareceu) ou 'misto' (o defeito)."""
+    texto, parcial, numero = k.get("texto") or "", bool(k.get("parcial")), k.get("numero")
+    if parcial and not numero:
+        return "parcial" if "—" in texto and "dado parcial" in texto and not re.search(r"\d", texto) else "misto"
+    if numero and not parcial:
+        return "numero" if "dado parcial" not in texto else "misto"
+    return "nada" if not parcial and not numero else "misto"
+
+
+def estados(kpis: dict) -> tuple[str, str]:
+    return estado_kpi(kpis.get("peso") or {}), estado_kpi(kpis.get("gordura") or {})
+
+
+def numeros_errados(vistos: list[dict], certo: dict) -> list[str]:
+    """Os números que apareceram no caminho e NÃO são os da série inteira (o defeito do H-128: a conta com metade da série)."""
+    errados: list[str] = []
+    for kp in vistos:
+        for m in ("peso", "gordura"):
+            n = (kp.get(m) or {}).get("numero")
+            if n and n != (certo.get(m) or {}).get("numero"):
+                errados.append(f"{m} {n.get('valor')} ({n.get('variacao')})")
+    return errados
 
 
 def q(sql: str) -> list:
@@ -227,6 +324,82 @@ def caso_resumo(nav) -> None:
         c.fim()
 
 
+def kpis(c) -> dict:
+    try:
+        return c.pg.evaluate(JS_KPIS)
+    except Exception:  # noqa: BLE001 — recarregando
+        return {}
+
+
+def acompanhar(c, ate, timeout: float, passo: float = 0.25) -> list[dict]:
+    """Lê os 2 KPIs a cada `passo` até `ate(kpis)` ou o tempo; devolve tudo o que foi visto (em ordem)."""
+    vistos: list[dict] = []
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        k = kpis(c)
+        vistos.append(k)
+        if ate(k):
+            break
+        c.pg.wait_for_timeout(passo * 1000)
+    return vistos
+
+
+def caso_kpi_parcial(nav) -> None:
+    """hml-26 (H-128): o cabeçalho do Diego (o Resumo) com a leitura da parte do Treino caindo na rede — 1 login, só leitura."""
+    c = abrir(nav, "kpi_parcial", "w7-personal", f"/painel/alunos/{DIEGO}")
+    falhas: list[FalhaDaParte] = []
+    try:
+        # 1. a série inteira (nada cai): o número "certo" dos 2
+        ok = c.esperar(lambda: estados(kpis(c)) == ("numero", "numero"), 90)
+        certo = kpis(c)
+        p.check(ok, f"[kpi_parcial] a série inteira: Peso e Gordura com o número ({certo.get('peso', {}).get('numero')}, "
+                    f"{certo.get('gordura', {}).get('numero')})")
+        if not ok:
+            return
+        # 2. a mesma tela recarregada com a leitura da parte do Treino caindo SÓ naquele carregamento (a dele + as 2 primeiras novas tentativas)
+        f = FalhaDaParte(c.pg, vezes=TENTATIVAS_DA_PARTE)
+        falhas.append(f)
+        c.pg.reload(wait_until="domcontentloaded")
+        vistos = acompanhar(c, lambda k: estados(k) == ("numero", "numero") and f.passou >= 1, 90)
+        viu_parcial = any(estados(k) == ("parcial", "parcial") for k in vistos)
+        p.check(viu_parcial, f"[kpi_parcial] a parte do Treino caiu: '—' + 'dado parcial' nos 2, nenhum número ({f.caiu} leitura(s) caída(s))")
+        p.check(not any("misto" in estados(k) for k in vistos), "[kpi_parcial] nunca o número junto com o 'dado parcial'")
+        errados = numeros_errados(vistos, certo)
+        p.check(not errados, f"[kpi_parcial] nenhum número da metade da série no caminho ({errados[:3]})")
+        final = vistos[-1] if vistos else {}
+        p.check(estados(final) == ("numero", "numero") and numeros_errados([final], certo) == [],
+                "[kpi_parcial] a nova tentativa passou sozinha: o número certo (o da série inteira) voltou nos 2")
+        c.pg.wait_for_timeout(1500)
+        p.check((f.caiu, f.passou) == (TENTATIVAS_DA_PARTE, 1),
+                f"[kpi_parcial] a parte do Treino foi buscada de novo SOZINHA: {f.caiu} caídas + {f.passou} que passou (= 1 + {TENTATIVAS_DA_PARTE})")
+        f.tirar()
+        # 3. todas caindo: o "—" fica, 1 + 3 pedidos e nenhum depois (sem laço); solta a rota + o foco → o número certo
+        g = FalhaDaParte(c.pg, vezes=None)
+        falhas.append(g)
+        c.pg.reload(wait_until="domcontentloaded")
+        ok = c.esperar(lambda: g.caiu >= 1 + TENTATIVAS_DA_PARTE, 90)
+        c.pg.wait_for_timeout(4000)
+        k = kpis(c)
+        p.check(ok and (g.caiu, g.passou) == (1 + TENTATIVAS_DA_PARTE, 0) and estados(k) == ("parcial", "parcial"),
+                f"[kpi_parcial] com todas caindo: '—' + 'dado parcial' fica, {g.caiu} pedidos (1 + {TENTATIVAS_DA_PARTE}) e nenhum depois de 4 s")
+        c.pg.mouse.move(5, 5)
+        c.print("kpi_parcial")
+        caixa = c.pg.locator("[data-kpis-aluno]").first.bounding_box() if c.tem("[data-kpis-aluno]") else None
+        if caixa:
+            c.pg.screenshot(path=str(B.PRINTS / f"{c.prefixo}_kpi_parcial_cabecalho.png"),
+                            clip={"x": caixa["x"] - 8, "y": caixa["y"] - 8, "width": caixa["width"] + 16, "height": caixa["height"] + 16})
+        g.soltar()
+        c.pg.evaluate("() => window.dispatchEvent(new Event('visibilitychange'))")
+        vistos = acompanhar(c, lambda kk: estados(kk) == ("numero", "numero"), 60)
+        final = vistos[-1] if vistos else {}
+        p.check(estados(final) == ("numero", "numero") and numeros_errados(vistos, certo) == [] and g.passou == 1,
+                f"[kpi_parcial] solta a rota + o foco: a parte voltou ({g.passou} pedido) e o número certo nos 2")
+    finally:
+        for x in falhas:
+            x.tirar()
+        c.fim()
+
+
 def caso_app(nav) -> None:
     c = abrir(nav, "app", "w10-aluno", "/evolucao", desktop=False)
     try:
@@ -322,8 +495,8 @@ def caso_negativos(nav) -> None:
         c.fim()
 
 
-CASOS = {"personal": caso_personal, "nutri": caso_nutri, "resumo": caso_resumo, "app": caso_app, "fotos": caso_fotos,
-         "excluir": caso_excluir, "negativos": caso_negativos}
+CASOS = {"personal": caso_personal, "nutri": caso_nutri, "resumo": caso_resumo, "kpi_parcial": caso_kpi_parcial, "app": caso_app,
+         "fotos": caso_fotos, "excluir": caso_excluir, "negativos": caso_negativos}
 
 
 def massa() -> dict:
@@ -358,14 +531,164 @@ def restaurar(m: dict) -> None:
     t(f"update {S}.physiq_profiles set {', '.join(sets)} where id = '{m['tid']}'")
 
 
-if __name__ == "__main__":
+class _Pedido:
+    def __init__(self, url: str, metodo: str, corpo) -> None:
+        self.url, self.method, self._corpo = url, metodo, corpo
+
+    @property
+    def post_data_json(self):
+        if isinstance(self._corpo, Exception):
+            raise self._corpo
+        return self._corpo
+
+
+class _RotaFalsa:
+    def __init__(self, url: str, metodo: str = "POST", corpo=None) -> None:
+        self.request = _Pedido(url, metodo, corpo)
+        self.seguiu, self.caiu = 0, []
+
+    def continue_(self) -> None:
+        self.seguiu += 1
+
+    def abort(self, codigo: str = "failed") -> None:
+        self.caiu.append(codigo)
+
+
+class _PaginaFalsa:
+    def __init__(self) -> None:
+        self.rotas: list = []
+
+    def route(self, padrao, f) -> None:
+        self.rotas.append((padrao, f))
+
+    def unroute(self, padrao, f) -> None:
+        self.rotas.remove((padrao, f))
+
+
+class _PlaywrightFalso:
+    """O sync_playwright falso do --seco: guarda o que o lançamento do navegador recebeu."""
+
+    def __init__(self) -> None:
+        self.chromium = self
+        self.lancamentos: list[dict] = []
+
+    def launch(self, **k):
+        self.lancamentos.append(k)
+        return self
+
+
+def _kpi(parcial: bool, texto: str | None, valor: str | None = None, variacao: str | None = None) -> dict:
+    return {"parcial": parcial, "texto": texto, "numero": {"valor": valor, "variacao": variacao} if valor is not None else None}
+
+
+def seco() -> int:
+    """hml-26 (H-128), sem navegador e sem rede (o socket fica bloqueado): a rota que derruba a parte do Treino, a leitura dos 2 KPIs, o
+    "nunca o número da metade", o --canal no lançamento e os seletores, o texto e as 3 tentativas nas telas."""
+    def sem_rede(*_a, **_k):
+        raise RuntimeError("--seco não usa a rede")
+
+    socket.socket.connect = sem_rede  # type: ignore[method-assign]
+    url = "https://treino.exemplo.invalid/functions/v1/treino-leitura"
+    pg = _PaginaFalsa()
+    f = FalhaDaParte(pg, vezes=TENTATIVAS_DA_PARTE)
+    padrao, pegar = pg.rotas[0]
+    p.check(padrao.search(url) and padrao.search(url + "?x=1") and not padrao.search(url + "-x")
+            and not padrao.search("https://treino.exemplo.invalid/functions/v1/admin-get-user"),
+            "seco: a rota pega só a treino-leitura (com ou sem ?; não a admin-get-user nem outro nome que comece igual)")
+    pre = _RotaFalsa(url, "OPTIONS")
+    outras = [_RotaFalsa(url, corpo={"action": a, "aluno": "x"}) for a in ("get", "semanaAtual", "volume")]
+    sem_json = _RotaFalsa(url, corpo=ValueError("não é JSON"))
+    leituras = [_RotaFalsa(url, corpo={"action": "avaliacoes", "aluno": "x"}) for _ in range(TENTATIVAS_DA_PARTE + 2)]
+    for r in [pre, *outras, sem_json, *leituras]:
+        pegar(r)
+    passaram = pre.seguiu == 1 and sem_json.seguiu == 1 and all(r.seguiu == 1 and not r.caiu for r in outras)
+    p.check(passaram and all(r.caiu == ["failed"] and r.seguiu == 0 for r in leituras[:TENTATIVAS_DA_PARTE])
+            and all(r.seguiu == 1 and not r.caiu for r in leituras[TENTATIVAS_DA_PARTE:]) and (f.caiu, f.passou) == (TENTATIVAS_DA_PARTE, 2),
+            f"seco: derruba na rede (abort, nunca 5xx) só as {TENTATIVAS_DA_PARTE} primeiras leituras da parte do Treino (action avaliacoes); depois passam; "
+            "o preflight, as outras ações e o corpo que não é JSON passam direto")
+    g = FalhaDaParte(pg, vezes=None)
+    _, pegar_g = pg.rotas[1]
+    antes = [_RotaFalsa(url, corpo={"action": "avaliacoes"}) for _ in range(6)]
+    for r in antes:
+        pegar_g(r)
+    g.soltar()
+    depois = _RotaFalsa(url, corpo={"action": "avaliacoes"})
+    pegar_g(depois)
+    f.tirar()
+    g.tirar()
+    g.tirar()
+    p.check(all(r.caiu == ["failed"] for r in antes) and depois.seguiu == 1 and (g.caiu, g.passou) == (6, 1) and not pg.rotas,
+            "seco: com vezes=None derruba todas até o soltar(); depois passa e conta; tirar() sai da página (idempotente)")
+    certo = {"peso": _kpi(False, "Peso81,8 kg2,2 kg em 6 meses", "81.8", "-2.2"), "gordura": _kpi(False, "Gordura19,3%2,7 pontos", "19.3", "-2.7")}
+    parcial = {"peso": _kpi(True, "Peso—dado parcial"), "gordura": _kpi(True, "Gordura—dado parcial")}
+    metade = {"peso": _kpi(False, "Peso81,8 kg0,9 kg em 6 meses", "81.8", "-0.9"), "gordura": _kpi(False, "Gordura19,3%1,0 ponto", "19.3", "-1")}
+    misto = {"peso": _kpi(True, "Peso81,8 kgdado parcial", "81.8", "-0.9"), "gordura": _kpi(True, "Gordura—dado parcial 1")}
+    p.check(estados(certo) == ("numero", "numero") and estados(parcial) == ("parcial", "parcial") and estados({}) == ("nada", "nada")
+            and estados(misto) == ("misto", "misto") and estado_kpi(_kpi(False, "Peso81,8 kgdado parcial", "81.8")) == "misto",
+            "seco: a leitura dos KPIs — número, '—' + 'dado parcial' (sem dígito), não apareceu, e o misto (número com 'dado parcial', dígito no parcial)")
+    p.check(numeros_errados([{}, parcial, certo], certo) == [] and numeros_errados([parcial, metade, certo], certo) == ["peso 81.8 (-0.9)", "gordura 19.3 (-1)"],
+            "seco: 'nunca o número da metade' — o parcial e o certo passam; a conta com metade da série no caminho é pega (nos 2)")
+    pw = _PlaywrightFalso()
+    abrir_navegador(pw, opcoes(["--seco", "--canal", "msedge"]).canal)
+    p.check(pw.lancamentos == [{"channel": "msedge", "args": ARGS_NAVEGADOR}] and opcoes(["--seco"]).canal == "chromium"
+            and "kpi_parcial" in opcoes(["--seco"]).casos.split(",") and "kpi_parcial" in CASOS,
+            "seco: o --canal msedge chega ao lançamento do navegador (sem ele, o chromium); o kpi_parcial está nos casos e no padrão do --casos")
+    fontes = {rel: (REPO / rel).read_text(encoding="utf-8") for rel in (
+        "src/painel/aluno/kpis/KpiPeso.tsx", "src/painel/aluno/kpis/KpiGordura.tsx", "src/painel/aluno/avaliacao/regras.ts",
+        "src/painel/aluno/avaliacao/useAvaliacaoDoAluno.ts", "src/integrations/consultas.ts", "src/painel/aluno/avaliacao/fontes.ts",
+        "src/painel/aluno/Cabecalho.tsx")}
+    kp, kg = fontes["src/painel/aluno/kpis/KpiPeso.tsx"], fontes["src/painel/aluno/kpis/KpiGordura.tsx"]
+    p.check('data-kpi-parcial="peso"' in kp and 'data-kpi-parcial="gordura"' in kg
+            and all('valor="—" detalhe={DETALHE_KPI_PARCIAL}' in x for x in (kp, kg))
+            and 'export const DETALHE_KPI_PARCIAL = "dado parcial";' in fontes["src/painel/aluno/avaliacao/regras.ts"]
+            and "data-kpi-compacto={rotulo}" in (REPO / "src/ui/premium/Kpi.tsx").read_text(encoding="utf-8")
+            and "data-kpis-aluno" in fontes["src/painel/aluno/Cabecalho.tsx"]
+            and all(f"data-kpi-{m}={{k.valor}}" in x and f"data-kpi-{m}-variacao=" in x for m, x in (("peso", kp), ("gordura", kg))),
+            "seco: os seletores do caso existem nas telas (o parcial, o número, o cartão e a caixa do cabeçalho) e o texto é 'dado parcial' com o '—'")
+    hook = fontes["src/painel/aluno/avaliacao/useAvaliacaoDoAluno.ts"]
+    do_app = re.search(r"\$\{[^}]*\}(/functions/v1/treino-leitura)`", fontes["src/painel/aluno/avaliacao/fontes.ts"])
+    p.check(f"export const NOVAS_TENTATIVAS_DA_PARTE = {TENTATIVAS_DA_PARTE};" in hook and "retryDelay: ESPERA_NOVA_TENTATIVA_MS" in hook
+            and "refetchOnWindowFocus: true" in hook and "export const ESPERA_NOVA_TENTATIVA_MS = 1000;" in fontes["src/integrations/consultas.ts"]
+            and 'action: "avaliacoes"' in fontes["src/painel/aluno/avaliacao/fontes.ts"] and bool(do_app and padrao.search(do_app.group(1))),
+            f"seco: as {TENTATIVAS_DA_PARTE} novas tentativas (1 s entre elas, o foco tenta de novo) são as do hook, e a rota pega a URL e a ação que o app chama")
+    try:
+        socket.create_connection(("127.0.0.1", 9), timeout=1)
+        bloqueado = False
+    except RuntimeError:
+        bloqueado = True
+    except OSError:
+        bloqueado = False
+    p.check(bloqueado, "seco: a rede fica bloqueada (nada foi ao banco nem ao site)")
+    return p.fim()
+
+
+ARGS_NAVEGADOR = ["--no-sandbox"]
+CASOS_PADRAO = "personal,nutri,resumo,kpi_parcial,app,fotos,excluir,negativos"
+
+
+def opcoes(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", required=True)
-    ap.add_argument("--prefixo", required=True)
-    ap.add_argument("--casos", default="personal,nutri,resumo,app,fotos,excluir,negativos")
+    ap.add_argument("--base")
+    ap.add_argument("--prefixo")
+    ap.add_argument("--casos", default=CASOS_PADRAO)
     # hml-18a: o E2E de tela sempre com o Edge no notebook (o Chromium do Playwright cai nas páginas longas — hml-11/hml-16)
     ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
-    a = ap.parse_args()
+    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: a rota da parte do Treino, a leitura dos KPIs, o --canal e as telas")
+    a = ap.parse_args(argv)
+    if not a.seco and (not a.base or not a.prefixo):
+        ap.error("--base e --prefixo são obrigatórios (menos no --seco)")
+    return a
+
+
+def abrir_navegador(pw, canal: str):
+    """O navegador dos casos, no canal do --canal."""
+    return pw.chromium.launch(channel=canal, args=ARGS_NAVEGADOR)
+
+
+if __name__ == "__main__":
+    a = opcoes()
+    if a.seco:
+        sys.exit(seco())
     ESTADO.update(base=a.base.rstrip("/"), prefixo=a.prefixo)
     B.saude_ok(f"avaliação — telas ({a.prefixo})")
     m = massa()
@@ -374,7 +697,7 @@ if __name__ == "__main__":
     t0 = time.time()
     try:
         with sync_playwright() as pw:
-            nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
+            nav = abrir_navegador(pw, a.canal)
             for nome in a.casos.split(","):
                 if nome == "resumo":
                     data = t(f"select proxima_avaliacao::text d from {S}.physiq_profiles where id = '{m['tid']}'")[0]["d"]
