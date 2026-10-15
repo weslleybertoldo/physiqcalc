@@ -65,6 +65,23 @@ API e a chave de serviço do projeto principal) — nunca no repositório nem no
 
 Trocar de celular sem risco (o antigo está com ele, só vai sair de uso) é o mesmo caminho; aí o passo 4 pode ser pulado.
 
+## Risco aceito: o login próprio do Treino
+
+O projeto do Treino tem o login próprio dele (o Supabase Auth do Treino), com o Google e o link por e-mail ligados. Esse caminho não
+passa pelo site, então não pede o código do app autenticador. O site e o app entram no Treino pela `trocar-token`, que pede a 2ª etapa
+de quem é master ou staff.
+
+- **Decisão do dono, 14/10/2026: o Google continua ligado no Treino, e o risco fica registrado aqui.** Motivo, nas palavras dele:
+  "Acesso a conta Google é mais um difícil de compartilhar". O link por e-mail não dá para desligar, porque a `trocar-token` usa esse
+  caminho.
+- O que já reduz o risco (hml-22): a conta `admin` do Treino não tem o Google, e a senha dela foi trocada por uma aleatória que
+  ninguém guarda. Antes da decisão, ninguém da equipe tinha entrado por esse caminho nos 30 dias anteriores.
+- **Rever a decisão** se alguém da equipe passar a entrar no Treino pelo Google, se o dono trocar de conta Google, num incidente de
+  segurança ou na próxima homologação.
+- **Para fechar o Google no Treino:** guardar a config de hoje (`GET /v1/projects/<ref do Treino>/config/auth` na Management API) e
+  mandar `PATCH` na mesma rota com `{"external_google_enabled": false}`. Conferir com um novo `GET`. O site e o app continuam
+  entrando pela `trocar-token`.
+
 ## A volta de cada peça (do mais rápido ao mais lento)
 
 1. **Apagar o fator do master** (o passo 5 da recuperação; num incidente, os passos 2 a 4 antes): tudo volta ao comportamento de antes
