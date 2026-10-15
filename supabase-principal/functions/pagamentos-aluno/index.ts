@@ -16,7 +16,12 @@
 //   aluno_mp_pix      { paciente_id, cobranca_id? }         Pix do Mercado Pago (contas liberadas pelo master — C99)
 //   aluno_mp_cartao   { paciente_id, cobranca_id?, card_token, payment_method_id, issuer_id, installments? }   W-P (I6): mais de
 //                                                            1 parcela só no cartão parcelado, até o máximo do plano
-//   aluno_mp_assinar  { paciente_id, card_token }            cobrança automática mensal no cartão (W-P: não no período todo)
+//                     mp-cartao: + pagador? { nome?, documento?: { tipo: "CPF"|"CNPJ", numero } } (o titular do formulário do cartão)
+//                     e device_id? (o MP_DEVICE_SESSION_ID do security.js) → o payer completo, 1 item, o descritor "PHYSIQ" e o cabeçalho
+//                     X-meli-session-id (_shared/mp-pagador-regras.ts); recusado → 200 com status_detail (o de sempre) e o log
+//                     mp_cartao_recusado; a recusa 400 → cartao_recusado com status_detail (só o código) e o detalhe sem número longo
+//   aluno_mp_assinar  { paciente_id, card_token, device_id? }  cobrança automática mensal no cartão (W-P: não no período todo); mp-cartao:
+//                                                            só o cabeçalho do aparelho (o corpo é o de antes)
 //   aluno_mp_cancelar { paciente_id }                        cancela a própria assinatura
 //   aluno_mp_conferir { cobranca_id }                        a tela confere o Pix do MP a cada 5 s e no "Já paguei"
 //   aluno_app_plano   { paciente_id, plano }                 W7b — aluno sem profissional troca o plano do app (Treino ·
@@ -137,6 +142,10 @@ import { masterComAal } from "../_shared/master-regras.ts";
 import {
   codigosDoMp, erroDeCartao, hojeSP, modoConfere, preapprovalDoPagamento, recusaDoSandbox, type AssinaturaMp, type PagamentoMp,
 } from "../_shared/cobranca-regras.ts";
+import {
+  DESCRITOR_FATURA, cabecalhosDoDevice, codigoDaRecusa, detalheSemDado, deviceDoPedido, infoAdicionalDoPedido, itemDoPedido, pagadorDoPedido,
+  resultadoDoDevice,
+} from "../_shared/mp-pagador-regras.ts";
 import {
   MpIndisponivel, credencialDoSchema, mpFetch, schemaDaCredencialMp, tokenMp, type CredencialMp, type RespostaMp,
 } from "../_shared/cobranca-mp.ts";
@@ -1428,25 +1437,35 @@ Deno.serve(async (req) => {
         await desfazerLinha(linha);
         return erro("missing_card_token", 400, origin);
       }
+      // mp-cartao (contrato §2.2 — "Recommendations to improve payments approval"): o aparelho no cabeçalho X-meli-session-id (o id do
+      // security.js; fora do formato, sem o cabeçalho — o token do SDK já leva o aparelho dele), o titular e o documento do formulário do
+      // cartão no payer (inválido fica fora; nunca trava), 1 item e o descritor "PHYSIQ" — nos 2 MPs, pela MESMA linha. CPF, nome e o id
+      // do aparelho só vão ao MP: nada no log, na resposta de erro ou no banco. O APK antigo (sem pagador/device_id): o pedido de antes +
+      // o item + o descritor.
+      const aparelho = deviceDoPedido(body.device_id);
+      const titular = pagadorDoPedido(body.pagador);
+      const item = itemDoPedido({ id: alvo.avulsa ? "avulsa" : (m.plano_aluno_id ?? "mensalidade"), titulo: linha.descricao, valor: alvo.valor });
       const pedido: Record<string, unknown> = {
-        transaction_amount: alvo.valor, token: cardToken, description: linha.descricao.slice(0, 120), installments: Number(parcelas), payer: { email: pagador },
-        external_reference: referencia, notification_url: notificacao,
+        transaction_amount: alvo.valor, token: cardToken, description: linha.descricao.slice(0, 120), installments: Number(parcelas),
+        payer: { email: pagador, ...titular }, external_reference: referencia, notification_url: notificacao,
+        additional_info: infoAdicionalDoPedido(item, titular), statement_descriptor: DESCRITOR_FATURA,
       };
       if (typeof body.payment_method_id === "string" && body.payment_method_id) pedido.payment_method_id = body.payment_method_id;
       if (body.issuer_id !== undefined && body.issuer_id !== null && body.issuer_id !== "") pedido.issuer_id = body.issuer_id;
+      const comAparelho = resultadoDoDevice(aparelho);
       let cobrado: RespostaMp<PagamentoMp>;
       try {
-        cobrado = await mp<PagamentoMp>(cred, "/v1/payments", { method: "POST", body: JSON.stringify(pedido) });
+        cobrado = await mp<PagamentoMp>(cred, "/v1/payments", { method: "POST", body: JSON.stringify(pedido), headers: cabecalhosDoDevice(aparelho) });
       } catch (e) {
         await desfazerLinha(linha); // W2: a conexão do personal caiu (ou o MP sumiu) no meio — a linha não fica "aguardando" sem pagamento
         throw e;
       }
       const { status: st, body: pay } = cobrado;
       if (st >= 300 || !pay?.id) {
-        log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: linha.id, status: st, externo: codigosDoMp(pay) });
+        log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: linha.id, status: st, resultado: comAparelho, externo: codigosDoMp(pay) });
         await desfazerLinha(linha);
         return erro(erroDeCartao(st, pay) ? "cartao_recusado" : "mp_error", erroDeCartao(st, pay) ? 400 : 502, origin,
-          { detalhe: String((pay as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
+          { detalhe: detalheSemDado(pay), status_detail: codigoDaRecusa(pay) });
       }
       // MENOR 20: o pagamento tem de ser do mundo do schema — o de sandbox no public (ou um de verdade no staging) nunca vale: nada aplicado e a
       // linha desfeita; o Weslley é avisado com o id do pagamento (para conferir/devolver no MP)
@@ -1454,6 +1473,10 @@ Deno.serve(async (req) => {
         log.erro({ codigo: "mp_cartao_modo_errado", schema, acao, ref: String(pay.id), status: st });
         await desfazerLinha(linha);
         return erro("mp_error", 502, origin);
+      }
+      // mp-cartao: a recusa vai ao log com o motivo (só o status_detail) e se o aparelho foi junto — a prova se lê sem a API do MP
+      if (pay.status === "rejected") {
+        log.aviso({ codigo: "mp_cartao_recusado", schema, acao, ref: String(pay.id), resultado: comAparelho, externo: codigosDoMp(pay) });
       }
       // hml-14 (H-32): o cartão JÁ foi cobrado — o erro daqui não vira 500 (o aluno pagaria 2×): registra e avisa; o aviso do MP
       // acha a cobrança pela referência
@@ -1500,8 +1523,12 @@ Deno.serve(async (req) => {
         auto_recurring: recorrencia, back_url: `${SITE[schema]}/perfil/pagamentos?assinatura=ok`, notification_url: notificacaoDe(cred, schema, SUPABASE_URL),
       };
       const pendente = () => mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, status: "pending" }) });
+      // mp-cartao (decisão 6): na automática com cartão, SÓ o cabeçalho do aparelho (o corpo é o de antes — a doc do /preapproval não tem
+      // nome, CPF, additional_info nem descritor); o pendente (checkout do MP, a rede do sandbox) não leva cartão nem aparelho
+      const aparelho = deviceDoPedido(body.device_id);
+      const comAparelho = resultadoDoDevice(aparelho);
       let { status: st, body: pre } = checkout ? await pendente()
-        : await mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, card_token_id: cardToken, status: "authorized" }) });
+        : await mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, card_token_id: cardToken, status: "authorized" }), headers: cabecalhosDoDevice(aparelho) });
       let sandbox = false;
       if (!checkout && (st >= 300 || !pre?.id) && schemaDaCredencialMp(cred) === "staging" && recusaDoSandbox(st, pre)) {
         // STAGING: o MP não tem assinatura com cartão no sandbox → nasce PENDENTE (checkout do MP). MENOR 28: pela credencial (a da conta de
@@ -1510,8 +1537,11 @@ Deno.serve(async (req) => {
         ({ status: st, body: pre } = await pendente());
       }
       if (st >= 300 || !pre?.id) {
-        log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, externo: codigosDoMp(pre) });
-        if (erroDeCartao(st, pre)) falhar("cartao_recusado", 400, { detalhe: String((pre as { message?: unknown } | null)?.message ?? "").slice(0, 200) });
+        // mp-cartao: + o resultado com/sem aparelho; o codigosDoMp tira o cc_rejected_… da mensagem (14/10: 400 sem códigos — o log ficou {})
+        log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, resultado: comAparelho, externo: codigosDoMp(pre) });
+        if (erroDeCartao(st, pre)) {
+          falhar("cartao_recusado", 400, { detalhe: detalheSemDado(pre), status_detail: codigoDaRecusa(pre) });
+        }
         falhar("mp_error", 502, { status_mp: st });
       }
       // C2: QUAL conta do MP recebe, só pelo collectorDaLinha (sem a W2, nada — o PGRST204 aqui viria DEPOIS do POST = automática em dobro; no

@@ -242,11 +242,36 @@ describe("hml-10 (D2): do Mercado Pago, só os códigos", () => {
     expect(contar("cobranca-conta/index.ts", "mp_pix_falhou")).toBe(1);
     expect(contar("cobranca-conta/index.ts", "mp_cartao_falhou")).toBe(1);
     expect(contar("cobranca-conta/index.ts", "mp_assinatura_falhou")).toBe(1);
-    for (const codigo of ["mp_pix_falhou", "mp_cartao_falhou", "mp_assinatura_falhou", "mp_valor_assinatura_app_falhou", "mp_reembolso_falhou"]) {
+    // mp-cartao: + a recusa do cartão (201 rejected) — aviso com o status_detail
+    for (const codigo of ["mp_pix_falhou", "mp_cartao_falhou", "mp_assinatura_falhou", "mp_valor_assinatura_app_falhou", "mp_reembolso_falhou",
+      "mp_cartao_recusado"]) {
       expect(contar("pagamentos-aluno/index.ts", codigo), codigo).toBe(1);
     }
     expect(contar("_shared/app-sem-profissional.ts", "mp_cancelar_falhou")).toBe(1);
     expect(contar("_shared/exclusao-profissional.ts", "mp_cancelar_falhou")).toBe(1);
+  });
+
+  it("mp-cartao: a recusa do cartão (201 rejected) e a automática recusada SÓ no texto (14/10) vão ao log com o código — sem o titular, o CPF nem o texto", () => {
+    const linhas: string[] = [];
+    vi.spyOn(console, "warn").mockImplementation((texto: unknown) => void linhas.push(String(texto)));
+    vi.spyOn(console, "error").mockImplementation((texto: unknown) => void linhas.push(String(texto)));
+    const log = criarLog("pagamentos-aluno", { avisar: null });
+    const recusado = {
+      id: 70000000123, status: "rejected", status_detail: "cc_rejected_high_risk",
+      payer: { email: "pagador@exemplo.com", first_name: "Maria", last_name: "Pagadora", identification: { type: "CPF", number: "12345678909" } },
+      additional_info: { payer: { first_name: "Maria", last_name: "Pagadora" } },
+    };
+    log.aviso({ codigo: "mp_cartao_recusado", schema: "public", acao: "aluno_mp_cartao", ref: String(recusado.id), resultado: "com_device",
+      externo: codigosDoMp(recusado) });
+    log.erro({ codigo: "mp_assinatura_falhou", schema: "public", acao: "aluno_mp_assinar", ref: "0b9c6f1e-2a3b-4c5d-8e9f-001122334455", status: 400,
+      resultado: "sem_device", externo: codigosDoMp({ message: "CC_REJECTED_HIGH_RISK for pagador@exemplo.com 12345678909", status: 400 }) });
+    expect(linhas.map((l) => JSON.parse(l))).toEqual([
+      { nivel: "aviso", funcao: "pagamentos-aluno", codigo: "mp_cartao_recusado", schema: "public", acao: "aluno_mp_cartao", ref: "70000000123",
+        resultado: "com_device", externo: { mp_status_detail: "cc_rejected_high_risk" } },
+      { nivel: "erro", funcao: "pagamentos-aluno", codigo: "mp_assinatura_falhou", schema: "public", acao: "aluno_mp_assinar",
+        ref: "0b9c6f1e-2a3b-4c5d-8e9f-001122334455", status: 400, resultado: "sem_device", externo: { mp_status_detail: "cc_rejected_high_risk" } },
+    ]);
+    expect(linhas.join("\n")).not.toMatch(/pagador|Maria|Pagadora|12345678909|for /);
   });
 
   it("espelho-enviar: a recusa da espelho-nucleo vira espelho_nucleo_<status>, sem o corpo dela", () => {

@@ -207,18 +207,34 @@ export interface CodigosDoMp {
 }
 
 /**
+ * mp-cartao (contrato §2.2): o código da recusa do cartão quando ele vem só no TEXTO da resposta do MP (`message`, ou `code`) — as 5
+ * automáticas recusadas de 14/10/2026 voltaram 400 sem `error`, `cause` nem `status_detail` (o log ficou `{}`). Só o código
+ * `cc_rejected_…`, em minúsculas; o texto livre nunca sai daqui. Sem código → null.
+ */
+export function recusaNoTexto(corpo: unknown): string | null {
+  const c = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as Record<string, unknown>) : {};
+  for (const campo of [c.message, c.code]) {
+    const achado = typeof campo === "string" ? /cc_rejected_[a-z_]{1,48}/i.exec(campo) : null;
+    if (achado) return achado[0].toLowerCase();
+  }
+  return null;
+}
+
+/**
  * hml-10 (H-24) — o MP recusou: para o log vão SÓ os códigos da resposta (`error`, os `cause[].code` e o `status_detail`),
  * nunca o corpo (a resposta do MP pode trazer e-mail, nome e documento de quem paga). O log confere o formato de cada um.
+ * mp-cartao: sem `status_detail`, o código `cc_rejected_…` que vier no texto (recusaNoTexto) vai como `mp_status_detail`.
  */
 export function codigosDoMp(corpo: unknown): CodigosDoMp {
   const c = corpo && typeof corpo === "object" && !Array.isArray(corpo) ? (corpo as Record<string, unknown>) : {};
   const causas = (Array.isArray(c.cause) ? c.cause : [])
     .map((x) => (x && typeof x === "object" ? (x as { code?: unknown }).code : null))
     .filter((x) => x !== null && x !== undefined);
+  const detalhe = c.status_detail !== undefined && c.status_detail !== null ? c.status_detail : recusaNoTexto(c);
   return {
     ...(c.error !== undefined && c.error !== null ? { mp_erro: c.error } : {}),
     ...(causas.length ? { mp_causas: causas } : {}),
-    ...(c.status_detail !== undefined && c.status_detail !== null ? { mp_status_detail: c.status_detail } : {}),
+    ...(detalhe !== undefined && detalhe !== null ? { mp_status_detail: detalhe } : {}),
   };
 }
 

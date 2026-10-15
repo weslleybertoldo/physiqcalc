@@ -1017,3 +1017,83 @@ describe("W2 (Task 9) — o token da conta em TODAS as chamadas do MP da pagamen
     expect(cabecalho).toContain("mp_conta_indisponivel");
   });
 });
+
+describe("mp-cartao — o pedido de cartão leva o aparelho, o titular, o item e o descritor; nada disso vai ao log, à resposta ou ao banco (guarda de fonte)", () => {
+  const f = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/pagamentos-aluno/index.ts"), "utf8");
+  const bloco = (acao: string) => {
+    const i = f.indexOf(`\n    if (acao === "${acao}"`);
+    expect(i, acao).toBeGreaterThan(-1);
+    const j = f.indexOf("\n    if (acao === ", i + 1);
+    return f.slice(i, j > -1 ? j : undefined);
+  };
+  const ordem = (texto: string, ...trechos: string[]) => {
+    let de = -1;
+    for (const t of trechos) {
+      const p = texto.indexOf(t, de + 1);
+      expect(p, `${t} (depois do anterior)`).toBeGreaterThan(de);
+      de = p;
+    }
+  };
+  const cartao = () => {
+    const b = bloco("aluno_mp_pix");
+    return b.slice(b.indexOf("const cardToken"));
+  };
+  /** As linhas de um trecho que citam o identificador (palavra inteira). */
+  const linhasCom = (texto: string, nome: string) => texto.split("\n").filter((l) => new RegExp(`\\b${nome}\\b`).test(l)).map((l) => l.trim());
+
+  it("aluno_mp_cartao: o aparelho e o titular do pedido → payer com o titular, 1 item, o descritor e o cabeçalho (o headers DEPOIS do body)", () => {
+    ordem(cartao(), "const aparelho = deviceDoPedido(body.device_id);", "const titular = pagadorDoPedido(body.pagador);",
+      'const item = itemDoPedido({ id: alvo.avulsa ? "avulsa" : (m.plano_aluno_id ?? "mensalidade"), titulo: linha.descricao, valor: alvo.valor });',
+      "payer: { email: pagador, ...titular }", "additional_info: infoAdicionalDoPedido(item, titular), statement_descriptor: DESCRITOR_FATURA,",
+      'await mp<PagamentoMp>(cred, "/v1/payments", { method: "POST", body: JSON.stringify(pedido), headers: cabecalhosDoDevice(aparelho) });');
+    // o Pix do mesmo bloco não leva nada disso (decisão: só o cartão)
+    const b = bloco("aluno_mp_pix");
+    const pix = b.slice(b.indexOf('if (metodo === "pix") {'), b.indexOf("const cardToken"));
+    expect(pix.length).toBeGreaterThan(200);
+    expect(pix).not.toMatch(/cabecalhosDoDevice|pagadorDoPedido|statement_descriptor|additional_info|device_id/);
+  });
+
+  it("aluno_mp_cartao: a recusa (201 rejected) vai ao log como aviso com o resultado e só os códigos; o 400 devolve o código e o detalhe sem dado", () => {
+    ordem(cartao(), 'log.erro({ codigo: "mp_cartao_falhou", schema, acao, ref: linha.id, status: st, resultado: comAparelho, externo: codigosDoMp(pay) });',
+      "{ detalhe: detalheSemDado(pay), status_detail: codigoDaRecusa(pay) }", 'log.erro({ codigo: "mp_cartao_modo_errado"',
+      'if (pay.status === "rejected") {',
+      'log.aviso({ codigo: "mp_cartao_recusado", schema, acao, ref: String(pay.id), resultado: comAparelho, externo: codigosDoMp(pay) });',
+      'update({ mp_payment_id: String(pay.id) })', "aplicarPagamentoMp(", "status_detail: pay.status_detail ?? null");
+    expect(f).not.toContain("?.message ?? \"\").slice(0, 200)");   // o detalhe cru saiu das 2 recusas
+  });
+
+  it("aluno_mp_assinar: SÓ o cabeçalho no POST authorized (o corpo de antes); o pendente sem; o log com o resultado; a recusa com o código", () => {
+    const b = bloco("aluno_mp_assinar");
+    ordem(b, "const aparelho = deviceDoPedido(body.device_id);", "const comAparelho = resultadoDoDevice(aparelho);",
+      ': await mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, card_token_id: cardToken, status: "authorized" }), headers: cabecalhosDoDevice(aparelho) });',
+      'log.erro({ codigo: "mp_assinatura_falhou", schema, acao, ref: m.id, status: st, resultado: comAparelho, externo: codigosDoMp(pre) });',
+      'falhar("cartao_recusado", 400, { detalhe: detalheSemDado(pre), status_detail: codigoDaRecusa(pre) });');
+    expect(b).toContain('const pendente = () => mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, status: "pending" }) });');
+    expect(b.replace(/^\s*\/\/.*$/gm, "")).not.toMatch(/pagadorDoPedido|body\.pagador|additional_info|statement_descriptor|itemDoPedido/);
+    expect(b.match(/cabecalhosDoDevice\(/g)).toHaveLength(1);
+  });
+
+  it("o titular e o aparelho só vão ao pedido do MP: nenhum log, resposta, gravação no banco ou outro uso", () => {
+    for (const [nome, permitidas] of [
+      ["titular", ["const titular = pagadorDoPedido(body.pagador);", "payer: { email: pagador, ...titular }, external_reference: referencia, notification_url: notificacao,",
+        "additional_info: infoAdicionalDoPedido(item, titular), statement_descriptor: DESCRITOR_FATURA,"]],
+      ["aparelho", ["const aparelho = deviceDoPedido(body.device_id);", "const comAparelho = resultadoDoDevice(aparelho);",
+        'cobrado = await mp<PagamentoMp>(cred, "/v1/payments", { method: "POST", body: JSON.stringify(pedido), headers: cabecalhosDoDevice(aparelho) });',
+        ': await mp<AssinaturaMp>(cred, "/preapproval", { method: "POST", body: JSON.stringify({ ...base, card_token_id: cardToken, status: "authorized" }), headers: cabecalhosDoDevice(aparelho) });']],
+    ] as const) {
+      const fora = linhasCom(f.replace(/^\s*\/\/.*$/gm, ""), nome).filter((l) => !(permitidas as readonly string[]).includes(l));
+      expect(fora, nome).toEqual([]);
+    }
+    // o pedido inteiro (com o titular) só vai no JSON.stringify do POST — nunca ao log, ao json() ou ao banco
+    expect(linhasCom(cartao().replace(/^\s*\/\/.*$/gm, ""), "pedido").filter((l) => !/^(const pedido: Record<string, unknown> = \{|if \(.*\) pedido\.(payment_method_id|issuer_id) = body\.(payment_method_id|issuer_id);|cobrado = await mp<PagamentoMp>)/.test(l))).toEqual([]);
+    for (const m of f.matchAll(/\blog\.(?:info|aviso|erro|excecao)\s*\(([\s\S]*?)\);/g)) {
+      expect(m[1], m[1].slice(0, 100)).not.toMatch(/\b(titular|aparelho|pedido|device_id|identification|first_name|last_name|documento)\b|body\.pagador/);
+    }
+  });
+
+  it("o cabeçalho da função documenta os campos novos", () => {
+    const cabecalho = f.slice(0, f.indexOf("\nimport "));
+    expect(cabecalho).toContain("mp-cartao: + pagador? { nome?, documento?: { tipo: \"CPF\"|\"CNPJ\", numero } }");
+    expect(cabecalho).toContain("aluno_mp_assinar  { paciente_id, card_token, device_id? }");
+  });
+});
