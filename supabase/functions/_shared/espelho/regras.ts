@@ -182,6 +182,31 @@ export function papelTreino(r: ResumoNucleo, atual: string | null | undefined, s
   return null;
 }
 
+/**
+ * hml-22 (H-22) — tem fator verificado no principal? (o `factors` do GET /auth/v1/user do principal; qualquer fator `verified`, o
+ * critério do GoTrue). Cópia do temFatorVerificado do principal (supabase-principal/functions/_shared/master-regras.ts): cada banco
+ * publica as suas funções; o teste confere que as 2 concordam.
+ */
+export function temFatorVerificado(fatores: unknown): boolean {
+  return Array.isArray(fatores) && fatores.some((f) => !!f && typeof f === "object" && (f as { status?: unknown }).status === "verified");
+}
+
+/**
+ * hml-22 (H-22) — a troca pede o código do app autenticador? Master (o resumo do principal) ou staff do Treino (o papel admin/master
+ * gravado no usuário do Treino, que é fixo) COM fator verificado no principal e SEM o token aal2 do principal → a trocar-token recusa
+ * (403 precisa_2fa) antes do espelho e da sessão. O Treino não sabe o aal do principal (a sessão dele sai sempre aal1), então quem
+ * decide é a troca. Sem fator, como hoje; quem não é master nem staff, nunca.
+ */
+export function trocaPedeDoisFatores(
+  resumo: Pick<ResumoNucleo, "master"> | null | undefined,
+  papelAtual: string | null | undefined,
+  fatores: unknown,
+  aal: unknown,
+): boolean {
+  const comando = !!resumo?.master || papelAtual === "admin" || papelAtual === "master";
+  return comando && temFatorVerificado(fatores) && aal !== "aal2";
+}
+
 /** Matrícula que manda no treino do aluno: não excluída, numa conta com Treino; ativa e com personal primeiro. */
 export function escolherMatriculaTreino(ms: MatriculaResumo[]): MatriculaResumo | null {
   const candidatas = (ms || []).filter((m) => !m.excluida && temModulo(m.conta, "treino"));

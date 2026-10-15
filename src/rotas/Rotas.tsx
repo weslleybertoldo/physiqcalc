@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useSessao } from "@/nucleo/sessao";
 import { destinoDepoisDoLogin } from "@/nucleo/situacao";
@@ -20,6 +20,9 @@ const RotasPainel = lazy(() => import("@/painel/RotasPainel"));
 // valor e o Rollup corta o import(): o código do master nem entra no bundle (src/lib/plataforma.ts). A expressão fica AQUI, sem
 // função no meio.
 const RotasMaster = import.meta.env.VITE_APP_NATIVO === "1" ? null : lazy(() => import("@/master/RotasMaster"));
+// hml-22 (H-22): a tela "Digite o código do app autenticador" (a verificação em 2 etapas do master) é só do site — o MESMO corte do
+// master: no build do app o Rollup corta o import() e a tela nem entra no bundle (scripts/ci/sem-master.sh confere pela 4ª marca).
+const TelaCodigo = import.meta.env.VITE_APP_NATIVO === "1" ? null : lazy(() => import("@/master/doisFatores/TelaCodigo"));
 // hml-10 (H-26 e H-48, D5): /erro-teste — a página que quebra o app de propósito (as 2 telas de erro e os avisos) — SÓ no build de
 // staging. O Vite troca o import.meta.env.VITE_DB_SCHEMA pelo valor e, na produção, o Rollup corta o import(): a página nem entra no
 // bundle (o mesmo jeito do master na hml-08; a expressão fica AQUI, direto na condição, sem função no meio).
@@ -30,6 +33,28 @@ const ErroDeTeste = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => im
 // expressão fica AQUI, direto na condição, sem função no meio (o mesmo jeito do master na hml-08 e da /erro-teste na hml-10).
 const PaginaLegal = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/PaginaLegal")) : null;
 // W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx, pelo registro) — as antigas saíram
+
+/**
+ * hml-22 (H-22): quem tem a verificação em 2 etapas ligada e entrou só com a senha ou o Google (aal1) vê a tela do código ANTES de
+ * qualquer área logada (o app do aluno no site, o painel e o master — o MasterLayout repete). A entrada e as páginas públicas abrem
+ * normal. Sem fator (hoje: todo mundo) e no build do app (sem a tela), passa direto.
+ */
+function useTelaCodigo(): boolean {
+  const { usuario, doisFatores } = useSessao();
+  return Boolean(TelaCodigo && usuario && doisFatores === "pede_codigo");
+}
+
+export function ComCodigo({ children }: { children: ReactNode }) {
+  const mostrar = useTelaCodigo();
+  if (mostrar && TelaCodigo) {
+    return (
+      <Carregavel esqueleto={<CarregandoTela />} nome="código do app autenticador">
+        <TelaCodigo />
+      </Carregavel>
+    );
+  }
+  return <>{children}</>;
+}
 
 /** Rota antiga dos 2 apps → rota nova (spec 4.8), levando a query e o #. */
 export function RedirecionarAntiga() {
@@ -74,7 +99,7 @@ export function Rotas() {
   return (
     <Routes>
       {/* App do aluno */}
-      <Route element={<AppAlunoLayout />}>
+      <Route element={<ComCodigo><AppAlunoLayout /></ComCodigo>}>
         <Route path="/" element={<RotaInicialApp />} />
         <Route path="/treino" element={<RotaAba id="treino" />} />
         <Route path="/dieta" element={<RotaAba id="dieta" />} />
@@ -94,9 +119,9 @@ export function Rotas() {
         ))}
 
       {/* Site do profissional e master (hml-08: o master só no site — no app, /master… cai em "Página não encontrada") */}
-      <Route path="/painel/*" element={<Carregavel esqueleto={<CarregandoTela />} nome="painel"><RotasPainel /></Carregavel>} />
+      <Route path="/painel/*" element={<ComCodigo><Carregavel esqueleto={<CarregandoTela />} nome="painel"><RotasPainel /></Carregavel></ComCodigo>} />
       {RotasMaster && masterNesteAparelho() && (
-        <Route path="/master/*" element={<Carregavel esqueleto={<CarregandoTela />} nome="master"><RotasMaster /></Carregavel>} />
+        <Route path="/master/*" element={<ComCodigo><Carregavel esqueleto={<CarregandoTela />} nome="master"><RotasMaster /></Carregavel></ComCodigo>} />
       )}
 
       {/* Rotas antigas do Calc e do Nutri */}

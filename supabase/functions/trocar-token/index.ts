@@ -3,7 +3,8 @@
 //
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: {} (vazio).
 // 200 → { access_token, refresh_token, expires_in, expires_at, token_type, treino_user_id, papel, vinculo, espelho }
-// Erros: 401 missing_auth | invalid_token · 403 email_nao_confirmado | conta_real_no_staging | aluno_bloqueado (W13) ·
+// Erros: 401 missing_auth | invalid_token · 403 email_nao_confirmado | conta_real_no_staging | aluno_bloqueado (W13) |
+//        precisa_2fa (hml-22: master ou staff com fator verificado no principal, sem o token aal2 — o site pede o código) ·
 //        409 conta_em_conflito ·
 //        429 rate_limited · 502 principal_indisponivel | espelho_indisponivel · 500 erro_interno
 //
@@ -34,6 +35,7 @@ import {
   ehLoginGoogle,
   emailConfirmado,
   emailDeTeste,
+  trocaPedeDoisFatores,
   type ResumoNucleo,
   type UsuarioPrincipal,
 } from "../_shared/espelho/regras.ts";
@@ -315,6 +317,14 @@ Deno.serve(async (req) => {
     acao = "espelho";
     const resumo = await resumoDoPrincipal(principal.id, schema, p);
     if (!resumo) return erro("espelho_indisponivel", 502, origin);
+    // hml-22 (H-22): master (o resumo) ou staff do Treino (o papel fixo de hoje) com fator verificado no principal só ganha a sessão
+    // do Treino com o token aal2 — aqui, antes do espelho (nenhum papel gravado) e da sessão. O fator vem do GET /auth/v1/user do
+    // passo 1 (fresco); o aal, do token que ele conferiu
+    const papelAtual = typeof treinoUser.app_metadata?.role === "string" ? (treinoUser.app_metadata.role as string) : null;
+    if (trocaPedeDoisFatores(resumo, papelAtual, principal.factors, claimsDoJwt(token)?.aal)) {
+      log.aviso({ codigo: "precisa_2fa", schema });
+      return erro("precisa_2fa", 403, origin);
+    }
     const espelho: ResultadoEspelho = await aplicarResumo(db, authAdmin, log, treinoUser, resumo, schema === "staging" ? "staging" : "public");
     await db.from("physiq_identidades").update({ visto_em: new Date().toISOString() }).eq("principal_user_id", principal.id);
 

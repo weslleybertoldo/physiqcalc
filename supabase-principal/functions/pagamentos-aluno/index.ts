@@ -132,7 +132,8 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog, emSegundoPlano } from "../_shared/log.ts";
-import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
+import { claimsDoJwt, emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
+import { masterComAal } from "../_shared/master-regras.ts";
 import {
   codigosDoMp, erroDeCartao, hojeSP, modoConfere, preapprovalDoPagamento, recusaDoSandbox, type AssinaturaMp, type PagamentoMp,
 } from "../_shared/cobranca-regras.ts";
@@ -341,7 +342,10 @@ Deno.serve(async (req) => {
   const email = String(user.email || "").trim().toLowerCase();
   if (schema === "staging" && !emailDeTeste(email)) return erro("conta_real_no_staging", 403, origin);
   if (!permitido(`${schema}:${user.id}`)) return erro("rate_limited", 429, origin);
-  const ehMaster = (user.app_metadata as Record<string, unknown> | undefined)?.role === "master";
+  // hml-22 (H-22): o poder de master daqui segue a regra do banco (master_aal_ok) — com fator verificado, só com o token aal2. Em
+  // aal1 ele vira a pessoa comum aqui (age como dono da conta dele), sem recusa; os fatores vêm do getUser acima (fresco)
+  const ehMaster = (user.app_metadata as Record<string, unknown> | undefined)?.role === "master"
+    && masterComAal(user.factors, claimsDoJwt(auth.slice(7))?.aal);
 
   let body: Record<string, unknown> = {};
   try {

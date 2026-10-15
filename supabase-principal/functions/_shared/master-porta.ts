@@ -4,11 +4,14 @@
 // (auth.uid() de verdade: o banco confere o master de novo e grava quem fez cada coisa nos eventos).
 // hml-10 (H-24, H-26): o log de cada função nasce aqui (criarLog com o nome dela) e vai no contexto; o catch final avisa
 // (log.excecao) e a resposta não muda.
+// hml-22 (H-22): o master com fator verificado no Auth (o TOTP do app autenticador) só passa com o token aal2 — senão 403
+// precisa_2fa (a tela pede o código). A mesma regra do master_aal_ok() do banco; sem fator, como antes. Com o Auth fora (o getUserById
+// com erro ou sem o usuário), 503 auth_indisponivel — falha FECHADA, antes de qualquer ação (revisão 🟡1).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "./avisar-erro.ts";
 import { criarLog, type Log } from "./log.ts";
-import { origemPermitida } from "./login-regras.ts";
-import { ehMaster, origemDoApp, schemaDoPedido, statusDoErro, type Schema } from "./master-regras.ts";
+import { claimsDoJwt, origemPermitida } from "./login-regras.ts";
+import { decidirPorta, origemDoApp, schemaDoPedido, statusDoErro, type Schema } from "./master-regras.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -86,13 +89,30 @@ export async function abrirPedido(req: Request, nome: string, log: Log): Promise
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
   const authAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
   // o papel vem do Auth (não do token, que pode ser de antes de tirar o master) + o perfil deste schema
-  const [{ data: u }, { data: perfil }] = await Promise.all([
+  const [{ data: u, error: eAuth }, { data: perfil }] = await Promise.all([
     authAdmin.auth.admin.getUserById(ud.user.id),
     db.from("profiles").select("role").eq("id", ud.user.id).maybeSingle(),
   ]);
-  if (!ehMaster((u?.user?.app_metadata as Record<string, unknown>) ?? null, (perfil as { role?: string } | null)?.role ?? null)) {
+  // hml-22 (H-22 + revisão 🟡1): a decisão na ordem, falhando FECHADA — o Auth fora → 503 antes de qualquer ação (sem a leitura, os
+  // fatores viriam vazios e o 2FA passaria); depois o master e o 2FA: o fator vem do Auth (o getUserById acima, fresco); o aal, do
+  // token — que já passou no getUser (assinatura, validade e sessão)
+  const decisao = decidirPorta({
+    authErro: eAuth,
+    usuario: u?.user ?? null,
+    papelPerfil: (perfil as { role?: string } | null)?.role ?? null,
+    aal: claimsDoJwt(token)?.aal,
+  });
+  if (decisao === "auth_indisponivel") {
+    log.erro({ codigo: "auth_indisponivel", schema, ref: ud.user.id, status: (eAuth as { status?: number } | null)?.status ?? 0 });
+    return json({ ok: false, erro: "auth_indisponivel" }, 503, origin);
+  }
+  if (decisao === "so_master") {
     log.aviso({ codigo: "nao_e_master", schema, ref: ud.user.id });
     return json({ ok: false, erro: "so_master" }, 403, origin);
+  }
+  if (decisao === "precisa_2fa") {
+    log.aviso({ codigo: "precisa_2fa", schema, ref: ud.user.id });
+    return json({ ok: false, erro: "precisa_2fa" }, 403, origin);
   }
   if (!permitido(`${nome}:${schema}:${ud.user.id}`, 240, 60_000)) return json({ ok: false, erro: "muitas_acoes" }, 429, origin);
   return { schema, origin, corpo, userId: ud.user.id, comoPessoa, db, authAdmin, log };

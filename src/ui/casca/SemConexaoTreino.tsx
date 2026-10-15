@@ -7,7 +7,7 @@ import { EstadoCarregando } from "@/ui/premium/Estados";
 import { MENSAGEM_TREINO_PAINEL, type TreinoDaPagina } from "./treinoDaPagina";
 
 /** O estado da página do Treino sem a sessão dele (W5): carregando, erro com "Tentar de novo" ou "é do módulo Treino". */
-const SEM_TENTAR: ErroTroca[] = ["conflito", "staging", "email", "invalido"];
+const SEM_TENTAR: ErroTroca[] = ["conflito", "staging", "email", "invalido", "dois_fatores"];
 
 export function SemConexaoTreino({ estado }: { estado: Exclude<TreinoDaPagina, { tipo: "ok" }> }) {
   const { tentarTreinoDeNovo } = useSessao();

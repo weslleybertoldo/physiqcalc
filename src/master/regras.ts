@@ -256,6 +256,10 @@ export function textoDasAutomaticas(resposta: unknown): string | null {
 
 const ERROS: Record<string, string> = {
   so_master: "Só o master pode fazer isto.",
+  // hml-22 (H-22): a verificação em 2 etapas ligada e a sessão sem o código (a tela do código aparece em seguida)
+  precisa_2fa: "Digite o código do app autenticador para continuar.",
+  // hml-22 (revisão 🟡1): o Auth não respondeu na conferência do master (a função falha fechada)
+  auth_indisponivel: "O login não respondeu agora. Tente de novo em instantes.",
   sem_login: "Sua sessão acabou. Entre de novo.",
   sem_internet: "Sem internet. Tente quando a conexão voltar.",
   conta_inexistente: "Esta conta não existe mais.",

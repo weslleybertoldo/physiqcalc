@@ -82,7 +82,9 @@ def _pat() -> str:
 
 def como_claims(claims: dict, corpo_sql: str) -> dict:
     """Roda um bloco PL/pgSQL COMO um JWT (role authenticated + request.jwt.claims), igual ao PostgREST, numa transação DESFEITA:
-    o resultado volta na mensagem da exceção (nada fica gravado). `corpo_sql` monta `r jsonb`."""
+    o resultado volta na mensagem da exceção (nada fica gravado). `corpo_sql` monta `r jsonb`. hml-22 (H-22): sem "aal" nas claims, vale
+    "aal2" (a sessão completa) — sem ele, o master com o 2FA ligado seria pessoa comum (para quem não é master, o aal não muda nada)."""
+    claims = {"aal": "aal2", **claims}
     sql = f"""do $w16b$ declare r jsonb := '{{}}'::jsonb; begin
       perform set_config('request.jwt.claims', '{json.dumps(claims)}', true);
       perform set_config('role', 'authenticated', true);

@@ -11,7 +11,8 @@ import type { Session } from "@supabase/supabase-js";
 import { criarFetchResiliente } from "@/integrations/repeticao";
 import { DB_SCHEMA, supabase } from "@/integrations/supabase/client";
 
-export type ErroTroca = "rede" | "invalido" | "conflito" | "limite" | "staging" | "email" | "indisponivel" | "interno" | "bloqueado";
+export type ErroTroca =
+  | "rede" | "invalido" | "conflito" | "limite" | "staging" | "email" | "indisponivel" | "interno" | "bloqueado" | "dois_fatores";
 
 export interface SessaoTreino {
   access_token: string;
@@ -37,13 +38,20 @@ export const MENSAGEM_TROCA: Record<ErroTroca, string> = {
   invalido: "Sua sessão terminou. Entre de novo.",
   // W13 (F5): o profissional bloqueou o acesso (a trava GateBloqueioAluno mostra a tela; aqui é só o texto do treino)
   bloqueado: "Acesso pausado pelo seu profissional.",
+  // hml-22 (H-22): o master com a verificação em 2 etapas ligada entrou só com a senha ou o Google (o site mostra a tela do código)
+  dois_fatores: "Digite o código do app autenticador para abrir o treino.",
 };
 
-/** Status HTTP + código da função → erro da troca. */
+/** Status HTTP + código da função → erro da troca. hml-22: 403 precisa_2fa → "dois_fatores" (não tenta sozinha nem pausa). */
 export function erroDaResposta(status: number, codigo?: string | null): ErroTroca {
   if (status === 0) return "rede";
   if (status === 401) return "invalido";
-  if (status === 403) return codigo === "conta_real_no_staging" ? "staging" : codigo === "aluno_bloqueado" ? "bloqueado" : "email";
+  if (status === 403) {
+    if (codigo === "conta_real_no_staging") return "staging";
+    if (codigo === "aluno_bloqueado") return "bloqueado";
+    if (codigo === "precisa_2fa") return "dois_fatores";
+    return "email";
+  }
   if (status === 409) return "conflito";
   if (status === 429) return "limite";
   if (status === 502 || status === 503 || status === 504) return "indisponivel";

@@ -38,6 +38,7 @@ export interface Achado {
 export const LOGIN = [
   "src/nucleo/sessao.tsx", "src/nucleo/senha.ts", "src/nucleo/trocaToken.ts", "src/nucleo/entrarSenha.ts", "src/lib/capacitorAuth.ts",
   "src/hooks/useAuth.tsx", "src/hooks/useAppLifecycle.ts", "src/lib/powersync/connector.ts", "src/lib/saasApi.ts",
+  "src/master/doisFatores/mfa.ts", // hml-22 (H-22): o 2FA do master (TOTP do Auth) — login, só no site
 ] as const;
 /** O getSession que só LÊ a sessão guardada no aparelho para levar o token a uma função (o fetch direto dela) — listados, só o getSession. */
 export const SESSAO_ANTES_DA_FUNCAO = [

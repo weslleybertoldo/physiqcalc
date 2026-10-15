@@ -17,6 +17,7 @@ import { capturarProfDaUrl, capturarProfDoDeepLink } from "@/lib/profPendente";
 import { capturarDestinoDaUrl, capturarLinkDoApp } from "@/lib/linksDoApp";
 import StagingGate from "@/components/StagingGate";
 import { Rotas } from "@/rotas/Rotas";
+import { BUILD_DO_APP } from "@/lib/plataforma";
 import { AbrirLinkDoApp } from "@/ui/casca/AbrirLinkDoApp";
 import { AvisosGlobais } from "@/ui/casca/AvisosGlobais";
 import { BoasVindasNutri } from "@/ui/casca/BoasVindasNutri";
@@ -54,7 +55,10 @@ capturarDestinoDaUrl();
 const AppRoutes = () => {
   const { loading } = useAuth();
   // W3: o login é o do banco principal — os avisos globais ("o Physiq mudou") valem para quem entrou, com ou sem Treino
-  const { usuario } = useSessao();
+  const { usuario, doisFatores } = useSessao();
+  // hml-22 (H-22): com a tela do código na frente (a verificação em 2 etapas — só no site; o build do app não tem a tela), os avisos
+  // esperam o código
+  const telaCodigo = !BUILD_DO_APP && doisFatores === "pede_codigo";
   // Capacitor: refresh sessão ao voltar do background
   useAppLifecycle();
 
@@ -70,7 +74,7 @@ const AppRoutes = () => {
   const avisos = (
     <>
       {/* janelas globais registradas em src/ui/avisos (ex.: "o Physiq mudou", W3) */}
-      {usuario && <AvisosGlobais />}
+      {usuario && !telaCodigo && <AvisosGlobais />}
       {/* H2: no APK, o link do site que abriu o app leva à tela dele */}
       <AbrirLinkDoApp />
     </>
