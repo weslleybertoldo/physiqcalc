@@ -7,7 +7,7 @@
 // essa conta É a do principal: o número dela, sem "dado parcial" e sem pedir o Treino de novo.
 // O caminho de verdade até a "rede" (os 2 KPIs, o useAvaliacaoDoAluno, o usePerfilAluno, as libs e o leitor em lote, com o cliente do React
 // Query do app): só o invoke da função e a parte do Treino são falsos, como em src/painel/aluno/avaliacao/useAvaliacaoDoAluno.test.tsx.
-import { render, waitFor, within } from "@testing-library/react";
+import { act, render, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -265,4 +265,30 @@ describe("hml-26 (H-128) — Peso e Gordura do cabeçalho com uma parte da séri
     expect(idas()).toHaveLength(1);
     expect(kpi("Peso")?.textContent).toBe("Peso81,8 kg0,9 kg em 6 meses");
   }, 10_000);
+
+  it("a releitura começa do zero (a nova tentativa é por leitura): o Treino cai 1× e volta → o número; recarregar com o principal caindo 1× → '—' + 'dado parcial' e, com a nova tentativa da leitura NOVA, o número", async () => {
+    h.treino.mockRejectedValueOnce(erroDoTreino()).mockResolvedValue(TREINO);
+    const { qc } = montar();
+    await esperarSerieInteira(); // a 1ª leitura: o Treino voltou na nova tentativa dela
+    expect(h.treino).toHaveBeenCalledTimes(2);
+    // a releitura (o que o recarregar faz): o principal cai 1× e a nova tentativa DESTA leitura fica no ar até o teste soltar
+    respostas.aluno_evolucao_painel = [FALHA, okDe(PRINCIPAL)];
+    const noAr = adiado<void>();
+    const responderJa = h.invoke.getMockImplementation()!;
+    h.invoke.mockImplementation(async (f: string, o: { body: Record<string, unknown> }) => {
+      if (h.corpos.length >= 2) await noAr.promessa;
+      return responderJa(f, o);
+    });
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: chaveAvaliacao(ALUNO) });
+    });
+    await waitFor(() => expect(parciais()).toEqual(["Peso", "Gordura"]));
+    expect(numeros()).toBe(0);
+    // a leitura nova busca o principal de novo (a da 1ª leitura, que trouxe o Treino, não serve para ela)
+    await waitFor(() => expect(h.invoke).toHaveBeenCalledTimes(3));
+    noAr.soltar();
+    await esperarSerieInteira();
+    expect(idas()).toEqual([expect.arrayContaining(["aluno_perfil", "aluno_evolucao_painel"]), ["aluno_evolucao_painel"], ["aluno_evolucao_painel"]]);
+    expect(h.treino).toHaveBeenCalledTimes(3);
+  });
 });
