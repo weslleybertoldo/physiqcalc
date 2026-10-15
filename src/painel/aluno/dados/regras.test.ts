@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CobrancaVista, FinanceiroProfissional } from "@/financeiro/tipos";
 import {
   AJUSTES, alturaEmMetros, ATALHOS_FLUXO, bloqueadoPorPagamento, cadastroParaTreino, corpoDoAluno, faixaDeIdade, formDoPerfil, idadeDe,
-  linhaDoCabecalho, linhaDoPerfil, linkLigado, MENSAGEM_MENOR_DE_16, mensagemErroPerfil, mudancas, objetivoDoAluno, observacaoDoAjuste, resumoDaTrava, rotaDoAtalho,
+  linhaDoCabecalho, linhaDoPerfil, linkLigado, MENSAGEM_MENOR_DE_16, mensagemErroPerfil, mesclarForm, mudancas, objetivoDoAluno, observacaoDoAjuste, resumoDaTrava, rotaDoAtalho,
   textoDoLink, validarCPF, validarForm, whatsappDoAluno,
 } from "./regras";
 import { perfil } from "@/test/fixturesPerfilAluno";
@@ -65,6 +65,19 @@ describe("W14 — Editar dados (C33)", () => {
     expect(principal).toEqual({ telefone: "11911112222" });
     expect(treino).toEqual({ altura: 179 });
     expect(mudancas(ini, ini)).toEqual({ principal: {}, treino: {} });
+  });
+  it("hml-25 (H-137): o inicial novo com a folha aberta — o campo tocado fica com o digitado; o resto (e a altura/peso do Treino) recebe o novo", () => {
+    const antes = formDoPerfil(perfil());
+    const novo = formDoPerfil(perfil({ apelido: "Rafinha" }), { nome: null, email: null, sexo: "male", idade: 28, data_nascimento: null, peso: 84.2,
+      altura: 178, foto_url: null, created_at: null });
+    const digitado = { ...antes, nome: "Rafael Moura Silva" };
+    expect(mesclarForm(digitado, novo, new Set(["nome"]))).toEqual({ ...novo, nome: "Rafael Moura Silva" });
+    expect(mesclarForm(digitado, novo, new Set(["nome"]))).toMatchObject({ apelido: "Rafinha", altura: "178", peso: "84,2" });
+    // tocado = passou pelo `muda`, mesmo que tenha voltado ao valor de antes
+    expect(mesclarForm(antes, { ...novo, nome: "Outro Nome" }, new Set(["nome"])).nome).toBe("Rafael Moura");
+    expect(mesclarForm(digitado, novo, new Set())).toEqual(novo);
+    expect(digitado.nome).toBe("Rafael Moura Silva");
+    expect(novo.nome).toBe("Rafael Moura");
   });
   it("o cadastro no formato do Banco do Treino (sexo male/female, idade pelo nascimento)", () => {
     const f = { ...formDoPerfil(perfil()), altura: "178", peso: "84,2" };
