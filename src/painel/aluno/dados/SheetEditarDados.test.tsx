@@ -15,6 +15,8 @@ const h = vi.hoisted(() => ({
   dados: vi.fn(),
   noTreino: vi.fn(),
   livre: vi.fn(),
+  sucesso: vi.fn(),
+  erro: vi.fn(),
 }));
 vi.mock("./api", () => ({
   ErroPerfil: class extends Error {
@@ -31,7 +33,7 @@ vi.mock("@/nucleo/dadoLivre", () => ({ conferirDadoLivre: h.livre }));
 // a sessão do Banco do Treino: "trocando" (a troca ainda não terminou) → "pronto" (terminou com a folha aberta)
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ treino: { estado: h.estado, erro: null } }) }));
 vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { success: h.sucesso, error: h.erro } }));
 
 import { SheetEditarDados } from "./SheetEditarDados";
 
@@ -59,6 +61,8 @@ beforeEach(() => {
   h.dados.mockReset();
   h.noTreino.mockReset();
   h.livre.mockReset();
+  h.sucesso.mockReset();
+  h.erro.mockReset();
 });
 
 describe("Editar dados › o dado que chega com a folha aberta (hml-25, H-137)", () => {
@@ -187,5 +191,25 @@ describe("Editar dados › o dado que chega com a folha aberta (hml-25, H-137)",
     expect(h.dados).toHaveBeenCalledTimes(1);
     expect(h.dados).toHaveBeenCalledWith("p1", { nome: "Rafael Moura Silva" });
     expect(h.noTreino).not.toHaveBeenCalled();
+  });
+
+  it("(h) o Salvar no vão da troca do Treino (a altura mudada e a sessão de lá saiu de pronto): avisa que a altura e o peso não chegaram", async () => {
+    h.estado = "pronto";
+    const aoFechar = vi.fn();
+    const p = perfil({ treino_user_id: "t1" });
+    const r = montar(folha({ perfil: p, treino: TREINO, aoFechar }));
+    expect(campo("altura")).toHaveValue("178");
+    digitar("altura", "180");
+    // a sessão do Treino sai de "pronto" com a folha aberta (a troca refeita): a altura e o peso somem da folha
+    h.estado = "trocando";
+    r.rerender(folha({ perfil: p, treino: TREINO, aoFechar }));
+    expect(campo("altura")).toBeNull();
+    salvar();
+    await waitFor(() => expect(aoFechar).toHaveBeenCalledTimes(1));
+    expect(h.erro).toHaveBeenCalledWith("O cadastro foi salvo, mas a altura e o peso não chegaram ao treino. Tente de novo.");
+    expect(h.noTreino).not.toHaveBeenCalled();
+    expect(h.dados).not.toHaveBeenCalled();
+    // o resto do fluxo não muda (o mesmo da falha do salvarNoTreino)
+    expect(h.sucesso).toHaveBeenCalledWith("Dados salvos.");
   });
 });

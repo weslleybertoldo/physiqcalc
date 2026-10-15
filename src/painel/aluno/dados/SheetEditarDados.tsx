@@ -13,6 +13,9 @@ import { cadastroParaTreino, formDoPerfil, formatarCPF, formatarTelefone, GENERO
 import type { FormDadosAluno, Genero, PerfilAluno, PerfilTreinoAluno } from "./tipos";
 import { useAtualizarAluno, useTreinoPronto } from "./usePerfilAluno";
 
+// a altura e o peso não chegaram ao Banco do Treino (o salvarNoTreino falhou, ou a sessão de lá saiu de "pronto" com a folha aberta)
+const MENSAGEM_SEM_TREINO = "O cadastro foi salvo, mas a altura e o peso não chegaram ao treino. Tente de novo.";
+
 /**
  * "Editar dados" do aluno (C33 + N-27): o cadastro fica no banco principal e vai para o Banco do Treino pelo espelho (nome, sexo
  * e nascimento); altura e peso de quem tem treino gravam lá (o mesmo que o "Dados Gerais" do Configurar aluno antigo) — quem não
@@ -114,8 +117,11 @@ export function SheetEditarDados({ aberto, aoFechar, perfil, treino, alunoId }: 
         try {
           await salvarNoTreino(perfil.treino_user_id!, cadastroParaTreino(f, hojeSP()));
         } catch {
-          toast.error("O cadastro foi salvo, mas a altura e o peso não chegaram ao treino. Tente de novo.");
+          toast.error(MENSAGEM_SEM_TREINO);
         }
+      } else if (!comTreino && Object.keys(t).length) {
+        // hml-25: a altura/peso mudaram e a sessão do Treino saiu de "pronto" com a folha aberta (a troca refeita): não foram para lá
+        toast.error(MENSAGEM_SEM_TREINO);
       }
       await atualizar(novo);
       toast.success("Dados salvos.");
