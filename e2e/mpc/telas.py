@@ -300,9 +300,11 @@ def rodar_staging(a) -> int:
     integração cifrada com a chave das funções), o Brick preenchido com a bandeira que a chave do vendedor acha pelo BIN e o Pagar de VERDADE
     na função publicada. O sandbox não paga (2034): a ação sai com o pagador e o device_id, o card token com o aparelho do SDK, a função
     responde cartao_recusado — nunca 500 — e nada fica pago. O preparar e o desfazer dentro do try/finally (a revisão mpc ⚪8f)."""
-    MPC = carregar_mpc()   # o preparar, a integração, o cartão pelo BIN e o desfazer da rodada (o mesmo estado do api.py)
+    # o import ANTES do carregar_mpc(), como no rodar_local: o api.py põe o e2e/w2 no sys.path[0] e o "telas" pegaria o e2e/w2/telas.py
     import telas as T  # noqa: PLC0415
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    MPC = carregar_mpc()   # o preparar, a integração, o cartão pelo BIN e o desfazer da rodada (o mesmo estado do api.py)
 
     MPC.CTX["modo"] = "staging"
     MPC.carregar()
