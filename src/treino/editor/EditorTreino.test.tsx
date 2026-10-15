@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -57,6 +57,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: h.toastErro } }));
 vi.mock("@/treino/ui/MiniaturaGif", () => ({ MiniaturaGif: ({ nome }: { nome: string }) => <span data-miniatura={nome} /> }));
 
 import { EditorTreino } from "./EditorTreino";
+import { filaDoEditor } from "./useEditorTreino";
 import CardTreino from "@/painel/aluno/resumo/CardTreino";
 import AbaTreino from "@/painel/aluno/abas/Treino";
 
@@ -225,6 +226,176 @@ describe("W15 — editor do treino (tela 8, lado esquerdo)", () => {
   });
 });
 
+/** Uma resposta do servidor que fica esperando até o teste soltar (ok) ou falhar. */
+function adiada<T = unknown>() {
+  let soltar!: (v: T) => void;
+  let falhar!: (e: unknown) => void;
+  const promessa = new Promise<T>((ok, erro) => {
+    soltar = ok;
+    falhar = erro;
+  });
+  return { promessa, soltar, falhar };
+}
+
+const digitarCampo = (rotulo: RegExp, valor: string) => {
+  const campo = screen.getByLabelText(rotulo) as HTMLInputElement;
+  fireEvent.focus(campo);
+  fireEvent.change(campo, { target: { value: valor } });
+  fireEvent.blur(campo);
+  return campo;
+};
+
+const fechar = () => {
+  const ev = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(ev);
+  return ev.defaultPrevented;
+};
+
+describe("hml-24 (H-127) — a fila por linha no editor", () => {
+  it("2 campos seguidos com o 1º em voo → 1 pedido por vez; o 2º leva os 2 campos; o navegador pergunta antes de fechar a aba", async () => {
+    const primeiro = adiada();
+    h.salvarPrescricao.mockReturnValueOnce(primeiro.promessa).mockResolvedValue({ ok: true });
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    digitarCampo(/reps de Supino Inclinado/, "10");
+    const carga = digitarCampo(/carga de Supino Inclinado/, "30");
+    expect(h.salvarPrescricao).toHaveBeenCalledTimes(1);
+    expect(h.salvarPrescricao.mock.calls[0][3]).toEqual({ series: 3, reps: "10", descanso: null, carga: null });
+    // a tela já mostra os 2 (o otimista) e, com gravação pendente, fechar a aba pede a confirmação do navegador
+    await waitFor(() => expect((screen.getByLabelText(/reps de Supino Inclinado/) as HTMLInputElement).value).toBe("10"));
+    expect(carga.value).toBe("30 kg");
+    expect(filaDoEditor.algoPendente()).toBe(true);
+    expect(fechar()).toBe(true);
+    await act(async () => primeiro.soltar({ ok: true }));
+    await waitFor(() => expect(h.salvarPrescricao).toHaveBeenCalledTimes(2));
+    expect(h.salvarPrescricao.mock.calls[1][3]).toEqual({ series: 3, reps: "10", descanso: null, carga: 30 });
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+    expect(fechar()).toBe(false);
+    expect(h.toastErro).not.toHaveBeenCalled();
+  });
+
+  it("linhas diferentes gravam em paralelo (um pedido de cada, sem esperar o outro)", async () => {
+    const a = adiada();
+    h.salvarPrescricao.mockReturnValueOnce(a.promessa).mockResolvedValue({ ok: true });
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    digitarCampo(/reps de Supino Inclinado/, "10");
+    digitarCampo(/reps de Crucifixo com Halteres/, "15");
+    expect(h.salvarPrescricao).toHaveBeenCalledTimes(2);
+    expect(h.salvarPrescricao.mock.calls.map((c) => c[2].exercicio_id)).toEqual(["e2", "e3"]);
+    await act(async () => a.soltar({ ok: true }));
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("erro → o campo volta ao salvo e o aviso traz 'Tentar de novo' (nada reenvia sozinho); o botão reenvia o que a linha queria", async () => {
+    h.salvarPrescricao.mockRejectedValueOnce(new Error("internal")).mockResolvedValue({ ok: true });
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    const reps = digitarCampo(/reps de Supino Reto/, "12");
+    await waitFor(() => expect(h.toastErro).toHaveBeenCalled());
+    const [texto, opcoes] = h.toastErro.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
+    expect(texto).toBe("Não deu para salvar agora. Tente de novo.");
+    expect(opcoes.action.label).toBe("Tentar de novo");
+    await waitFor(() => expect(reps.value).toBe("10"));
+    expect(h.salvarPrescricao).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(h.carregarEditor).toHaveBeenCalledTimes(2)); // a releitura do servidor
+    act(() => opcoes.action.onClick());
+    await waitFor(() => expect(h.salvarPrescricao).toHaveBeenCalledTimes(2));
+    expect(h.salvarPrescricao.mock.calls[1][3]).toEqual({ series: 4, reps: "12", descanso: 60, carga: 60 });
+    await waitFor(() => expect(reps.value).toBe("12"));
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("o erro de uma linha não apaga o que outra ainda grava (a releitura mostra a pendente por cima)", async () => {
+    const outra = adiada();
+    // a releitura do servidor traz um marcador (a observação) para o teste saber que ela chegou à tela
+    const doServidor = { grupo_id: "gA", grupo_usuario_id: null, exercicio_id: null, exercicio_usuario_id: null, num_series: 3, observacao: "Lida de novo do servidor." };
+    h.carregarEditor.mockResolvedValueOnce(dados()).mockImplementation(async () => dados({ seriesPadrao: [...dados().seriesPadrao, doServidor] }));
+    h.salvarPrescricao.mockImplementation((_u: string, _a: unknown, ex: { exercicio_id: string }) =>
+      ex.exercicio_id === "e1" ? Promise.reject(new Error("internal")) : outra.promessa);
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    const pendente = digitarCampo(/reps de Crucifixo com Halteres/, "15");
+    digitarCampo(/reps de Supino Reto/, "12");
+    await waitFor(() => expect(h.toastErro).toHaveBeenCalled());
+    // a releitura chegou à tela (o marcador do servidor aparece); o servidor ainda não tem o 15 — veio sem ele —, mas a tela segue
+    // com o que a linha pendente quer; a linha que falhou voltou ao salvo
+    await waitFor(() => expect((document.querySelector("[data-treino-observacao-campo]") as HTMLTextAreaElement).value).toBe("Lida de novo do servidor."));
+    expect(pendente.value).toBe("15");
+    expect((screen.getByLabelText(/reps de Supino Reto/) as HTMLInputElement).value).toBe("10");
+    await act(async () => outra.soltar({ ok: true }));
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+    expect((screen.getByLabelText(/reps de Crucifixo com Halteres/) as HTMLInputElement).value).toBe("15");
+  });
+
+  it("a folha Editar espera a gravação (Salvando…) e fecha no ok", async () => {
+    const g = adiada();
+    h.salvarPrescricao.mockReturnValueOnce(g.promessa);
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    fireEvent.click(screen.getByRole("button", { name: "Editar Crucifixo com Halteres" }));
+    await waitFor(() => expect(document.body.querySelector("[data-folha-editar]")).not.toBeNull());
+    fireEvent.change(document.body.querySelector('[data-editar-campo="reps"]')!, { target: { value: "15" } });
+    fireEvent.click(document.body.querySelector("[data-editar-salvar]")!);
+    await waitFor(() => expect(h.salvarPrescricao).toHaveBeenCalledTimes(1));
+    expect(h.salvarPrescricao.mock.calls[0][3]).toEqual({ series: 3, reps: "15", descanso: null, carga: null });
+    expect(document.body.querySelector("[data-editar-salvar]")?.getAttribute("data-salvando")).toBe("1");
+    await act(async () => g.soltar({ ok: true }));
+    await waitFor(() => expect(document.body.querySelector("[data-folha-editar]")).toBeNull());
+  });
+
+  it("a folha Editar no erro fica aberta (o aviso com 'Tentar de novo')", async () => {
+    h.salvarPrescricao.mockRejectedValueOnce(new Error("internal"));
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    fireEvent.click(screen.getByRole("button", { name: "Editar Crucifixo com Halteres" }));
+    await waitFor(() => expect(document.body.querySelector("[data-folha-editar]")).not.toBeNull());
+    fireEvent.click(document.body.querySelector("[data-editar-salvar]")!);
+    await waitFor(() => expect(h.toastErro).toHaveBeenCalled());
+    await waitFor(() => expect(document.body.querySelector("[data-editar-salvar]")?.getAttribute("data-salvando")).toBe("0"));
+    expect(document.body.querySelector("[data-folha-editar]")).not.toBeNull();
+    expect((h.toastErro.mock.calls[0][1] as { action: { label: string } }).action.label).toBe("Tentar de novo");
+  });
+
+  it("a observação vai pela fila: 2 seguidas com a 1ª em voo → 2 pedidos, um depois do outro, o 2º com o último texto", async () => {
+    const primeira = adiada();
+    h.salvarObservacao.mockReturnValueOnce(primeira.promessa).mockResolvedValue({ ok: true, observacao: "x" });
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    const obs = document.querySelector("[data-treino-observacao-campo]") as HTMLTextAreaElement;
+    for (const texto of ["Primeira.", "Segunda."]) {
+      fireEvent.focus(obs);
+      fireEvent.change(obs, { target: { value: texto } });
+      fireEvent.blur(obs);
+    }
+    expect(h.salvarObservacao).toHaveBeenCalledTimes(1);
+    expect(h.salvarObservacao).toHaveBeenLastCalledWith("t1", { grupo_id: "gA" }, "Primeira.");
+    await act(async () => primeira.soltar({ ok: true, observacao: "Primeira." }));
+    await waitFor(() => expect(h.salvarObservacao).toHaveBeenCalledTimes(2));
+    expect(h.salvarObservacao).toHaveBeenLastCalledWith("t1", { grupo_id: "gA" }, "Segunda.");
+    await waitFor(() => expect(filaDoEditor.algoPendente()).toBe(false));
+  });
+
+  it("tirar o exercício descarta a fila dele: o que ainda ia gravar nele não vai", async () => {
+    const primeiro = adiada();
+    h.salvarPrescricao.mockReturnValueOnce(primeiro.promessa).mockResolvedValue({ ok: true });
+    h.removerExercicio.mockResolvedValue({ ok: true });
+    montar(<EditorTreino treinoUserId="t1" />);
+    await screen.findByText("A · Peito e tríceps");
+    digitarCampo(/reps de Tríceps Pulley/, "12");
+    digitarCampo(/carga de Tríceps Pulley/, "25");
+    expect(h.salvarPrescricao).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Tirar Tríceps Pulley do treino" }));
+    const dialogo = await screen.findByRole("alertdialog");
+    fireEvent.click(dialogo.querySelector("[data-confirmar-ok]")!);
+    await waitFor(() => expect(h.removerExercicio).toHaveBeenCalledTimes(1));
+    expect(filaDoEditor.algoPendente()).toBe(false);
+    await act(async () => primeiro.soltar({ ok: true }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(h.salvarPrescricao).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("W15 — card Treino do Resumo (tela 7) e a aba", () => {
   it('"N de M na semana", os treinos A/B/C e as séries por grupo', async () => {
     const dias = datasDaSemana(new Date()).map(chaveData);
@@ -240,6 +411,29 @@ describe("W15 — card Treino do Resumo (tela 7) e a aba", () => {
     await waitFor(() => expect(document.querySelector('[data-volume-grupo="pernas"]')?.getAttribute("data-volume-total")).toBe("18"));
     expect(document.querySelector('[data-volume-grupo="bracos"]')?.getAttribute("data-volume-total")).toBe("12");
     expect(screen.getByText("Abrir").getAttribute("href")).toBe("/painel/alunos/p1/treino");
+  });
+
+  it("hml-24 (H-131): o 'N DE M' só aparece com a semana carregada (carregando → sem chip, nunca o 0 DE 5; chegou → 3 DE 5)", async () => {
+    const dias = datasDaSemana(new Date()).map(chaveData);
+    const semana = adiada<{ overrides: never[]; concluidos: { data_treino: string; slot_idx: number }[] }>();
+    h.estado.mockReturnValue({ tipo: "ok", treinoUserId: "t1", somenteLeitura: false, perfil: perfil() });
+    h.carregarSemanaAtual.mockReturnValue(semana.promessa);
+    montar(<CardTreino alunoId="p1" />);
+    expect(await screen.findByText("A · Peito e tríceps")).toBeInTheDocument();
+    expect(document.querySelector("[data-card-treino-semana]")).toBeNull();
+    expect(screen.queryByText(/DE 5 NA SEMANA/)).toBeNull();
+    await act(async () => semana.soltar({ overrides: [], concluidos: [0, 1, 2].map((i) => ({ data_treino: dias[i], slot_idx: 0 })) }));
+    expect(await screen.findByText("3 DE 5 NA SEMANA")).toBeInTheDocument();
+    expect(document.querySelector("[data-card-treino-semana]")?.getAttribute("data-card-treino-semana")).toBe("3/5");
+  });
+
+  it("hml-24 (H-131): a semana com erro → sem o chip (o 0 DE M de mentira não aparece)", async () => {
+    h.estado.mockReturnValue({ tipo: "ok", treinoUserId: "t1", somenteLeitura: false, perfil: perfil() });
+    h.carregarSemanaAtual.mockRejectedValue(new Error("statement timeout"));
+    montar(<CardTreino alunoId="p1" />);
+    expect(await screen.findByText("A · Peito e tríceps")).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.querySelector("[data-card-treino-semana]")).toBeNull();
   });
 
   it("aluno sem o módulo Treino: o card não aparece; a aba explica", async () => {

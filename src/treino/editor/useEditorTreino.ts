@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { chaveData, datasDaSemana } from "@/treino/datas";
@@ -25,10 +25,43 @@ import {
   tirarTreino,
   usarTreino,
 } from "./api";
-import { idsDaChave, montarTreinos } from "./regras";
+import { criarFila, vigiarSaida, type Valor } from "./filaDaLinha";
+import { comLinha, comObservacao, comPrescricao, idsDaChave, linhaDaChave, montarTreinos } from "./regras";
 import type { ConfigTreinoAluno, DadosEditor, ExercicioEditor, PrescricaoEditavel, TreinoEditor } from "./tipos";
 
 export const chaveEditor = (treinoUserId: string | null) => ["treino-editor", treinoUserId] as const;
+
+// ───────────────────────── hml-24 (H-127): a fila por linha da prescrição e da observação ─────────────────────────
+// FORA do React (o módulo): a gravação de uma linha termina mesmo saindo da tela, dentro do app; com algo pendente, o navegador
+// pergunta antes de fechar ou recarregar a aba. Chave = "<aluno do Treino>|<treino>|<exercício>" (a observação: "…|geral").
+
+type AlvoTreino = { grupo_id?: string; grupo_usuario_id?: string };
+type IdsExercicio = { exercicio_id: string | null; exercicio_usuario_id: string | null };
+/** O que a tela precisa para mostrar a linha pendente por cima do que o servidor devolveu (e refazer o "Tentar de novo"). */
+type Meta = { tipo: "prescricao"; alvo: AlvoTreino; ex: IdsExercicio } | { tipo: "observacao"; alvo: AlvoTreino };
+
+export const filaDoEditor = criarFila<Valor, unknown>();
+const metas = new Map<string, Meta>();
+/** A linha do servidor (a última confirmada) de cada linha com algo pendente: o "voltar ao salvo" do erro. */
+const salvas = new Map<string, DadosEditor["seriesPadrao"][number] | null>();
+if (typeof window !== "undefined") vigiarSaida(filaDoEditor, window);
+
+export const chaveDaPrescricao = (treinoUserId: string, t: Pick<TreinoEditor, "chave">, ex: Pick<ExercicioEditor, "chave">) =>
+  `${treinoUserId}|${t.chave}|${ex.chave}`;
+export const chaveDaObservacao = (treinoUserId: string, t: Pick<TreinoEditor, "chave">) => `${treinoUserId}|${t.chave}|geral`;
+
+const aplicarMeta = (d: DadosEditor, m: Meta, v: Valor): DadosEditor =>
+  m.tipo === "prescricao" ? comPrescricao(d, m.alvo, m.ex, v as unknown as PrescricaoEditavel) : comObservacao(d, m.alvo, (v.observacao as string | null) ?? null);
+
+/** O que o servidor devolveu + as linhas deste aluno com gravação pendente por cima (uma releitura no meio não apaga o que grava). */
+function comPendentes(d: DadosEditor, treinoUserId: string, pendentes: ReadonlyArray<readonly [string, Valor]>): DadosEditor {
+  let saida = d;
+  for (const [chave, desejado] of pendentes) {
+    const m = chave.startsWith(`${treinoUserId}|`) ? metas.get(chave) : undefined;
+    if (m) saida = aplicarMeta(saida, m, desejado);
+  }
+  return saida;
+}
 
 /** Frases das recusas das funções do Treino (o resto vira "Não deu para salvar"). */
 export function mensagemDoErro(e: unknown): string {
@@ -84,8 +117,14 @@ export function useDadosEditor(treinoUserId: string | null, leituraAluno?: strin
     retry: (n, e) => !(e instanceof ErroTreinoPainel && ["forbidden", "invalid_token"].includes(e.codigo)) && n < 1,
     networkMode: "online",
   });
-  const treinos = useMemo(() => montarTreinos(q.data), [q.data]);
-  return { ...q, treinos };
+  // hml-24: as linhas com gravação pendente na fila aparecem com o valor que a pessoa quer (o servidor ainda não tem)
+  const pendentes = useSyncExternalStore(filaDoEditor.assinar, filaDoEditor.pendentes, filaDoEditor.pendentes);
+  const data = useMemo(
+    () => (q.data && treinoUserId && !leituraAluno && pendentes.length ? comPendentes(q.data, treinoUserId, pendentes) : q.data),
+    [q.data, treinoUserId, leituraAluno, pendentes],
+  );
+  const treinos = useMemo(() => montarTreinos(data), [data]);
+  return { ...q, data, treinos };
 }
 
 /** A semana de hoje (Seg–Dom): trocas do dia e treinos feitos — o "N de M na semana". */
@@ -175,45 +214,75 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
     [qc, chave, treinoUserId, recarregar, onMudou],
   );
 
-  const prescrever = useCallback(
-    (t: TreinoEditor, ex: ExercicioEditor, p: PrescricaoEditavel) =>
-      rodar(`presc:${t.chave}:${ex.chave}`, () => salvarPrescricao(treinoUserId!, alvoDoTreino(t), ex, p), {
-        depois: p.series !== ex.series ? "volume" : "nada",
-        otimista: (d) => {
-          const alvo = alvoDoTreino(t);
-          const mesma = (r: DadosEditor["seriesPadrao"][number]) =>
-            (r.grupo_id ?? null) === (alvo.grupo_id ?? null) && (r.grupo_usuario_id ?? null) === (alvo.grupo_usuario_id ?? null)
-            && (r.exercicio_id ?? null) === ex.exercicio_id && (r.exercicio_usuario_id ?? null) === ex.exercicio_usuario_id;
-          const linha = {
-            grupo_id: alvo.grupo_id ?? null, grupo_usuario_id: alvo.grupo_usuario_id ?? null, exercicio_id: ex.exercicio_id,
-            exercicio_usuario_id: ex.exercicio_usuario_id, num_series: p.series, reps_alvo: p.reps, descanso_segundos: p.descanso,
-            carga_sugerida_kg: p.carga, observacao: d.seriesPadrao.find(mesma)?.observacao ?? null,
-          };
-          return { ...d, seriesPadrao: [...d.seriesPadrao.filter((r) => !mesma(r)), linha] };
+  /**
+   * hml-24 (H-127): a prescrição e a observação vão pela FILA POR LINHA (filaDaLinha.ts) — 1 pedido por vez por linha, juntando os
+   * campos que chegarem enquanto ele voa; a tela troca na hora (o otimista de hoje). Ok → o onMudou e o volume quando as séries
+   * mudaram. Erro → só aquela linha volta ao salvo, o aviso com "Tentar de novo" e a releitura (as outras linhas pendentes ficam por
+   * cima). A promessa resolve com o envio que levou a mudança (a folha espera e fecha no ok) ou null.
+   */
+  const gravarNaFila = useCallback(
+    (chaveFila: string, meta: Meta, base: Valor, novo: Valor, enviar: (v: Valor) => Promise<unknown>, ok?: string): Promise<unknown | null> => {
+      if (!treinoUserId) return Promise.resolve(null);
+      metas.set(chaveFila, meta);
+      const exDaMeta = meta.tipo === "prescricao" ? meta.ex : null;
+      // a linha do servidor antes do 1º pendente (o "voltar ao salvo"); com algo pendente, ela já está guardada
+      if (!filaDoEditor.pendente(chaveFila)) salvas.set(chaveFila, linhaDaChave(qc.getQueryData<DadosEditor>(chave), meta.alvo, exDaMeta));
+      void qc.cancelQueries({ queryKey: chave });
+      const tentarDeNovo = () => {
+        if (!filaDoEditor.temErro(chaveFila)) return;
+        salvas.set(chaveFila, linhaDaChave(qc.getQueryData<DadosEditor>(chave), meta.alvo, exDaMeta));
+        void filaDoEditor.tentarDeNovo(chaveFila);
+        const v = filaDoEditor.pendente(chaveFila);
+        if (v) qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, v) : d));
+      };
+      const promessa = filaDoEditor.mudar(chaveFila, base, novo, {
+        enviar,
+        aoOk: (_r, envio) => {
+          // o servidor tem o valor: o cache também (uma leitura velha no meio não o apaga) e esta vira a linha salva
+          qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, envio.valor) : d));
+          salvas.set(chaveFila, linhaDaChave(qc.getQueryData<DadosEditor>(chave), meta.alvo, exDaMeta));
+          if (ok) toast.success(ok);
+          onMudou?.();
+          if (envio.campos.has("series")) void qc.invalidateQueries({ queryKey: ["treino-volume", treinoUserId] });
         },
-      }),
-    [rodar, treinoUserId],
+        aoErro: (e) => {
+          // só esta linha volta ao que o servidor tinha; as outras pendentes seguem por cima da releitura
+          const salva = salvas.get(chaveFila) ?? null;
+          qc.setQueryData<DadosEditor>(chave, (d) => (d ? comLinha(d, meta.alvo, exDaMeta, salva) : d));
+          salvas.delete(chaveFila);
+          toast.error(mensagemDoErro(e), { id: `fila:${chaveFila}`, action: { label: "Tentar de novo", onClick: tentarDeNovo } });
+          void recarregar();
+        },
+        aoDescartar: () => salvas.delete(chaveFila),
+      });
+      const v = filaDoEditor.pendente(chaveFila);
+      if (v) qc.setQueryData<DadosEditor>(chave, (d) => (d ? aplicarMeta(d, meta, v) : d));
+      return promessa;
+    },
+    [qc, chave, treinoUserId, recarregar, onMudou],
+  );
+
+  const prescrever = useCallback(
+    (t: TreinoEditor, ex: ExercicioEditor, p: PrescricaoEditavel) => {
+      if (!treinoUserId) return Promise.resolve(null);
+      const alvo = alvoDoTreino(t);
+      const ids = { exercicio_id: ex.exercicio_id, exercicio_usuario_id: ex.exercicio_usuario_id };
+      const base = { series: ex.series, reps: ex.reps, descanso: ex.descanso, carga: ex.carga };
+      return gravarNaFila(chaveDaPrescricao(treinoUserId, t, ex), { tipo: "prescricao", alvo, ex: ids }, base, { ...p },
+        (v) => salvarPrescricao(treinoUserId, alvo, ids, v as unknown as PrescricaoEditavel));
+    },
+    [gravarNaFila, treinoUserId],
   );
 
   const observar = useCallback(
     (t: TreinoEditor, texto: string) => {
+      if (!treinoUserId) return Promise.resolve(null);
       const obs = texto.trim() ? texto.trim() : null;
-      return rodar(`obs:${t.chave}`, () => salvarObservacao(treinoUserId!, alvoDoTreino(t), obs), {
-        ok: "Observação salva.",
-        depois: "nada",
-        otimista: (d) => {
-          const alvo = alvoDoTreino(t);
-          const geral = (r: DadosEditor["seriesPadrao"][number]) =>
-            (r.grupo_id ?? null) === (alvo.grupo_id ?? null) && (r.grupo_usuario_id ?? null) === (alvo.grupo_usuario_id ?? null) && !r.exercicio_id && !r.exercicio_usuario_id;
-          const atual = d.seriesPadrao.find(geral);
-          if (atual) return { ...d, seriesPadrao: d.seriesPadrao.map((r) => (geral(r) ? { ...r, observacao: obs } : r)) };
-          if (!obs) return d;
-          const n = Number(d.config?.series_padrao_qtd) || 3;
-          return { ...d, seriesPadrao: [...d.seriesPadrao, { grupo_id: alvo.grupo_id ?? null, grupo_usuario_id: alvo.grupo_usuario_id ?? null, exercicio_id: null, exercicio_usuario_id: null, num_series: n, observacao: obs }] };
-        },
-      });
+      const alvo = alvoDoTreino(t);
+      return gravarNaFila(chaveDaObservacao(treinoUserId, t), { tipo: "observacao", alvo }, { observacao: t.observacao ?? null }, { observacao: obs },
+        (v) => salvarObservacao(treinoUserId, alvo, (v.observacao as string | null) ?? null), "Observação salva.");
     },
-    [rodar, treinoUserId],
+    [gravarNaFila, treinoUserId],
   );
 
   const configurar = useCallback(
@@ -241,6 +310,8 @@ export function useAcoesEditor(treinoUserId: string | null, onMudou?: () => void
       return r;
     },
     remover: async (t: TreinoEditor, ex: ExercicioEditor) => {
+      // hml-24: o exercício que sai leva a fila dele (o que ainda ia gravar nele não vai mais)
+      if (treinoUserId) filaDoEditor.descartar(chaveDaPrescricao(treinoUserId, t, ex));
       const r = await rodar(`rem:${t.chave}:${ex.chave}`, () => removerExercicio(treinoUserId!, t.id, ex.exercicio_id!), { ok: "Exercício tirado do treino." });
       avisoCopia(r, t.nome);
       return r;

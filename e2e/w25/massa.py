@@ -12,14 +12,17 @@ cada bloco com dado — tudo marcado para o --limpar voltar como estava:
   preconsulta 1 resposta nova sem aluno (o número do menu) — "Fernanda Dias" respondeu há 2 h;
   aniversario "Marina Alves" faz aniversário no sábado desta semana (nascimento 03/10/1995).
 Nada de cliente: só a conta de teste. E-mails e CPF únicos (W16b): só endereços w25.*.teste.claude@physiqnutri.app, sem CPF.
+hml-24: o treino do Carlos é um treino PRÓPRIO da W25 ("Peito e tríceps W25", do Lucas, com o supino) — antes ele recebia o treino A
+da W15 ("Peito e tríceps", que a tela 8 da W15 quer só do Rafael); a ligação velha com o A sai no montar.
 
-Uso: python3 e2e/w25/massa.py [--limpar]
+Uso: python3 e2e/w25/massa.py [--limpar | --seco]   (--seco: sem rede — monta o SQL do treino próprio com ids de mentira e confere)
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
 import json
+import socket
 import sys
 from pathlib import Path
 
@@ -34,7 +37,8 @@ lit = B.q
 ARQ = B.SCRATCH / "massa_staging.json"
 
 SUPINO = "23d01e92-0780-4bbf-9451-0c04d63600cf"   # Supino Reto com Barra (catálogo)
-GRUPO_A = "0d65a1c2-775e-4d9f-a4fd-c8cf9e6a600f"  # "Peito e tríceps" do Lucas
+GRUPO_A = "0d65a1c2-775e-4d9f-a4fd-c8cf9e6a600f"  # "Peito e tríceps" do Lucas (o treino A da W15) — hml-24: só para tirar a ligação velha
+TREINO_W25 = "Peito e tríceps W25"  # hml-24: o treino próprio do Carlos (o aluno de teste da W25)
 NOME_PRECONSULTA = "Fernanda Dias"
 TITULO_PRECONSULTA = "Pré-consulta de treino W25"
 NOME_PENDENTE = "Paula Nunes W25"
@@ -62,6 +66,25 @@ def garantir_usuario_treino(email: str, senha: str, nome: str) -> str:
     return r["id"]
 
 
+def sql_treino_do_carlos(grupo: str, carlos: str, d10: str, d20: str) -> str:
+    """hml-24: o treino do Carlos no grupo PRÓPRIO da W25 (o supino), a semana seg/qua/sex nele, os 2 treinos feitos e o supino de
+    65 → 70 kg; a ligação velha com o treino A da W15 sai. Só linhas do Carlos e do grupo da W25."""
+    return f"""
+      delete from {S}.tb_grupos_exercicios where grupo_id = '{grupo}';
+      insert into {S}.tb_grupos_exercicios (grupo_id, exercicio_id, ordem) values ('{grupo}', '{SUPINO}', 0);
+      delete from {S}.tb_grupos_treino_perfis where grupo_id = '{GRUPO_A}' and user_id = '{carlos}';
+      insert into {S}.tb_grupos_treino_perfis (grupo_id, user_id) values ('{grupo}', '{carlos}') on conflict (grupo_id, user_id) do nothing;
+      delete from {S}.tb_semana_treinos where user_id = '{carlos}';
+      insert into {S}.tb_semana_treinos (user_id, dia_semana, slot_idx, grupo_id) values
+        ('{carlos}', 'SEG', 0, '{grupo}'), ('{carlos}', 'QUA', 0, '{grupo}'), ('{carlos}', 'SEX', 0, '{grupo}');
+      delete from {S}.tb_treino_concluido where user_id = '{carlos}';
+      insert into {S}.tb_treino_concluido (user_id, data_treino, slot_idx, concluido) values ('{carlos}', '{d10}', 0, true), ('{carlos}', '{d20}', 0, true);
+      delete from {S}.tb_treino_series where user_id = '{carlos}';
+      insert into {S}.tb_treino_series (user_id, exercicio_id, data_treino, numero_serie, peso, reps, concluida, slot_idx) values
+        ('{carlos}', '{SUPINO}', '{d20}', 1, 65, 10, true, 0), ('{carlos}', '{SUPINO}', '{d10}', 1, 70, 8, true, 0);
+    """
+
+
 def montar() -> dict:
     conta = B.conta_w13()
     lucas_p = B.uid("w13-dono")
@@ -87,17 +110,12 @@ def montar() -> dict:
     if carlos["tid"] != carlos_t:
         antes.setdefault("carlos_tid_antes", carlos["tid"])
         q(f"update {S}.pacientes set treino_user_id = '{carlos_t}' where id = '{carlos['id']}'")
-    B.B5.exec_treino(f"""
-      insert into {S}.tb_grupos_treino_perfis (grupo_id, user_id) values ('{GRUPO_A}', '{carlos_t}') on conflict (grupo_id, user_id) do nothing;
-      delete from {S}.tb_semana_treinos where user_id = '{carlos_t}';
-      insert into {S}.tb_semana_treinos (user_id, dia_semana, slot_idx, grupo_id) values
-        ('{carlos_t}', 'SEG', 0, '{GRUPO_A}'), ('{carlos_t}', 'QUA', 0, '{GRUPO_A}'), ('{carlos_t}', 'SEX', 0, '{GRUPO_A}');
-      delete from {S}.tb_treino_concluido where user_id = '{carlos_t}';
-      insert into {S}.tb_treino_concluido (user_id, data_treino, slot_idx, concluido) values ('{carlos_t}', '{d(10)}', 0, true), ('{carlos_t}', '{d(20)}', 0, true);
-      delete from {S}.tb_treino_series where user_id = '{carlos_t}';
-      insert into {S}.tb_treino_series (user_id, exercicio_id, data_treino, numero_serie, peso, reps, concluida, slot_idx) values
-        ('{carlos_t}', '{SUPINO}', '{d(20)}', 1, 65, 10, true, 0), ('{carlos_t}', '{SUPINO}', '{d(10)}', 1, 70, 8, true, 0);
-    """)
+    # hml-24: o treino próprio da W25 (o grupo guardado na massa; some → nasce de novo), do Lucas, com o supino
+    grupo_w25 = antes.get("grupo_w25")
+    if not (grupo_w25 and qt(f"select 1 as ok from {S}.tb_grupos_treino where id = '{grupo_w25}'")):
+        grupo_w25 = qt(f"insert into {S}.tb_grupos_treino (nome, professor_id) values ({lit(TREINO_W25)}, '{lucas_t}') returning id::text as id")[0]["id"]
+    antes["grupo_w25"] = grupo_w25
+    B.B5.exec_treino(sql_treino_do_carlos(grupo_w25, carlos_t, d(10), d(20)))
 
     # ── Rafael: o treino de hoje (Atividade recente), o recorde no supino e a avaliação vencida ──
     prox = qt(f"select proxima_avaliacao::text as p from {S}.physiq_profiles where id = '{rafael_t}'")[0]["p"]
@@ -182,6 +200,10 @@ def limpar() -> None:
         B.B5.exec_treino(f"""
           delete from {S}.tb_treino_series where user_id = '{t}'; delete from {S}.tb_treino_concluido where user_id = '{t}';
           delete from {S}.tb_semana_treinos where user_id = '{t}'; delete from {S}.tb_grupos_treino_perfis where user_id = '{t}';""")
+    if m.get("grupo_w25"):
+        # hml-24: o treino próprio da W25 sai junto (os exercícios e o "recebe" dele vão pela FK)
+        B.B5.exec_treino(f"delete from {S}.tb_semana_treinos where grupo_id = '{m['grupo_w25']}'; "
+                         f"delete from {S}.tb_grupos_treino where id = '{m['grupo_w25']}'")
         q(f"update {S}.pacientes set treino_user_id = {lit(m.get('carlos_tid_antes'))} where id = '{m['carlos_paciente']}'")
         sp = B.service(B.TREINO_REF)
         B.http("DELETE", f"{B.B5.TREINO_URL}/auth/v1/admin/users/{t}", None, {"apikey": sp, "Authorization": f"Bearer {sp}"})
@@ -205,10 +227,31 @@ def limpar() -> None:
     print("limpo: a massa da W25 saiu do staging (os logins de teste do principal ficam sem matrícula)")
 
 
+def seco() -> int:
+    def sem_rede(*_a, **_k):
+        raise RuntimeError("--seco não usa a rede")
+
+    socket.socket.connect = sem_rede  # type: ignore[method-assign]
+    g, c = "00000000-0000-4000-8000-0000000000c1", "00000000-0000-4000-8000-0000000000c2"
+    sql = sql_treino_do_carlos(g, c, "2026-10-05", "2026-09-25")
+    linhas = [x.strip() for x in sql.strip().split(";") if x.strip()]
+    so_staging = all(x.split()[0] in ("delete", "insert") and f" {S}." in x for x in linhas)
+    so_carlos = all(f"'{c}'" in x or (x.startswith(f"delete from {S}.tb_grupos_exercicios") and f"'{g}'" in x)
+                    or (x.startswith(f"insert into {S}.tb_grupos_exercicios") and f"'{g}'" in x) for x in linhas)
+    sem_o_a = GRUPO_A not in sql.replace(f"delete from {S}.tb_grupos_treino_perfis where grupo_id = '{GRUPO_A}' and user_id = '{c}'", "")
+    ok = so_staging and so_carlos and sem_o_a and TREINO_W25.endswith(" W25") and sql.count(f"'{g}'") >= 5
+    print(("✅ " if ok else "❌ ") + f"seco: o treino do Carlos no grupo próprio da W25 ({len(linhas)} comandos, só no staging, só do Carlos e do grupo "
+          "dele; o treino A da W15 só aparece para tirar a ligação velha)")
+    return 0 if ok else 1
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--limpar", action="store_true")
+    ap.add_argument("--seco", action="store_true")
     a = ap.parse_args()
+    if a.seco:
+        raise SystemExit(seco())
     if a.limpar:
         limpar()
     else:
