@@ -218,6 +218,8 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
   const log = d.registrar ?? (() => {});
   if (e.papelAuth === "master" || e.papelAuth === "admin") return recusa("profissional", { motivo: "master" });
   if (!e.simular && !confirmacaoValida(e.confirmacao)) return recusa("confirmacao_invalida");
+  // a Play já cancelada (o passo 2) vai em toda recusa depois dele — também no 500 do catch
+  let cancelou: Record<string, unknown> = {};
   try {
     // 1. confere
     const pre = obj(await d.conferir());
@@ -256,7 +258,8 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
     }
     if (falhas > 0) return recusa("cobranca_nao_cancelada", { canceladas, falhas });
     // a revisão, ⚪14: daqui em diante, a recusa CONTA que a assinatura da Play já foi cancelada (sem volta; vale até o fim do período pago)
-    const cancelou = playCanceladas > 0 ? { play_cancelada: true } : {};
+    // — também o 500 do catch (a conferência das correções, DECISÃO 07:08)
+    if (playCanceladas > 0) cancelou = { play_cancelada: true };
 
     // 3. Banco do Treino
     const t = await d.treino("excluir_profissional");
@@ -293,7 +296,7 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
     };
   } catch (err) {
     log(`erro: ${(err as Error)?.message ?? String(err)}`);
-    return recusa("erro_interno");
+    return recusa("erro_interno", cancelou);
   }
 }
 

@@ -14,6 +14,10 @@ describe("o 502 da exclusão conta que a assinatura da Play já foi cancelada", 
     expect(m).toMatch(JA_CANCELADA);
     expect(mensagemErroConta(new ErroPerfil("treino_indisponivel", { ok: false, erro: "treino_indisponivel" }))).not.toMatch(/Google Play/);
   });
+  it("o 500 (erro_interno) com a Play já cancelada também conta (a conferência das correções, DECISÃO 07:08)", () => {
+    expect(mensagemErroConta(new ErroPerfil("erro_interno", { ok: false, erro: "erro_interno", play_cancelada: true }))).toMatch(JA_CANCELADA);
+    expect(mensagemErroExclusao(new ErroExclusao("erro_interno", { ok: false, erro: "erro_interno", play_cancelada: true }))).toMatch(JA_CANCELADA);
+  });
   it("o profissional (o painel › Excluir minha conta)", () => {
     const m = mensagemErroExclusao(new ErroExclusao("treino_indisponivel", { ok: false, erro: "treino_indisponivel", play_cancelada: true }));
     expect(m).toMatch(JA_CANCELADA);
