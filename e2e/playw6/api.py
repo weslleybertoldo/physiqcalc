@@ -668,6 +668,9 @@ def caso_rtdn(m: dict, token: str) -> None:
     mudar(token, "suspender")
     st = empurrar(tipo="assinatura", notificacao=5, token=token)
     p.check(st == 204 and assinatura(token).get("estado") == "suspensa" and travada(cobertura(pid)), f"rtdn · ON_HOLD → suspensa, trava — {st}")
+    st_e, r_e = compras("w7b-treino", {"acao": "estado"})
+    p.check(st_e == 200 and (r_e.get("assinatura") or {}).get("estado") == "suspensa" and "ressincronizada" not in r_e,
+            f"rtdn · o estado com a suspensa (o fim no passado) NÃO vem ressincronizada (nada mudou no Google) — {st_e}")
     mudar(token, "recuperar")
     st = empurrar(tipo="assinatura", notificacao=1, token=token)
     p.check(st == 204 and assinatura(token).get("estado") == "ativa" and len(cobrancas_play(pid)) == 3 and not travada(cobertura(pid)),
@@ -743,7 +746,7 @@ def caso_ressincroniza(m: dict, token: str) -> None:
     acoes = [x.get("acao") for x in sim_pedidos(n0)]
     p.check(st == 200 and (r.get("assinatura") or {}).get("estado") == "ativa" and perto(ts(a.get("expira_em")), ts(i["expira"]))
             and not travada(cobertura(pid)) and len(cobrancas_play(pid)) == n_cob + 1 and "get" in acoes
-            and "acknowledge" not in acoes and "defer" not in acoes,
+            and "acknowledge" not in acoes and "defer" not in acoes and r.get("ressincronizada") is True,
             f"ressincroniza · a renovação sem o RTDN: o estado lê o Google e grava (o fim novo, +1 cobrança; sem reconhecer nem adiar) — {st}")
     # (b) a cancelada que venceu sem o EXPIRED (o aviso perdido): não é mais "viva" e o estado grava a expirada
     mudar(token, "cancelar_usuario")
