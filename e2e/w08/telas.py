@@ -8,20 +8,23 @@ arquivos do próprio app; no site, o service worker guarda) vêm dos arquivos lo
 Casos (na ordem):
   treino_dia       aluno do Calc: o treino do profissional no dia → séries com peso e OK (2 exercícios feitos, o 3º com 2 de 3)
                    → tela 2 (card, feitos com ✓, o atual com "Série 3 de 3" e a carga, card do descanso com o anel) → exercício
-                   aberto com as séries → ajustes do descanso → termina o treino → "Treino finalizado!" → compartilhar → volta a
-                   internet → as séries (peso × reps), o histórico e o concluído sobem para o staging
+                   aberto com as séries → ajustes do descanso (hml-28, H-169: "Pausar" → "Continuar" e a fileira dos 3 botões cabe
+                   na folha em 390 e em 360 px; depois volta a "Pausar") → termina o treino → "Treino finalizado!" → compartilhar →
+                   volta a internet → as séries (peso × reps), o histórico e o concluído sobem para o staging
   historico        o calendário do mês com o treino de hoje, o detalhe, compartilhar e excluir (sem internet; a exclusão sobe)
   funcoes          ficha com GIF, histórico do exercício, anotações (o ponto), academia, adicionar/tirar série, reordenar
                    arrastando (a ordem sobe), "Montar o meu" (treino e exercício próprios viram o treino do dia)
   sem_profissional aluno do app (W7b, sem profissional): "Montar o meu" e "Usar um treino pronto" (abre os treinos prontos)
   so_nutricao      negativo: aluno só de Nutrição não tem a aba Treino (a rota volta para a abertura)
   sem_internet     o aviso "Sem internet · o treino fica salvo no aparelho (N mudanças)"
-Uso: python3 e2e/w08/telas.py --base http://localhost:5173 --prefixo local [--casos a,b]
+--seco (hml-28): sem navegador e sem rede — o que o check do H-169 usa existe no código e a regra dele com as medidas da sonda.
+Uso: python3 e2e/w08/telas.py --base http://localhost:5173 --prefixo local [--casos a,b] [--canal msedge] | --seco
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import socket
 import sys
 import time
 from pathlib import Path
@@ -89,6 +92,62 @@ def series_com_peso(c, ex_id: str, peso: str, quantas: int | None = None) -> int
     return feitas
 
 
+# hml-28 (H-169): a fileira dos 3 botões da folha "Descanso" ([data-descanso-pausar], [data-descanso-recomecar] e
+# [data-descanso-menos15-ajuste]). A borda ÚTIL = o conteúdo do pai da fileira (a raiz [data-ajustes-descanso], já dentro do px-5 do
+# PainelDeslizante); o corpo da folha (o 1º ancestral que rola) não pode rolar para o lado. O scrollWidth do documento sozinho não
+# acusa: a folha é fixa e o "−15 s" que passava (10,5 px em 390) caía no padding — por isso cada botão × a borda útil.
+MEDIR_DESCANSO = """() => {
+  const bs = ['pausar', 'recomecar', 'menos15-ajuste'].map((s) => document.querySelector(`[data-painel] [data-ajustes-descanso] [data-descanso-${s}]`));
+  if (bs.some((b) => !b)) return { botoes: [] };
+  const fil = bs[0].parentElement, pai = fil.parentElement, c = (x) => Math.round(x * 100) / 100;
+  let corpo = pai;
+  while (corpo && corpo !== document.body && getComputedStyle(corpo).overflowX === 'visible') corpo = corpo.parentElement;
+  const cs = getComputedStyle(pai), r = pai.getBoundingClientRect();
+  return {
+    tela: innerWidth, doc: document.documentElement.scrollWidth, fileira: [fil.clientWidth, fil.scrollWidth],
+    corpo: corpo && corpo !== document.body ? [corpo.clientWidth, corpo.scrollWidth] : null,
+    util: [c(r.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth)), c(r.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth))],
+    pausar: bs[0].textContent.trim(),
+    botoes: bs.map((b) => { const q = b.getBoundingClientRect(); return [c(q.left), c(q.right)]; }),
+  };
+}"""
+
+
+def fileira_descanso_cabe(m: dict, largura: int) -> bool:
+    """Com o descanso pausado ("Continuar", o estado mais largo), os 3 botões, cada um dentro da borda útil (0,5 px de folga do
+    arredondamento) e da tela; a fileira e o corpo da folha sem rolar para o lado; a tela e o documento na largura."""
+    bts = m.get("botoes") or []
+    return (m.get("pausar") == "Continuar" and len(bts) == 3 and m.get("corpo") is not None
+            and all(b[0] >= m["util"][0] - 0.5 and b[1] <= m["util"][1] + 0.5 and b[1] <= m["tela"] for b in bts)
+            and m["fileira"][1] <= m["fileira"][0] and m["corpo"][1] <= m["corpo"][0] and m["tela"] <= largura and m["doc"] <= largura)
+
+
+def descanso_pausado_cabe(c) -> None:
+    """hml-28 (H-169): com a folha "Descanso" aberta, toca "Pausar" (vira "Continuar") e mede a fileira em 390 × 844 e em 360 × 800;
+    depois volta a 390 × 844 e toca "Continuar" (o descanso volta a correr e o caso segue como antes). Sem exceção: um botão
+    desligado (o descanso já acabou) vira check falho, não derruba o caso (a limpeza do staging vem depois)."""
+    sel = "[data-ajustes-descanso] [data-descanso-pausar]"
+    if c.pg.locator(sel).count() == 1 and c.pg.locator(sel).is_enabled():
+        c.pg.locator(sel).click()
+    pausou = c.esperar(lambda: B.texto(c, sel) == "Continuar", 5)
+    try:
+        for largura, altura in ((390, 844), (360, 800)):
+            c.pg.set_viewport_size({"width": largura, "height": altura})
+            c.pg.wait_for_timeout(500)   # a troca de tamanho e o toque assentam (o botão afunda por 150 ms no toque)
+            m = c.pg.evaluate(MEDIR_DESCANSO)
+            p.check(pausou and fileira_descanso_cabe(m, largura),
+                    f"a fileira do Descanso ({m.get('pausar')!r}) cabe em {largura} px: cada botão dentro da borda útil {m.get('util')} "
+                    f"(esquerda, direita = {m.get('botoes')}); fileira e corpo client/scroll = {m.get('fileira')} {m.get('corpo')}; "
+                    f"scrollWidth do documento = {m.get('doc')}")
+            c.print(f"descanso_continuar_{largura}")
+    finally:
+        c.pg.set_viewport_size({"width": 390, "height": 844})
+        c.pg.wait_for_timeout(300)
+    if B.texto(c, sel) == "Continuar":
+        c.pg.locator(sel).click()
+    p.check(c.esperar(lambda: B.texto(c, sel) == "Pausar", 5), f"'Continuar' volta o descanso a correr ({B.texto(c, sel)!r})")
+
+
 @caso
 def caso_treino_dia(nav, a) -> None:
     desde = B.agora_iso()
@@ -136,6 +195,8 @@ def caso_treino_dia(nav, a) -> None:
         cortados = c.pg.evaluate("() => [...document.querySelectorAll('[data-ajustes-descanso] button')].filter(b => b.offsetWidth && b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim())")
         p.check(not cortados, f"os botões do descanso cabem sem cortar o texto ({cortados})")
         c.print("descanso_ajustes")
+        # hml-28 (H-169): com o descanso pausado, o "−15 s" passava 10,5 px da borda útil em 390 px e saía em parte da tela em 360 px
+        descanso_pausado_cabe(c)
         dur0 = B.texto(c, "[data-descanso-duracao]")
         c.pg.locator("[data-descanso-tempo-mais]").click()
         c.pg.wait_for_timeout(300)
@@ -387,15 +448,70 @@ def caso_sem_internet(nav, a) -> None:
     B.limpar_staging(desde, "sem_internet")
 
 
+# --seco (hml-28): o arquivo → o que tem de estar nele (os seletores, o rótulo e as classes que o check do H-169 usa)
+NO_CODIGO = {
+    "src/treino/ui/CartaoDescanso.tsx": ['className="@container flex flex-col gap-4 pt-1" data-ajustes-descanso',
+                                         'className="grid grid-cols-2 gap-2 @min-[360px]:grid-cols-[1fr_1fr_auto]"',
+                                         'className="col-span-2 px-4 @min-[360px]:col-span-1"', "data-descanso-pausar", "data-descanso-recomecar",
+                                         "data-descanso-menos15-ajuste", '{d.pausado ? "Continuar" : "Pausar"}', "data-descanso-ajustes"],
+    "src/ui/premium/Sheet.tsx": ["data-painel={lado}", 'className="min-h-0 flex-1 overflow-y-auto px-5 pb-5"'],
+}
+# as medidas da sonda da hml-28 (réplica com as classes do código, Chromium 153 = Edge 154): o código de antes com "Continuar" e o corrigido
+_ANTES = {"pausar": "Continuar", "botoes": [[21, 152.64], [160.64, 302.58], [310.58, 379.5]]}
+_DEPOIS = {"pausar": "Continuar"}
+MEDIDAS_DA_SONDA = {
+    "antes_390": {**_ANTES, "tela": 390, "doc": 390, "util": [21, 369], "fileira": [348, 359], "corpo": [388, 388]},
+    "antes_360": {**_ANTES, "tela": 360, "doc": 360, "util": [21, 339], "fileira": [318, 359], "corpo": [358, 379]},
+    "depois_390": {**_DEPOIS, "tela": 390, "doc": 390, "util": [21, 369], "fileira": [348, 348], "corpo": [388, 388],
+                   "botoes": [[21, 191], [199, 369], [21, 369]]},
+    "depois_360": {**_DEPOIS, "tela": 360, "doc": 360, "util": [21, 339], "fileira": [318, 318], "corpo": [358, 358],
+                   "botoes": [[21, 176], [184, 339], [21, 339]]},
+}
+
+
+def seco() -> int:
+    """Sem navegador e sem rede (o socket fica bloqueado): os seletores e as classes do H-169 no código e a regra do check."""
+    def sem_rede(*_a, **_k):
+        raise RuntimeError("--seco não usa a rede")
+
+    socket.socket.connect = sem_rede  # type: ignore[method-assign]
+    raiz = Path(__file__).resolve().parents[2]
+    falta = [f"{arq} › {x}" for arq, itens in NO_CODIGO.items() for x in itens
+             if not (raiz / arq).exists() or x not in (raiz / arq).read_text(encoding="utf-8")]
+    total = sum(len(v) for v in NO_CODIGO.values())
+    p.check(not falta, f"seco: {total - len(falta)}/{total} seletores, rótulos e classes do check do H-169 no código" + (f" — falta: {falta}" if falta else ""))
+    M = MEDIDAS_DA_SONDA
+    p.check(not fileira_descanso_cabe(M["antes_390"], 390) and not fileira_descanso_cabe(M["antes_360"], 360),
+            "seco: a regra acusa o código de antes ('Continuar': o −15 s até 379,5 px, a útil 369 em 390 e 339 em 360)")
+    p.check(fileira_descanso_cabe(M["depois_390"], 390) and fileira_descanso_cabe(M["depois_360"], 360),
+            "seco: a regra passa no corrigido (o −15 s na 2ª linha com a largura toda; cada botão dentro da útil em 390 e em 360)")
+    p.check(not fileira_descanso_cabe({**M["depois_390"], "pausar": "Pausar"}, 390) and not fileira_descanso_cabe({"botoes": []}, 390)
+            and not fileira_descanso_cabe({**M["depois_390"], "corpo": None}, 390),
+            "seco: a regra exige o descanso pausado ('Continuar'), os 3 botões e o corpo da folha (com 'Pausar' ou sem a fileira, falha)")
+    try:
+        socket.create_connection(("127.0.0.1", 9), timeout=1)
+        bloqueado = False
+    except RuntimeError:
+        bloqueado = True
+    except OSError:
+        bloqueado = False
+    p.check(bloqueado, "seco: a rede fica bloqueada (nada foi ao banco nem ao site)")
+    return p.fim()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:5173")
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
+    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: o check do H-169 (seletores, classes e a regra)")
     a = ap.parse_args()
+    if a.seco:
+        return seco()
     B.ESTADO["schema"] = "staging"
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage"])
         for nome in a.casos.split(","):
             print(f"\n== {nome} ==", flush=True)
             if not B.saude_treino():
