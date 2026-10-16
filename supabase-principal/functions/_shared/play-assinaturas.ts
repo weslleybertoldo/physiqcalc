@@ -15,7 +15,8 @@ import type { Log } from "./log.ts";
 import { PlayIndisponivel, adiar, cancelar, contaDaPlay, obter, reconhecer, type OpcoesPlay } from "./play-api.ts";
 import {
   CANCELAMENTO_NO_VINCULO_E_NA_EXCLUSAO, ESTADOS_QUE_RENOVAM, ESTADOS_VIVOS, compraNaoExiste, diasParaAdiar, duracaoDoAdiamento,
-  ehUuid, entradaDoGoogle, googleTransitorio, lerAssinaturaV2, type AssinaturaGoogle, type EntradaAplicar, type EstadoPlay, type Schema,
+  ehUuid, entradaDoGoogle, fimDoAdiamento, googleTransitorio, lerAssinaturaV2, type AssinaturaGoogle, type EntradaAplicar, type EstadoPlay,
+  type Schema,
 } from "./play-regras.ts";
 import type { Prazo } from "./tempo.ts";
 
@@ -84,10 +85,13 @@ export async function assinaturaDoToken(db: SupabaseClient, token: string): Prom
   return (data as LinhaPlayBanco | null) ?? null;
 }
 
-/** A assinatura VIVA da matrícula (uma no máximo — play_assinaturas_viva_uq); null = nenhuma. */
+/** A cancelada que já venceu NÃO é viva (o RTDN EXPIRED atrasou ou se perdeu): a mesma regra da play_aplicar (a revisão, 🟡3). */
+const naoVencida = (agora = new Date()): string => `estado.neq.cancelada,expira_em.is.null,expira_em.gte.${agora.toISOString()}`;
+
+/** A assinatura VIVA da matrícula (uma no máximo — play_assinaturas_viva_uq; a cancelada vencida fica de fora); null = nenhuma. */
 export async function assinaturaVivaDa(db: SupabaseClient, pacienteId: string): Promise<LinhaPlayBanco | null> {
   const { data, error } = await db.from("play_assinaturas").select(COLUNAS).eq("paciente_id", pacienteId)
-    .in("estado", ESTADOS_VIVOS as string[]).order("atualizada_em", { ascending: false }).limit(1);
+    .in("estado", ESTADOS_VIVOS as string[]).or(naoVencida()).order("atualizada_em", { ascending: false }).limit(1);
   if (error) {
     if (semTabela(error)) return null;
     throw error;
@@ -95,11 +99,11 @@ export async function assinaturaVivaDa(db: SupabaseClient, pacienteId: string): 
   return ((data ?? []) as LinhaPlayBanco[])[0] ?? null;
 }
 
-/** As assinaturas VIVAS destas matrículas (o pagamentos-aluno recusa o MP com a Play viva). */
+/** As assinaturas VIVAS destas matrículas (o pagamentos-aluno recusa o MP com a Play viva; a cancelada vencida fica de fora). */
 export async function vivasDasMatriculas(db: SupabaseClient, pacienteIds: string[]): Promise<LinhaPlayBanco[]> {
   if (!pacienteIds.length) return [];
   const { data, error } = await db.from("play_assinaturas").select(COLUNAS).in("paciente_id", pacienteIds)
-    .in("estado", ESTADOS_VIVOS as string[]).order("atualizada_em", { ascending: false }).limit(1000);
+    .in("estado", ESTADOS_VIVOS as string[]).or(naoVencida()).order("atualizada_em", { ascending: false }).limit(1000);
   if (error) {
     if (semTabela(error)) return [];
     throw error;
@@ -135,6 +139,8 @@ export interface PedidoSincronia {
   canceladaPor?: "vinculo" | "exclusao" | "google" | null;
   /** reconhecer se faltar (o registrar e o aviso: sim) */
   reconhecer: boolean;
+  /** o defer da 1ª compra coberta (o padrão: sim; a ressincronia do estado: não) */
+  adiar?: boolean;
 }
 
 export type ResultadoSincronia =
@@ -191,35 +197,122 @@ export async function sincronizar(c: ContextoPlay, token: string, p: PedidoSincr
     }
   }
 
-  // o defer da 1ª compra coberta (o que falta do teste ou do mês do MP), uma vez
-  const dias = resposta.estado === "ativa" && resposta.matricula_ativa === true && resposta.adiar_ate && !resposta.adiada_em
+  // o defer da 1ª compra coberta (o que falta do teste ou do mês do MP), UMA vez só (a revisão, 🟡1): a marca adiada_em é RESERVADA no banco
+  // antes de ir ao Google (o update atômico: quem não reservou não adia — o RTDN 9 ou o repetido que chega no meio) e, logo depois do 2xx,
+  // gravada com o fim novo da PRÓPRIA resposta do defer, antes de qualquer outra ida. O Google que recusa (resposta que decide) desfaz a
+  // reserva e a próxima sincronia tenta de novo; o Google sem resposta (prazo, rede) MANTÉM a reserva: adiar 2 vezes daria de novo os dias
+  // (a receita some calada) — o log play_adiar_incerto avisa para conferir no Console.
+  const dias = p.adiar !== false && resposta.estado === "ativa" && resposta.matricula_ativa === true && resposta.adiar_ate && !resposta.adiada_em
     ? diasParaAdiar(resposta.adiar_ate, atual.inicio) : null;
   if (dias) {
-    try {
-      const fresca = reconheceu ? await lerDoGoogle(c, token) : atual; // reconhecer muda o etag
+    const reservada = await reservarAdiamento(c.db, token);
+    if (!reservada) {
+      c.log.aviso({ codigo: "play_adiar_ja_reservado", schema: c.schema, ref: p.pacienteId });
+    } else {
+      resposta = { ...resposta, adiada_em: reservada };
+      let fresca: AssinaturaGoogle | null = null;
+      try {
+        fresca = reconheceu ? await lerDoGoogle(c, token) : atual; // reconhecer muda o etag
+      } catch (e) {
+        if (!(e instanceof PlayIndisponivel)) throw e;
+        // o GET de antes do defer caiu: o defer nem foi pedido — a reserva sai e a próxima sincronia tenta
+        await desfazerReserva(c.db, token, reservada);
+        resposta = { ...resposta, adiada_em: null };
+        c.log.aviso({ codigo: "play_adiar_falhou", schema: c.schema, ref: p.pacienteId, status: e.status, externo: { google_erro: e.codigo } });
+      }
       if (fresca?.etag) {
-        const r = await adiar(token, fresca.etag, duracaoDoAdiamento(dias), opcoesDe(c));
-        if (r.status >= 200 && r.status < 300) {
-          const depois = await lerDoGoogle(c, token);
-          if (depois) {
-            atual = depois;
-            const e2 = entradaDoGoogle(p.pacienteId, token, depois, { ...extra, adiada: true, reconhecida: reconheceu });
-            if (e2) resposta = await aplicar(c.db, e2);
-          }
+        let r: Awaited<ReturnType<typeof adiar>> | null = null;
+        try {
+          r = await adiar(token, fresca.etag, duracaoDoAdiamento(dias), opcoesDe(c));
+        } catch (e) {
+          if (!(e instanceof PlayIndisponivel)) throw e;
+          c.log.erro({ codigo: "play_adiar_incerto", schema: c.schema, ref: p.pacienteId, n: dias, status: e.status, externo: { google_erro: e.codigo } });
+        }
+        if (r && r.status >= 200 && r.status < 300) {
           adiou = true;
+          // a marca com o fim novo da resposta do defer, LOGO depois do 2xx (antes de qualquer outra ida ao Google)
+          const fim = fimDoAdiamento(r.corpo);
+          const marca = entradaDoGoogle(p.pacienteId, token, fim ? { ...fresca, expiraEm: fim } : fresca, { ...extra, adiada: true, reconhecida: reconheceu });
+          if (marca) resposta = await aplicar(c.db, marca);
           c.log.info({ codigo: "play_adiada", schema: c.schema, ref: p.pacienteId, n: dias });
-        } else {
+          // depois, o GET (a fonte da verdade): se cair, a marca e o fim novo já estão no banco
+          try {
+            const depois = await lerDoGoogle(c, token);
+            if (depois) {
+              atual = depois;
+              const e2 = entradaDoGoogle(p.pacienteId, token, depois, { ...extra, adiada: true, reconhecida: reconheceu });
+              if (e2) resposta = await aplicar(c.db, e2);
+            }
+          } catch (e) {
+            if (!(e instanceof PlayIndisponivel)) throw e;
+            c.log.aviso({ codigo: "play_pos_adiar_get_falhou", schema: c.schema, ref: p.pacienteId, status: e.status, externo: { google_erro: e.codigo } });
+          }
+        } else if (r) {
+          // o Google recusou (resposta que decide): a reserva sai e a próxima sincronia tenta de novo
+          await desfazerReserva(c.db, token, reservada);
+          resposta = { ...resposta, adiada_em: null };
           c.log.erro({ codigo: "play_adiar_falhou", schema: c.schema, ref: p.pacienteId, status: r.status, externo: { google_erro: r.erro } });
         }
-      } else {
+      } else if (fresca) {
+        await desfazerReserva(c.db, token, reservada);
+        resposta = { ...resposta, adiada_em: null };
         c.log.aviso({ codigo: "play_adiar_falhou", schema: c.schema, ref: p.pacienteId, resultado: "sem_etag" });
       }
-    } catch (e) {
-      if (!(e instanceof PlayIndisponivel)) throw e;
-      c.log.aviso({ codigo: "play_adiar_falhou", schema: c.schema, ref: p.pacienteId, status: e.status, externo: { google_erro: e.codigo } });
     }
   }
   return { ok: true, resposta, assinatura: atual, reconheceu, adiou };
+}
+
+/** A reserva do defer (atômica: só quem acha adiada_em nulo reserva). Devolve o instante reservado ou null. Erro do banco lança. */
+async function reservarAdiamento(db: SupabaseClient, token: string): Promise<string | null> {
+  const { data, error } = await db.from("play_assinaturas").update({ adiada_em: new Date().toISOString() }).eq("token", token)
+    .is("adiada_em", null).select("adiada_em");
+  if (error) throw error;
+  return ((data ?? []) as Array<{ adiada_em: string | null }>)[0]?.adiada_em ?? null;
+}
+
+/** Desfaz a reserva (só a que esta sincronia fez). Erro do banco lança. */
+async function desfazerReserva(db: SupabaseClient, token: string, reservada: string): Promise<void> {
+  const { error } = await db.from("play_assinaturas").update({ adiada_em: null }).eq("token", token).eq("adiada_em", reservada);
+  if (error) throw error;
+}
+
+/**
+ * O `estado` da play-compras (a revisão, 🟡3): as linhas "vivas" desta matrícula cujo fim já passou — a renovação ou o EXPIRED que o RTDN
+ * não trouxe (atrasado, perdido, ou sem o Pub/Sub — a alternativa "sem cartão" do §7.14) — voltam ao Google: o GET + a play_aplicar, sem
+ * reconhecer nem adiar. O Google fora = segue com o que o banco tem (log). Devolve quantas gravou. Erro do banco lança.
+ */
+export async function ressincronizarVencidas(c: ContextoPlay, pacienteId: string): Promise<number> {
+  const { data, error } = await c.db.from("play_assinaturas").select(COLUNAS).eq("paciente_id", pacienteId)
+    .in("estado", ESTADOS_VIVOS as string[]).lt("expira_em", new Date().toISOString()).order("atualizada_em", { ascending: false }).limit(5);
+  if (error) {
+    if (semTabela(error)) return 0;
+    throw error;
+  }
+  let n = 0;
+  for (const l of (data ?? []) as LinhaPlayBanco[]) {
+    try {
+      const r = await sincronizar(c, l.token, { pacienteId, reconhecer: false, adiar: false });
+      if (r.ok) n++;
+      else c.log.aviso({ codigo: "play_ressincronia_recusada", schema: c.schema, ref: pacienteId, resultado: r.erro });
+    } catch (e) {
+      if (!(e instanceof PlayIndisponivel)) throw e;
+      c.log.aviso({ codigo: "play_ressincronia_falhou", schema: c.schema, ref: pacienteId, status: e.status, externo: { google_erro: e.codigo } });
+    }
+  }
+  if (n) c.log.info({ codigo: "play_ressincronizada", schema: c.schema, ref: pacienteId, n });
+  return n;
+}
+
+/**
+ * A devolução de um token que o Google já esqueceu (o GET 404/410 — mais de 60 dias): o pedido do aviso basta para marcar a cobrança dele
+ * como devolvida (cancelada + reembolsado_em), sem o GET (a revisão, ⚪13). Devolve quantas marcou. Erro do banco lança.
+ */
+export async function devolverPedidoSemCompra(db: SupabaseClient, pacienteId: string, pedido: string): Promise<number> {
+  const { data, error } = await db.from("cobrancas").update({ status: "cancelada", reembolsado_em: new Date().toISOString() })
+    .eq("play_pedido", pedido).eq("forma", "google_play").eq("paciente_id", pacienteId).eq("status", "paga").select("id");
+  if (error) throw error;
+  return ((data ?? []) as unknown[]).length;
 }
 
 /**
