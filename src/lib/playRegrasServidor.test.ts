@@ -94,6 +94,30 @@ describe("a leitura do GET (purchases.subscriptionsv2)", () => {
     expect(a.produto).toBe("app_treino_alimentacao");
     expect(a.produtos.sort()).toEqual(["app_treino", "app_treino_alimentacao"]);
   });
+  it("o DEFERRED da doc (o token novo com 2 linhas: a antiga COM expiryTime + deferredItemReplacement e a nova SEM): nas 2 ordens, o vigente é a antiga", () => {
+    const antiga = {
+      productId: "app_treino_alimentacao",
+      expiryTime: "2026-11-16T10:00:00Z",
+      autoRenewingPlan: { autoRenewEnabled: true, recurringPrice: { currencyCode: "BRL", units: "49", nanos: 900000000 } },
+      offerDetails: { basePlanId: "mensal" },
+      latestSuccessfulOrderId: "GPA.1111-2222-3333-44444",
+      deferredItemReplacement: { productId: "app_treino" },
+    };
+    const nova = {
+      productId: "app_treino",
+      autoRenewingPlan: { autoRenewEnabled: true, recurringPrice: { currencyCode: "BRL", units: "29", nanos: 900000000 } },
+      offerDetails: { basePlanId: "mensal-novo" },
+    };
+    for (const linhas of [[antiga, nova], [nova, antiga]]) {
+      const a = lerAssinaturaV2(getV2({ lineItems: linhas }))!;
+      expect(a.produto).toBe("app_treino_alimentacao");
+      expect(a.planoBase).toBe("mensal");
+      expect(a.valor).toBe(49.9);
+      expect(a.expiraEm).toBe("2026-11-16T10:00:00.000Z");
+      expect(a.pedidoPago).toBe("GPA.1111-2222-3333-44444");
+      expect(a.produtos.sort()).toEqual(["app_treino", "app_treino_alimentacao"]);
+    }
+  });
   it("na carência sem pedido novo pago, o pedido do topo NÃO vale (pode ser o recusado)", () => {
     const a = lerAssinaturaV2(getV2({ subscriptionState: "SUBSCRIPTION_STATE_IN_GRACE_PERIOD", latestOrderId: "GPA.1111-2222-3333-44444..1" },
       { latestSuccessfulOrderId: undefined }))!;
@@ -386,5 +410,17 @@ describe("a exclusão: a da Play cancela antes de apagar (o profissional que tam
   });
   it("o aluno: a recusa play_nao_cancelada é 502 (nada foi apagado)", () => {
     expect(STATUS_DA_RECUSA.play_nao_cancelada).toBe(502);
+  });
+  it("a revisão ⚪14: a Play cancelada e o Treino que para depois → o 502 CONTA que a assinatura já foi cancelada (sem Play, não diz)", async () => {
+    const { d, apagou } = deps({ canceladas: 1, falhas: 0 });
+    d.treino = async (acao) => (acao === "excluir_profissional" ? { passo: "indisponivel", corpo: {} } : { passo: "sem_vinculo", corpo: {} });
+    const r = await excluirContaProfissional({ simular: false, confirmacao: "EXCLUIR", papelAuth: "" }, d);
+    expect(r.status).toBe(502);
+    expect(r.corpo as Record<string, unknown>).toMatchObject({ erro: "treino_indisponivel", play_cancelada: true });
+    expect(apagou()).toBe(false);
+    const sem = deps({ canceladas: 0, falhas: 0 });
+    sem.d.treino = d.treino;
+    const r2 = await excluirContaProfissional({ simular: false, confirmacao: "EXCLUIR", papelAuth: "" }, sem.d);
+    expect((r2.corpo as Record<string, unknown>).play_cancelada).toBeUndefined();
   });
 });

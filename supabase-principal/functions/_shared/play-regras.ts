@@ -174,8 +174,11 @@ export function lerAssinaturaV2(corpo: unknown): AssinaturaGoogle | null {
     });
   }
   if (!linhas.length) return null;
-  // a vigente: a que vence por último (sem data = a primeira)
-  const vigente = [...linhas].sort((a, b) => Date.parse(b.expiraEm ?? "") - Date.parse(a.expiraEm ?? "") || 0)[0] ?? linhas[0];
+  // a vigente: a que vence por último ENTRE AS QUE TÊM expiryTime — no DEFERRED (a troca na renovação) o token novo traz a linha do
+  // produto novo SEM data (doc de subscriptions, 16/10): ela nunca é a vigente, em qualquer ordem da resposta (a revisão, 🟡2). Sem
+  // nenhuma data, a primeira.
+  const comData = linhas.filter((l) => Number.isFinite(Date.parse(l.expiraEm ?? "")));
+  const vigente = comData.length ? comData.reduce((a, b) => (Date.parse(b.expiraEm!) > Date.parse(a.expiraEm!) ? b : a)) : linhas[0];
   const datas = linhas.map((l) => (l.expiraEm ? Date.parse(l.expiraEm) : NaN)).filter(Number.isFinite);
   const contas = obj(c.externalAccountIdentifiers);
   const fora = obj(c.outOfAppPurchaseContext);
@@ -287,6 +290,16 @@ export function diasParaAdiar(adiarAte: string | null | undefined, inicio: strin
 
 /** A duração do defer no formato da API (segundos: "432000s"). */
 export const duracaoDoAdiamento = (dias: number): string => `${Math.round(dias) * 86_400}s`;
+
+/**
+ * O fim novo que a PRÓPRIA resposta do defer traz (`itemExpiryTimeDetails[].expiryTime`, doc do `defer` conferida 16/10): o maior. Sem ele
+ * (resposta fora do formato), null — quem chama grava a marca com o fim que já tinha e o próximo GET acerta (a revisão, 🟡1).
+ */
+export function fimDoAdiamento(corpo: unknown): string | null {
+  const itens = Array.isArray(obj(corpo).itemExpiryTimeDetails) ? (obj(corpo).itemExpiryTimeDetails as unknown[]) : [];
+  const datas = itens.map((i) => dataIso(obj(i).expiryTime)).filter((d): d is string => !!d).map((d) => Date.parse(d)).filter(Number.isFinite);
+  return datas.length ? new Date(Math.max(...datas)).toISOString() : null;
+}
 
 /** Decisão 6 (16/10/2026): para o completo na hora (CHARGE_PRORATED_PRICE); para o Treino na renovação (DEFERRED). Igual = null. */
 export function modoDaTroca(de: string | null | undefined, para: string | null | undefined): "na_hora" | "na_renovacao" | null {
