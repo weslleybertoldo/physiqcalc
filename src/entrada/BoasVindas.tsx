@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Briefcase, LogOut } from "lucide-react";
+import { usePlayDaLoja } from "@/app-aluno/sozinho/usePlayDaLoja";
 import { ehLoja } from "@/lib/distribuicao";
 import { listar } from "@/rotas/registro";
 import { useSessao } from "@/nucleo/sessao";
@@ -21,6 +22,9 @@ const ORDEM = ["TenhoCodigo", "TreinarSemProfissional", "CriarConta"];
  * que é pelo site) e "Treinar sem profissional" (a mensalidade do app vai para o Play Billing na W6) são só do site.
  */
 const SO_NO_SITE = ["TreinarSemProfissional", "CriarConta"];
+/** play-W6: com a Play valendo (usePlayDaLoja), o "Treinar sem profissional" volta na loja — a assinatura do plano do app é pela Google Play.
+ *  "Sou profissional" continua só no site (o profissional paga pelo site). */
+const SO_NO_SITE_COM_PLAY = ["CriarConta"];
 
 /** Enquanto a W4 não traz o "Sou profissional", o cartão avisa que o cadastro abre em breve. */
 function SouProfissionalEmBreve() {
@@ -49,7 +53,9 @@ function SouProfissionalEmBreve() {
  */
 export default function BoasVindas() {
   const { situacao, usuario, sair } = useSessao();
-  const opcoes = listar("onboarding", ORDEM).filter((o) => !(ehLoja && SO_NO_SITE.includes(o.nome)));
+  const play = usePlayDaLoja();
+  const soNoSite = play.ativa ? SO_NO_SITE_COM_PLAY : SO_NO_SITE;
+  const opcoes = listar("onboarding", ORDEM).filter((o) => !(ehLoja && soNoSite.includes(o.nome)));
   const temCriarConta = opcoes.some((o) => o.nome === "CriarConta");
   const primeiroNome = (situacao?.nome || usuario?.email?.split("@")[0] || "").split(" ")[0];
   const jaTemAlgo = !!situacao && !situacao.sem_nada;
@@ -80,7 +86,7 @@ export default function BoasVindas() {
       ) : (
         <>
           <p className="px-1 text-center text-[12.5px] leading-relaxed text-texto-3">
-            {ehLoja
+            {ehLoja && !play.ativa
               ? "Sem código? Peça ao seu profissional ou saia e volte depois — a sua conta fica guardada."
               : "Sem código? Treine sozinho com os dias grátis ou saia e volte depois — a sua conta fica guardada."}
           </p>

@@ -63,7 +63,9 @@ describe("a trava: o caminho novo só no pedido do app novo", () => {
     expect(fluxoDoPedido({ fluxo: "profissional", confirmacao: "EXCLUIR" })).toBe("profissional");
   });
   it("as recusas do caminho de hoje não mudaram (403 profissional, 409, 502)", () => {
-    expect(STATUS_DA_RECUSA).toEqual({ confirmacao_invalida: 400, profissional: 403, assinatura_ativa: 409, treino_indisponivel: 502 });
+    // play-W6: + play_nao_cancelada (502) — só aparece com uma assinatura da Google Play que renova; sem ela, o caminho de hoje
+    expect(STATUS_DA_RECUSA).toEqual({ confirmacao_invalida: 400, profissional: 403, assinatura_ativa: 409, treino_indisponivel: 502,
+      play_nao_cancelada: 502 });
   });
   it("na borda, o desvio vem antes do caminho de hoje, que segue inteiro (403 do master, excluir_dados_aluno, hard delete do aluno)", () => {
     const fonte = readFileSync(resolve(__dirname, "../../../../supabase-principal/functions/excluir-minha-conta/index.ts"), "utf8");
