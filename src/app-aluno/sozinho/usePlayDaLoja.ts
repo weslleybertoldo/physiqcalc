@@ -95,6 +95,7 @@ export function _esquecerPlayDaLojaParaTestes(): void {
 export interface PlayDaLoja {
   /** a loja com a Play valendo (sem isso, a tela da loja de hoje) */
   ativa: boolean;
+  /** a 1ª carga (ainda sem o estado): recarregar depois não volta a "carregando" */
   carregando: boolean;
   estado: EstadoPlayServidor | null;
   /** a oferta mensal de cada produto que a Play achou (o preço é o DELA) */
@@ -119,7 +120,9 @@ export function usePlayDaLoja(): PlayDaLoja {
     const ativa = presente && atual.estado?.disponivel === true && atual.aparelho && Object.keys(ofertas).length > 0;
     return {
       ativa,
-      carregando: presente && (doOutro || atual.carregando || (!quando && !atual.estado)),
+      // SÓ a 1ª carga (ainda sem o estado da pessoa): recarregar depois (o concluir() de assinar, o "recarregar") NUNCA vira "carregando"
+      // — a trava não some e a folha que mora nela não desmonta com o erro do registrar (a conferência das correções, DECISÃO 07:08)
+      carregando: presente && !atual.estado && (doOutro || atual.carregando || !quando),
       estado: presente ? atual.estado : null,
       ofertas,
       menorPreco: menorPreco(ofertas),
