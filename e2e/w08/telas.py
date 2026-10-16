@@ -7,7 +7,8 @@ arquivos do próprio app; no site, o service worker guarda) vêm dos arquivos lo
 
 Casos (na ordem):
   treino_dia       aluno do Calc: o treino do profissional no dia → séries com peso e OK (2 exercícios feitos, o 3º com 2 de 3)
-                   → tela 2 (card, feitos com ✓, o atual com "Série 3 de 3" e a carga, card do descanso com o anel) → exercício
+                   → tela 2 (card, feitos com ✓, o atual com "Série 3 de 3" e a carga, card do descanso com o anel; hml-28: a faixa
+                   Seg–Dom cabe em 390 e em 360 px) → exercício
                    aberto com as séries → ajustes do descanso (hml-28, H-169: "Pausar" → "Continuar" e a fileira dos 3 botões cabe
                    na folha em 390 e em 360 px; depois volta a "Pausar") → termina o treino → "Treino finalizado!" → compartilhar →
                    volta a internet → as séries (peso × reps), o histórico e o concluído sobem para o staging
@@ -17,7 +18,7 @@ Casos (na ordem):
   sem_profissional aluno do app (W7b, sem profissional): "Montar o meu" e "Usar um treino pronto" (abre os treinos prontos)
   so_nutricao      negativo: aluno só de Nutrição não tem a aba Treino (a rota volta para a abertura)
   sem_internet     o aviso "Sem internet · o treino fica salvo no aparelho (N mudanças)"
---seco (hml-28): sem navegador e sem rede — o que o check do H-169 usa existe no código e a regra dele com as medidas da sonda.
+--seco (hml-28): sem navegador e sem rede — o que os checks do H-169 e da faixa usam existe no código e as regras deles com as medidas da sonda.
 Uso: python3 e2e/w08/telas.py --base http://localhost:5173 --prefixo local [--casos a,b] [--canal msedge] | --seco
 """
 from __future__ import annotations
@@ -148,6 +149,54 @@ def descanso_pausado_cabe(c) -> None:
     p.check(c.esperar(lambda: B.texto(c, sel) == "Pausar", 5), f"'Continuar' volta o descanso a correr ({B.texto(c, sel)!r})")
 
 
+# hml-28 (achado da W, a decisão de 16/10 08:12): a faixa Seg–Dom da aba Treino (FaixaSemana.tsx, [data-faixa-semana]). Os 7 dias de 44 px +
+# gap 4 = 332 px; em 360 px a página (px-[18px]) dá 324 e o "Dom" passava 8 px da borda útil. A borda ÚTIL = o conteúdo do pai da fileira
+# (a <section>, sem padding: o conteúdo da página). Cabendo, os 44 px de hoje; não cabendo, os 7 encolhem por igual (sem cortar o conteúdo).
+MEDIR_FAIXA = """() => {
+  const dias = [...document.querySelectorAll('[data-faixa-semana] [data-dia-estado]')];
+  if (dias.length !== 7) return { dias: [] };
+  const fil = dias[0].parentElement, pai = fil.parentElement, cs = getComputedStyle(pai), r = pai.getBoundingClientRect();
+  const c = (x) => Math.round(x * 100) / 100;
+  return {
+    tela: innerWidth, doc: document.documentElement.scrollWidth, fileira: [fil.clientWidth, fil.scrollWidth],
+    util: [c(r.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth)), c(r.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth))],
+    dias: dias.map((d) => { const q = d.getBoundingClientRect(); return [c(q.left), c(q.right), d.clientWidth, d.scrollWidth]; }),
+  };
+}"""
+
+
+def faixa_cabe(m: dict, largura: int) -> bool:
+    """Os 7 dias, cada um dentro da borda útil (0,5 px de folga do arredondamento) e sem o conteúdo sair dele; a mesma largura nos 7
+    (0,5 px), nunca mais de 44 px e, cabendo (útil ≥ 332 px), os 44 px de hoje; a fileira sem rolar; a tela e o documento na largura."""
+    ds = m.get("dias") or []
+    if len(ds) != 7:
+        return False
+    ws = [d[1] - d[0] for d in ds]
+    cabe_44 = m["util"][1] - m["util"][0] >= 332
+    return (all(d[0] >= m["util"][0] - 0.5 and d[1] <= m["util"][1] + 0.5 and d[3] <= d[2] + 1 for d in ds)
+            and max(ws) - min(ws) <= 0.5 and max(ws) <= 44.5 and (not cabe_44 or min(ws) >= 43.5)
+            and m["fileira"][1] <= m["fileira"][0] and m["tela"] <= largura and m["doc"] <= largura)
+
+
+def faixa_cabe_em_390_e_360(c) -> None:
+    """hml-28: mede a faixa Seg–Dom em 390 × 844 e em 360 × 800 (set_viewport_size) e volta a 390 × 844 (o caso segue como antes)."""
+    try:
+        for largura, altura in ((390, 844), (360, 800)):
+            c.pg.set_viewport_size({"width": largura, "height": altura})
+            c.pg.wait_for_timeout(400)
+            m = c.pg.evaluate(MEDIR_FAIXA)
+            ds = m.get("dias") or []
+            p.check(faixa_cabe(m, largura),
+                    f"a faixa Seg–Dom cabe em {largura} px: os 7 dias dentro da borda útil {m.get('util')} (o 1º {ds[0][:2] if ds else None}, o último "
+                    f"{ds[-1][:2] if ds else None}; larguras {sorted({round(d[1] - d[0], 2) for d in ds})}); fileira client/scroll = {m.get('fileira')}; "
+                    f"scrollWidth do documento = {m.get('doc')}")
+            if largura == 360:
+                c.print("faixa_360")
+    finally:
+        c.pg.set_viewport_size({"width": 390, "height": 844})
+        c.pg.wait_for_timeout(300)
+
+
 @caso
 def caso_treino_dia(nav, a) -> None:
     desde = B.agora_iso()
@@ -182,6 +231,8 @@ def caso_treino_dia(nav, a) -> None:
         p.check(c.tem("[data-descanso]") and B.texto(c, "[data-descanso-depois]").startswith("Depois: série 3"), f"card do descanso: '{B.texto(c, '[data-descanso-depois]')}'")
         p.check(c.pg.locator('[data-dia-estado]').count() == 7, "faixa Seg–Dom com os 7 dias")
         c.print("treino_dia")
+        # hml-28: em 360 px o "Dom" da faixa passava 8 px da borda útil da página; os 7 dias têm de caber em 390 e em 360 px
+        faixa_cabe_em_390_e_360(c)
         B.abrir_exercicio(c, e3)
         c.pg.wait_for_timeout(400)
         # as séries acima do card do descanso (que flutua sobre a barra de abas)
@@ -448,13 +499,16 @@ def caso_sem_internet(nav, a) -> None:
     B.limpar_staging(desde, "sem_internet")
 
 
-# --seco (hml-28): o arquivo → o que tem de estar nele (os seletores, o rótulo e as classes que o check do H-169 usa)
+# --seco (hml-28): o arquivo → o que tem de estar nele (os seletores, o rótulo e as classes que os checks do H-169 e da faixa usam)
 NO_CODIGO = {
     "src/treino/ui/CartaoDescanso.tsx": ['className="@container flex flex-col gap-4 pt-1" data-ajustes-descanso',
                                          'className="grid grid-cols-2 gap-2 @min-[360px]:grid-cols-[1fr_1fr_auto]"',
                                          'className="col-span-2 px-4 @min-[360px]:col-span-1"', "data-descanso-pausar", "data-descanso-recomecar",
                                          "data-descanso-menos15-ajuste", '{d.pausado ? "Continuar" : "Pausar"}', "data-descanso-ajustes"],
     "src/ui/premium/Sheet.tsx": ["data-painel={lado}", 'className="min-h-0 flex-1 overflow-y-auto px-5 pb-5"'],
+    # a faixa Seg–Dom (o achado da W): os seletores do check e o dia sem o flex-none (os 7 encolhem por igual quando não cabem)
+    "src/treino/ui/FaixaSemana.tsx": ["data-faixa-semana={deslocamento}", "data-dia-estado={estado}", 'className="flex justify-between gap-1"',
+                                      '"relative flex h-[62px] w-[44px] flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold transition-colors"'],
 }
 # as medidas da sonda da hml-28 (réplica com as classes do código, Chromium 153 = Edge 154): o código de antes com "Continuar" e o corrigido
 _ANTES = {"pausar": "Continuar", "botoes": [[21, 152.64], [160.64, 302.58], [310.58, 379.5]]}
@@ -467,10 +521,21 @@ MEDIDAS_DA_SONDA = {
     "depois_360": {**_DEPOIS, "tela": 360, "doc": 360, "util": [21, 339], "fileira": [318, 318], "corpo": [358, 358],
                    "botoes": [[21, 176], [184, 339], [21, 339]]},
 }
+# a faixa Seg–Dom na sonda da hml-28 (a página com as classes do código): antes e depois em 360 px; os 44 px de hoje em 390 (antes = depois)
+MEDIDAS_DA_FAIXA = {
+    "antes_360": {"tela": 360, "doc": 360, "util": [18, 342], "fileira": [324, 332],
+                  "dias": [[18, 62, 42, 42], [66, 110, 42, 42], [114, 158, 42, 42], [162, 206, 42, 42], [210, 254, 42, 42], [258, 302, 42, 42], [306, 350, 42, 42]]},
+    "depois_360": {"tela": 360, "doc": 360, "util": [18, 342], "fileira": [324, 324],
+                   "dias": [[18, 60.86, 41, 41], [64.86, 107.7, 41, 41], [111.7, 154.56, 41, 41], [158.56, 201.42, 41, 41], [205.42, 248.28, 41, 41],
+                            [252.28, 295.14, 41, 41], [299.14, 342, 41, 41]]},
+    "hoje_390": {"tela": 390, "doc": 390, "util": [18, 372], "fileira": [354, 354],
+                 "dias": [[18, 62, 42, 42], [69.67, 113.67, 42, 42], [121.33, 165.33, 42, 42], [173, 217, 42, 42], [224.67, 268.67, 42, 42],
+                          [276.33, 320.33, 42, 42], [328, 372, 42, 42]]},
+}
 
 
 def seco() -> int:
-    """Sem navegador e sem rede (o socket fica bloqueado): os seletores e as classes do H-169 no código e a regra do check."""
+    """Sem navegador e sem rede (o socket fica bloqueado): os seletores e as classes do H-169 e da faixa no código e as regras dos checks."""
     def sem_rede(*_a, **_k):
         raise RuntimeError("--seco não usa a rede")
 
@@ -479,7 +544,7 @@ def seco() -> int:
     falta = [f"{arq} › {x}" for arq, itens in NO_CODIGO.items() for x in itens
              if not (raiz / arq).exists() or x not in (raiz / arq).read_text(encoding="utf-8")]
     total = sum(len(v) for v in NO_CODIGO.values())
-    p.check(not falta, f"seco: {total - len(falta)}/{total} seletores, rótulos e classes do check do H-169 no código" + (f" — falta: {falta}" if falta else ""))
+    p.check(not falta, f"seco: {total - len(falta)}/{total} seletores, rótulos e classes dos checks do H-169 e da faixa no código" + (f" — falta: {falta}" if falta else ""))
     M = MEDIDAS_DA_SONDA
     p.check(not fileira_descanso_cabe(M["antes_390"], 390) and not fileira_descanso_cabe(M["antes_360"], 360),
             "seco: a regra acusa o código de antes ('Continuar': o −15 s até 379,5 px, a útil 369 em 390 e 339 em 360)")
@@ -488,6 +553,15 @@ def seco() -> int:
     p.check(not fileira_descanso_cabe({**M["depois_390"], "pausar": "Pausar"}, 390) and not fileira_descanso_cabe({"botoes": []}, 390)
             and not fileira_descanso_cabe({**M["depois_390"], "corpo": None}, 390),
             "seco: a regra exige o descanso pausado ('Continuar'), os 3 botões e o corpo da folha (com 'Pausar' ou sem a fileira, falha)")
+    FX = MEDIDAS_DA_FAIXA
+    p.check(not faixa_cabe(FX["antes_360"], 360) and faixa_cabe(FX["depois_360"], 360) and faixa_cabe(FX["hoje_390"], 390),
+            "seco: a regra da faixa acusa o código de antes em 360 px (o 'Dom' até 350, a útil 342) e passa no corrigido (os 7 com 42,86 px) e nos 44 px de 390")
+    d390, d360 = FX["hoje_390"]["dias"], FX["depois_360"]["dias"]
+    p.check(not faixa_cabe({**FX["hoje_390"], "dias": [[d[0], d[0] + 40, 38, 38] for d in d390]}, 390)
+            and not faixa_cabe({**FX["depois_360"], "dias": d360[:6] + [[299.14, 330, 29, 29]]}, 360)
+            and not faixa_cabe({**FX["depois_360"], "dias": [[d[0], d[1], 41, 45] for d in d360]}, 360)
+            and not faixa_cabe({**FX["depois_360"], "dias": d360[:6]}, 360),
+            "seco: a regra da faixa exige os 44 px de hoje quando cabe (encolher em 390 falha), os 7 iguais, o conteúdo dentro do dia e os 7 dias")
     try:
         socket.create_connection(("127.0.0.1", 9), timeout=1)
         bloqueado = False
@@ -505,7 +579,7 @@ def main() -> int:
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
     ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
-    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: o check do H-169 (seletores, classes e a regra)")
+    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: os checks do H-169 e da faixa (seletores, classes e as regras)")
     a = ap.parse_args()
     if a.seco:
         return seco()

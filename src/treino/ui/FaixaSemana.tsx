@@ -94,7 +94,9 @@ export function FaixaSemana({
               aria-label={`${ROTULO_DIA[d.data.getDay()]} ${rotuloData(d.data)}${comTreino ? ` — ${d.treinos.map((t) => t.nome).join(", ")}` : " — sem treino"}${feito ? " (feito)" : ""}`}
               onClick={() => aoEscolher(d.chave)}
               className={cn(
-                "relative flex h-[62px] w-[44px] flex-none flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold transition-colors",
+                // hml-28: sem o flex-none, os 7 dias (44 px + gap 4 = 332 px) encolhem por igual quando a faixa é mais estreita — em 360 px a página
+                // dá 324 e o "Dom" passava 8 px da borda; cabendo, os 44 px de antes
+                "relative flex h-[62px] w-[44px] flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold transition-colors",
                 d.hoje ? "border-transparent text-texto-4" : feito ? "border-violeta/30 bg-violeta/12 text-texto-2" : "border-linha bg-superficie text-texto-2",
                 !d.hoje && !feito && !comTreino && "opacity-55",
                 escolhido && !d.hoje && "ring-1 ring-violeta-2 ring-offset-0",
