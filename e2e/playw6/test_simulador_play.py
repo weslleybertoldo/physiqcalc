@@ -218,11 +218,33 @@ class TesteSimulador(unittest.TestCase):
         self.assertNotEqual(v["lineItems"][0]["latestSuccessfulOrderId"], t1["pedido"])
         self.assertEqual(self.api("GET", f"/subscriptionsv2/tokens/{t1['token']}", acesso=a)[1]["subscriptionState"], "SUBSCRIPTION_STATE_EXPIRED")
         depois = self.compra(produto="app_treino", ligada=na_hora["token"], modo="na_renovacao")
-        v = self.api("GET", f"/subscriptionsv2/tokens/{depois['token']}", acesso=a)[1]
-        linha = v["lineItems"][0]
-        self.assertEqual((linha["productId"], linha["deferredItemReplacement"]["productId"]), ("app_treino_alimentacao", "app_treino"))
+        # o DEFERRED da doc: 2 linhas — a do produto atual COM expiryTime + deferredItemReplacement e a do novo SEM expiryTime — nas 2 ordens
+        for nova_primeiro in (False, True):
+            http("POST", f"{self.base}/_cenario", {"deferred_nova_primeiro": nova_primeiro})
+            v = self.api("GET", f"/subscriptionsv2/tokens/{depois['token']}", acesso=a)[1]
+            linhas = {li["productId"]: li for li in v["lineItems"]}
+            self.assertEqual(len(v["lineItems"]), 2)
+            self.assertEqual(v["lineItems"][0]["productId"], "app_treino" if nova_primeiro else "app_treino_alimentacao")
+            self.assertEqual(linhas["app_treino_alimentacao"]["deferredItemReplacement"]["productId"], "app_treino")
+            self.assertIn("expiryTime", linhas["app_treino_alimentacao"])
+            self.assertNotIn("expiryTime", linhas["app_treino"])
+        http("POST", f"{self.base}/_cenario", {})
         http("POST", f"{self.base}/_mudar", {"token": depois["token"], "acao": "renovar"})
-        self.assertEqual(self.api("GET", f"/subscriptionsv2/tokens/{depois['token']}", acesso=a)[1]["lineItems"][0]["productId"], "app_treino")
+        v = self.api("GET", f"/subscriptionsv2/tokens/{depois['token']}", acesso=a)[1]
+        self.assertEqual([li["productId"] for li in v["lineItems"]], ["app_treino"])
+        self.assertIn("expiryTime", v["lineItems"][0])
+
+    def test_o_get_que_falha_logo_depois_do_defer(self) -> None:
+        c = self.compra()
+        a = self.acesso()
+        http("POST", f"{self.base}/_cenario", {"falhas_get_pos_defer": 1})
+        v = self.api("GET", f"/subscriptionsv2/tokens/{c['token']}", acesso=a)[1]
+        self.assertEqual(self.api("POST", f"/subscriptionsv2/tokens/{c['token']}:defer", {"deferralContext": {"etag": v["etag"], "deferDuration": "172800s"}}, a)[0], 200)
+        self.assertEqual(self.api("GET", f"/subscriptionsv2/tokens/{c['token']}", acesso=a)[0], 503)   # o 1º GET depois do defer cai
+        self.assertEqual(self.api("GET", f"/subscriptionsv2/tokens/{c['token']}", acesso=a)[0], 200)   # o seguinte volta
+        info = http("POST", f"{self.base}/_compra_info", {"token": c["token"]})[1]
+        self.assertEqual((info["adiada_dias"], info["adiamentos"]), (2, 1))
+        http("POST", f"{self.base}/_cenario", {})
 
     # ───── o JWKS e o push assinado ─────
     def test_push_valido_assinado_e_os_forjados(self) -> None:

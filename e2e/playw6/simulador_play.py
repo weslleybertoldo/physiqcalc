@@ -24,7 +24,8 @@ verdade: a conta de serviço, a chave do OIDC, os tokens de compra e os pedidos 
              último pedido e revoga) → {estado, pedido?}
     /_push {url, tipo: assinatura|devolucao|teste|outro, notificacao?, token?, pedido?, pacote?, oidc: valido|ausente|forjado|aud|email|
             nao_verificado|expirado|kid, audiencia?, conta?, repetir_id?} → {status} (o aviso do Pub/Sub, ASSINADO com a chave do simulador)
-    /_cenario {chaves} (as que não vierem voltam ao padrão) · /_pedidos [?desde=n] (método, ação, status e o NÚMERO da compra — nunca o token)
+    /_cenario {chaves} (as que não vierem voltam ao padrão; + deferred_nova_primeiro: a ordem das 2 linhas do DEFERRED; falhas_get_pos_defer: n GETs
+             com 503 logo depois de cada defer) · /_pedidos [?desde=n] (método, ação, status e o NÚMERO da compra — nunca o token)
     /_compra_info {token} (o estado interno: produto, estado, fim, reconhecida, cancelamento, adiada — para o e2e conferir)
 Testes: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest e2e/playw6/test_simulador_play.py    Uso: python3 e2e/playw6/simulador_play.py --porta 8796
 """
@@ -58,7 +59,8 @@ AUDIENCIA_PADRAO = "https://api-principal.physiqcalc.com.br/functions/v1/play-rt
 CONTA_PUSH_PADRAO = "play-rtdn-push@physiq-br.iam.gserviceaccount.com"
 KID = "sim-oidc-1"
 DIA_S = 86_400
-PADRAO: dict = {"oauth_status": None, "get_status": None, "cancelar_status": None, "ack_status": None, "defer_status": None}
+PADRAO: dict = {"oauth_status": None, "get_status": None, "cancelar_status": None, "ack_status": None, "defer_status": None,
+                "deferred_nova_primeiro": False, "falhas_get_pos_defer": 0}
 PREFIXO_API = "/androidpublisher/v3/applications/"
 RX_GET = re.compile(r"^/androidpublisher/v3/applications/([^/]+)/purchases/subscriptionsv2/tokens/([^/:]+)$")
 RX_V2 = re.compile(r"^/androidpublisher/v3/applications/([^/]+)/purchases/subscriptionsv2/tokens/([^/:]+):(cancel|defer|revoke)$")
@@ -221,8 +223,15 @@ class Simulador:
         }
         if c["pago"]:
             linha["latestSuccessfulOrderId"] = c["pago"]
+        linhas = [linha]
         if c["troca_para"]:
+            # o DEFERRED da doc (subscriptions, 16/10): o token novo traz 2 linhas — a do produto atual COM expiryTime + o
+            # deferredItemReplacement e a do produto novo SEM expiryTime; o cenário escolhe a ordem (o código não pode depender dela)
             linha["deferredItemReplacement"] = {"productId": c["troca_para"]}
+            u2, n2 = PRECOS[c["troca_para"]]
+            nova = {"productId": c["troca_para"], "autoRenewingPlan": {"autoRenewEnabled": True, "recurringPrice": {"currencyCode": "BRL", "units": u2, "nanos": n2}},
+                    "offerDetails": {"basePlanId": "mensal", "offerTags": []}}
+            linhas = [nova, linha] if self.cenario.get("deferred_nova_primeiro") else [linha, nova]
         v: dict = {
             "kind": "androidpublisher#subscriptionPurchaseV2",
             "regionCode": "BR",
@@ -231,7 +240,7 @@ class Simulador:
             "latestOrderId": c["pedidos"][-1],
             "acknowledgementState": "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED" if c["reconhecida"] else "ACKNOWLEDGEMENT_STATE_PENDING",
             "etag": c["etag"],
-            "lineItems": [linha],
+            "lineItems": linhas,
         }
         if c["conta"]:
             v["externalAccountIdentifiers"] = {"obfuscatedExternalAccountId": c["conta"]}
@@ -387,6 +396,11 @@ def criar_servidor(porta: int, sim: Simulador | None = None) -> ThreadingHTTPSer
                     self._anotar("get", 401, token)
                     return self._json(401, self._erro_google(401, "UNAUTHENTICATED", "authError"))
                 st = sim.cenario.get("get_status")
+                with sim.trava:
+                    c0 = sim.compras.get(token)
+                    if not st and c0 and c0.get("falhar_gets", 0) > 0:
+                        c0["falhar_gets"] -= 1
+                        st = 503
                 if st:
                     self._anotar("get", int(st), token)
                     return self._json(int(st), self._erro_google(int(st), "UNAVAILABLE", "backendError"))
@@ -476,6 +490,8 @@ def criar_servidor(porta: int, sim: Simulador | None = None) -> ThreadingHTTPSer
                         return self._json(400, self._erro_google(400, "INVALID_ARGUMENT", "invalidValue"))
                     c["expira"] = c["expira"] + dt.timedelta(seconds=seg)
                     c["adiada_s"] += seg
+                    c["adiamentos"] = c.get("adiamentos", 0) + 1
+                    c["falhar_gets"] = int(sim.cenario.get("falhas_get_pos_defer") or 0)
                     c["etag"] = secrets.token_hex(8)
                     self._anotar("defer", 200, token, {"dias": seg // DIA_S})
                     return self._json(200, {"itemExpiryTimeDetails": [{"productId": c["produto"], "expiryTime": iso(c["expira"])}]})
@@ -513,7 +529,7 @@ def criar_servidor(porta: int, sim: Simulador | None = None) -> ThreadingHTTPSer
                         if not c:
                             return self._json(404, {"erro": "token"})
                         return self._json(200, {"produto": c["produto"], "estado": c["estado"], "expira": iso(c["expira"]), "renova": c["renova"],
-                                                "reconhecida": c["reconhecida"], "cancelamento": c["cancelamento"], "adiada_dias": c["adiada_s"] // DIA_S,
+                                                "reconhecida": c["reconhecida"], "cancelamento": c["cancelamento"], "adiada_dias": c["adiada_s"] // DIA_S, "adiamentos": c.get("adiamentos", 0),
                                                 "revogada": c["revogada"], "troca_para": c["troca_para"], "pedido": c["pago"]})
             except (KeyError, ValueError) as e:
                 return self._json(400, {"erro": str(e)})
