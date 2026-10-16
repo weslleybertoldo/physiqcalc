@@ -7,9 +7,11 @@ Modos:
   --foto <arquivo> [--schema S]       SÓ LEITURA: a cobertura (mensalidade_pago_ate) de TODAS as matrículas, as cobre_* de todas as
                                       mensalidades e o corpo (md5 do pg_get_functiondef) das 3 funções trocadas; no ensaio local, também
                                       as leituras do aluno (financeiro_do_aluno e meu_plano_app de cada login, sem a chave nova 'play').
-                                      O arquivo fica FORA do repo (só ids e números).
+                                      No staging e no local, + a cobertura RECALCULADA pelo corpo de antes num bloco desfeito (nada fica
+                                      gravado; o public nunca). O arquivo fica FORA do repo (só ids e números).
   --comparar <arquivo> [--schema S]   a mesma foto de novo + a cobertura RECALCULADA de todas as matrículas num bloco desfeito, comparadas
-                                      com a foto: sem linha da Play, IGUAL (diferença = falha). --funcoes-iguais: os 3 corpos também iguais
+                                      com a foto (com a RECALCULADA da foto, quando ela tem: o corpo novo × o de antes): sem linha da Play,
+                                      IGUAL (diferença = falha). --funcoes-iguais: os 3 corpos também iguais
                                       letra por letra (depois da reversa). Só staging ou local (o public nunca recebe o bloco).
   --so-catalogo [--schema S]          SÓ LEITURA (vale no public): a tabela com RLS e sem policy, os grants (o app e o visitante não leem
                                       nem gravam; só o service_role executa a play_aplicar), os gatilhos, a forma no CHECK, o índice do
@@ -145,10 +147,25 @@ def comparar(arquivo: Path, s: str, funcoes_iguais: bool) -> None:
     d = diferencas(antes["cobrancas"], agora["cobrancas"])
     P.check(d == 0, f"[{s}] as cobre_de/cobre_ate/parcela_num das {len(antes['cobrancas'])} mensalidades IGUAIS ({d} diferente(s))")
     rec = recalculada(s)
-    d = diferencas(antes["pacientes"], rec["pacientes"])
-    P.check(d == 0, f"[{s}] RECALCULADA pelo corpo em vigor (bloco desfeito): a cobertura das {n} IGUAL à da foto ({d} diferente(s))")
-    d = diferencas(antes["cobrancas"], {k: v for k, v in rec["cobrancas"].items()})
-    P.check(d == 0, f"[{s}] RECALCULADA: as cobre_*/parcela_num das mensalidades IGUAIS ({d} diferente(s))")
+    base = antes.get("recalculada")
+    if base:
+        # a foto guardou a RECALCULADA pelo corpo de ANTES (bloco desfeito): a de agora (o corpo novo) tem de dar o MESMO em todas — a
+        # prova de que a migration não muda a cobertura sem linha da Play, mesmo onde a gravada já não batia com o recálculo (isso é de
+        # antes da migration: as mesmas matrículas, o mesmo valor)
+        d = diferencas(base["pacientes"], rec["pacientes"])
+        P.check(d == 0, f"[{s}] RECALCULADA pelo corpo em vigor = a RECALCULADA pelo corpo de antes (a da foto): a cobertura das {n} IGUAL "
+                        f"({d} diferente(s))")
+        d = diferencas(base["cobrancas"], rec["cobrancas"])
+        P.check(d == 0, f"[{s}] RECALCULADA: as cobre_*/parcela_num das mensalidades IGUAIS às do corpo de antes ({d} diferente(s))")
+        ja = {k for k in set(antes["pacientes"]) | set(base["pacientes"]) if antes["pacientes"].get(k) != base["pacientes"].get(k)}
+        agora_dif = {k for k in set(antes["pacientes"]) | set(rec["pacientes"]) if antes["pacientes"].get(k) != rec["pacientes"].get(k)}
+        P.check(agora_dif == ja, f"[{s}] a gravada × a recalculada: {len(agora_dif)} diferente(s) — as MESMAS {len(ja)} de antes da migration "
+                                 f"(gravadas que já não batiam com o recálculo do corpo de antes)")
+    else:
+        d = diferencas(antes["pacientes"], rec["pacientes"])
+        P.check(d == 0, f"[{s}] RECALCULADA pelo corpo em vigor (bloco desfeito): a cobertura das {n} IGUAL à da foto ({d} diferente(s))")
+        d = diferencas(antes["cobrancas"], {k: v for k, v in rec["cobrancas"].items()})
+        P.check(d == 0, f"[{s}] RECALCULADA: as cobre_*/parcela_num das mensalidades IGUAIS ({d} diferente(s))")
     trocadas = sorted(f for f in FUNCOES if antes["funcoes"].get(f) != agora["funcoes"].get(f))
     if funcoes_iguais:
         P.check(not trocadas and len(agora["funcoes"]) == 3,
@@ -595,9 +612,14 @@ def main() -> int:
     s = a.schema
     if a.foto:
         f = foto(s)
+        if s == "staging" or B.LOCAL:
+            # + a RECALCULADA pelo corpo de antes (bloco desfeito: nada gravado; nunca no public) — o --comparar a compara com a do corpo novo
+            f["recalculada"] = recalculada(s)
         Path(a.foto).write_text(json.dumps(f), encoding="utf-8")
+        ja = sum(1 for k in f["pacientes"] if "recalculada" in f and f["pacientes"].get(k) != f["recalculada"]["pacientes"].get(k))
         print(f"[{s}] foto: {len(f['pacientes'])} matrículas, {len(f['cobrancas'])} mensalidades, {len(f['funcoes'])} funções"
-              + (f", {len(f['leituras'])} logins" if "leituras" in f else ""), flush=True)
+              + (f", {len(f['leituras'])} logins" if "leituras" in f else "")
+              + (f"; a recalculada pelo corpo de hoje: {ja} gravada(s) que já não batem com o recálculo" if "recalculada" in f else ""), flush=True)
         return 0 if f["pacientes"] and len(f["funcoes"]) == 3 else 1
     if a.comparar:
         if s == "public" and not B.LOCAL:
