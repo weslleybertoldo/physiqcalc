@@ -12,7 +12,8 @@
 #                   ambiente, os mesmos do APK)
 #   gradle          ./gradlew bundlePlayRelease com a chave de upload (PLAY_UPLOAD_*; no CI o .p12 vem em base64 no
 #                   PLAY_UPLOAD_KEYSTORE_BASE64). Sem a chave o AAB sai SEM assinatura — e a conferência recusa
-#   conferir [aab]  as conferências abaixo; passando todas, o AAB vira Physiq-v<versão>-loja.aab (SUFIXO_AAB troca o "-loja")
+#   conferir [aab]  as conferências abaixo; passando todas, o AAB vira Physiq-v<versão>-loja.aab (SUFIXO_AAB troca o "-loja"; o de
+#                   STAGING sai SEMPRE -loja-staging — play-W6, a revisão 🟡7: à Google Play sobe só o AAB do CI)
 #   sem-master aab  só a conferência (f), sem o Android (sem keytool, bundletool nem Gradle)
 #   local           versao + web + gradle + conferir no notebook, com a chave do ~/keystores/physiq-play-upload.env (lida só
 #                   no Gradle; PLAY_UPLOAD_ENV troca o arquivo), e devolve o build.gradle como estava
@@ -312,10 +313,23 @@ passo_conferir() {
   fi
   local final="$aab"
   if [ "$aab" = "$AAB_GERADO" ]; then
-    final="$SAIDA/Physiq-v$v${SUFIXO_AAB:--loja}.aab"
+    final="$SAIDA/Physiq-v$v$(sufixo_do_aab "$aab").aab"
     mv "$aab" "$final"
   fi
   log "AAB conferido: ${final#"$RAIZ"/} ($(du -h "$final" | cut -f1), SHA-256 $(sha256sum "$final" | cut -d' ' -f1))"
+}
+
+# play-W6 (a revisão, 🟡7): o AAB de STAGING (o npm run build:aab do notebook, com o .env.local de staging — o health.json de dentro dele diz
+# "schema":"staging") NUNCA leva o nome do de produção: sai -loja-staging, qualquer que seja o SUFIXO_AAB. À Google Play sobe SÓ o AAB do
+# CI (o build de produção); este fala com o banco de STAGING e gastaria o versionCode. O de produção e o do check seguem o SUFIXO_AAB.
+sufixo_do_aab() {
+  local saude
+  saude="$(unzip -p "$1" base/assets/public/health.json 2>/dev/null || true)"
+  if grep -qF '"schema":"staging"' <<< "$saude"; then
+    printf '%s' "-loja-staging"
+  else
+    printf '%s' "${SUFIXO_AAB:--loja}"
+  fi
 }
 
 passo_local() {

@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * play-W6 — a assinatura do aluno sem profissional pela Google Play (Play Billing Library 9.1.0). Só existe no build type
@@ -51,6 +52,9 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
     /** Os 2 modos de troca que o app usa (decisão de 16/10/2026): para o completo na hora; para o Treino na renovação. */
     private static final String TROCA_NA_HORA = "na_hora";
     private static final String TROCA_NA_RENOVACAO = "na_renovacao";
+    /** A matrícula opaca (o obfuscatedAccountId) é o id da matrícula do app: um uuid, nada de dado pessoal (a revisão, ⚪19). */
+    private static final Pattern CONTA_UUID =
+            Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
     private interface Conexao {
         void pronta();
@@ -87,11 +91,13 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
         conectar(new Conexao() {
             @Override
             public void pronta() {
-                BillingResult r = cliente.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS);
-                JSObject o = new JSObject();
-                o.put("disponivel", r.getResponseCode() == BillingClient.BillingResponseCode.OK);
-                o.put("codigo", r.getResponseCode());
-                call.resolve(o);
+                protegido(call, () -> {
+                    BillingResult r = cliente.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS);
+                    JSObject o = new JSObject();
+                    o.put("disponivel", r.getResponseCode() == BillingClient.BillingResponseCode.OK);
+                    o.put("codigo", r.getResponseCode());
+                    call.resolve(o);
+                });
             }
 
             @Override
@@ -115,6 +121,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
         conectar(new Conexao() {
             @Override
             public void pronta() {
+                protegido(call, () -> {
                 List<QueryProductDetailsParams.Product> lista = new ArrayList<>();
                 for (String id : ids) {
                     lista.add(QueryProductDetailsParams.Product.newBuilder()
@@ -123,7 +130,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
                             .build());
                 }
                 QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(lista).build();
-                cliente.queryProductDetailsAsync(params, (r, resultado) -> {
+                cliente.queryProductDetailsAsync(params, (r, resultado) -> protegido(call, () -> {
                     if (r.getResponseCode() != BillingClient.BillingResponseCode.OK || resultado == null) {
                         call.resolve(produtosVazios(ids, r.getResponseCode()));
                         return;
@@ -144,6 +151,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
                     o.put("produtos", produtos);
                     o.put("naoAchados", naoAchados);
                     call.resolve(o);
+                }));
                 });
             }
 
@@ -171,6 +179,10 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
             call.reject("parametros_invalidos");
             return;
         }
+        if (!CONTA_UUID.matcher(conta).matches()) {
+            call.reject("conta_invalida");
+            return;
+        }
         final boolean troca = !vazio(tokenAntigo);
         if (troca && (vazio(produtoAntigo) || modo == 0)) {
             call.reject("troca_invalida");
@@ -187,6 +199,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
         conectar(new Conexao() {
             @Override
             public void pronta() {
+                protegido(call, () -> {
                 BillingFlowParams.ProductDetailsParams.Builder item = BillingFlowParams.ProductDetailsParams.newBuilder()
                         .setProductDetails(pd)
                         .setOfferToken(oferta);
@@ -218,7 +231,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
                     }
                     return;
                 }
-                atividade.runOnUiThread(() -> {
+                atividade.runOnUiThread(() -> protegido(call, () -> {
                     BillingResult r = cliente.launchBillingFlow(atividade, params);
                     if (r.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                         PluginCall c = tirarCompra();
@@ -226,6 +239,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
                             c.resolve(resultado(r.getResponseCode(), null));
                         }
                     }
+                }));
                 });
             }
 
@@ -239,12 +253,21 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
     /** O que a Play devolve depois da folha de compra (e as compras que chegam por fora dela, pelo evento "compras"). */
     @Override
     public void onPurchasesUpdated(@NonNull BillingResult r, @Nullable List<Purchase> compras) {
-        JSObject o = resultado(r.getResponseCode(), compras);
-        PluginCall c = tirarCompra();
-        if (c != null) {
-            c.resolve(o);
-        } else if (r.getResponseCode() == BillingClient.BillingResponseCode.OK && compras != null && !compras.isEmpty()) {
-            notifyListeners("compras", o, true);
+        try {
+            JSObject o = resultado(r.getResponseCode(), compras);
+            PluginCall c = tirarCompra();
+            if (c != null) {
+                c.resolve(o);
+            } else if (r.getResponseCode() == BillingClient.BillingResponseCode.OK && compras != null && !compras.isEmpty()) {
+                notifyListeners("compras", o, true);
+            }
+        } catch (RuntimeException e) {
+            // a revisão, ⚪19: a exceção na thread da Play não derruba o app — a compra em andamento recebe o erro (o servidor e o
+            // compras() recuperam o que a Play fez)
+            PluginCall c = tirarCompra();
+            if (c != null) {
+                c.resolve(resultado(BillingClient.BillingResponseCode.ERROR, null));
+            }
         }
     }
 
@@ -254,12 +277,14 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
         conectar(new Conexao() {
             @Override
             public void pronta() {
-                QueryPurchasesParams params = QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build();
-                cliente.queryPurchasesAsync(params, (r, lista) -> {
-                    JSObject o = new JSObject();
-                    o.put("codigo", r.getResponseCode());
-                    o.put("compras", r.getResponseCode() == BillingClient.BillingResponseCode.OK ? comprasJs(lista) : new JSArray());
-                    call.resolve(o);
+                protegido(call, () -> {
+                    QueryPurchasesParams params = QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build();
+                    cliente.queryPurchasesAsync(params, (r, lista) -> protegido(call, () -> {
+                        JSObject o = new JSObject();
+                        o.put("codigo", r.getResponseCode());
+                        o.put("compras", r.getResponseCode() == BillingClient.BillingResponseCode.OK ? comprasJs(lista) : new JSArray());
+                        call.resolve(o);
+                    }));
                 });
             }
 
@@ -328,6 +353,27 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
                 c.pronta();
             } else {
                 c.falhou(codigo);
+            }
+        }
+    }
+
+    /**
+     * Roda o corpo de um callback (da Play ou da conexão): a exceção (um builder que recusa a oferta, o JSON) vira a resposta de erro da
+     * chamada — nunca derruba o app (a revisão, ⚪19). A compra em andamento desta chamada sai (a próxima pode abrir a folha).
+     */
+    private void protegido(final PluginCall call, final Runnable corpo) {
+        try {
+            corpo.run();
+        } catch (RuntimeException e) {
+            synchronized (trava) {
+                if (compraEmAndamento == call) {
+                    compraEmAndamento = null;
+                }
+            }
+            try {
+                call.resolve(resultado(BillingClient.BillingResponseCode.ERROR, null));
+            } catch (RuntimeException ignorada) {
+                // a chamada já tinha resposta: nada a fazer
             }
         }
     }

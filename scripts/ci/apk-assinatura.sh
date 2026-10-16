@@ -32,7 +32,8 @@ apksigner_bin() {
   return 1
 }
 
-# a impressão SHA-256 do (primeiro) certificado que assina o APK, normalizada (sem ":" e em maiúsculas)
+# a impressão SHA-256 do (primeiro) certificado que assina o APK, normalizada (sem ":" e em maiúsculas); o DN dele fica em DN_DO_APK
+DN_DO_APK=""
 impressao_do_apk() {
   local apk="$1" as saida dig
   [ -f "$apk" ] || { erro "APK não encontrado: $apk"; return 1; }
@@ -43,6 +44,7 @@ impressao_do_apk() {
     printf '%s\n' "$saida" | head -20 >&2
     return 1
   fi
+  DN_DO_APK="$(printf '%s\n' "$saida" | { grep -E 'certificate DN:' || true; } | head -1 | sed -E 's/.*DN:[[:space:]]*//')"
   dig="$(printf '%s\n' "$saida" | { grep -E 'certificate SHA-256 digest:' || true; } | head -1 | sed -E 's/.*digest:[[:space:]]*//' | norm)"
   if [ -z "$dig" ]; then
     erro "a saída do apksigner não tem a impressão SHA-256 do certificado:"
@@ -87,12 +89,19 @@ case "$modo" in
     apk="${2:?uso: $0 teste <apk>}"
     site="$(printf '%s' "$SHA256_SITE" | norm)"
     upload="$(printf '%s' "$SHA256_UPLOAD" | norm)"
-    dig="$(impressao_do_apk "$apk")"
+    impressao_do_apk "$apk" > "${TMPDIR:-/tmp}/apk-assinatura-dig.$$" || exit 1
+    dig="$(cat "${TMPDIR:-/tmp}/apk-assinatura-dig.$$")"
+    rm -f "${TMPDIR:-/tmp}/apk-assinatura-dig.$$"
     if [ "$dig" = "$site" ] || [ "$dig" = "$upload" ]; then
       erro "o APK de teste saiu com uma chave REAL ($dig) — ele leva só a chave de debug da máquina"
       exit 1
     fi
-    echo "OK APK de teste assinado com a chave de debug da máquina (SHA-256 $dig) — não é a do site nem a de upload"
+    # play-W6 (a revisão, ⚪19): e é a de DEBUG mesmo (o certificado que o Android gera para o debug.keystore: CN=Android Debug)
+    if ! grep -qE '(^|[ ,])CN=Android Debug(,|$)' <<< "$DN_DO_APK"; then
+      erro "o APK de teste não saiu com a chave de debug da máquina (o certificado: ${DN_DO_APK:-sem DN}; esperado CN=Android Debug)"
+      exit 1
+    fi
+    echo "OK APK de teste assinado com a chave de debug da máquina (CN=Android Debug, SHA-256 $dig) — não é a do site nem a de upload"
     ;;
   *)
     echo "uso: $0 descartavel <apk> <SHA-256 esperado> | site <apk> | teste <apk>" >&2

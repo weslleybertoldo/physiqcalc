@@ -13,7 +13,9 @@ Desde a W4 da loja (06/10/2026) a versão da Google Play sai como **AAB** (Andro
 - **Notebook (teste):** `npm run build:aab` → `android/app/build/outputs/bundle/playRelease/Physiq-v<versão>-loja.aab`.
   Lê a chave de `~/keystores/physiq-play-upload.env` só no Gradle e precisa do JDK 21 e do Android SDK (`~/jdk21` e
   `~/android-sdk` quando `JAVA_HOME`/`ANDROID_HOME` não dizem outros). O site vai com o `.env.local` da pasta — numa
-  worktree, o do staging: para a loja, use o AAB do CI.
+  worktree, o do staging: aí o AAB sai **`Physiq-v<versão>-loja-staging.aab`** (o `conferir` lê o `health.json` de dentro dele;
+  nunca o nome do de produção — play-W6, a revisão 🟡7). **À Google Play sobe SÓ o AAB do CI** (o build de produção): o do
+  notebook fala com o banco de STAGING e gastaria o versionCode.
 - Os dois usam o `scripts/ci/aab-loja.sh` (passos `versao`, `firebase`, `web`, `gradle` e `conferir`; `local` = todos).
 
 ## Onde baixar
@@ -141,6 +143,24 @@ Gradle) e confere: assinado, mas nem com a chave do site nem com a de upload (`a
 - **Só no teste local (o simulador `e2e/playw6/simulador_play.py`):** `PLAY_API_BASE`, `PLAY_OAUTH_URL` e `PLAY_OIDC_JWKS`
   trocam o Google pelo simulador — e só valem com `http://127.0.0.1:<porta>` (a produção não tem nenhuma delas; qualquer
   outro valor é ignorado).
+
+- **A cobrança da troca na hora é uma estimativa:** a linha `google_play` do pedido da troca para o completo (CHARGE_PRORATED_PRICE)
+  grava o preço cheio do produto novo (o `recurringPrice` do GET); o Google cobra só o rateio do período que falta — o valor exato
+  só pela Orders API (a revisão, ⚪9). O Financeiro do master superestima o mês da troca.
+
+### A volta com assinante vivo (a revisão, 🟡8)
+
+A trava desligada (`play_billing` = `{"liberada": false}`) tira a oferta na hora, sem AAB novo — e é a volta inteira enquanto houver
+assinatura viva: **com assinatura viva, a volta é SÓ a trava.** As funções novas e o banco ficam: elas seguem gravando as
+renovações, os avisos do Google, o cancelamento no vínculo e na exclusão. Por quê: sem a `play_aplicar` (a reversa) e com as
+funções da `7c266196`, nenhuma renovação entra no banco — a cobertura vence e o assinante trava com o Google cobrando; e a
+`pagamentos-aluno` velha volta a aceitar o Mercado Pago de quem tem a Play (cobrar 2 vezes).
+
+A reversa e as funções velhas só com **0 assinatura viva**: (1) contar (SQL só leitura) as linhas da `play_assinaturas` em
+`pendente`, `ativa`, `carencia`, `suspensa`, `pausada` ou `cancelada` ainda no prazo; (2) com alguma,
+cancelar (ou devolver) as vivas pela API — o `cancel` com `DEVELOPER_REQUESTED_STOP_PAYMENTS` (vale até o fim) ou o `revoke`
+(devolve e corta) — e esperar o fim do período pago; (3) com 0, a reversa (`--so staging` e depois `--so public`) e as funções da
+`7c266196`. O §5 do contrato da play-W6 segue este roteiro.
 
 ### O Google Cloud e o Console (etapas 2 e 3 — da sessão principal, com o OK dele)
 
