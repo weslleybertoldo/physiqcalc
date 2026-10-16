@@ -9,7 +9,8 @@
 //     a mesma ordem do registrar (_shared/play-assinaturas.ts › sincronizar: a play_aplicar, reconhecer se faltar, o defer da 1ª compra)
 //     → a rede: renovou numa matrícula encerrada pelo vínculo (ou apagada) → cancela (vale até o fim, sem devolver) ·
 //     sem dono → log play_sem_dono + 204 (a compra já reconhecida e que renova = a exclusão que falhou → cancela) ·
-//   voidedPurchaseNotification → o GET + a cobrança do pedido devolvida (cancelada + reembolsado_em); o acesso cortado = revogada.
+//   voidedPurchaseNotification → o GET + a cobrança do pedido devolvida (cancelada + reembolsado_em); o acesso cortado = revogada; o token
+//     que o Google já esqueceu (o GET 404/410) = só a cobrança do pedido devolvida, pelo orderId do aviso.
 // Erro do banco ou do Google sem resposta → 500/503 (o Pub/Sub repete; tudo é idempotente — o aviso repetido não muda nada). Sem o segredo
 // PLAY_SERVICE_ACCOUNT → 503 + log play_sem_credencial. Log: só códigos (ref = o id do aviso no Pub/Sub); nunca o token, o pedido, o corpo
 // do Google nem o e-mail do push.
@@ -21,7 +22,7 @@ import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supa
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
 import { PlayIndisponivel, cancelar, contaDaPlay } from "../_shared/play-api.ts";
-import { acharDono, cancelarPlayDasMatriculas, lerDoGoogle, situacaoDaMatricula, sincronizar } from "../_shared/play-assinaturas.ts";
+import { acharDono, cancelarPlayDasMatriculas, devolverPedidoSemCompra, lerDoGoogle, situacaoDaMatricula, sincronizar } from "../_shared/play-assinaturas.ts";
 import {
   AUDIENCIA_PADRAO, CANCELAMENTO_NO_VINCULO_E_NA_EXCLUSAO, CONTA_PUSH_PADRAO, EMISSORES_GOOGLE, JWKS_GOOGLE, LIMITE_CORPO_RTDN, PACOTE,
   RTDN_REVOGADA, conferirClaimsDoPush, idDoAviso, lerAvisoRtdn, urlLocal, type AvisoRtdn, type Schema,
@@ -98,6 +99,13 @@ async function processar(aviso: Extract<AvisoRtdn, { tipo: "assinatura" | "devol
     return responder(204);
   }
   const c = { db: dbs[dono.schema], schema: dono.schema, log, prazo: p };
+  if (!a && aviso.tipo === "devolucao" && aviso.pedido) {
+    // a devolução de um token que o Google já esqueceu (o GET 404/410 — mais de 60 dias): o pedido do aviso basta para marcar a cobrança
+    // dele como devolvida, sem o GET (a revisão, ⚪13)
+    const n = await devolverPedidoSemCompra(c.db, dono.pacienteId, aviso.pedido);
+    log.info({ codigo: "play_devolucao_sem_compra", schema: c.schema, acao: nome, ref, n });
+    return responder(204);
+  }
   const situacao = await situacaoDaMatricula(c.db, dono.pacienteId);
   const revogada = aviso.tipo === "assinatura" ? aviso.notificacao === RTDN_REVOGADA : a?.estadoGoogle === "SUBSCRIPTION_STATE_EXPIRED";
   const r = await sincronizar(c, aviso.token, {

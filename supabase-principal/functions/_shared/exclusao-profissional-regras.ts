@@ -247,22 +247,26 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
       else falhas++;
     }
     // play-W6: a da Google Play (a matrícula do app dele, quando também é aluno) — antes de apagar qualquer coisa
+    let playCanceladas = 0;
     if (d.cancelarPlay) {
       const r = await d.cancelarPlay();
       canceladas += r.canceladas;
       falhas += r.falhas;
+      playCanceladas = r.canceladas;
     }
     if (falhas > 0) return recusa("cobranca_nao_cancelada", { canceladas, falhas });
+    // a revisão, ⚪14: daqui em diante, a recusa CONTA que a assinatura da Play já foi cancelada (sem volta; vale até o fim do período pago)
+    const cancelou = playCanceladas > 0 ? { play_cancelada: true } : {};
 
     // 3. Banco do Treino
     const t = await d.treino("excluir_profissional");
-    if (t.passo === "profissional") return recusa("profissional", { motivo: "treino" });
-    if (t.passo === "conta_real") return recusa("conta_real_no_staging", { motivo: "dados_em_producao" });
-    if (t.passo === "indisponivel") return recusa("treino_indisponivel");
+    if (t.passo === "profissional") return recusa("profissional", { motivo: "treino", ...cancelou });
+    if (t.passo === "conta_real") return recusa("conta_real_no_staging", { motivo: "dados_em_producao", ...cancelou });
+    if (t.passo === "indisponivel") return recusa("treino_indisponivel", cancelou);
 
     // 4. banco principal
     const fim = obj(await d.excluir());
-    if (fim.ok !== true) return recusa(String(fim.erro ?? "erro_interno"), fim.motivo ? { motivo: fim.motivo } : {});
+    if (fim.ok !== true) return recusa(String(fim.erro ?? "erro_interno"), { ...(fim.motivo ? { motivo: fim.motivo } : {}), ...cancelou });
 
     // 4b. W2 (revisão I-2): o Mercado Pago DA CONTA das contas dele sai do ar — só depois do SQL de verdade; a falha não volta a exclusão
     const contasDele = lista(fim.contas_dono).map((c) => texto(c.id)).filter((id): id is string => id !== null);

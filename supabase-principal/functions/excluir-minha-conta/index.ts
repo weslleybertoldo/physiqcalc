@@ -180,18 +180,20 @@ Deno.serve(async (req) => {
     const play = await cancelarPlayNaExclusao({ db, schema: schema as Schema, log, prazo: p }, user.id);
     if (!play.ok) return recusa("play_nao_cancelada", origin);
 
-    // 2. Banco do Treino (dados de treino + login de lá)
+    // 2. Banco do Treino (dados de treino + login de lá) — a revisão, ⚪14: se parar aqui, a resposta CONTA que a assinatura da Play já foi
+    // cancelada no 1b (sem volta: DEVELOPER_REQUESTED_STOP_PAYMENTS; vale até o fim do período pago)
+    const cancelou = play.canceladas > 0 ? { play_cancelada: true } : {};
     const treino = await chamarTreino(schema, "excluir", user.id, log, { prazo: p });
-    if (treino.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
+    if (treino.passo === "profissional") return recusa("profissional", origin, { motivo: "treino", ...cancelou });
     if (treino.passo === "conta_real") return dadosEmProducao(origin);
-    if (treino.passo === "indisponivel") return recusa("treino_indisponivel", origin);
+    if (treino.passo === "indisponivel") return recusa("treino_indisponivel", origin, cancelou);
     const t = treino.passo === "sem_vinculo" ? null : treino.corpo;
 
     // 3. banco principal: o que o aluno enviou + a matrícula desligada
     const { data: fim, error: ef } = await db.rpc("excluir_dados_aluno", { p_uid: user.id, p_simular: false });
     if (ef) throw ef;
     const feito = (fim ?? {}) as Record<string, unknown>;
-    if (feito.ok !== true) return recusa(String(feito.erro ?? "erro_interno"), origin);
+    if (feito.ok !== true) return recusa(String(feito.erro ?? "erro_interno"), origin, cancelou);
     const arquivos = (Array.isArray(feito.arquivos) ? feito.arquivos : []) as Array<{ bucket: string; path: string }>;
     const porBucket = new Map<string, string[]>();
     for (const a of arquivos) if (a?.bucket && a?.path) porBucket.set(a.bucket, [...(porBucket.get(a.bucket) ?? []), a.path]);
