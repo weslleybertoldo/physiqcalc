@@ -65,6 +65,11 @@ android {
             def lojaKeystoreFile = System.getenv("PLAY_UPLOAD_KEYSTORE_FILE")
             if (lojaKeystoreFile) {
                 signingConfig = signingConfigs.loja
+            } else if (System.getenv("PLAY_APK_CHAVE_DEBUG") == "1") {
+                // play-W6: o APK "loja + staging" (scripts/ci/aab-loja.sh apk-staging) — o testador de licença instala por fora
+                // um build com a chave de DEBUG (a Play aceita, com o pacote igual). Só com a variável explícita e sem a chave
+                // de upload; nunca vai para a loja (a conferência do AAB recusa qualquer chave que não seja a de upload).
+                signingConfig = signingConfigs.debug
             }
         }
     }
@@ -85,6 +90,10 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // play-W6: a Play Billing Library SÓ na versão da Google Play (playRelease) — o APK do site sai sem a biblioteca e sem a
+    // permissão com.android.vending.BILLING que o AAR declara (scripts/ci/aab-loja.sh confere as 2 saídas). O plugin que a
+    // usa mora em src/playRelease/java (PlayBillingPlugin + PlataformaLoja). A 9 vale até 31/08/2028 (a 8, até 31/08/2027).
+    playReleaseImplementation "com.android.billingclient:billing:9.1.0"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
