@@ -310,13 +310,13 @@ def log_desde(pos: int) -> str:
         return f.read().decode("utf-8", "replace")
 
 
-def subir() -> dict:
+def subir(rotulo: str = "e2e/playw6/api.py --local") -> dict:
     for nome, porta in PORTAS.items():
         if porta_aberta(porta):
             raise RuntimeError(f"a porta {porta} ({nome}) já está em uso — outra rodada?")
     DIR.mkdir(parents=True, exist_ok=True)
     saida = LOG_DENO.open("a", encoding="utf-8")
-    saida.write(f"\n===== {time.strftime('%Y-%m-%d %H:%M:%S')} e2e/playw6/api.py --local =====\n")
+    saida.write(f"\n===== {time.strftime('%Y-%m-%d %H:%M:%S')} {rotulo} =====\n")
     saida.flush()
     CTX["saida"], CTX["log_inicio"] = saida, tamanho_do_log()
     procs: dict = {}
