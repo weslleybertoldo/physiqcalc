@@ -6,6 +6,7 @@ import {
 } from "../../supabase-principal/functions/_shared/play-regras";
 import { GoogleSemToken, claimsDoToken, esquecerToken, tokenDoGoogle } from "../../supabase-principal/functions/_shared/google-oauth";
 import { PlayIndisponivel, adiar, cancelar, obter, reconhecer, revogar } from "../../supabase-principal/functions/_shared/play-api";
+import { sincronizar } from "../../supabase-principal/functions/_shared/play-assinaturas";
 import { excluirContaProfissional, type DepsExclusao } from "../../supabase-principal/functions/_shared/exclusao-profissional-regras";
 import { STATUS_DA_RECUSA } from "../../supabase-principal/functions/_shared/conta-aluno-regras";
 
@@ -422,5 +423,65 @@ describe("a exclusão: a da Play cancela antes de apagar (o profissional que tam
     sem.d.treino = d.treino;
     const r2 = await excluirContaProfissional({ simular: false, confirmacao: "EXCLUIR", papelAuth: "" }, sem.d);
     expect((r2.corpo as Record<string, unknown>).play_cancelada).toBeUndefined();
+  });
+});
+
+describe("o defer na sincronia: a resposta 5xx é INCERTA (a conferência das correções, DECISÃO 07:08)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  // o banco de mentira: a play_aplicar devolve a 1ª compra ativa, coberta (adiar_ate) e ainda sem a marca; o update guarda o que gravou
+  function bancoFalso() {
+    const gravados: Array<Record<string, unknown>> = [];
+    const db = {
+      rpc: vi.fn(async () => ({ data: { ok: true, nova: true, estado: "ativa", matricula_ativa: true, expira_em: "2026-11-16T10:00:00Z",
+        adiar_ate: "2026-10-20T10:00:00Z", adiada_em: null, reconhecida_em: "2026-10-16T10:00:01Z" }, error: null })),
+      from: () => ({
+        update: (valores: Record<string, unknown>) => {
+          gravados.push(valores);
+          const cadeia: Record<string, unknown> = {};
+          cadeia.eq = () => cadeia;
+          cadeia.is = () => cadeia;
+          cadeia.select = async () => ({ data: [{ adiada_em: "2026-10-16T10:00:02Z" }], error: null });
+          cadeia.then = (ok: (v: unknown) => unknown) => ok({ error: null });
+          return cadeia;
+        },
+      }),
+    };
+    return { db, gravados };
+  }
+  function googleFalso(statusDoDefer: number) {
+    const buscar = vi.fn(async (url: unknown) => {
+      const u = String(url);
+      if (u.endsWith("/token")) return resposta(200, { access_token: "acesso", expires_in: 3600 });
+      if (u.endsWith(":acknowledge")) return resposta(204, null);
+      if (u.endsWith(":defer")) return resposta(statusDoDefer, statusDoDefer < 300 ? { itemExpiryTimeDetails: [{ productId: "app_treino", expiryTime: "2026-11-20T10:00:00Z" }] }
+        : { error: { code: statusDoDefer, status: "X", errors: [{ reason: "backendError", message: "x" }] } });
+      return resposta(200, getV2());
+    });
+    return buscar as unknown as typeof fetch;
+  }
+  const log = () => ({ info: vi.fn(), aviso: vi.fn(), erro: vi.fn(), excecao: vi.fn() });
+
+  it.each([500, 503])("o Google responde %i ao defer: a reserva FICA (nada de desfazer) e o log play_adiar_incerto (adiar de novo daria os dias 2 vezes)", async (st) => {
+    vi.stubGlobal("Deno", { env: { get: (n: string) => (n === "PLAY_SERVICE_ACCOUNT" ? JSON.stringify(conta()) : undefined) } });
+    const { db, gravados } = bancoFalso();
+    const l = log();
+    const r = await sincronizar({ db: db as never, schema: "staging", log: l as never, buscar: googleFalso(st) }, TOKEN,
+      { pacienteId: MATRICULA, assinatura: lerAssinaturaV2(getV2()), reconhecer: true });
+    expect(r.ok).toBe(true);
+    expect(gravados.filter((g) => "adiada_em" in g && g.adiada_em === null)).toEqual([]);
+    expect(gravados.filter((g) => typeof g.adiada_em === "string")).toHaveLength(1);
+    expect(l.erro.mock.calls.map((c) => (c[0] as { codigo: string }).codigo)).toContain("play_adiar_incerto");
+    expect(r.ok && r.resposta.adiada_em).toBeTruthy();
+  });
+
+  it("o Google RECUSA o defer (400, resposta que decide): a reserva sai e a próxima sincronia tenta de novo", async () => {
+    vi.stubGlobal("Deno", { env: { get: (n: string) => (n === "PLAY_SERVICE_ACCOUNT" ? JSON.stringify(conta()) : undefined) } });
+    const { db, gravados } = bancoFalso();
+    const l = log();
+    const r = await sincronizar({ db: db as never, schema: "staging", log: l as never, buscar: googleFalso(400) }, TOKEN,
+      { pacienteId: MATRICULA, assinatura: lerAssinaturaV2(getV2()), reconhecer: true });
+    expect(r.ok).toBe(true);
+    expect(gravados.filter((g) => "adiada_em" in g && g.adiada_em === null)).toHaveLength(1);
+    expect(l.erro.mock.calls.map((c) => (c[0] as { codigo: string }).codigo)).toContain("play_adiar_falhou");
   });
 });
