@@ -183,6 +183,9 @@ export interface DepsExclusao {
   cancelarDosAlunos(pacienteIds: string[]): Promise<{ canceladas: number; falhas: number }>;
   /** cancela no Mercado Pago uma assinatura antiga do Calc que só o Treino conhece */
   cancelarSolta(preapprovalId: string): Promise<boolean>;
+  /** play-W6: cancela a assinatura da Google Play da matrícula do app DELE (o profissional que também é aluno do app); sem linha da Play,
+   *  { 0, 0 } sem ida ao Google. Falhou → conta como falha (o 502 cobranca_nao_cancelada de sempre, nada apagado) */
+  cancelarPlay?(): Promise<{ canceladas: number; falhas: number }>;
   /** espelho_disparar(): a equipe e os alunos chegam ao Treino agora (melhor esforço) */
   dispararEspelho(): Promise<void>;
   /** arquivos do diário (parte de aluno) + a foto do Perfil; devolve quantos saíram (melhor esforço) */
@@ -242,6 +245,12 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
     for (const id of cob.soltasDoTreino) {
       if (await d.cancelarSolta(id)) canceladas++;
       else falhas++;
+    }
+    // play-W6: a da Google Play (a matrícula do app dele, quando também é aluno) — antes de apagar qualquer coisa
+    if (d.cancelarPlay) {
+      const r = await d.cancelarPlay();
+      canceladas += r.canceladas;
+      falhas += r.falhas;
     }
     if (falhas > 0) return recusa("cobranca_nao_cancelada", { canceladas, falhas });
 
