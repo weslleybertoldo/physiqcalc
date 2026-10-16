@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   AUDIENCIA_PADRAO, CANCELAMENTO_NO_VINCULO_E_NA_EXCLUSAO, CONTA_PUSH_PADRAO, ESTADOS_QUE_COBREM, ESTADOS_VIVOS, PACOTE, PRODUTOS,
@@ -411,6 +414,22 @@ describe("a exclusão: a da Play cancela antes de apagar (o profissional que tam
   });
   it("o aluno: a recusa play_nao_cancelada é 502 (nada foi apagado)", () => {
     expect(STATUS_DA_RECUSA.play_nao_cancelada).toBe(502);
+  });
+  it("a conferência das correções (DECISÃO 07:08): o erro que LANÇA depois de cancelar a Play → o 500 também conta que ela já foi cancelada", async () => {
+    const { d, apagou } = deps({ canceladas: 1, falhas: 0 });
+    d.excluir = async () => {
+      throw new Error("o banco caiu");
+    };
+    const r = await excluirContaProfissional({ simular: false, confirmacao: "EXCLUIR", papelAuth: "" }, d);
+    expect(r.status).toBe(500);
+    expect(r.corpo as Record<string, unknown>).toMatchObject({ erro: "erro_interno", play_cancelada: true });
+    expect(apagou()).toBe(false);
+  });
+  it("o aluno (excluir-minha-conta): o catch do 500 leva o play_cancelada quando a Play já foi cancelada no 1b", () => {
+    const fonte = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../supabase-principal/functions/excluir-minha-conta/index.ts"), "utf8");
+    const pega = fonte.slice(fonte.lastIndexOf("} catch (e) {"));
+    expect(pega).toMatch(/json\(\{ ok: false, erro: "erro_interno", \.\.\.\(playCancelada \? \{ play_cancelada: true \} : \{\}\) \}, 500, origin\)/);
+    expect(fonte).toMatch(/playCancelada = play\.canceladas > 0;/);
   });
   it("a revisão ⚪14: a Play cancelada e o Treino que para depois → o 502 CONTA que a assinatura já foi cancelada (sem Play, não diz)", async () => {
     const { d, apagou } = deps({ canceladas: 1, falhas: 0 });

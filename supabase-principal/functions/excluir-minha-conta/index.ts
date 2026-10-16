@@ -157,6 +157,8 @@ Deno.serve(async (req) => {
   if (papelAuth === "master" || papelAuth === "admin") return recusa("profissional", origin, { motivo: "master" });
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
+  // a conferência das correções (DECISÃO 07:08): a Play já cancelada no 1b vai também no 500 do catch (o erro que lança depois dele)
+  let playCancelada = false;
   try {
     // 1. confere nos 2 bancos antes de mexer em qualquer coisa
     const { data: pre, error: ep } = await db.rpc("excluir_dados_aluno", { p_uid: user.id, p_simular: true });
@@ -182,7 +184,8 @@ Deno.serve(async (req) => {
 
     // 2. Banco do Treino (dados de treino + login de lá) — a revisão, ⚪14: se parar aqui, a resposta CONTA que a assinatura da Play já foi
     // cancelada no 1b (sem volta: DEVELOPER_REQUESTED_STOP_PAYMENTS; vale até o fim do período pago)
-    const cancelou = play.canceladas > 0 ? { play_cancelada: true } : {};
+    playCancelada = play.canceladas > 0;
+    const cancelou = playCancelada ? { play_cancelada: true } : {};
     const treino = await chamarTreino(schema, "excluir", user.id, log, { prazo: p });
     if (treino.passo === "profissional") return recusa("profissional", origin, { motivo: "treino", ...cancelou });
     if (treino.passo === "conta_real") return dadosEmProducao(origin);
@@ -220,6 +223,6 @@ Deno.serve(async (req) => {
     }, 200, origin);
   } catch (e) {
     log.excecao(e, { acao: simular ? "simular" : "excluir", schema });
-    return json({ ok: false, erro: "erro_interno" }, 500, origin);
+    return json({ ok: false, erro: "erro_interno", ...(playCancelada ? { play_cancelada: true } : {}) }, 500, origin);
   }
 });
