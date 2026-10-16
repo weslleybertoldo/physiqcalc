@@ -396,7 +396,9 @@ begin
     v_troca := {schema}.app_trocar_plano(v_pac.id, v_produto, null);
   end if;
 
-  -- a cobrança do pedido PAGO (a compra e cada renovação): 1 linha por pedido; nenhuma na compra de TESTE do Google
+  -- a cobrança do pedido PAGO (a compra e cada renovação): 1 linha por pedido; nenhuma na compra de TESTE do Google. O valor é o
+  -- recurringPrice do GET: na troca NA HORA (CHARGE_PRORATED_PRICE) o Google cobra só o rateio do período que falta, então a
+  -- linha da troca é uma ESTIMATIVA (o preço cheio do produto novo) — o valor exato só pela Orders API (a revisão, ⚪9)
   if v_pedido is not null and not v_atual.teste and v_atual.estado in ('ativa', 'cancelada', 'carencia') then
     select c.dono_id into v_dono from {schema}.contas c where c.id = v_conta;
     v_valor := case when v_valor is not null and v_valor > 0 then round(v_valor, 2) else v_plano.valor end;
@@ -478,6 +480,8 @@ language sql stable security definer set search_path = '' as $$
                 (select jsonb_build_object('estado', a.estado, 'renova', a.renova, 'expira_em', a.expira_em, 'produto', a.produto)
                    from {schema}.play_assinaturas a
                   where a.paciente_id = p.id and a.estado in ('pendente', 'ativa', 'cancelada', 'carencia', 'suspensa', 'pausada')
+                    -- a cancelada que já venceu (o RTDN EXPIRED atrasou ou se perdeu) não é viva: a regra da play_aplicar
+                    and not (a.estado = 'cancelada' and a.expira_em is not null and a.expira_em < now())
                   order by a.atualizada_em desc limit 1) end
     ) as j
     from {schema}.pacientes p
@@ -509,6 +513,8 @@ language sql stable security definer set search_path = '' as $$
                                                         'produto', a.produto)
                                 from {schema}.play_assinaturas a
                                where a.paciente_id = p.id and a.estado in ('pendente', 'ativa', 'cancelada', 'carencia', 'suspensa', 'pausada')
+                    -- a cancelada que já venceu (o RTDN EXPIRED atrasou ou se perdeu) não é viva: a regra da play_aplicar
+                    and not (a.estado = 'cancelada' and a.expira_em is not null and a.expira_em < now())
                                order by a.atualizada_em desc limit 1))
                     from {schema}.pacientes p left join {schema}.planos_aluno pa on pa.id = p.plano_aluno_id
                    where p.user_id = auth.uid() and p.conta_id = {schema}.conta_do_app() and p.deleted_at is null

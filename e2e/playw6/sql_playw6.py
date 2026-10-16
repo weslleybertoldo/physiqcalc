@@ -37,6 +37,7 @@ Modos:
   13 guarda         o app cria cobrança 'google_play' → nasce comum (sem forma nem pedido); numa linha da Play o UPDATE do app não muda nada
   14 leituras       financeiro_do_aluno e meu_plano_app com a Play viva: 'play' {estado, renova, expira_em, produto}, sem token nem pedido
   15 gatilho        apagar a assinatura recalcula a cobertura
+  16 vencida        a cancelada que já venceu fora das leituras do aluno (a revisão, 🟡3); a cancelada no prazo continua
 Uso: python3 e2e/playw6/sql_playw6.py [--casos 1,2,…] [--schema staging|public]   (local)
      python3 e2e/playw6/sql_playw6.py --foto <arq> | --comparar <arq> [--funcoes-iguais] | --so-catalogo  [--schema …]
 Saída sem dado pessoal: só contagens, códigos, estados e booleanos (nenhum id, token ou pedido).
@@ -600,6 +601,32 @@ begin
         P.check(r["cobriu"] is True and r["voltou"] is True, f"[{s}] 15 apagar a assinatura recalcula a cobertura (volta a de antes)")
 
 
+    if 16 in quais:
+        # a revisão, 🟡3: a cancelada que já venceu (o RTDN EXPIRED atrasou ou se perdeu) NÃO é "viva" nas leituras do aluno — a mesma regra
+        # da play_aplicar (a vaga) e das leituras do servidor; a cancelada ainda no prazo continua aparecendo
+        r = caso(16, f"""
+declare
+  f jsonb; m jsonb; f2 jsonb; m2 jsonb;
+begin
+  perform {ap("'paciente_id', '@A5@'::uuid", "'token', 'playw6-e2e-c16'", "'produto', 'app_treino'", "'estado', 'cancelada'",
+              "'expira_em', now() - interval '1 hour'", "'renova', false")};
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', 'b0000000-0000-4000-8000-000000000015', 'role', 'authenticated')::text, true);
+  f := @S@.financeiro_do_aluno();
+  m := @S@.meu_plano_app();
+  update @S@.play_assinaturas set expira_em = now() + interval '1 day' where token = 'playw6-e2e-c16';
+  f2 := @S@.financeiro_do_aluno();
+  m2 := @S@.meu_plano_app();
+  raise exception 'RESULTADO<<%>>', jsonb_build_object(
+    'fin_vencida', (select e -> 'play' from jsonb_array_elements(f) e where (e ->> 'app')::boolean limit 1),
+    'plano_vencida', m -> 'matricula' -> 'play',
+    'fin_no_prazo', (select e -> 'play' ->> 'estado' from jsonb_array_elements(f2) e where (e ->> 'app')::boolean limit 1),
+    'plano_no_prazo', m2 -> 'matricula' -> 'play' ->> 'estado')::text;""", s)
+        P.check(r.get("fin_vencida") is None and r.get("plano_vencida") is None,
+                f"[{s}] 16 a cancelada VENCIDA fora das leituras do aluno (financeiro_do_aluno e meu_plano_app sem 'play')")
+        P.check(r.get("fin_no_prazo") == "cancelada" and r.get("plano_no_prazo") == "cancelada",
+                f"[{s}] 16 a cancelada ainda no prazo continua nas leituras (vale até o fim)")
+
+
 def main() -> int:
     ap_ = argparse.ArgumentParser()
     ap_.add_argument("--schema", default="staging", choices=("staging", "public"))
@@ -631,7 +658,7 @@ def main() -> int:
         return P.fim()
     if not B.LOCAL:
         raise SystemExit("os casos usam a massa sintética do PG local: rode com PHYSIQ_SQL_LOCAL (ferramentas/local_playw6.py)")
-    quais = {int(x) for x in a.casos.split(",") if x.strip()} or set(range(1, 16))
+    quais = {int(x) for x in a.casos.split(",") if x.strip()} or set(range(1, 17))
     casos(s, quais)
     catalogo(s)
     return P.fim()
