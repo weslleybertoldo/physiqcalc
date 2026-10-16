@@ -19,15 +19,20 @@ Casos (na ordem):
   so_nutricao      negativo: aluno só de Nutrição não tem a aba Treino (a rota volta para a abertura)
   sem_internet     o aviso "Sem internet · o treino fica salvo no aparelho (N mudanças)"
 --seco (hml-28): sem navegador e sem rede — o que os checks do H-169 e da faixa usam existe no código e as regras deles com as medidas da sonda.
+Build de STAGING (hml-28 F5; o /health.json com "schema": "staging" = SEM PowerSync, H-14): o treino_dia prova a faixa Seg–Dom e a folha
+"Descanso" (o descanso guardado no aparelho) e o resto dele fica PULADO; historico, funcoes, sem_profissional e sem_internet ficam PULADOS.
 Uso: python3 e2e/w08/telas.py --base http://localhost:5173 --prefixo local [--casos a,b] [--canal msedge] | --seco
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
+import re
 import socket
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -197,8 +202,107 @@ def faixa_cabe_em_390_e_360(c) -> None:
         c.pg.wait_for_timeout(300)
 
 
+# hml-28 F5: o build de STAGING (vite build com VITE_DB_SCHEMA=staging — o site de teste e o vite preview do dist/) fica SEM PowerSync desde a
+# hml-04c (H-14, src/lib/powersync/instancia.ts: PROD e schema ≠ public → ""): nada sincroniza, o banco local do aparelho fica vazio e a aba
+# Treino fica no esqueleto "Baixando o seu treino" (o primeiroSync do Treino.tsx) — sem o treino do profissional, sem séries e sem a fila que
+# sobe. Nesse build o treino_dia prova o que não depende do banco local (a faixa Seg–Dom e a folha "Descanso") e o que precisa do treino no
+# aparelho fica PULADO, com o motivo (fora do placar; os casos inteiros, sem login nem gravação). O /health.json só existe no build
+# (vite.config.ts, apply: "build") e diz o schema; sem ele (o vite dev) ou com o public, o fluxo de sempre.
+SEM_POWERSYNC = {"sim": False}
+PULADOS: list[str] = []
+MOTIVO_SEM_POWERSYNC = "o build de staging não tem PowerSync (H-14): sem o treino no aparelho nem a fila que sobe"
+PRECISAM_DO_POWERSYNC = {
+    "historico": "terminar um treino, o calendário do mês, o detalhe, compartilhar e excluir",
+    "funcoes": "ficha, histórico, anotações, academia, séries, reordenar e 'Montar o meu'",
+    "sem_profissional": "o vazio com 'Montar o meu' e 'Usar um treino pronto' (sem o 1º sync a aba fica no esqueleto)",
+    "sem_internet": "o aviso sem internet com as mudanças esperando na fila",
+}
+PULADOS_DO_TREINO_DIA = (
+    "o treino do profissional no dia, as miniaturas e 'Começar treino' (3 checks)",
+    "as séries com peso e OK, os feitos com ✓, o atual 'Série 3 de 3' com a carga, o card '2 de N', a pílula e o card do descanso (8 checks)",
+    "o exercício aberto com S1 e S2 feitas (1 check)",
+    "o fim do treino: 'Treino foi concluído?', 'Treino finalizado!', compartilhar e TREINO CONCLUÍDO (5 checks)",
+    "a volta da internet e a subida para o staging: a fila, as séries, o histórico e o concluído (4 checks)",
+)
+# o descanso como o app o guarda no aparelho quando uma série recebe OK (useDescanso.ts: LS_DESCANSO e o EstadoDescansoSalvo); a aba Treino o
+# retoma ao montar ("o descanso sobrevive a recarregar"). O startedAt é o relógio da página; 3 min de descanso, correndo.
+DESCANSO_SEMEADO = {"ativo": True, "startedAt": 0, "pausedRemaining": 180, "isPaused": False, "duracao": 180,
+                    "exercicioNome": "Supino reto (teste E2E)", "numeroSerie": 2, "serieId": "e2e-hml28-descanso",
+                    "depois": "série 3 do Supino reto (teste E2E)"}
+SEMEAR_DESCANSO = "(s) => localStorage.setItem('physiq_rest_timer', JSON.stringify({ ...s, startedAt: Date.now() }))"
+
+
+def build_sem_powersync(base: str) -> bool:
+    """O build em `base` é o de staging (o /health.json com "schema": "staging") → sem PowerSync (H-14)."""
+    try:
+        with urllib.request.urlopen(f"{base.rstrip('/')}/health.json", timeout=20) as r:
+            return json.loads(r.read().decode("utf-8")).get("schema") == "staging"
+    except Exception:  # noqa: BLE001 — sem o arquivo (o vite dev) ou fora do ar: o fluxo de sempre
+        return False
+
+
+def pulado(texto: str) -> None:
+    """O que o build não deixa provar: fora do placar (nem ✅ nem ❌), numa linha ⏭️ e no total do fim."""
+    PULADOS.append(texto)
+    print(f"⏭️ pulado: {texto}", flush=True)
+
+
+def treino_dia_sem_powersync(nav, a) -> None:
+    """hml-28 F5 (o build sem PowerSync): a aba no esqueleto, a faixa Seg–Dom em 390 e 360 px e a folha "Descanso" com o descanso guardado no
+    aparelho (recarregar traz o cartão de volta), com os checks do H-169; o resto do treino_dia fica PULADO. Nada vai ao banco (o descanso só
+    mexe no localStorage); a limpeza do staging roda no fim do mesmo jeito."""
+    desde = B.agora_iso()
+    c = B.Caso(nav, a.base, a.prefixo, "treino_dia", desktop=False)
+    try:
+        c.entrar(B.ALUNO, "/treino", zerar=True)
+        c.fechar_avisos()
+        abriu = c.esperar(lambda: c.tem("[data-aba-treino]") and c.pg.locator("[data-faixa-semana] [data-dia-estado]").count() == 7, 60)
+        p.check(abriu, "[treino_dia] a aba Treino abriu já logada, com a faixa Seg–Dom")
+        p.check("Entrar com o Google" not in c.texto() and not c.caminho().startswith("/entrar"), "[treino_dia] não caiu na tela de entrada")
+        esqueleto = '[data-aba-treino] [data-estado="carregando"][aria-label="Baixando o seu treino"]'
+        p.check(c.esperar(lambda: c.tem(esqueleto), 10) and not c.tem("[data-cartao-treino]") and not c.tem("[data-sem-treino-dia]"),
+                "build sem PowerSync (H-14): a aba no esqueleto 'Baixando o seu treino', sem o cartão do treino (o esperado)")
+        p.check(c.pg.locator("[data-dia-estado]").count() == 7, "faixa Seg–Dom com os 7 dias")
+        c.print("treino_dia")
+        # hml-28: em 360 px o "Dom" da faixa passava 8 px da borda útil da página; os 7 dias têm de caber em 390 e em 360 px
+        faixa_cabe_em_390_e_360(c)
+        # o descanso guardado no aparelho → recarregar → a aba retoma o cartão do descanso (correndo)
+        c.pg.evaluate(SEMEAR_DESCANSO, DESCANSO_SEMEADO)
+        c.pg.reload(wait_until="domcontentloaded")
+        c.fechar_avisos()
+        p.check(c.esperar(lambda: c.tem('[data-descanso="correndo"]') and c.tem("[data-descanso-ajustes]"), 30),
+                f"o cartão do descanso volta ao recarregar (o descanso guardado no aparelho): '{B.texto(c, '[data-descanso-depois]')}'")
+        c.print("descanso_cartao")
+        c.pg.locator("[data-descanso-ajustes]").click()
+        c.esperar(lambda: c.tem("[data-ajustes-descanso]"), 6)
+        p.check(c.tem("[data-descanso-pausar]") and c.tem("[data-descanso-som]") and c.tem("[data-descanso-duracao]"), "ajustes do descanso: pausar, recomeçar, tempo e o som")
+        cortados = c.pg.evaluate("() => [...document.querySelectorAll('[data-ajustes-descanso] button')].filter(b => b.offsetWidth && b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim())")
+        p.check(not cortados, f"os botões do descanso cabem sem cortar o texto ({cortados})")
+        c.print("descanso_ajustes")
+        # hml-28 (H-169): com o descanso pausado, o "−15 s" passava 10,5 px da borda útil em 390 px e saía em parte da tela em 360 px
+        descanso_pausado_cabe(c)
+        dur0 = B.texto(c, "[data-descanso-duracao]")
+        c.pg.locator("[data-descanso-tempo-mais]").click()
+        c.pg.wait_for_timeout(300)
+        p.check(B.texto(c, "[data-descanso-duracao]") != dur0, f"ajustar o tempo do descanso ({dur0} → {B.texto(c, '[data-descanso-duracao]')})")
+        c.pg.keyboard.press("Escape")
+        c.pg.wait_for_timeout(400)
+        c.pg.locator("[data-descanso-pular]").click()
+        p.check(c.esperar(lambda: not c.tem("[data-descanso]"), 6) and c.pg.evaluate("() => localStorage.getItem('physiq_rest_timer')") is None,
+                "'Pular' fecha o descanso (nada fica guardado no aparelho)")
+        for parte in PULADOS_DO_TREINO_DIA:
+            pulado(f"[treino_dia] {parte} — {MOTIVO_SEM_POWERSYNC}")
+    finally:
+        c.fim()
+        time.sleep(2)
+        B.limpar_staging(desde, "treino_dia")
+
+
 @caso
 def caso_treino_dia(nav, a) -> None:
+    if SEM_POWERSYNC["sim"]:
+        treino_dia_sem_powersync(nav, a)
+        return
     desde = B.agora_iso()
     c = B.abrir_treino(nav, a.base, a.prefixo, "treino_dia")
     arquivos_locais(c)
@@ -509,6 +613,14 @@ NO_CODIGO = {
     # a faixa Seg–Dom (o achado da W): os seletores do check e o dia sem o flex-none (os 7 encolhem por igual quando não cabem)
     "src/treino/ui/FaixaSemana.tsx": ["data-faixa-semana={deslocamento}", "data-dia-estado={estado}", 'className="flex justify-between gap-1"',
                                       '"relative flex h-[62px] w-[44px] flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold transition-colors"'],
+    # hml-28 F5, o caminho do build sem PowerSync: a regra da instância, o esqueleto do 1º sync, o descanso guardado no aparelho (a chave, a aba
+    # que o retoma ao montar, o estado e o Pular do cartão) e o health.json do build com o schema
+    "src/lib/powersync/instancia.ts": ['if (env.PROD && schema !== "public") return "";'],
+    "src/app-aluno/abas/Treino.tsx": ["const primeiroSync = !status.hasSynced && vazio", 'rotulo="Baixando o seu treino"', "ativo: descansoGuardadoAtivo(),"],
+    "src/treino/useDescanso.ts": ['export const LS_DESCANSO = "physiq_rest_timer";'],
+    "src/ui/premium/Estados.tsx": ['aria-label={rotulo} data-estado="carregando"'],
+    "src/treino/ui/CartaoDescanso.tsx#cartao": ['data-descanso={d.acabou ? "acabou" : d.pausado ? "pausado" : "correndo"}', "data-descanso-pular"],
+    "vite.config.ts": ['name: "physiq-health",', 'fileName: "health.json"', "schema: SCHEMAS_DO_BANCO.includes(schema) ? schema : null,"],
 }
 # as medidas da sonda da hml-28 (réplica com as classes do código, Chromium 153 = Edge 154): o código de antes com "Continuar" e o corrigido
 _ANTES = {"pausar": "Continuar", "botoes": [[21, 152.64], [160.64, 302.58], [310.58, 379.5]]}
@@ -541,10 +653,19 @@ def seco() -> int:
 
     socket.socket.connect = sem_rede  # type: ignore[method-assign]
     raiz = Path(__file__).resolve().parents[2]
-    falta = [f"{arq} › {x}" for arq, itens in NO_CODIGO.items() for x in itens
-             if not (raiz / arq).exists() or x not in (raiz / arq).read_text(encoding="utf-8")]
+
+    def fonte(arq: str) -> str:  # "arquivo#rótulo": o mesmo arquivo em mais de uma entrada
+        f = raiz / arq.split("#")[0]
+        return f.read_text(encoding="utf-8") if f.exists() else ""
+
+    falta = [f"{arq} › {x}" for arq, itens in NO_CODIGO.items() for x in itens if x not in fonte(arq)]
     total = sum(len(v) for v in NO_CODIGO.values())
-    p.check(not falta, f"seco: {total - len(falta)}/{total} seletores, rótulos e classes dos checks do H-169 e da faixa no código" + (f" — falta: {falta}" if falta else ""))
+    p.check(not falta, f"seco: {total - len(falta)}/{total} seletores, rótulos e classes dos checks do H-169, da faixa e do build sem PowerSync no código"
+            + (f" — falta: {falta}" if falta else ""))
+    m = re.search(r"export interface EstadoDescansoSalvo \{(.*?)\n\}", fonte("src/treino/useDescanso.ts"), re.S)
+    campos = re.findall(r"^\s+(\w+)\??:", m.group(1), re.M) if m else []
+    p.check(bool(campos) and set(campos) == set(DESCANSO_SEMEADO),
+            f"seco: o descanso semeado no build sem PowerSync tem os campos do EstadoDescansoSalvo (useDescanso.ts): {sorted(campos)}")
     M = MEDIDAS_DA_SONDA
     p.check(not fileira_descanso_cabe(M["antes_390"], 390) and not fileira_descanso_cabe(M["antes_360"], 360),
             "seco: a regra acusa o código de antes ('Continuar': o −15 s até 379,5 px, a útil 369 em 390 e 339 em 360)")
@@ -579,15 +700,22 @@ def main() -> int:
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
     ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
-    ap.add_argument("--seco", action="store_true", help="sem navegador e sem rede: os checks do H-169 e da faixa (seletores, classes e as regras)")
+    ap.add_argument("--seco", action="store_true",
+                    help="sem navegador e sem rede: os checks do H-169 e da faixa (seletores, classes e as regras) e as premissas do build sem PowerSync")
     a = ap.parse_args()
     if a.seco:
         return seco()
     B.ESTADO["schema"] = "staging"
+    SEM_POWERSYNC["sim"] = build_sem_powersync(a.base)
+    print(f"o build em {a.base}: " + ("de STAGING, SEM PowerSync (H-14) — o que precisa do treino no aparelho fica PULADO" if SEM_POWERSYNC["sim"]
+                                     else "com PowerSync (ou sem o /health.json) — o fluxo completo"), flush=True)
     with sync_playwright() as pw:
         nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage"])
         for nome in a.casos.split(","):
             print(f"\n== {nome} ==", flush=True)
+            if SEM_POWERSYNC["sim"] and nome in PRECISAM_DO_POWERSYNC:
+                pulado(f"[{nome}] o caso inteiro: {PRECISAM_DO_POWERSYNC[nome]} — {MOTIVO_SEM_POWERSYNC}")
+                continue
             if not B.saude_treino():
                 p.check(False, f"[{nome}] Banco do Treino fora do normal — parei (sem reiniciar nada)")
                 break
@@ -597,6 +725,8 @@ def main() -> int:
                 p.check(False, f"[{nome}] exceção: {e!r}"[:400])
             time.sleep(4)
         nav.close()
+    if PULADOS:
+        print(f"\n⏭️ {len(PULADOS)} pulados (fora do placar) — {MOTIVO_SEM_POWERSYNC}", flush=True)
     return p.fim()
 
 
