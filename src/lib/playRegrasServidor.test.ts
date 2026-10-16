@@ -6,7 +6,7 @@ import {
 } from "../../supabase-principal/functions/_shared/play-regras";
 import { GoogleSemToken, claimsDoToken, esquecerToken, tokenDoGoogle } from "../../supabase-principal/functions/_shared/google-oauth";
 import { PlayIndisponivel, adiar, cancelar, obter, reconhecer, revogar } from "../../supabase-principal/functions/_shared/play-api";
-import { sincronizar } from "../../supabase-principal/functions/_shared/play-assinaturas";
+import { ressincronizarVencidas, sincronizar } from "../../supabase-principal/functions/_shared/play-assinaturas";
 import { excluirContaProfissional, type DepsExclusao } from "../../supabase-principal/functions/_shared/exclusao-profissional-regras";
 import { STATUS_DA_RECUSA } from "../../supabase-principal/functions/_shared/conta-aluno-regras";
 
@@ -483,5 +483,39 @@ describe("o defer na sincronia: a resposta 5xx é INCERTA (a conferência das co
     expect(r.ok).toBe(true);
     expect(gravados.filter((g) => "adiada_em" in g && g.adiada_em === null)).toHaveLength(1);
     expect(l.erro.mock.calls.map((c) => (c[0] as { codigo: string }).codigo)).toContain("play_adiar_falhou");
+  });
+});
+
+describe("a ressincronia do estado conta só a viva que MUDOU (a conferência das correções, DECISÃO 07:08)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const PASSADO = "2026-10-10T10:00:00.000Z";
+  // o banco de mentira: 1 linha viva com o fim já passado; a play_aplicar devolve o que o Google disse (o `depois`)
+  function bancoFalso(estadoAntes: string, depois: { estado: string; expira_em: string }) {
+    const linha = { token: TOKEN, paciente_id: MATRICULA, estado: estadoAntes, renova: true, expira_em: PASSADO, produto: "app_treino", teste: false };
+    const cadeia: Record<string, unknown> = {};
+    for (const m of ["select", "eq", "in", "lt", "order"]) cadeia[m] = () => cadeia;
+    cadeia.limit = async () => ({ data: [linha], error: null });
+    return {
+      rpc: vi.fn(async () => ({ data: { ok: true, nova: false, matricula_ativa: true, reconhecida_em: "x", adiar_ate: null, adiada_em: null, ...depois }, error: null })),
+      from: () => cadeia,
+    };
+  }
+  const google = (estado: string, expiryTime: string) => vi.fn(async (url: unknown) => {
+    if (String(url).endsWith("/token")) return resposta(200, { access_token: "acesso", expires_in: 3600 });
+    return resposta(200, getV2({ subscriptionState: estado, acknowledgementState: "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED" }, { expiryTime }));
+  }) as unknown as typeof fetch;
+  const log = () => ({ info: vi.fn(), aviso: vi.fn(), erro: vi.fn(), excecao: vi.fn() });
+
+  it("a SUSPENSA (o fim sempre no passado) que o Google devolve igual NÃO conta — o app não invalida o resumo a cada estado", async () => {
+    vi.stubGlobal("Deno", { env: { get: (n: string) => (n === "PLAY_SERVICE_ACCOUNT" ? JSON.stringify(conta()) : undefined) } });
+    const db = bancoFalso("suspensa", { estado: "suspensa", expira_em: PASSADO });
+    const n = await ressincronizarVencidas({ db: db as never, schema: "staging", log: log() as never, buscar: google("SUBSCRIPTION_STATE_ON_HOLD", PASSADO) }, MATRICULA);
+    expect(n).toBe(0);
+  });
+  it("a ativa vencida que o Google devolve RENOVADA (o fim andou) conta", async () => {
+    vi.stubGlobal("Deno", { env: { get: (n: string) => (n === "PLAY_SERVICE_ACCOUNT" ? JSON.stringify(conta()) : undefined) } });
+    const db = bancoFalso("ativa", { estado: "ativa", expira_em: "2026-11-16T10:00:00.000Z" });
+    const n = await ressincronizarVencidas({ db: db as never, schema: "staging", log: log() as never, buscar: google("SUBSCRIPTION_STATE_ACTIVE", "2026-11-16T10:00:00Z") }, MATRICULA);
+    expect(n).toBe(1);
   });
 });
