@@ -14,18 +14,25 @@ exclusão), w7b-vence (coberta pelo mês do MP: a corrida com a automática e o 
   outro_dono   a compra de OUTRA matrícula → 409 compra_de_outra_conta (nada gravado nem reconhecido)
   token_falso  o token que o Google não conhece → 400 compra_invalida; fora do formato → 400 pedido_invalido
   estado       disponivel, a matrícula, a assinatura (só estado, renova, expira_em e produto: sem token nem pedido)
-  teste_defer  no teste grátis: a 1ª compra é adiada pelos dias que faltam (≥ 1 dia) e a cobertura vai ao fim novo
+  teste_defer  no teste grátis: a 1ª compra é adiada pelos dias que faltam (≥ 1 dia) e a cobertura vai ao fim novo — com o GET de depois do
+               defer CAINDO (a marca já gravada) e o RTDN 9 (DEFERRED) que chega em seguida SEM adiar de novo (a revisão, 🟡1)
   mp_vivo      com a automática do MP viva (a corrida; a automática SIMULADA "sim-playw6-…", que só existe no banco): a do MP cancelada, a
                Play segue, adiada pelo que o MP pagou
   rtdn         RENEWED → +1 cobrança e a cobertura anda · o mesmo aviso de novo = nada · IN_GRACE → cobre · ON_HOLD → trava · RECOVERED · CANCELED
                → vale até o fim · EXPIRED → trava · REVOKED → revogada, trava · VOIDED → a cobrança devolvida
-  troca        para o completo NA HORA (a anterior substituída, o plano na hora) · para o Treino NA RENOVAÇÃO (o plano só no RENEWED)
+  troca        para o completo NA HORA (a anterior substituída, o plano na hora) · para o Treino NA RENOVAÇÃO (o plano só no RENEWED; o GET
+               do token novo com as 2 linhas da doc, a nova primeiro — a revisão, 🟡2)
+  ressincroniza a viva vencida no banco (o RTDN perdido): o estado lê o Google e grava — a renovação sem RTDN (+1 cobrança, sem reconhecer
+               nem adiar) e a cancelada vencida (fora do aluno_status; gravada expirada) (a revisão, 🟡3)
+  devolucao_velha  o aviso de devolução de um token que o Google esqueceu (GET 410): a cobrança devolvida pelo orderId (a revisão, ⚪13)
   vinculo      2 matrículas do app SINTÉTICAS ("PLAYW6 Vínculo A/B" do w7b-treino, encerradas pelo vínculo — o molde do e2e/w19) com a Play
                viva: o aviso RENEWED da A → a rede do play-rtdn cancela; o aluno_status (a rede da pagamentos-aluno) cancela a B — as 2 com
                DEVELOPER_REQUESTED_STOP_PAYMENTS (vale até o fim, sem devolver)
   exclusao     o Google fora → 502 play_nao_cancelada e nada apagado (o Treino nem é chamado para excluir); o Google ok → a da Play cancelada
-               ANTES e o Treino (FALSO, local: o "excluir" falha) → 502 treino_indisponivel — nada apagado no principal nem no login
+               ANTES e o Treino (FALSO, local: o "excluir" falha) → 502 treino_indisponivel com play_cancelada (a revisão, ⚪14) — nada
+               apagado no principal nem no login
   site_409     com a Play viva, o Pix do site/APK antigo → 409 assinatura_play; o aluno_status traz o play (sem o token)
+  mp_409       o registrar recusado (outra Play viva → 409) NÃO cancela a automática do MP (a revisão, ⚪12)
   log          o log do Deno da rodada sem os valores de teste (os tokens de compra, os pedidos, os e-mails): 0 ocorrência
 A FOTO (antes de gravar, em ~/projetos/physiqcalc-scratch/hml/playw6/local/api-estado.json, 600): as matrículas das 3 contas. No fim (ou no
 --limpar): saem as assinaturas da Play da rodada (token "simtok-"), as cobranças google_play delas, a automática simulada ("sim-playw6-"),
@@ -34,6 +41,7 @@ as matrículas sintéticas ("PLAYW6 ") e os eventos de plano da rodada; o plano 
 à foto. Os logins (1 por conta usada) saem com logout local no fim.
 Saída sem dado pessoal nem segredo: códigos, status, contagens e booleanos.
 Precisa: ~/.pc-pat, as senhas das contas de TESTE, o ~/.deno/bin/deno e as portas 8791–8796 livres.
+O vermelho das correções: PLAYW6_FUNCOES_DE=<as funções de antes, por git archive, fora do repo> roda os mesmos casos contra o código velho.
 Uso: python3 e2e/playw6/api.py --seco
      python3 e2e/playw6/api.py --local [--casos registrar,rtdn,...]
      python3 e2e/playw6/api.py --limpar
@@ -69,6 +77,8 @@ ESTADO_ARQ = DIR / "api-estado.json"
 LOG_DENO = DIR / "deno-local.log"
 SQLRO = CASA / "projetos" / "physiqcalc-scratch" / "hml" / "sqlro.py"
 DENO = CASA / ".deno" / "bin" / "deno"
+# só para provar o VERMELHO das correções: as funções de antes (git archive do commit velho, fora do repo); o padrão é a worktree
+FUNCOES_DIR = Path(os.environ.get("PLAYW6_FUNCOES_DE") or (RAIZ / "supabase-principal" / "functions"))
 PORTAS = {"compras": 8791, "rtdn": 8792, "pag": 8793, "excluir": 8794, "treino": 8795, "sim": 8796}
 FUNCOES = {"compras": "play-compras", "rtdn": "play-rtdn", "pag": "pagamentos-aluno", "excluir": "excluir-minha-conta"}
 CONTAS = ("w7b-treino", "w7b-removido", "w7b-vence")
@@ -76,7 +86,8 @@ OUTRO_DONO = "w7b-novo"
 MARCA_AUTOMATICA = "sim-playw6-"
 MARCA_SINTETICA = "PLAYW6 "
 CANCELAMENTO = "DEVELOPER_REQUESTED_STOP_PAYMENTS"
-CASOS = ("oidc", "registrar", "outro_dono", "token_falso", "estado", "teste_defer", "mp_vivo", "rtdn", "troca", "vinculo", "exclusao", "site_409", "log")
+CASOS = ("oidc", "registrar", "outro_dono", "token_falso", "estado", "teste_defer", "mp_vivo", "rtdn", "troca", "ressincroniza", "devolucao_velha",
+         "vinculo", "exclusao", "site_409", "mp_409", "log")
 CAMPOS_FOTO = ("ativo", "plano_id", "valor", "pago_ate", "teste_ate", "encerrada_em", "encerrada_motivo")
 
 B = None   # a base da W7b (e2e/w07b/_base.py: as contas de TESTE, o login e o SQL) — carregada no --local/--limpar (o --seco não abre rede)
@@ -330,7 +341,7 @@ def subir(rotulo: str = "e2e/playw6/api.py --local") -> dict:
     rede_ = f"127.0.0.1,{B.PRINCIPAL_REF}.supabase.co"
     for nome, funcao in FUNCOES.items():
         procs[nome] = subprocess.Popen([str(DENO), "run", f"--allow-net={rede_}", "--allow-env", "--allow-read", "e2e/w1/servir_local.ts",
-                                        f"supabase-principal/functions/{funcao}/index.ts", str(PORTAS[nome])],
+                                        str(FUNCOES_DIR / funcao / "index.ts"), str(PORTAS[nome])],
                                        cwd=RAIZ, env=env, stdout=saida, stderr=saida)
     print(f"   processos: {', '.join(f'{k} pid {v.pid}' for k, v in procs.items())} + o Treino falso (porta {PORTAS['treino']}) (log: {LOG_DENO})",
           flush=True)
@@ -594,19 +605,30 @@ def caso_estado(m: dict, token: str) -> None:
 
 
 def caso_teste_defer(m: dict) -> str:
+    """🟡1 da revisão: o GET logo DEPOIS do defer cai (o cenário falhas_get_pos_defer) e o RTDN 9 (SUBSCRIPTION_DEFERRED) chega em seguida —
+    a marca adiada_em já está no banco (gravada logo depois do 2xx, com o fim novo da resposta do defer): nada de 2º defer."""
     antes = ts(m["pago_ate"])
     p.check(antes is not None and antes > agora() + dt.timedelta(days=1), "teste_defer · a matrícula no teste grátis, coberta por mais de 1 dia")
     c = comprar("app_treino", m["id"])
     inicio = ts(info(c["token"])["expira"]) - dt.timedelta(days=30)
-    st, r = registrar("w7b-removido", c["token"], "app_treino")
+    sim("/_cenario", {"falhas_get_pos_defer": 1})
+    try:
+        st, r = registrar("w7b-removido", c["token"], "app_treino")
+    finally:
+        sim("/_cenario", {})
     a = assinatura(c["token"])
     i = info(c["token"])
     dias = math.ceil((antes - inicio).total_seconds() / 86400) if antes else None
     p.check(st == 200 and r.get("adiada") is True and a.get("adiada") is True and perto(ts(a.get("adiar_ate")), antes),
-            f"teste_defer · a 1ª compra no teste: adiar_ate = o fim da cobertura de antes e adiada — {st} {r.get('erro') or ''}")
-    p.check(dias is not None and dias >= 1 and i["adiada_dias"] == dias, f"teste_defer · o defer no Google = os dias que faltam ({i['adiada_dias']} = {dias})")
+            f"teste_defer · a 1ª compra no teste, com o GET de depois do defer caindo: adiar_ate = o fim de antes e a marca gravada — {st} {r.get('adiada')}")
+    p.check(dias is not None and dias >= 1 and i["adiada_dias"] == dias and i["adiamentos"] == 1,
+            f"teste_defer · o defer no Google = os dias que faltam ({i['adiada_dias']} = {dias}; {i['adiamentos']} defer)")
     p.check(perto(cobertura(m["id"]), ts(i["expira"])) and ts(i["expira"]) > antes + dt.timedelta(days=29),
-            "teste_defer · a cobertura vai ao fim novo (o mês pago começa depois do teste)")
+            "teste_defer · a cobertura vai ao fim novo (o da resposta do defer; o mês pago começa depois do teste)")
+    st9 = empurrar(tipo="assinatura", notificacao=9, token=c["token"])
+    i = info(c["token"])
+    p.check(st9 == 204 and i["adiamentos"] == 1 and i["adiada_dias"] == dias and perto(cobertura(m["id"]), ts(i["expira"])),
+            f"teste_defer · o RTDN 9 (DEFERRED) que chega depois NÃO adia de novo ({i['adiamentos']} defer, {i['adiada_dias']} dias) — {st9}")
     return c["token"]
 
 
@@ -676,7 +698,7 @@ def caso_rtdn(m: dict, token: str) -> None:
             f"rtdn · VOIDED → a cobrança do pedido devolvida (cancelada + reembolsado_em) e a assinatura revogada, trava — {st}")
 
 
-def caso_troca(m: dict) -> None:
+def caso_troca(m: dict) -> str:
     pid = m["id"]
     t1 = comprar("app_treino", pid)["token"]
     st0, _ = registrar("w7b-treino", t1, "app_treino")
@@ -689,7 +711,11 @@ def caso_troca(m: dict) -> None:
             f"troca · para o completo NA HORA: a anterior substituída, o plano já é o completo (R$ 49,90) e a cobrança do pedido novo — {st}")
     t3 = comprar("app_treino", pid, ligada=t2, modo="na_renovacao")["token"]
     n_cob = len(cobrancas_play(pid))
-    st, _r = registrar("w7b-treino", t3, "app_treino")
+    sim("/_cenario", {"deferred_nova_primeiro": True})   # 🟡2: o GET do token novo com a linha do Treino (sem data) ANTES da atual
+    try:
+        st, _r = registrar("w7b-treino", t3, "app_treino")
+    finally:
+        sim("/_cenario", {})
     p.check(st == 200 and assinatura(t2).get("estado") == "substituida" and matricula("w7b-treino")["plano"] == "app_treino_alimentacao"
             and len(cobrancas_play(pid)) == n_cob,
             f"troca · para o Treino NA RENOVAÇÃO: o plano segue o completo até renovar, sem cobrança nova — {st}")
@@ -698,6 +724,67 @@ def caso_troca(m: dict) -> None:
     mm = matricula("w7b-treino")
     p.check(st == 204 and mm["plano"] == "app_treino" and float(mm["valor"]) == 29.9 and len(cobrancas_play(pid)) == n_cob + 1,
             f"troca · no RENEWED o plano vira o Treino (R$ 29,90) e a renovação cobra — {st}")
+    return t3
+
+
+def caso_ressincroniza(m: dict, token: str) -> None:
+    """🟡3 da revisão: a viva que já venceu no banco (o RTDN perdido): o estado da play-compras lê o Google e grava, sem reconhecer nem adiar;
+    e a cancelada vencida sai das leituras de "viva" do servidor (a regra da play_aplicar)."""
+    pid = m["id"]
+    # (a) a renovação que o RTDN não trouxe: o Google renovou; no banco, o fim gravado já passou (o tempo, simulado no fim gravado)
+    mudar(token, "renovar")
+    n_cob = len(cobrancas_play(pid))
+    sql(f"update {S}.play_assinaturas set expira_em = now() - interval '1 minute' where token = {lit(token)}")
+    p.check(travada(cobertura(pid)), "ressincroniza · (o ensaio) o fim gravado já passou: a cobertura travou")
+    n0 = sim_n()
+    st, r = compras("w7b-treino", {"acao": "estado"})
+    i = info(token)
+    a = assinatura(token)
+    acoes = [x.get("acao") for x in sim_pedidos(n0)]
+    p.check(st == 200 and (r.get("assinatura") or {}).get("estado") == "ativa" and perto(ts(a.get("expira_em")), ts(i["expira"]))
+            and not travada(cobertura(pid)) and len(cobrancas_play(pid)) == n_cob + 1 and "get" in acoes
+            and "acknowledge" not in acoes and "defer" not in acoes,
+            f"ressincroniza · a renovação sem o RTDN: o estado lê o Google e grava (o fim novo, +1 cobrança; sem reconhecer nem adiar) — {st}")
+    # (b) a cancelada que venceu sem o EXPIRED (o aviso perdido): não é mais "viva" e o estado grava a expirada
+    mudar(token, "cancelar_usuario")
+    mudar(token, "expirar")
+    sql(f"update {S}.play_assinaturas set estado = 'cancelada', renova = false, expira_em = now() - interval '1 minute' where token = {lit(token)}")
+    st2, r2 = pag("w7b-treino", "aluno_status")
+    mat = next((x for x in (r2.get("matriculas") or []) if x.get("paciente_id") == pid), {})
+    p.check(st2 == 200 and mat.get("play") is None,
+            f"ressincroniza · a cancelada vencida fora da leitura de \"viva\" do servidor (o aluno_status sem a Play) — {st2}")
+    st, r = compras("w7b-treino", {"acao": "estado"})
+    p.check(st == 200 and r.get("assinatura") is None and assinatura(token).get("estado") == "expirada",
+            f"ressincroniza · o estado: sem assinatura viva e a vencida gravada expirada (o Google) — {st}")
+
+
+def caso_devolucao_velha(m: dict) -> None:
+    """⚪13 da revisão: o aviso de devolução de um token que o Google já esqueceu (o GET 410): a cobrança do pedido devolvida pelo orderId."""
+    pid = m["id"]
+    c4 = comprar("app_treino", pid)
+    st0, _r = registrar("w7b-treino", c4["token"], "app_treino")
+    antes = sum(1 for x in cobrancas_play(pid) if x["status"] == "cancelada" and x["reembolsada"])
+    sim("/_cenario", {"get_status": 410})
+    try:
+        st = empurrar(tipo="devolucao", token=c4["token"], pedido=c4["pedido"])
+    finally:
+        sim("/_cenario", {})
+    depois = sum(1 for x in cobrancas_play(pid) if x["status"] == "cancelada" and x["reembolsada"])
+    p.check(st0 == 200 and st == 204 and depois == antes + 1,
+            f"devolucao_velha · o token que o Google esqueceu (GET 410): a cobrança do pedido devolvida pelo orderId — {st0} {st}, {antes}→{depois}")
+
+
+def caso_mp_409(m: dict) -> None:
+    """⚪12 da revisão: o registrar que falha (outra assinatura da Play viva → 409) NÃO cancela a automática do MP."""
+    sql(f"""insert into {S}.aluno_assinaturas (paciente_id, conta_id, mp_preapproval_id, status, valor, proximo_vencimento, payload)
+            values ({lit(m['id'])}::uuid, {S}.conta_do_app(), '{MARCA_AUTOMATICA}{secrets.token_hex(6)}', 'authorized', 29.90,
+                    now() + interval '20 days', jsonb_build_object('simulada', true, 'playw6', true))""")
+    c = comprar("app_treino", m["id"])
+    st, r = registrar("w7b-vence", c["token"], "app_treino")
+    vivas = int(um(f"""select count(*) as n from {S}.aluno_assinaturas where paciente_id = {lit(m['id'])}::uuid
+                        and status in ('authorized', 'pending', 'paused')""")["n"])
+    p.check(st == 409 and r.get("erro") == "assinatura_duplicada" and vivas == 1,
+            f"mp_409 · o registrar recusado (outra Play viva → 409) não cancela a automática do MP — {st} {r.get('erro')}, vivas {vivas}")
 
 
 def caso_vinculo(est: dict) -> None:
@@ -742,6 +829,7 @@ def caso_exclusao(m: dict, token: str) -> None:
     p.check(st == 502 and r.get("erro") == "treino_indisponivel" and len(canc) == 1 and canc[0].get("tipo") == CANCELAMENTO
             and a.get("estado") == "cancelada" and a.get("cancelada_por") == "exclusao" and treino.acoes == ["conferir", "excluir"],
             f"exclusao · a da Play cancelada ({CANCELAMENTO}) ANTES do Treino; o Treino falhou → 502 e parou — {st} {r.get('erro')}")
+    p.check(r.get("play_cancelada") is True, f"exclusao · o 502 conta que a assinatura da Play já foi cancelada (play_cancelada: {r.get('play_cancelada')})")
     mm = matricula("w7b-removido")
     p.check(B.uid("w7b-removido") == uid_antes and mm["id"] == m["id"] and mm["ativo"] is True,
             "exclusao · nada apagado: o login e a matrícula seguem")
@@ -777,7 +865,7 @@ def rodar_local(casos: set[str]) -> int:
         sim("/_zerar")
         if "oidc" in casos:
             caso_oidc()
-        tok = caso_registrar(m["w7b-treino"]) if casos & {"registrar", "estado", "rtdn", "troca"} else None
+        tok = caso_registrar(m["w7b-treino"]) if casos & {"registrar", "estado", "rtdn", "troca", "ressincroniza", "devolucao_velha"} else None
         if "outro_dono" in casos:
             caso_outro_dono(m["w7b-treino"])
         if "token_falso" in casos:
@@ -785,17 +873,22 @@ def rodar_local(casos: set[str]) -> int:
         if "estado" in casos and tok:
             caso_estado(m["w7b-treino"], tok)
         tok_teste = caso_teste_defer(m["w7b-removido"]) if casos & {"teste_defer", "exclusao"} else None
-        tok_mp = caso_mp_vivo(m["w7b-vence"]) if casos & {"mp_vivo", "site_409"} else None
-        if casos & {"rtdn", "troca"} and tok:
+        tok_mp = caso_mp_vivo(m["w7b-vence"]) if casos & {"mp_vivo", "site_409", "mp_409"} else None
+        if casos & {"rtdn", "troca", "ressincroniza", "devolucao_velha"} and tok:
             caso_rtdn(m["w7b-treino"], tok)   # a troca precisa da matrícula sem a Play viva: o rtdn deixa a última revogada
-        if "troca" in casos:
-            caso_troca(m["w7b-treino"])
+        tok_troca = caso_troca(m["w7b-treino"]) if casos & {"troca", "ressincroniza", "devolucao_velha"} else None
+        if casos & {"ressincroniza", "devolucao_velha"} and tok_troca:
+            caso_ressincroniza(m["w7b-treino"], tok_troca)   # a devolução velha precisa da matrícula sem a Play viva: a ressincronia expira a da troca
+        if "devolucao_velha" in casos and tok_troca:
+            caso_devolucao_velha(m["w7b-treino"])
         if "vinculo" in casos:
             caso_vinculo(est)
         if "exclusao" in casos and tok_teste:
             caso_exclusao(m["w7b-removido"], tok_teste)
         if "site_409" in casos and tok_mp:
             caso_site_409(m["w7b-vence"], tok_mp)
+        if "mp_409" in casos and tok_mp:
+            caso_mp_409(m["w7b-vence"])
     except Exception as e:  # noqa: BLE001 — a rodada cai, mas o desfazer roda; só o tipo do erro sai (nada de dado)
         p.check(False, f"a rodada parou: {type(e).__name__} (veja o log do Deno; o desfazer roda agora)")
     finally:
