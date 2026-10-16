@@ -5,6 +5,7 @@ import { ExternalLink, Repeat, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { MensagemForm } from "@/entrada/pecas/Campo";
 import { ouvirComprasDaPlay, pluginDaPlayPresente, urlGerenciarNaPlay } from "@/lib/playBilling";
+import { cn } from "@/lib/utils";
 import { useSessao } from "@/nucleo/sessao";
 import { ESTADO_ABERTA_PELO_APP } from "@/publico/privacidade/textos";
 import { Botao } from "@/ui/premium/Botao";
@@ -22,6 +23,9 @@ import { usePlayDaLoja } from "../usePlayDaLoja";
 const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
 
 const CLASSE_LINK = "font-semibold text-violeta-3 underline-offset-2 hover:underline";
+/** O "Assinar pela Google Play · R$ X/mês" é longo: o pq-botao é nowrap com 44 px fixos e, a 390, passava da borda do cartão da trava
+ *  (o E2E de tela da play-W6, 16/10 — o molde do BOTAO_LONGO do Recebimento). A linha quebra dentro do botão e o toque mínimo de 44 px fica. */
+const BOTAO_LONGO = "h-auto min-h-[44px] whitespace-normal py-2 text-center leading-snug";
 
 /**
  * play-W6 — a folha da oferta da Google Play: o nome do plano, o preço QUE A PLAY DEVOLVE por mês, "renova todo mês até você cancelar",
@@ -156,8 +160,13 @@ export function BotaoAssinarPlay({
   if (!oferta) return null;
   return (
     <>
-      <Botao variante={variante} icone={ShoppingBag} className={className} onClick={() => setAberto(true)} data-play-assinar={oferta.produto}>
-        {rotulo ?? `Assinar pela Google Play · ${porMes(oferta.preco)}`}
+      <Botao variante={variante} icone={ShoppingBag} className={cn(BOTAO_LONGO, className)} onClick={() => setAberto(true)} data-play-assinar={oferta.produto}>
+        {rotulo ?? (
+          // 1 item só no flex do botão (a linha quebra no texto, não entre itens) e o preço inteiro na mesma linha ("R$" não fica sozinho)
+          <span>
+            Assinar pela Google Play · <span className="whitespace-nowrap">{porMes(oferta.preco)}</span>
+          </span>
+        )}
       </Botao>
       <FolhaOfertaPlay aberto={aberto} aoFechar={() => setAberto(false)} oferta={oferta} nomePlano={nomePlano} matriculaId={matricula}
         cobertoAte={cobertoAte} />
