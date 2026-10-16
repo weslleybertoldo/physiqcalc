@@ -1,4 +1,6 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -211,6 +213,108 @@ describe("o Android: a cobrança só no playRelease", () => {
     const plugin = ler(`${JAVA}/playRelease/${PACOTE_JAVA}/PlayBillingPlugin.java`);
     expect(plugin).not.toMatch(/acknowledgePurchase|AcknowledgePurchaseParams|consumeAsync|ConsumeParams/);
     expect(plugin).toContain("setObfuscatedAccountId(conta)");
+  });
+
+  it("a revisão ⚪19: o comprar confere a matrícula opaca no formato de uuid; os callbacks da Play rodam protegidos (exceção não derruba o app)", () => {
+    const plugin = ler(`${JAVA}/playRelease/${PACOTE_JAVA}/PlayBillingPlugin.java`);
+    expect(plugin).toMatch(/CONTA_UUID\.matcher\(conta\)\.matches\(\)/);
+    expect(plugin).toContain('call.reject("conta_invalida")');
+    // as idas que voltam pela thread da Play (os 2 queries) e o resultado da compra: dentro do protegido(…) / try-catch
+    expect(plugin).toMatch(/queryProductDetailsAsync\(params, \(r, resultado\) -> protegido\(call, \(\) -> \{/);
+    expect(plugin).toMatch(/queryPurchasesAsync\(params, \(r, lista\) -> protegido\(call, \(\) -> \{/);
+    const atualizadas = plugin.slice(plugin.indexOf("public void onPurchasesUpdated"), plugin.indexOf("public void compras(") );
+    expect(atualizadas).toMatch(/try \{[\s\S]*\} catch \(RuntimeException e\) \{/);
+    // o pronta() da compra (os builders do BillingFlowParams) e o launchBillingFlow na thread da tela
+    const comprar = plugin.slice(plugin.indexOf("public void comprar("), plugin.indexOf("public void onPurchasesUpdated"));
+    expect(comprar).toMatch(/public void pronta\(\) \{\s*protegido\(call, \(\) -> \{/);
+    expect(comprar).toMatch(/runOnUiThread\(\(\) -> protegido\(call, \(\) -> \{/);
+  });
+
+  it("a revisão 🟡7: o AAB local de STAGING nunca sai com o nome do de produção (-loja-staging); o de produção e o do check, iguais", () => {
+    const script = ler("scripts/ci/aab-loja.sh");
+    const fn = script.match(/^sufixo_do_aab\(\) \{[\s\S]*?^\}/m)?.[0] ?? "";
+    expect(fn, "a função sufixo_do_aab no aab-loja.sh").not.toBe("");
+    expect(script).toContain('final="$SAIDA/Physiq-v$v$(sufixo_do_aab "$aab").aab"');
+    const pasta = mkdtempSync(join(tmpdir(), "aab-nome-"));
+    try {
+      const aab = (nome: string, schema: string) => {
+        const d = join(pasta, nome, "base/assets/public");
+        mkdirSync(d, { recursive: true });
+        writeFileSync(join(d, "health.json"), JSON.stringify({ ok: true, schema, distribuicao: "play" }));
+        spawnSync("zip", ["-qr", `../${nome}.aab`, "base"], { cwd: join(pasta, nome) });
+        return join(pasta, `${nome}.aab`);
+      };
+      const sufixo = (arq: string, env: Record<string, string> = {}) =>
+        spawnSync("bash", ["-c", `${fn}\nsufixo_do_aab "$1"`, "x", arq], { encoding: "utf8", env: { ...process.env, SUFIXO_AAB: "", ...env } }).stdout;
+      const staging = aab("st", "staging");
+      const producao = aab("pr", "public");
+      expect(sufixo(staging)).toBe("-loja-staging");
+      expect(sufixo(staging, { SUFIXO_AAB: "-loja" })).toBe("-loja-staging");
+      expect(sufixo(producao)).toBe("-loja");
+      expect(sufixo(producao, { SUFIXO_AAB: "-loja-check" })).toBe("-loja-check");
+    } finally {
+      rmSync(pasta, { recursive: true, force: true });
+    }
+    // e a doc: à Google Play sobe SÓ o AAB do CI
+    expect(ler("docs/loja-google-play.md")).toMatch(/À Google Play sobe SÓ o AAB do CI/);
+  });
+
+  it("a revisão ⚪19: o cobranca-play.sh confere o código de saída do dexdump (o dex que falha não passa calado — o multidex)", () => {
+    const pasta = mkdtempSync(join(tmpdir(), "dex-play-"));
+    try {
+      const bt = join(pasta, "android/build-tools/35.0.0");
+      mkdirSync(bt, { recursive: true });
+      writeFileSync(join(bt, "aapt2"), "#!/usr/bin/env bash\necho \"uses-permission: name='android.permission.INTERNET'\"\n");
+      // o 1º dex responde 150 classes; o 2º (onde estaria o plugin) falha
+      writeFileSync(join(bt, "dexdump"), "#!/usr/bin/env bash\ncase \"$1\" in *classes2.dex) exit 1 ;; esac\nfor i in $(seq 1 150); do echo \"  Class descriptor  : 'Lx/C$i;'\"; done\n");
+      chmodSync(join(bt, "aapt2"), 0o755);
+      chmodSync(join(bt, "dexdump"), 0o755);
+      const apk = join(pasta, "site.apk");
+      writeFileSync(join(pasta, "classes.dex"), "dex");
+      writeFileSync(join(pasta, "classes2.dex"), "dex");
+      spawnSync("zip", ["-q", apk, "classes.dex", "classes2.dex"], { cwd: pasta });
+      const r = spawnSync("bash", [resolve(RAIZ, "scripts/ci/cobranca-play.sh"), "sem", apk],
+        { encoding: "utf8", env: { ...process.env, ANDROID_HOME: join(pasta, "android"), GITHUB_ACTIONS: "", TMPDIR: pasta } });
+      expect(r.status, r.stdout + r.stderr).not.toBe(0);
+      expect(r.stderr).toMatch(/dexdump falhou/);
+    } finally {
+      rmSync(pasta, { recursive: true, force: true });
+    }
+  });
+
+  it("a revisão ⚪19: o modo teste do apk-assinatura.sh prova que a chave é a de DEBUG (CN=Android Debug)", () => {
+    const pasta = mkdtempSync(join(tmpdir(), "apk-debug-"));
+    try {
+      const bt = join(pasta, "android/build-tools/35.0.0");
+      mkdirSync(bt, { recursive: true });
+      const apk = join(pasta, "loja-staging.apk");
+      writeFileSync(apk, "apk");
+      const assinar = (dn: string) => {
+        writeFileSync(join(bt, "apksigner"), `#!/usr/bin/env bash\n[ "$1" = version ] && { echo 0.9; exit 0; }\necho "Signer #1 certificate DN: ${dn}"\necho "Signer #1 certificate SHA-256 digest: aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44"\n`);
+        chmodSync(join(bt, "apksigner"), 0o755);
+        return spawnSync("bash", [resolve(RAIZ, "scripts/ci/apk-assinatura.sh"), "teste", apk],
+          { encoding: "utf8", env: { ...process.env, ANDROID_HOME: join(pasta, "android"), GITHUB_ACTIONS: "" } });
+      };
+      expect(assinar("C=US, O=Android, CN=Android Debug").status).toBe(0);
+      const outra = assinar("CN=Fulano, O=Outra Empresa, C=BR");
+      expect(outra.status, outra.stdout + outra.stderr).not.toBe(0);
+      expect(outra.stderr).toMatch(/Android Debug/);
+    } finally {
+      rmSync(pasta, { recursive: true, force: true });
+    }
+  });
+
+  it("a revisão 🟡8: a VOLTA com assinante vivo — o roteiro no cabeçalho da reversa e no docs/loja-google-play.md (com a Play viva, só a trava)", () => {
+    const reversa = ler("supabase-principal/reversas/20261016010000_playw6_play_billing_reversa.sql");
+    const cabecalho = reversa.slice(0, reversa.indexOf("select set_config"));
+    expect(cabecalho).toMatch(/COM ASSINATURA DA PLAY VIVA, A VOLTA É SÓ A TRAVA/);
+    expect(cabecalho).toMatch(/só com 0 assinatura viva/);
+    const doc = ler("docs/loja-google-play.md");
+    expect(doc).toMatch(/### A volta com assinante vivo/);
+    expect(doc).toMatch(/com assinatura viva, a volta é SÓ a trava/);
+    expect(doc).toMatch(/cancelar \(ou devolver\) as vivas pela API/);
+    // ⚪9: a cobrança da troca na hora é uma estimativa (o preço cheio; o Google cobra o rateio)
+    expect(doc).toMatch(/troca na hora[^\n]*estimativa/);
   });
 
   it("a conferência das 2 saídas: o AAB tem a cobrança (g) e o APK do site, não", () => {

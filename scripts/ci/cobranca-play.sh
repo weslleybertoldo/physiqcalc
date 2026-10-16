@@ -65,7 +65,13 @@ classes() {
   unzip -qo "$arq" '*.dex' -d "$tmp" >/dev/null 2>&1 || true
   while IFS= read -r f; do
     n=$((n + 1))
-    "$dexdump" "$f" 2>/dev/null | sed -n "s/^  Class descriptor  : '\(.*\)'$/\1/p"
+    # play-W6 (a revisão, ⚪19): o código de saída de CADA dex — no multidex, o dex que falha (onde podia estar o plugin) não passa calado
+    if ! "$dexdump" "$f" > "$tmp/saida.txt" 2>/dev/null; then
+      erro "o dexdump falhou em ${f#"$tmp"/} (a lista de classes ficaria incompleta)"
+      rm -rf "${tmp:?}"
+      return 1
+    fi
+    sed -n "s/^  Class descriptor  : '\(.*\)'$/\1/p" "$tmp/saida.txt"
   done < <(find "$tmp" -type f -name '*.dex' | sort)
   rm -rf "${tmp:?}"
   if [ "$n" -eq 0 ]; then

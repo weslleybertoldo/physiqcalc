@@ -9,6 +9,11 @@
 -- mudança mais nova (antes de rodar: git log das migrations depois de 20261016010000).
 -- Junto com ela (docs/loja-google-play.md e o §5 do contrato da play-W6): a trava desligada já tira a oferta; as funções mexidas voltam ao
 -- 7c266196; a play-compras e a play-rtdn param de gravar (a play_aplicar sai); a assinatura push do Pub/Sub sai.
+-- ⚠️ COM ASSINATURA DA PLAY VIVA, A VOLTA É SÓ A TRAVA (play_billing = {"liberada": false}) — a revisão, 🟡8: sem a play_aplicar e com as
+-- funções velhas, nenhuma renovação entra no banco (a cobertura vence e o assinante trava com o Google cobrando) e a pagamentos-aluno
+-- velha volta a aceitar o MP de quem tem a Play. Esta reversa (e as funções da 7c266196) só com 0 assinatura viva: conte antes (SQL só
+-- leitura: play_assinaturas em pendente/ativa/carencia/suspensa/pausada ou cancelada ainda no prazo); com alguma, cancele (ou devolva)
+-- as vivas pela API e espere o fim do período pago (docs/loja-google-play.md › "A volta com assinante vivo").
 -- Aplicar: python3 scripts/apply_migration_principal.py supabase-principal/reversas/20261016010000_playw6_play_billing_reversa.sql --so staging
 --          python3 scripts/apply_migration_principal.py supabase-principal/reversas/20261016010000_playw6_play_billing_reversa.sql --so public
 
