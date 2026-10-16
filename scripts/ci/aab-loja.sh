@@ -54,6 +54,8 @@ BUNDLETOOL_SHA256="a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028
 # No notebook: o JDK 21 e o Android SDK de lá quando o ambiente não diz outros (no CI, o setup-java e o setup-android dizem).
 if [ -z "${JAVA_HOME:-}" ] && [ -d "$HOME/jdk21" ]; then export JAVA_HOME="$HOME/jdk21"; fi
 if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/android-sdk" ]; then export ANDROID_HOME="$HOME/android-sdk"; fi
+# o apksigner do build-tools é um script que chama o `java` do PATH (o apk-staging confere a assinatura com ele)
+if [ -n "${JAVA_HOME:-}" ] && ! command -v java >/dev/null 2>&1; then export PATH="$JAVA_HOME/bin:$PATH"; fi
 
 GRADLE_ORIGINAL=""
 limpar() {
