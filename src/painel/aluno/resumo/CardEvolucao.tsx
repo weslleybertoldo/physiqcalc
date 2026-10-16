@@ -6,7 +6,7 @@ import { GraficoLinha } from "@/evolucao/ui/GraficoLinha";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
 import { Esqueleto } from "@/ui/premium/Estados";
-import { chipDaUltima, pontosDoCard, textoDaProxima } from "../avaliacao/regras";
+import { chipDaUltima, DETALHE_KPI_PARCIAL, pontosDoCard, textoDaProxima } from "../avaliacao/regras";
 import { useAvaliacaoDoAluno } from "../avaliacao/useAvaliacaoDoAluno";
 
 function Numero({ rotulo, valor, marca }: { rotulo: string; valor: string; marca: string }) {
@@ -22,23 +22,28 @@ function Numero({ rotulo, valor, marca }: { rotulo: string; valor: string; marca
  * Card "Evolução" do Resumo do aluno (tela 7 — W17): o tipo e a data da última avaliação ("7 DOBRAS · 14/06"), o peso, o músculo
  * (massa muscular da balança ou massa magra), a próxima avaliação (NF7) e o gráfico do peso de 6 meses — os MESMOS números da aba
  * Avaliação e da Evolução do aluno (série única dos 2 bancos, W10). "Abrir" vai para a aba Avaliação.
+ * hml-26 (H-128): com uma parte da série em erro (o `parcial` do hook), nada sai da metade dela — "—" no Peso e no Músculo, sem o chip
+ * e sem o gráfico, e "dado parcial" no lugar dele; a Próxima (a data do perfil do Treino, não uma conta da série) fica. A parte é buscada
+ * de novo sozinha (o hook); voltou → os números e o gráfico. As 2 partes em erro: o "Não deu para carregar agora." de antes.
  */
 export default function CardEvolucao({ alunoId }: { alunoId: string }) {
   const ev = useAvaliacaoDoAluno(alunoId);
   const hoje = useMemo(() => hojeSP(), []);
   const serie = ev.serie;
   const d = useMemo(() => {
-    if (!serie) return null;
+    if (!serie || ev.parcial) return null;
     const [peso, , musculo] = kpisDaSerie(serie, "6m", hoje);
     const g = pontosDoCard(serie, hoje);
     return { peso, musculo, ultima: ultimaAvaliacao(serie), grafico: g };
-  }, [serie, hoje]);
+  }, [serie, ev.parcial, hoje]);
   const proxima = textoDaProxima(ev.dados?.treino?.proxima ?? null, hoje);
   const base = `/painel/alunos/${encodeURIComponent(alunoId)}`;
   if (ev.perfil && !ev.carregando && !serie && !ev.erro) return null;
+  // uma parte veio e a outra não (as 2 em erro = o erro da consulta, sem série: o aviso de antes)
+  const parcial = ev.parcial && !!serie && !ev.erro;
   const chip = chipDaUltima(d?.ultima ?? null);
   return (
-    <Cartao className="flex min-h-[240px] flex-col px-[18px] py-4" data-card-evolucao={d?.ultima?.id ?? "vazio"}>
+    <Cartao className="flex min-h-[240px] flex-col px-[18px] py-4" data-card-evolucao={parcial ? "parcial" : d?.ultima?.id ?? "vazio"}>
       <CabecalhoCartao
         titulo="Evolução"
         extra={chip ? <Chip tom="t" data-card-evolucao-ultima>{chip}</Chip> : undefined}
@@ -46,6 +51,15 @@ export default function CardEvolucao({ alunoId }: { alunoId: string }) {
       />
       {ev.carregando || (!serie && !ev.erro) ? (
         <Esqueleto className="h-[170px] w-full" />
+      ) : parcial ? (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <Numero rotulo="Peso" valor="—" marca="peso" />
+            <Numero rotulo="Músculo" valor="—" marca="musculo" />
+            <Numero rotulo="Próxima" valor={proxima ? proxima.data : "—"} marca="proxima" />
+          </div>
+          <p className="mt-auto pt-3 text-[12px] text-texto-3" data-card-evolucao-parcial>{DETALHE_KPI_PARCIAL}</p>
+        </>
       ) : ev.erro || !d ? (
         <p className="text-[12.5px] text-texto-3">Não deu para carregar agora.</p>
       ) : !d.ultima ? (

@@ -4,6 +4,9 @@
 // espera o perfil (o `modulos` dele decide se ela entra). Sem acesso ao aluno: o erro do perfil, a série vazia, nada do Treino e nenhuma
 // ida a mais. O caminho de verdade até a "rede": o hook, o usePerfilAluno, as libs (buscarPerfilAluno, carregarPrincipalDoPainel) e o
 // leitor em lote — só o invoke da função e a parte do Treino (a treino-leitura, fora da 20b) são falsos.
+// hml-26 (H-128): a parte que falhou é pedida de novo SOZINHA (o caso do nao_encontrado) e a regra pura da série parcial (serieParcial e
+// juntarParteDeNovo); os números do cabeçalho com a série parcial estão em src/painel/aluno/kpis/KpiPesoGordura.test.tsx. A revisão (achado
+// 1): o 403 sem_acesso do Treino (o perfil do Treino é de OUTRA conta) é a falha "sem-acesso" — fora do parcial e da nova tentativa.
 import type { ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -43,8 +46,9 @@ vi.mock("./fontes", async (original) => ({
   carregarTreinoDoPainel: (id: string) => h.treino(id),
 }));
 
+import { ErroFonte } from "@/evolucao/fontes";
 import { chavePerfilAluno } from "../dados/usePerfilAluno";
-import { useAvaliacaoDoAluno } from "./useAvaliacaoDoAluno";
+import { juntarParteDeNovo, serieParcial, useAvaliacaoDoAluno, type DadosAvaliacao, type FalhaParte } from "./useAvaliacaoDoAluno";
 
 const PERFIL = {
   ok: true, paciente_id: "p1", rota_id: ALUNO, nome: "Ana W5P", tags: [], modulos: ["treino", "nutricao"], conta_modulos: ["treino", "nutricao"],
@@ -159,6 +163,25 @@ describe("hml-20b — a série do painel vai no lote do perfil (1 ida) e só o T
     expect(result.current.dados?.falhas).toEqual({ treino: null, principal: "erro" });
     expect(result.current.dados?.treino).toEqual(TREINO);
     expect(result.current.erro).toBeNull();
+    expect(result.current.parcial).toBe(true);
+    // hml-26 (H-128): a nova tentativa pede SÓ a parte que falhou, num lote só dela — nem o perfil de novo, nem o Treino
+    await waitFor(() => expect(idas()).toHaveLength(2));
+    expect(idas()[1]).toEqual(["aluno_evolucao_painel"]);
+    expect(h.treino).toHaveBeenCalledTimes(1);
+  });
+
+  it("hml-26 (a revisão, achado 1): o Treino de OUTRA conta (403 sem_acesso) — a falha dele é 'sem-acesso' (verdadeira: a aba Avaliação avisa como antes), fora do parcial e sem nova tentativa", async () => {
+    h.treino.mockRejectedValue(new ErroFonte("treino", "sem_acesso"));
+    const { result } = montar();
+    await waitFor(() => expect(h.invoke).toHaveBeenCalledTimes(1));
+    soltar.shift()?.();
+    await waitFor(() => expect(result.current.dados).toBeDefined());
+    expect(result.current.dados?.falhas).toEqual({ treino: "sem-acesso", principal: null });
+    expect(result.current.dados?.treino).toBeNull();
+    expect(result.current.parcial).toBe(false); // a série visível por esta conta É a do principal
+    expect(result.current.serie?.avaliacoes.map((a) => a.idOriginal)).toEqual(["an1"]);
+    await new Promise((r) => setTimeout(r, 60)); // a nova tentativa sairia logo: nenhuma (nem o Treino, nem o principal)
+    expect(h.treino).toHaveBeenCalledTimes(1);
     expect(idas()).toHaveLength(1);
   });
 
@@ -173,5 +196,52 @@ describe("hml-20b — a série do painel vai no lote do perfil (1 ida) e só o T
     await waitFor(() => expect(result.current.dados).toBeDefined());
     expect(result.current.dados?.falhas).toEqual({ treino: null, principal: null });
     expect(idas()).toHaveLength(1);
+  });
+});
+
+describe("hml-26 (H-128) — a regra da série parcial (pura): serieParcial e juntarParteDeNovo", () => {
+  const PRINCIPAL_OK: NonNullable<DadosAvaliacao["principal"]> = { pacienteId: "p1", objetivo: null, antropometrias: [], fotos: [] };
+  const dadosCom = (treino: FalhaParte, principal: FalhaParte): DadosAvaliacao => ({
+    treino: treino ? null : TREINO,
+    principal: principal ? null : PRINCIPAL_OK,
+    falhas: { treino, principal },
+  });
+
+  it("serieParcial: uma parte com falha (erro ou sem conexão) → incompleta; as 2 ok — vazias ou o aluno só de Nutrição (sem a parte do Treino, sem falha) — não; o Treino de outra conta (sem-acesso) não; sem dado, só com o erro da consulta", () => {
+    expect(serieParcial(dadosCom(null, null), null)).toBe(false);
+    expect(serieParcial({ treino: null, principal: PRINCIPAL_OK, falhas: { treino: null, principal: null } }, null)).toBe(false);
+    expect(serieParcial(dadosCom("erro", null), null)).toBe(true);
+    expect(serieParcial(dadosCom("sem-conexao", null), null)).toBe(true);
+    expect(serieParcial(dadosCom(null, "erro"), null)).toBe(true);
+    expect(serieParcial(dadosCom(null, "sem-conexao"), null)).toBe(true);
+    // a revisão (achado 1): o Treino de OUTRA conta (a treino-leitura responde 403 sem_acesso de propósito) não é queda — a série visível
+    // por essa conta É a do principal; com o principal em erro, segue incompleta
+    expect(serieParcial(dadosCom("sem-acesso", null), null)).toBe(false);
+    expect(serieParcial(dadosCom("sem-acesso", "erro"), null)).toBe(true);
+    expect(serieParcial(undefined, new Error("erro_interno"))).toBe(true); // as 2 partes em erro: a consulta caiu, sem dado
+    expect(serieParcial(undefined, null)).toBe(false); // carregando (ou a consulta parada sem o perfil)
+    expect(serieParcial(dadosCom(null, null), new Error("erro_interno"))).toBe(false); // a releitura que caiu: vale o dado inteiro que ficou
+    expect(serieParcial(dadosCom("erro", null), new Error("erro_interno"))).toBe(true);
+  });
+
+  it("juntarParteDeNovo: a parte que voltou entra no lugar da que falhou e a falha sai; a que tinha vindo fica (o mesmo objeto); nada que tinha falhado → o mesmo dado", () => {
+    const semTreino = dadosCom("erro", null);
+    const junto = juntarParteDeNovo(semTreino, { treino: TREINO });
+    expect(junto).toEqual({ treino: TREINO, principal: PRINCIPAL_OK, falhas: { treino: null, principal: null } });
+    expect(junto.principal).toBe(semTreino.principal);
+    expect(serieParcial(junto, null)).toBe(false);
+    // o aluno sem treino ainda (a treino-leitura responde sem_treino → null): a parte volta vazia e a falha sai
+    expect(juntarParteDeNovo(semTreino, { treino: null })).toEqual({ treino: null, principal: PRINCIPAL_OK, falhas: { treino: null, principal: null } });
+    const semPrincipal = dadosCom(null, "sem-conexao");
+    const junto2 = juntarParteDeNovo(semPrincipal, { principal: PRINCIPAL_OK });
+    expect(junto2).toEqual({ treino: TREINO, principal: PRINCIPAL_OK, falhas: { treino: null, principal: null } });
+    expect(junto2.treino).toBe(semPrincipal.treino);
+    // nada voltou (ainda no ar, ou as 3 tentativas falharam): o mesmo dado, com a falha
+    expect(juntarParteDeNovo(semTreino, undefined)).toBe(semTreino);
+    expect(juntarParteDeNovo(semTreino, {})).toBe(semTreino);
+    // a parte que NÃO tinha falhado nunca é trocada pela que "voltou"
+    const inteiro = dadosCom(null, null);
+    expect(juntarParteDeNovo(inteiro, { treino: null, principal: PRINCIPAL_OK })).toBe(inteiro);
+    expect(juntarParteDeNovo(semTreino, { principal: { ...PRINCIPAL_OK, objetivo: "outro" } })).toBe(semTreino);
   });
 });

@@ -335,8 +335,9 @@ describe("Configurações › Recebimento — W2 (o Mercado Pago da conta do per
     await waitFor(() => expect(h.browserOpen).toHaveBeenCalledWith({ url: SITE }));
     expect(h.conectar).toHaveBeenCalledWith("c1", "apk");
     expect(ir).not.toHaveBeenCalled();
-    expect(document.querySelector("[data-mp-no-navegador]")?.textContent).toBe("Conecte no navegador que abriu e volte ao app.");
-    expect(h.ouvir).toHaveBeenCalledWith("browserFinished", expect.any(Function));
+    // o aviso e o ouvinte nascem depois do Browser.open (o setNoNavegador e o efeito dele): espera os 2 — com o CI lento, o efeito roda depois
+    await waitFor(() => expect(document.querySelector("[data-mp-no-navegador]")?.textContent).toBe("Conecte no navegador que abriu e volte ao app."));
+    await waitFor(() => expect(h.ouvir).toHaveBeenCalledWith("browserFinished", expect.any(Function)));
     const leituras = h.ler.mock.calls.length;
     h.ler.mockResolvedValue(MP({ status: "ativa", apelido: "FULANO" }));
     act(() => fechou());

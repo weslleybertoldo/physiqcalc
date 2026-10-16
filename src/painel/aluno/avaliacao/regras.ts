@@ -188,6 +188,12 @@ export function numerosDoHistorico(av: Avaliacao): string {
   return partes.join(" · ") || "Sem medidas de composição";
 }
 
+/**
+ * hml-26 (H-128): o que vai embaixo do "—" nos 2 números do cabeçalho quando a série está incompleta (uma parte não veio — serieParcial,
+ * em useAvaliacaoDoAluno.ts): nunca a conta com metade da série.
+ */
+export const DETALHE_KPI_PARCIAL = "dado parcial";
+
 /** Os 2 números do cabeçalho (tela 7): o valor mais recente e a variação dos últimos 6 meses ("6,1 kg em 6 meses", "4,6 pontos"). */
 export function detalheDoKpi(k: Kpi): string | null {
   if (k.variacao === null) return null;
