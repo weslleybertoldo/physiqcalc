@@ -294,7 +294,7 @@ export async function ressincronizarVencidas(c: ContextoPlay, pacienteId: string
     try {
       const r = await sincronizar(c, l.token, { pacienteId, reconhecer: false, adiar: false });
       if (r.ok) n++;
-      else c.log.aviso({ codigo: "play_ressincronia_recusada", schema: c.schema, ref: pacienteId, resultado: r.erro });
+      else c.log.aviso({ codigo: "play_ressincronia_recusada", schema: c.schema, ref: pacienteId, resultado: (r as { erro: string }).erro });
     } catch (e) {
       if (!(e instanceof PlayIndisponivel)) throw e;
       c.log.aviso({ codigo: "play_ressincronia_falhou", schema: c.schema, ref: pacienteId, status: e.status, externo: { google_erro: e.codigo } });
