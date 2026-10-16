@@ -281,6 +281,12 @@ def caso_loja(nav, mid: str) -> None:
     p.check(ok and "R$ 31,90" in texto_de(c, f"{folha} [data-play-preco]") and "R$ 31,90 por mês." in linhas
             and "Renova todo mês até você cancelar." in linhas and "Cancele quando quiser na Google Play." in linhas,
             "[loja] L2 a folha da oferta: o preço da Play por mês, renova até cancelar, cancele na Google Play")
+    # a revisão, 🟡4: na folha da Play, nada do site — o Mercado Pago, o Pix, o cartão, o preço do banco, o bloqueio do dia seguinte (o
+    # resumo dos Termos de staging entra com o recorte da loja)
+    texto_folha = texto_de(c, folha)
+    p.check(not re.search(r"Mercado Pago|\bPix\b|cart[ãa]o|29,90|49,90|bloquead", texto_folha, re.I),
+            f"[loja] L2 a folha da Play sem o Mercado Pago, o Pix, o cartão, o preço do banco e o bloqueio "
+            f"({'com o resumo dos Termos' if 'resumo dos Termos' in texto_folha else 'sem o resumo dos Termos'})")
     termos = c.pg.locator(f"{folha} [data-play-termos] a")
     hrefs = {termos.nth(i).get_attribute("href") for i in range(termos.count())}
     p.check(hrefs == {"/termos", "/privacidade"} and c.tem("[data-play-assinar-confirmar]"),
