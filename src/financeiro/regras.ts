@@ -253,19 +253,31 @@ export interface Faixa {
  * W-P: no plano do período todo (ehPeriodoTodo) a faixa fala do plano ("Seu plano vence em 3 dias"); no mês a mês, no plano de
  * 1 mês e no modo de hoje, da mensalidade.
  */
-export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora: Date = new Date()): Faixa | null {
+/** play-W6: o que a faixa da conta do app usa na loja com a Play valendo. */
+export interface OpcoesFaixa {
+  /** o preço da PLAY do plano do app ("R$ 29,90"): o subtítulo fala da Google Play e o botão é "Assinar" */
+  precoDaPlay?: (r: ResumoMatricula) => string | null;
+}
+
+/** play-W6: a matrícula do app com a assinatura da Google Play viva — sem faixa (renova sozinha; travada, a trava fala). */
+const PLAY_VIVA = new Set(["pendente", "ativa", "cancelada", "carencia", "suspensa", "pausada"]);
+
+export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora: Date = new Date(), opcoes: OpcoesFaixa = {}): Faixa | null {
   const hoje = hojeSP(agora);
   const candidatas: Array<Faixa & { ordem: number }> = [];
   for (const r of lista ?? []) {
-    const pagar = podePagarPeloApp(r.recebimento_modo, r.tem_chave);
-    const formas = r.profissional && !pagar ? `combine com ${r.profissional.split(" ")[0]}` : formasDePagar(r.recebimento_modo, r.tem_chave);
+    if (r.app && r.play && PLAY_VIVA.has(r.play.estado)) continue;
+    const precoPlay = r.app && opcoes.precoDaPlay ? opcoes.precoDaPlay(r) : null;
+    const pagar = precoPlay ? true : podePagarPeloApp(r.recebimento_modo, r.tem_chave);
+    const formas = precoPlay ? "Google Play"
+      : r.profissional && !pagar ? `combine com ${r.profissional.split(" ")[0]}` : formasDePagar(r.recebimento_modo, r.tem_chave);
     const e = estadoDaMensalidade({ valor: r.mensalidade_valor, pausada: r.pausada, pago_ate: r.pago_ate, desde: r.desde, aguardando: r.aguardando, teste_ate: r.teste_ate }, agora);
     if (e.situacao === "teste") {
       // W7b: aluno sem profissional nos dias grátis — "Seus dias grátis vão até 06/10 · Depois, R$ 29,90/mês · Pix ou cartão · Assinar"
       candidatas.push({
         tom: "t",
         titulo: e.dias !== null && e.dias <= 0 ? "Seu teste grátis termina hoje" : e.dias === 1 ? "Seu teste grátis termina amanhã" : `Seus dias grátis vão até ${dataBR(e.vence)}`,
-        subtitulo: `Depois, ${reais(e.valor)}/mês · ${formas}`,
+        subtitulo: `Depois, ${precoPlay ?? reais(e.valor)}/mês · ${formas}`,
         podePagar: pagar,
         acao: "Assinar",
         alvo: { tipo: "mensalidade" },
@@ -276,8 +288,9 @@ export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora:
       candidatas.push({
         tom: e.situacao === "vence_em_breve" ? "a" : "r",
         titulo: ehPeriodoTodo(r.modalidade, r.plano_meses) ? `Seu plano ${textoDoVencimento(e)}` : `Sua mensalidade ${textoDoVencimento(e)}`,
-        subtitulo: `${reais(e.valor)} · ${formas}`,
+        subtitulo: precoPlay ? `${precoPlay}/mês · ${formas}` : `${reais(e.valor)} · ${formas}`,
         podePagar: pagar,
+        ...(precoPlay ? { acao: "Assinar" } : {}),
         alvo: { tipo: "mensalidade" },
         pacienteId: r.paciente_id,
         ordem: e.dias ?? -9999,
@@ -326,6 +339,7 @@ export function rotuloDaForma(c: Pick<CobrancaVista, "forma" | "metodo" | "ip_me
     return "InfinitePay";
   }
   if (c.forma === "manual") return `Por fora · ${ROTULO_METODO[c.metodo ?? ""] ?? c.metodo ?? "manual"}`;
+  if (c.forma === "google_play") return "Google Play";
   return "";
 }
 

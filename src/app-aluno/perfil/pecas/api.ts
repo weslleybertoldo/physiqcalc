@@ -131,6 +131,8 @@ export const MENSAGEM_ERRO_CONTA: Record<string, string> = {
   profissional: "Como você também usa o painel de profissional, a exclusão é feita no painel, em Configurações › Excluir minha conta: lá você confere o que acontece com os seus alunos e a equipe e baixa os prontuários antes.",
   assinatura_ativa: "Você tem uma cobrança automática ligada no cartão. Cancele em Perfil › Pagamentos antes de excluir a conta.",
   treino_indisponivel: "Não foi possível falar com o banco do treino agora. Nada foi apagado — tente de novo em alguns minutos.",
+  // play-W6: a assinatura da Google Play é cancelada ANTES de apagar; o Google não respondeu → nada foi apagado
+  play_nao_cancelada: "Não deu para cancelar a sua assinatura da Google Play agora. Nada foi apagado — tente de novo em alguns minutos.",
   rate_limited: "Muitas tentativas. Tente de novo em alguns minutos.",
   conta_real_no_staging: "Este é o ambiente de teste: só contas de teste podem fazer isso aqui.",
   invalid_token: "Sua sessão expirou. Saia e entre de novo.",

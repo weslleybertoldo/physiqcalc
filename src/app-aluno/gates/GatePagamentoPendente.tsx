@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { UserRound, Wallet } from "lucide-react";
+import { BotaoAssinarPlay, BotaoGerenciarPlay } from "@/app-aluno/sozinho/pecas/AssinaturaPlay";
+import { normalizarVistaPlay, playViva, textoDaAssinatura } from "@/app-aluno/sozinho/playRegras";
+import { usePlayDaLoja } from "@/app-aluno/sozinho/usePlayDaLoja";
 import { reais, soOTeste, travaDoInadimplente } from "@/financeiro/regras";
 import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
 import { ehLoja } from "@/lib/distribuicao";
@@ -22,12 +25,17 @@ import { TelaTrava } from "./pecas/TelaTrava";
  * hml-11 (D14, achado 7 — o mesmo tipo do H-60): o Perfil continua abrindo, reduzido a Sair, Exportar e Excluir, como nas travas de
  * bloqueio (GateBloqueioMaster, GateBloqueioAluno). Antes o /perfil?excluir=1 da /excluir-conta caía na trava e o aluno sem
  * pagamento não tinha como levar os dados nem excluir a conta (LGPD e a exigência da Play). Vale na loja também.
+ * play-W6: a conta do app com a assinatura da Google Play VIVA e travada (suspensa ou pausada: o pagamento não passou depois da carência)
+ * — no site, no APK do site e na loja — mostra "Atualize o pagamento na Google Play" + o Gerenciar (nada de Pagar nem de Assinar de novo).
+ * Na loja com a Play valendo (usePlayDaLoja), a trava da conta do app ganha "Assinar pela Google Play" (a folha da oferta, com o preço da
+ * Play); sem ela, o texto neutro de antes.
  */
 export default function GatePagamentoPendente({ children }: { children: ReactNode }) {
   const { situacao } = useSessao();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { resumo } = useResumoFinanceiro();
+  const play = usePlayDaLoja();
   if (!situacao || ehProfissional(situacao) || pathname.startsWith("/perfil/pagamentos")) return <>{children}</>;
   const lista = resumo ?? [];
   const travadas = lista.filter((r) => travaDoInadimplente(r));
@@ -38,6 +46,45 @@ export default function GatePagamentoPendente({ children }: { children: ReactNod
       <UserRound aria-hidden /> Exportar ou excluir meus dados
     </button>
   );
+  const fimDoTeste = !!r.app && soOTeste({ pago_ate: r.pago_ate, teste_ate: r.teste_ate ?? null });
+  const vistaPlay = r.app ? normalizarVistaPlay(r.play) : null;
+
+  // play-W6: a assinatura da Play viva e sem acesso (suspensa/pausada) — atualizar na Google Play, em qualquer versão
+  if (r.app && playViva(vistaPlay)) {
+    const t = textoDaAssinatura(vistaPlay);
+    const texto = `${t.detalhe} O que você já tinha continua guardado.`;
+    if (pathname === ROTA_PERFIL_REDUZIDO) {
+      return (
+        <PerfilReduzido motivo="play-travada" titulo={t.titulo} mensagem={texto}>
+          {children}
+        </PerfilReduzido>
+      );
+    }
+    return (
+      <TelaTrava marca="play-travada" icone={Wallet} tom="var(--p-ambar-3)" titulo={t.titulo} texto={texto}
+        acoes={<><BotaoGerenciarPlay produto={vistaPlay.produto} variante="w" tamanho="md" className="w-full" rotulo="Atualizar na Google Play" />{meusDados}</>} />
+    );
+  }
+  if (ehLoja && r.app && play.ativa) {
+    const titulo = fimDoTeste ? "Seus dias grátis acabaram" : "Seu plano não está ativo";
+    const texto = `Assine o plano ${r.plano_nome ?? "do app"} pela Google Play para voltar a usar o app — o que você já tinha continua guardado.`;
+    if (pathname === ROTA_PERFIL_REDUZIDO) {
+      return (
+        <PerfilReduzido motivo="plano-app-play" titulo={titulo} mensagem={texto}>
+          {children}
+        </PerfilReduzido>
+      );
+    }
+    return (
+      <TelaTrava marca="plano-app-play" icone={Wallet} tom="var(--p-ambar-3)" titulo={titulo} texto={texto}
+        acoes={
+          <>
+            <BotaoAssinarPlay produto={r.plano_codigo ?? null} nomePlano={r.plano_nome ?? "do app"} matriculaId={r.paciente_id} cobertoAte={null} className="w-full" />
+            {meusDados}
+          </>
+        } />
+    );
+  }
   if (ehLoja && r.app) {
     const titulo = "Seu plano não está ativo";
     const texto = "O acesso ao app está pausado. O que você já tinha continua guardado.";
@@ -52,7 +99,6 @@ export default function GatePagamentoPendente({ children }: { children: ReactNod
   }
   const quem = r.profissional ? ` com ${r.profissional.split(" ")[0]}` : "";
   const valor = Number(r.mensalidade_valor) > 0 ? ` de ${reais(r.mensalidade_valor)}` : "";
-  const fimDoTeste = !!r.app && soOTeste({ pago_ate: r.pago_ate, teste_ate: r.teste_ate ?? null });
   const marca = r.app ? "pagamento-pendente-app" : "pagamento-pendente";
   const titulo = fimDoTeste ? "Seus dias grátis acabaram" : "Pagamento pendente";
   const texto = r.app
