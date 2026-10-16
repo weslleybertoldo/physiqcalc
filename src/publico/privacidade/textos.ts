@@ -9,13 +9,16 @@
  *   7 dias (Pro) a 30 (Enterprise), com o PITR até 28. Histórico: até a W2 as 2 páginas diziam "até 7 dias", o que não se
  *   comprovava; a W3 tirou o prazo até a decisão.
  * - SERVICOS_TERCEIROS: quem recebe dado pessoal fora do Physiq, o que recebe e para quê. Cada item foi conferido no código em
- *   06/10/2026 (o arquivo vai no comentário). Serviço que o código não usa não entra (o Google Play Billing só chega na W6).
+ *   06/10/2026 (o arquivo vai no comentário). Serviço que o código não usa não entra.
  *
  * hml-11 (H-28, A2 — correções de fato, sem base legal, papel, direito nem prazo novo): a frase dos backups passou a dizer o que
  * existe desde a hml-07 (a cópia diária cifrada no notebook, docs/backup.md: 03:23, age, apagada com 29 dias; o provedor no Free
  * não tem backup); o Google (FCM) recebe só o texto fixo por tipo desde a hml-10 (_shared/push-regras.ts, corpoDoPush); o
  * Telegram (os avisos de erro da hml-10, _shared/erros.ts limpa antes) entrou na lista. FRASE_SUPORTE é a "frase A" da hml-08
  * (H-22) para a Política nova (src/publico/legal/politica.ts); a página de hoje não a usa.
+ * play-W6 (16/10/2026, decisão 12 — correção de FATO, o molde da hml-11 e da mp-cartao; a base legal e a Política nova seguem com o
+ * advogado): a assinatura do plano do app pela Google Play (o Play Billing) entrou na lista — vale no site também (quem assinou pela loja
+ * vê a assinatura em qualquer versão).
  */
 export const FRASE_BACKUPS =
   "As cópias de segurança do banco de dados — a cópia diária e as feitas antes de manutenções — são cifradas, guardadas no Brasil e apagadas em até 30 dias depois de feitas; até lá, não são usadas para outro fim.";
@@ -67,6 +70,14 @@ export const SERVICOS_TERCEIROS: readonly ServicoTerceiro[] = [
     id: "google",
     nome: "Google",
     texto: "o login com o Google, que envia ao Physiq o seu nome, e-mail e foto quando você autoriza, e as notificações do app no Android (Firebase Cloud Messaging), que recebem o código do aparelho e um texto curto, fixo para cada tipo de aviso (por exemplo, \"Tem novidade na sua agenda.\"), sem nome nem valor; o aviso completo fica só dentro do app.",
+  },
+  // play-W6: android/app/src/playRelease/java/…/PlayBillingPlugin.java (a Play Billing Library: setObfuscatedAccountId = a matrícula, um uuid
+  // sem dado pessoal) · supabase-principal/functions/play-compras e play-rtdn (_shared/play-api.ts: androidpublisher.googleapis.com; o aviso
+  // pelo Pub/Sub) · migration 20261016010000_playw6_play_billing.sql (play_assinaturas: o token e o pedido só no servidor)
+  {
+    id: "google-play",
+    nome: "Google Play",
+    texto: "processa a assinatura do plano do app feita na versão da Google Play: o pagamento é feito na Google Play, segundo a política de privacidade do Google, e o número do cartão e os dados de quem paga não passam pelo Physiq. O Physiq envia à Google Play só um código da sua matrícula, sem dado pessoal, e recebe dela a situação da assinatura (ativa, cancelada, até quando vale), o plano, o valor e o número do pedido.",
   },
   // supabase-principal/functions/convites, alunos, agenda-avisar e aluno-enviar (api.resend.com)
   {

@@ -25,6 +25,7 @@ export const ONDE_FICA_O_SERVICO: Readonly<Record<string, string>> = {
   cloudflare: "rede mundial",
   vercel: "Estados Unidos",
   google: "Estados Unidos",
+  "google-play": "Estados Unidos",
   resend: "Estados Unidos",
   "mercado-pago": "Brasil",
   whatsapp: "o WhatsApp é de empresa estrangeira; a conexão do profissional fica num aparelho de quem opera o Physiq, no Brasil, e nunca no banco",
@@ -98,7 +99,7 @@ Neste texto, "Physiq" e "nós" são quem oferece o aplicativo.
 | Rotinas e lembretes | nome, dose, tipo (suplemento, remédio, hábito ou outro), horário, dias da semana, quem criou, o que você marcou como feito e o histórico de mudanças, inclusive das rotinas apagadas | lembrar você no horário e mostrar as rotinas a você e aos seus profissionais |
 | Prontuário e pré-consulta | anamnese, antropometria, exames, gestação, as anotações clínicas do nutricionista e as respostas da pré-consulta | o atendimento do nutricionista |
 | Agenda e pagamentos ao profissional | consultas, mensalidades, cobranças, comprovantes de Pix e recibos | o profissional organizar o atendimento e receber |
-| Pagamentos ao Physiq | plano, valor, situação, vencimento e o identificador do pagamento no Mercado Pago (o número do cartão não passa pelo Physiq) | cobrar o plano do profissional e o plano do app |
+| Pagamentos ao Physiq | plano, valor, situação, vencimento e o identificador do pagamento no Mercado Pago ou do pedido na Google Play (o número do cartão não passa pelo Physiq) | cobrar o plano do profissional e o plano do app |
 | Profissional | registro no conselho (CRN, CREF), WhatsApp, endereço, carimbo, chave Pix de recebimento e, quando ele liga as mensagens automáticas, a conexão do WhatsApp dele | o perfil profissional, os recibos e os avisos aos alunos |
 | Aceite e consentimentos | data, hora e versão aceita dos Termos e desta política; o consentimento do dado de saúde; e, para quem tem 16 ou 17 anos, o consentimento do responsável (nome, vínculo e como consentiu, registrados pelo profissional); e de onde veio cada aceite (site, app ou Google Play) | provar o aceite e o consentimento |
 | Técnicos | identificador do usuário, datas, o código do aparelho para as notificações, um código feito a partir do endereço IP (não o IP) para limitar tentativas, e os avisos de erro, sem dado pessoal | segurança, notificações e correção de erros |

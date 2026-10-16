@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Dumbbell, LayoutDashboard, UserRoundX } from "lucide-react";
+import { usePlayDaLoja } from "@/app-aluno/sozinho/usePlayDaLoja";
 import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { ehProfissional } from "@/nucleo/situacao";
@@ -17,12 +18,14 @@ import { TelaTrava } from "./pecas/TelaTrava";
  * W7: o aluno sem módulo também abre o Perfil (Sair, Exportar, Excluir e o "Tenho um código do meu profissional").
  * W7b: e pode treinar sozinho (Boas-vindas › "Treinar sem profissional", com os dias grátis do plano do app). W1 da loja: na versão
  * da Google Play o "Treinar sem profissional" não existe (a mensalidade do app vai para o Play Billing na W6) — a trava fica sem o botão.
+ * play-W6: com a Play valendo na loja (usePlayDaLoja), o botão volta (a assinatura do plano do app é pela Google Play).
  * Sem a situação (principal fora do ar e nada guardado) não trava: vale o que o Treino sabe.
  */
 export default function GateSemModulo({ children }: { children: ReactNode }) {
   const { situacao } = useSessao();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const play = usePlayDaLoja();
   if (!situacao) return <>{children}</>;
   const noPerfil = pathname === "/perfil" || pathname.startsWith("/perfil/");
   // hml-09 (D7): quem ainda não tem nada também abre o Perfil (Sair, Exportar e Excluir) — antes, o "Entrar para excluir" da
@@ -53,7 +56,7 @@ export default function GateSemModulo({ children }: { children: ReactNode }) {
         tom="var(--p-ambar-3)"
         titulo="Seu profissional ainda não liberou seu acesso"
         texto="Assim que ele liberar o treino ou a dieta, tudo aparece aqui. O que você já tinha continua guardado."
-        acoes={ehLoja ? undefined : (
+        acoes={ehLoja && !play.ativa ? undefined : (
           <button type="button" className="pq-botao pq-botao-g w-full" onClick={() => navigate("/boas-vindas")} data-trava-treinar-sozinho>
             <Dumbbell aria-hidden /> Treinar sem profissional
           </button>

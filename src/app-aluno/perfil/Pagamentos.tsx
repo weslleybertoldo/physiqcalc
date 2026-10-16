@@ -31,6 +31,8 @@ import { formatarDataRecibo, formatarNumeroRecibo } from "@/financeiro/recibos";
 import type { CobrancaVista, MatriculaPagamentos, ReciboVista } from "@/financeiro/tipos";
 import { ComprovanteVisor } from "@/financeiro/ui/ComprovanteVisor";
 import { LinhaCobranca } from "@/financeiro/ui/LinhaCobranca";
+import { CartaoAssinaturaPlay } from "@/app-aluno/sozinho/pecas/AssinaturaPlay";
+import { normalizarVistaPlay, playViva } from "@/app-aluno/sozinho/playRegras";
 import { ehLoja } from "@/lib/distribuicao";
 import { CHAVES_DA_VOLTA } from "@/lib/linksDoApp";
 import { Botao, BotaoIcone } from "@/ui/premium/Botao";
@@ -69,7 +71,13 @@ const CONFERIR_IP_POR_MS = 10 * 60_000;
  * W2: na conta que recebe pelo Mercado Pago DO PERSONAL (mercadopago_conta), o Pagar abre o PagarMercadoPago com o cartão na chave pública
  * dele (a conexão caída → só o aviso e a linha diz "pagamento pelo app indisponível", sem Pix nem cartão; sem a chave → só o Pix e a
  * linha diz "Pix"). Na loja é igual (o serviço do profissional).
+ * play-W6: a conta do app com a assinatura da Google Play VIVA (site, APK do site e loja) mostra "Assinatura pela Google Play · até DD/MM ·
+ * renova sozinha · Gerenciar" e o plano sem preço nem Pagar (nada de Pix, cartão ou automática — o servidor também recusa: 409
+ * assinatura_play); o histórico mostra os pedidos da Play (forma "Google Play").
  */
+/** play-W6: a matrícula do app com a assinatura da Google Play viva. */
+const playVivaDe = (m: MatriculaPagamentos) => !!m.conta.app && playViva(normalizarVistaPlay(m.play));
+
 export default function Pagamentos() {
   const navigate = useNavigate();
   const online = useOnline();
@@ -88,7 +96,7 @@ export default function Pagamentos() {
     const d = consulta.data;
     if (!pedido || !d) return;
     for (const m of d.matriculas) {
-      if (ehLoja && m.conta.app) continue;
+      if ((ehLoja && m.conta.app) || playVivaDe(m)) continue;
       if (!podePagarPeloApp(m.conta.modo, !!m.chave)) continue;
       const c = m.cobrancas.find((x) => x.id === pedido && x.status === "aberta");
       if (c) {
@@ -248,8 +256,10 @@ function SecaoMatricula({
   const historico = cobrancas.filter((c) => !abertas.includes(c) && c !== aguardando
     && !(c.status === "aguardando_confirmacao" && (c.forma === "mp" || c.forma === "infinitepay")));
   const recusa = recusaVigente(m.cobrancas);
-  // W1 da loja: a conta do app na versão da Google Play (sem pagar pelo app até a W6)
-  const lojaApp = ehLoja && !!m.conta.app;
+  // W1 da loja: a conta do app na versão da Google Play (sem pagar pelo app até a W6); play-W6: e a de qualquer versão com a Play viva
+  const vistaPlay = m.conta.app ? normalizarVistaPlay(m.play) : null;
+  const comPlay = playViva(vistaPlay);
+  const lojaApp = (ehLoja && !!m.conta.app) || comPlay;
   const pagarNoApp = !lojaApp && podePagarPeloApp(m.conta.modo, !!m.chave);
   const profissional = m.conta.profissional || "seu profissional";
   const [cancelando, setCancelando] = useState(false);
@@ -278,12 +288,15 @@ function SecaoMatricula({
     <section className="flex flex-col gap-3" data-matricula-pagamentos={m.paciente_id}>
       {varias && <div className="pq-eyebrow mt-2">{m.conta.nome ?? "Seu profissional"}</div>}
       {m.mensalidade ? (
-        <CartaoMensalidade m={m} aguardando={!!aguardando} pagarNoApp={pagarNoApp} aoPagar={aoPagar} ipAberta={ipAberta} />
+        <CartaoMensalidade m={m} aguardando={!!aguardando} pagarNoApp={pagarNoApp} aoPagar={aoPagar} ipAberta={ipAberta} soPlano={comPlay} />
       ) : !m.cobrancas.length ? (
         <Cartao className="px-4 py-3.5 text-[13px] text-texto-2" data-sem-mensalidade>
           Nenhuma cobrança com {profissional} por enquanto. Quando houver, ela aparece aqui.
         </Cartao>
       ) : null}
+
+      {/* play-W6: a assinatura da Google Play viva da conta do app (o Gerenciar abre a Central de assinaturas) */}
+      {vistaPlay && comPlay && <CartaoAssinaturaPlay play={vistaPlay} nomePlano={m.mensalidade?.plano ?? null} />}
 
       {/* a conta do app na loja não mostra preço (W1 da loja) */}
       {ipAberta && !lojaApp && (
@@ -455,13 +468,15 @@ function FolhaTodos({ todos, hoje, aoFechar, aoAbrir, aoAbrirRecibo }: {
   );
 }
 
-function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar, ipAberta }: {
+function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar, ipAberta, soPlano = false }: {
   m: MatriculaPagamentos;
   aguardando: boolean;
   pagarNoApp: boolean;
   aoPagar: (a: AlvoPagamento) => void;
   /** W1: a tentativa viva da InfinitePay — o Pagar vira "Continuar o pagamento" */
   ipAberta: CobrancaVista | null;
+  /** play-W6: a conta do app com a assinatura da Google Play viva — o plano e a situação, sem preço nem forma (como na loja) */
+  soPlano?: boolean;
 }) {
   const navigate = useNavigate();
   const ms = m.mensalidade!;
@@ -471,8 +486,8 @@ function CartaoMensalidade({ m, aguardando, pagarNoApp, aoPagar, ipAberta }: {
   const precisaPagar = e.situacao === "vencida" || e.situacao === "pendente" || e.situacao === "vence_em_breve" || e.situacao === "teste";
   const automatica = m.assinatura?.status === "authorized";
   const doApp = !!m.conta.app;
-  // W1 da loja: a conta do app na versão da Google Play — o plano e a situação, sem preço nem forma de pagar
-  const lojaApp = ehLoja && doApp;
+  // W1 da loja: a conta do app na versão da Google Play — o plano e a situação, sem preço nem forma de pagar (play-W6: e com a Play viva)
+  const lojaApp = (ehLoja && doApp) || soPlano;
   // W2: o MP do personal com a conexão caída (mp.disponivel false; a chave pública também vem null) não promete forma nenhuma — a folha
   // só avisa que o pagamento pelo app está indisponível; conectado sem a chave pública dele, não tem cartão — só o Pix (decisão 14)
   const mpCaido = m.conta.modo === "mercadopago_conta" && m.mp?.disponivel === false;
