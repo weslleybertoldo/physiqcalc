@@ -31,11 +31,13 @@ const FUNCOES = [
   "conta", // hml-21a: o jeito 2 do resto do principal (a casca e o app do aluno), pela porta-pessoa (com o JWKS só no `ler`)
   "acessos", // W-A P2: a aba Acessos do Painel › Aluno, pela porta-pessoa
   "aluno-dia", // W-A P2: as rotinas e a dieta livre (o app do aluno e o painel), pela porta-pessoa
+  "play-compras", // play-W6: a assinatura da Google Play do lado do app (estado e registrar), pela porta-pessoa
+  "play-rtdn", // play-W6: o aviso da Google Play pelo Pub/Sub (push com OIDC; verify_jwt false)
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
 /** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro; hml-21a: + a conta;
  *  W-A P2: + a acessos e a aluno-dia). */
-const PESSOA = ["nutricao", "financeiro", "conta", "acessos", "aluno-dia"];
+const PESSOA = ["nutricao", "financeiro", "conta", "acessos", "aluno-dia", "play-compras"];
 /** Onde mora o catch final: na index.ts, menos nas 3 master-* (servir, da master-porta) e na erro-avisar (atenderPedido). */
 const CATCH_FINAL: Record<string, string> = {
   ...Object.fromEntries(MASTER.map((f) => [f, "_shared/master-porta.ts"])),
@@ -159,7 +161,27 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     // W-A P2: as regras das 2 da W-A e os módulos da aluno-dia passam pelas mesmas guardas
     for (const s of ["acessos-regras", "aluno-dia-regras"]) expect(todos).toContain(`_shared/${s}.ts`);
     for (const m of ["comum", "rotinas", "dieta", "profissional"]) expect(todos).toContain(`aluno-dia/${m}.ts`);
+    // play-W6: as 4 peças da Play (as regras, o OAuth, a API e o banco/ordem) passam pelas mesmas guardas
+    for (const s of ["play-regras", "google-oauth", "play-api", "play-assinaturas"]) expect(todos).toContain(`_shared/${s}.ts`);
     expect(todos).not.toContain(LOG);
+  });
+
+  it("play-W6: nenhuma chamada de log das peças da Play leva o token, o pedido, o etag ou o e-mail (só códigos; ref = a matrícula ou o aviso)", () => {
+    const arquivos = ["play-compras/index.ts", "play-rtdn/index.ts", "_shared/play-assinaturas.ts", "_shared/play-api.ts", "_shared/google-oauth.ts",
+      "_shared/app-sem-profissional.ts", "_shared/exclusao-profissional.ts", "excluir-minha-conta/index.ts"];
+    const proibidos = /\b(token|aviso\.token|tokenAnterior|tokenExpirado|pedido|pedidoPago|devolvidoPedido|etag|email|emailDeTeste|purchaseToken|orderId|corpo|conta\.client_email)\b/;
+    const achados: string[] = [];
+    let chamadas = 0;
+    for (const rel of arquivos) {
+      for (const c of chamadasDeLog(ler(rel))) {
+        chamadas++;
+        // fora das aspas (o nome do código pode ter as palavras): "play_sem_credencial" não conta
+        const semTextos = c.argumentos.replace(/"[^"]*"|'[^']*'|`[^`]*`/g, '""');
+        if (proibidos.test(semTextos)) achados.push(`${rel}:${c.linha}`);
+      }
+    }
+    expect(achados).toEqual([]);
+    expect(chamadas).toBeGreaterThan(25);
   });
 
   it.each(FUNCOES)("%s: nenhum console. na função nem nos _shared que ela importa", (funcao) => {
