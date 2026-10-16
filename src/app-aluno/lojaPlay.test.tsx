@@ -195,6 +195,43 @@ describe("loja COM a Play valendo — a trava, a faixa, Meu plano, Pagamentos e 
     await waitFor(() => expect(h.assinar).toHaveBeenCalledWith({ matriculaId: "pa", oferta: OFERTAS.app_treino, troca: null }));
   });
 
+  it("a revisão ⚪15 + ⚪17: o 502 do registrar e o já tem RECARREGAM (a Play e a situação); o já tem mostra o Gerenciar", async () => {
+    for (const codigo of ["google_indisponivel", "ja_tem"] as const) {
+      const recarregar = vi.fn(async () => {});
+      const recarregarSituacao = vi.fn(async () => null);
+      h.play = { ...PLAY_ATIVA, recarregar };
+      h.sessao = { ...h.sessao, recarregarSituacao };
+      h.resumo = [resumoApp({ pago_ate: dia(-2), teste_ate: dia(-2), desde: dia(-9) })];
+      h.assinar.mockReset().mockResolvedValue({ tipo: "erro", codigo });
+      const r = montar(<GatePagamentoPendente><div>o app</div></GatePagamentoPendente>);
+      fireEvent.click(screen.getByRole("button", { name: "Assinar pela Google Play · R$ 31,90/mês" }));
+      await waitFor(() => expect(document.querySelector("[data-folha-oferta-play='app_treino']")).not.toBeNull());
+      fireEvent.click(screen.getByRole("button", { name: "Assinar pela Google Play" }));
+      await waitFor(() => expect(document.querySelector("[data-play-erro]")).not.toBeNull());
+      await waitFor(() => expect(recarregar).toHaveBeenCalled());
+      expect(recarregarSituacao, codigo).toHaveBeenCalled();
+      const gerenciar = document.querySelector("[data-folha-oferta-play] [data-play-gerenciar]");
+      if (codigo === "ja_tem") expect(gerenciar, codigo).not.toBeNull();
+      else expect(gerenciar, codigo).toBeNull();
+      r.unmount();
+    }
+  });
+
+  it("a revisão ⚪17: sem a oferta do plano DA MATRÍCULA, o botão não vende outro plano (nada de \"Assinar Treino + Alimentação\" com o Treino)", () => {
+    h.play = { ...PLAY_ATIVA, ofertas: { app_treino: OFERTAS.app_treino } };
+    h.resumo = [resumoApp({ pago_ate: dia(-2), teste_ate: dia(-30), desde: dia(-40), plano_codigo: "app_treino_alimentacao", plano_nome: "Treino + Alimentação" })];
+    montar(<GatePagamentoPendente><div>o app</div></GatePagamentoPendente>);
+    expect(document.querySelector("[data-play-assinar]")).toBeNull();
+  });
+
+  it("a revisão ⚪17: enquanto a Play da loja carrega, a trava NÃO pisca a loja de hoje (o \"acesso pausado\" sem saída)", () => {
+    h.play = { ...PLAY_INATIVA, carregando: true };
+    h.resumo = [resumoApp({ pago_ate: dia(-2), teste_ate: dia(-30), desde: dia(-40) })];
+    montar(<GatePagamentoPendente><div>o app</div></GatePagamentoPendente>);
+    expect(document.querySelector("[data-trava-app]")?.getAttribute("data-trava-app")).toBe("carregando");
+    expect(screen.queryByText(/O acesso ao app está pausado/)).toBeNull();
+  });
+
   it("a faixa nos dias grátis: o preço da Play + 'Assinar' → Meu plano com a folha", async () => {
     h.resumo = [resumoApp({ pago_ate: dia(3), teste_ate: dia(3), desde: dia(-4) })];
     montar(<FaixaMensalidade />, "/");
@@ -321,5 +358,14 @@ describe("site (e APK do site) com a assinatura da Play viva: a assinatura + o l
     expect(screen.getByText("Assinatura suspensa")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Atualizar na Google Play/ }).getAttribute("href")).toMatch(/^https:\/\/play\.google\.com\/store\/account\/subscriptions/);
     expect(screen.queryByRole("button", { name: /^Pagar/ })).toBeNull();
+  });
+
+  it("a revisão 🟡3: a trava da Play só com a suspensa/pausada — a ativa ou a cancelada com a cobertura vencida NÃO prendem em \"Atualizar na Google Play\"", () => {
+    for (const estado of ["ativa", "cancelada", "carencia", "pendente"] as const) {
+      h.resumo = [resumoApp({ pago_ate: dia(-2), teste_ate: dia(-30), desde: dia(-40), play: { ...VIVA, estado, renova: estado !== "cancelada", expira_em: dia(-2) } })];
+      const r = montar(<GatePagamentoPendente><div>o app</div></GatePagamentoPendente>);
+      expect(document.querySelector("[data-trava-app]")?.getAttribute("data-trava-app"), estado).not.toBe("play-travada");
+      r.unmount();
+    }
   });
 });

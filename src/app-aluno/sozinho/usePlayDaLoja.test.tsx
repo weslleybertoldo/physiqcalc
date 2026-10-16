@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // aparelho + ao menos 1 oferta. Faltou qualquer um = a loja de hoje. Fora da loja nativa, nada é perguntado.
 const h = vi.hoisted(() => ({
   plugin: true,
+  usuario: "u1" as string | null,
   estado: vi.fn(),
   aparelho: vi.fn(),
   produtos: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock("@/lib/playBilling", () => ({
   produtosDaPlay: h.produtos,
 }));
 vi.mock("./play", () => ({ buscarEstadoPlay: h.estado }));
+vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: h.usuario ? { id: h.usuario } : null }) }));
 
 import { _esquecerPlayDaLojaParaTestes, carregarPlayDaLoja, usePlayDaLoja } from "./usePlayDaLoja";
 
@@ -26,6 +28,7 @@ const estado = (p: Record<string, unknown> = {}) => ({ disponivel: true, matricu
 
 beforeEach(() => {
   h.plugin = true;
+  h.usuario = "u1";
   h.estado.mockReset().mockResolvedValue(estado());
   h.aparelho.mockReset().mockResolvedValue(true);
   h.produtos.mockReset().mockResolvedValue({ produtos: [produto("app_treino", "R$ 31,90")], naoAchados: ["app_treino_alimentacao"] });
@@ -79,5 +82,18 @@ describe("usePlayDaLoja", () => {
     expect(h.estado).toHaveBeenCalledTimes(1);
     await act(() => a.result.current.recarregar());
     expect(h.estado).toHaveBeenCalledTimes(2);
+  });
+
+  it("a revisão ⚪16: trocou a pessoa no aparelho → o guardado da outra some e o servidor é perguntado de novo (mesmo dentro de 1 minuto)", async () => {
+    const r = renderHook(() => usePlayDaLoja());
+    await waitFor(() => expect(r.result.current.ativa).toBe(true));
+    expect(h.estado).toHaveBeenCalledTimes(1);
+    h.usuario = "u2";
+    h.estado.mockResolvedValue(estado({ disponivel: false, matricula: { id: "m2", ativo: true } }));
+    r.rerender();
+    expect(r.result.current.ativa).toBe(false);   // nem um quadro com o "disponível" da outra pessoa
+    await waitFor(() => expect(h.estado).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(r.result.current.estado?.matricula?.id).toBe("m2"));
+    expect(r.result.current.ativa).toBe(false);
   });
 });

@@ -24,6 +24,8 @@ describe("a condição do Vite fica direto no código (o Rollup corta o texto no
     "src/painel/configuracoes/plano/PlanoContaNova.tsx",
     "src/entrada/onboarding/TreinarSemProfissional.tsx",
     "src/app-aluno/perfil/MeuPlano.tsx",
+    // play-W6 (a revisão, ⚪18): a folha da oferta da Google Play (o resumo "loja")
+    "src/app-aluno/sozinho/pecas/AssinaturaPlay.tsx",
   ])("%s: o resumo antes de pagar só no staging, com a expressão direto no lazy", (arquivo) => {
     expect(ler(arquivo)).toContain(
       'const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;',
