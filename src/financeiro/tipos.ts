@@ -5,7 +5,16 @@ import type { Modalidade, Parcela, PlanoDoAluno } from "./planos";
 
 export type StatusCobranca = "aberta" | "paga" | "cancelada" | "aguardando_confirmacao";
 export type TipoCobranca = "mensalidade" | "avulsa";
-export type FormaCobranca = "pix_manual" | "mp" | "manual" | "infinitepay";
+/** play-W6: 'google_play' = o pedido da assinatura do plano do app pela Google Play (o servidor grava; o app só lê). */
+export type FormaCobranca = "pix_manual" | "mp" | "manual" | "infinitepay" | "google_play";
+
+/** play-W6 — a assinatura da Google Play VIVA da matrícula do app (nunca o token nem o pedido): null/ausente = sem ela. */
+export interface PlayDaMatricula {
+  estado: "pendente" | "ativa" | "cancelada" | "carencia" | "suspensa" | "pausada";
+  renova: boolean;
+  expira_em: string | null;
+  produto: string;
+}
 /** W2: 'mercadopago' = o Mercado Pago do Physiq (só o master liga); 'mercadopago_conta' = o Mercado Pago DO PERSONAL (o dono conecta o dele). */
 export type ModoRecebimento = "pix_manual" | "nenhum" | "mercadopago" | "infinitepay" | "mercadopago_conta";
 
@@ -133,6 +142,8 @@ export interface MatriculaPagamentos {
    *  chave null = sem a chave: só o Pix — decisão 14). A conexão caída vem com disponivel false (e a chave null): nada pelo app — a folha
    *  só avisa e a linha da mensalidade não promete Pix nem cartão. Nos outros modos, null; ausente na função de antes da W2. */
   mp?: { disponivel: boolean; chave_publica: string | null } | null;
+  /** play-W6 — a assinatura da Google Play viva da matrícula do app (aluno_status); null nas outras e sem ela; ausente na função de antes */
+  play?: PlayDaMatricula | null;
   /** hml-14d (B21 · D31): quantas cobranças e recibos vivos a matrícula tem — o "Ver todos (N)" (as listas acima param em 48/24).
    *  Ausentes na função de antes de publicar a 14d. */
   total_cobrancas?: number;
@@ -244,6 +255,8 @@ export interface ResumoMatricula {
   /** W-P — plano com período (nulo = modo de hoje) */
   modalidade?: Modalidade | null;
   plano_meses?: number | null;
+  /** play-W6 — a assinatura da Google Play viva da matrícula do app (financeiro_do_aluno); ausente no banco de antes */
+  play?: PlayDaMatricula | null;
 }
 
 /** hml-14d (B21 · D31): "Recebido" e "Gasto com o aluno" somados no banco (financeiro_totais_do_aluno), quantos lançamentos o aluno

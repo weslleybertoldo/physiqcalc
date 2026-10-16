@@ -48,19 +48,23 @@ describe("/privacidade e /termos (C13)", () => {
 });
 
 describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)", () => {
-  it("a data nova e os 10 serviços conferidos no código, cada um com o que recebe", () => {
+  it("a data nova e os 11 serviços conferidos no código, cada um com o que recebe", () => {
     abrir(<Privacidade />, "/privacidade");
-    // hml-11 (A2): as correções de fato entraram em 8/10/2026
-    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 15 de outubro de 2026");
-    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp", "telegram", "github"]);
+    // hml-11 (A2): as correções de fato entraram em 8/10/2026; play-W6 (decisão 12): o Google Play em 16/10/2026
+    expect(document.querySelector("[data-atualizada-em]")?.textContent).toBe("Última atualização: 16 de outubro de 2026");
+    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "google-play", "resend", "mercado-pago", "whatsapp", "telegram", "github"]);
     const t = document.querySelector("[data-servicos-terceiros]")?.textContent ?? "";
-    for (const nome of ["Supabase", "PowerSync", "Cloudflare", "Vercel", "Google", "Resend", "Mercado Pago", "WhatsApp", "Telegram", "GitHub"]) expect(t).toContain(nome);
+    for (const nome of ["Supabase", "PowerSync", "Cloudflare", "Vercel", "Google", "Google Play", "Resend", "Mercado Pago", "WhatsApp", "Telegram", "GitHub"]) expect(t).toContain(nome);
     expect(t).toContain("Firebase Cloud Messaging");
     expect(t).toContain("Turnstile");
     expect(t).toMatch(/número do cartão é digitado no formulário do próprio Mercado Pago/);
     expect(t).toMatch(/sem empresa intermediária/);
-    // o Play Billing ainda não existe (W6): nada de citá-lo
-    expect(document.body.textContent).not.toMatch(/Billing|faturamento do Google/i);
+    // play-W6 (decisão 12 — correção de FATO): a assinatura do plano do app pela Google Play existe; o Physiq manda só o código da matrícula
+    // e o pagamento fica com o Google
+    const play = document.querySelector("[data-servico='google-play']")?.textContent ?? "";
+    expect(play).toMatch(/assinatura do plano do app feita na versão da Google Play/);
+    expect(play).toMatch(/o número do cartão e os dados de quem paga não passam pelo Physiq/);
+    expect(play).toMatch(/só um código da sua matrícula, sem dado pessoal/);
     expect(document.body.textContent).toMatch(/Quem instala pela Google Play/);
   });
 
@@ -97,7 +101,7 @@ describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)"
   it("versão da Google Play: o GitHub (instalador e atualização do APK do site) não aparece; o resto é igual", () => {
     h.loja = true;
     abrir(<Privacidade />, "/privacidade");
-    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "resend", "mercado-pago", "whatsapp", "telegram"]);
+    expect(servicosNaTela()).toEqual(["supabase", "powersync", "cloudflare", "vercel", "google", "google-play", "resend", "mercado-pago", "whatsapp", "telegram"]);
     expect(document.body.textContent).not.toMatch(/GitHub|instalador/);
     expect(servicosDaVersao(true)).toHaveLength(SERVICOS_TERCEIROS.length - 1);
   });

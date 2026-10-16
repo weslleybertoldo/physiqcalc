@@ -3,6 +3,9 @@ import { FAIXAS, NOME_PLANO, PLANOS, PRECOS_PADRAO, TESTE_DIAS, TESTE_MAX_ALUNOS
 import { lerMarkdown, type ItemLista } from "./markdown";
 import { DATA_DOS_TEXTOS, ROTA_POLITICA, ROTA_TERMOS, VENDEDOR } from "./versao";
 
+/** play-W6: o nome do plano do app pelo código (a seed da W7b — PLANOS_APP_PADRAO). */
+const nomeDoPlanoApp = (codigo: string): string => PLANOS_APP_PADRAO.find((p) => p.codigo === codigo)?.nome ?? codigo;
+
 /**
  * hml-11 (H-28, D8) — os Termos de assinatura (a cobrança do plano do profissional e do plano do app), em revisão: só no build de
  * staging até a virada (src/publico/legal/versao.ts). Base: o rascunho para o advogado
@@ -197,6 +200,9 @@ Pelo Mercado Pago, dentro do app ou do site: o profissional paga em Configuraç�
 - **Cobrança automática:** cancele em Configurações › Plano › Cancelar cobrança automática (profissional) ou em Perfil ›
   Pagamentos (aluno). A cobrança para na hora no Mercado Pago, e **o acesso continua até o fim do período já pago**.
 - **Excluir a conta** também cancela a cobrança automática ([Termos de Uso](${ROTA_TERMOS}), seção 11).
+- **Assinatura pela Google Play** (aluno sem profissional, na versão do app da Google Play): cancele quando quiser na Google Play (Perfil ›
+  Meu plano › Gerenciar na Google Play). A renovação para, e **o acesso continua até o fim do período já pago**. Colocar o código de um
+  profissional ou excluir a conta também cancela a assinatura da Google Play, sem devolver o período já pago.
 
 ## 9. Desistência (direito de arrependimento)
 
@@ -207,6 +213,8 @@ Pelo Mercado Pago, dentro do app ou do site: o profissional paga em Configuraç�
   - o acesso pago por ele termina;
   - no cartão, o Mercado Pago avisa a administradora para não cobrar ou para estornar (Decreto nº 7.962/2013, art. 5º);
   - respondemos em até 5 dias.
+- **Na assinatura pela Google Play**, o pedido também é pelo ${EMAIL}: devolvemos o valor inteiro do pagamento pela Google Play, no mesmo
+  meio usado para pagar, e o acesso pago por ele termina. A Google Play também recebe pedidos de reembolso pelas regras dela.
 
 ## 10. Fora do prazo de desistência
 
@@ -238,11 +246,15 @@ Pelo Mercado Pago, dentro do app ou do site: o profissional paga em Configuraç�
 
 ## 15. Versão da Google Play
 
-Na versão do app instalada pela Google Play não há pagamento dentro do app:
-- o profissional paga pelo site;
-- o plano do app para quem treina sem profissional não aparece nessa versão.
-
-Se isso mudar (pagamento pela Google Play), estes termos ganham uma versão nova.
+Na versão do app instalada pela Google Play:
+- o profissional paga pelo site (não há pagamento do profissional dentro do app);
+- o aluno sem profissional assina o plano do app **pela Google Play**: o preço é o que a tela de assinar mostra, por mês, e a assinatura
+  **renova todo mês até você cancelar** na Google Play. O pagamento, a renovação, o cancelamento e o reembolso seguem também as regras da
+  Google Play;
+- os dias grátis do app continuam: assinar durante o teste (ou com um mês já pago) não faz perder os dias que faltam — o período pago
+  começa depois deles;
+- trocar de plano: para o ${nomeDoPlanoApp("app_treino_alimentacao")} vale na hora (a Google Play cobra só a diferença do período que
+  falta); para o ${nomeDoPlanoApp("app_treino")}, vale na próxima renovação.
 
 ## 16. O que não é venda do Physiq
 

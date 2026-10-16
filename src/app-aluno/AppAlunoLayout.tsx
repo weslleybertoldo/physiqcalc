@@ -14,6 +14,7 @@ import { TransicaoDePagina } from "@/ui/casca/TransicaoDePagina";
 import { EstadoCarregando } from "@/ui/premium/Estados";
 import { TabBar } from "@/ui/premium/TabBar";
 import { ABAS_APP, abaDaRota, abaDeAbertura, abasVisiveis } from "./catalogoAbas";
+import { PlayEmSegundoPlano } from "./sozinho/pecas/AssinaturaPlay";
 
 /**
  * hml-18b (H-54, F) — o banco local do treino (PowerSync: ~270 KB + o worker + o wasm do SQLite) num pedaço próprio, carregado só
@@ -138,6 +139,8 @@ export default function AppAlunoLayout() {
   return (
     <div data-casca-app className="relative isolate min-h-screen text-texto">
       <div aria-hidden className="pq-halo-app pointer-events-none fixed inset-0 -z-10" />
+      {/* play-W6: a compra da Google Play que ficou no meio volta ao servidor (fora das travas: a trava da mensalidade espera por ela) */}
+      <PlayEmSegundoPlano />
       <Carregavel nome="banco local do app" esqueleto={<EsqueletoBancoLocal />}>
         <BancoLocal>
           <ComGates gates={gatesApp}>
