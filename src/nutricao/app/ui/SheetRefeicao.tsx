@@ -54,7 +54,9 @@ export function SheetRefeicao({
       descricao={partes.join(" · ") || undefined}
       rodape={
         refeicao && (podeMarcar || aoFoto) ? (
-          <div className="flex gap-2.5">
+          // hml-27 (H-129) `flex-wrap`: "Marcar como feita" + "Foto pro diário" (o botão não quebra texto) não cabem lado a lado em 390 px —
+          // o 2º passava 15 px da borda útil, colado na borda da tela. Não cabendo, o 2º desce para a linha de baixo, cada um com a largura toda.
+          <div className="flex flex-wrap gap-2.5">
             {podeMarcar && (
               <Botao variante={marcada ? "g" : "w"} icone={marcada ? Undo2 : Check} className="flex-1" onClick={() => aoMarcar(!marcada)} disabled={salvando || desligado} data-folha-marcar={marcada ? "desmarcar" : "marcar"}>
                 {marcada ? "Desmarcar" : "Marcar como feita"}
