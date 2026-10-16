@@ -151,8 +151,16 @@ export async function prontuariosParaBaixar(conta: string | null, pacientes: str
   };
 }
 
-/** Códigos da borda → frase para a pessoa. Na versão da loja, nenhuma menção a como pagar. */
+/** Códigos da borda → frase para a pessoa. Na versão da loja, nenhuma menção a como pagar. play-W6 (a revisão, ⚪14): com o
+ *  play_cancelada (a assinatura da Google Play do aluno do app cancelada antes de a exclusão parar), a frase conta. */
 export function mensagemErroExclusao(e: unknown): string {
+  const frase = fraseDoErroExclusao(e);
+  return e instanceof ErroExclusao && e.extra?.play_cancelada === true
+    ? `${frase} A sua assinatura da Google Play já foi cancelada: ela não renova mais e vale até o fim do período pago.`
+    : frase;
+}
+
+function fraseDoErroExclusao(e: unknown): string {
   const codigo = e instanceof ErroExclusao ? e.codigo : "erro_interno";
   const motivo = e instanceof ErroExclusao ? String(e.extra?.motivo ?? "") : "";
   switch (codigo) {

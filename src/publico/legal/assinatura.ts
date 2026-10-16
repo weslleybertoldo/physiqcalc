@@ -277,11 +277,26 @@ Na versão do app instalada pela Google Play:
  * texto. `para` tira o bloco do outro público (a tela do profissional não mostra o plano do app, e vice-versa). Sem a seção = erro
  * (o teste acusa antes de uma tela sair sem resumo).
  */
-export function resumoDaAssinatura(para?: "profissional" | "aluno", md: string = TERMOS_DE_ASSINATURA): ItemLista[] {
+export function resumoDaAssinatura(para?: "profissional" | "aluno" | "loja", md: string = TERMOS_DE_ASSINATURA): ItemLista[] {
   const blocos = lerMarkdown(md);
   const inicio = blocos.findIndex((b) => b.tipo === "titulo" && b.texto === TITULO_RESUMO);
   const lista = inicio >= 0 ? blocos[inicio + 1] : undefined;
   if (!lista || lista.tipo !== "lista") throw new Error(`Termos de assinatura sem a seção "${TITULO_RESUMO}"`);
+  if (para === "loja") return lista.itens.filter((item) => !SO_DO_SITE.test(textoDoItem(item)));
   const doOutro = para === "profissional" ? ROTULO_ALUNO : para === "aluno" ? ROTULO_PROFISSIONAL : null;
   return lista.itens.filter((item) => !(doOutro && item.trechos[0]?.negrito && item.trechos[0].texto === doOutro));
+}
+
+/**
+ * play-W6 (a revisão, 🟡4): o resumo da folha da Google Play ("loja") tira o que é do site — o bloco do profissional, o do aluno (com os
+ * preços do banco: na folha, o preço é o da Play), o Mercado Pago (Pix, cartão, automática), o "bloqueado no dia seguinte" (na Play, a
+ * carência e a suspensão são as do Google) e a mensalidade ao profissional. Ficam quem vende, o cancelamento, a desistência, o que não é
+ * devolvido e a mudança de preço. O filtro é pelo TEXTO do item: um item novo do site com essas palavras também sai.
+ */
+const SO_DO_SITE = new RegExp(`${ROTULO_PROFISSIONAL}|${ROTULO_ALUNO}|Mercado Pago|\\bPix\\b|cart[ãa]o|R\\$|bloquead|ao profissional dele`, "i");
+
+function textoDoItem(item: ItemLista): string {
+  const dos = (blocos: ItemLista["dentro"]): string =>
+    blocos.map((b) => (b.tipo === "lista" ? b.itens.map(textoDoItem).join(" ") : b.tipo === "paragrafo" ? b.trechos.map((x) => x.texto).join("") : "")).join(" ");
+  return `${item.trechos.map((x) => x.texto).join("")} ${dos(item.dentro)}`;
 }

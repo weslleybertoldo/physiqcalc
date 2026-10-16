@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { UserRound, Wallet } from "lucide-react";
 import { BotaoAssinarPlay, BotaoGerenciarPlay } from "@/app-aluno/sozinho/pecas/AssinaturaPlay";
-import { normalizarVistaPlay, playViva, textoDaAssinatura } from "@/app-aluno/sozinho/playRegras";
+import { normalizarVistaPlay, playTravada, textoDaAssinatura } from "@/app-aluno/sozinho/playRegras";
 import { usePlayDaLoja } from "@/app-aluno/sozinho/usePlayDaLoja";
 import { reais, soOTeste, travaDoInadimplente } from "@/financeiro/regras";
 import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
@@ -49,8 +49,10 @@ export default function GatePagamentoPendente({ children }: { children: ReactNod
   const fimDoTeste = !!r.app && soOTeste({ pago_ate: r.pago_ate, teste_ate: r.teste_ate ?? null });
   const vistaPlay = r.app ? normalizarVistaPlay(r.play) : null;
 
-  // play-W6: a assinatura da Play viva e sem acesso (suspensa/pausada) — atualizar na Google Play, em qualquer versão
-  if (r.app && playViva(vistaPlay)) {
+  // play-W6: a assinatura da Play TRAVADA (suspensa/pausada: o pagamento não passou depois da carência) — atualizar na Google Play, em
+  // qualquer versão. Só ela (a revisão, 🟡3): a ativa com a renovação atrasada e a cancelada que já venceu caem na trava de sempre (na loja,
+  // a oferta; o `estado` da play-compras ressincroniza a viva vencida) — nunca presas num "Atualizar" sem saída
+  if (r.app && vistaPlay && playTravada(vistaPlay)) {
     const t = textoDaAssinatura(vistaPlay);
     const texto = `${t.detalhe} O que você já tinha continua guardado.`;
     if (pathname === ROTA_PERFIL_REDUZIDO) {
@@ -64,6 +66,10 @@ export default function GatePagamentoPendente({ children }: { children: ReactNod
       <TelaTrava marca="play-travada" icone={Wallet} tom="var(--p-ambar-3)" titulo={t.titulo} texto={texto}
         acoes={<><BotaoGerenciarPlay produto={vistaPlay.produto} variante="w" tamanho="md" className="w-full" rotulo="Atualizar na Google Play" />{meusDados}</>} />
     );
+  }
+  // a revisão, ⚪17: na loja, enquanto a Play carrega, nem a trava de hoje (o "acesso pausado" sem saída) nem a da Play — só o espaço dela
+  if (ehLoja && r.app && play.carregando) {
+    return <div data-trava-app="carregando" aria-busy="true" className="min-h-[calc(100vh-40px)]" />;
   }
   if (ehLoja && r.app && play.ativa) {
     const titulo = fimDoTeste ? "Seus dias grátis acabaram" : "Seu plano não está ativo";

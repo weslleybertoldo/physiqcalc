@@ -5,9 +5,12 @@
  * continua escondido) — e no site nada disto roda.
  * Um armazém do módulo (useSyncExternalStore), sem o React Query: a faixa, as travas e as Boas-vindas também são testadas sem o provedor.
  * O servidor e a Play são perguntados 1 vez por minuto no máximo (quem pede junto divide o pedido); `recarregar` pergunta de novo.
+ * O guardado é da PESSOA (a revisão, ⚪16): trocou o login no aparelho → o da outra some na hora e o servidor é perguntado de novo (o
+ * pedido que ainda estava no ar para a outra pessoa não publica mais nada).
  */
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { playDisponivel, pluginDaPlayPresente, produtosDaPlay, type ProdutoPlay } from "@/lib/playBilling";
+import { useSessao } from "@/nucleo/sessao";
 import { buscarEstadoPlay, type EstadoPlayServidor } from "./play";
 import { PRODUTOS_PLAY, menorPreco, ofertasMensais, type CodigoPlay, type OfertaMensal } from "./playRegras";
 
@@ -24,6 +27,10 @@ const VALIDADE_MS = 60_000;
 let retrato: Retrato = VAZIO;
 let pedido: Promise<void> | null = null;
 let quando = 0;
+/** de quem é o guardado (o id do login); undefined = ainda de ninguém */
+let dono: string | null | undefined;
+/** cada troca de pessoa abre uma geração nova: o pedido de uma geração velha não publica */
+let geracao = 0;
 const ouvintes = new Set<() => void>();
 
 function publicar(r: Retrato): void {
@@ -36,11 +43,23 @@ function assinar(f: () => void): () => void {
   return () => ouvintes.delete(f);
 }
 
-/** Pergunta ao servidor e à Play (1 pedido em voo; dentro da validade, nada). Fora da loja nativa, nada. Nunca lança. */
-export function carregarPlayDaLoja(forcar = false): Promise<void> {
+/** A pessoa mudou (outro login no aparelho): o guardado da outra some e a geração muda (o pedido no ar da outra não publica mais). */
+function trocarDono(uid: string | null): void {
+  dono = uid;
+  geracao++;
+  pedido = null;
+  quando = 0;
+  retrato = VAZIO;
+}
+
+/** Pergunta ao servidor e à Play (1 pedido em voo; dentro da validade, nada). Fora da loja nativa, nada. Nunca lança. `uid` = de quem
+ *  é a pergunta (o login de agora): outro dono zera o guardado antes. */
+export function carregarPlayDaLoja(forcar = false, uid?: string | null): Promise<void> {
   if (!pluginDaPlayPresente()) return Promise.resolve();
+  if (uid !== undefined && uid !== dono) trocarDono(uid);
   if (pedido) return pedido;
   if (!forcar && quando && Date.now() - quando < VALIDADE_MS) return Promise.resolve();
+  const minha = geracao;
   publicar({ ...retrato, carregando: true });
   pedido = (async () => {
     let novo: Retrato = { ...VAZIO };
@@ -55,10 +74,11 @@ export function carregarPlayDaLoja(forcar = false): Promise<void> {
     } catch {
       /* sem o servidor agora: a loja de hoje (pergunta de novo na próxima) */
     }
+    if (minha !== geracao) return; // a pessoa mudou no meio: nada a publicar
     quando = Date.now();
     publicar({ ...novo, carregando: false });
   })().finally(() => {
-    pedido = null;
+    if (minha === geracao) pedido = null;
   });
   return pedido;
 }
@@ -68,6 +88,8 @@ export function _esquecerPlayDaLojaParaTestes(): void {
   retrato = VAZIO;
   pedido = null;
   quando = 0;
+  dono = undefined;
+  geracao++;
 }
 
 export interface PlayDaLoja {
@@ -84,20 +106,24 @@ export interface PlayDaLoja {
 
 export function usePlayDaLoja(): PlayDaLoja {
   const presente = pluginDaPlayPresente();
+  const uid = useSessao().usuario?.id ?? null;
   const r = useSyncExternalStore(assinar, () => retrato, () => retrato);
   useEffect(() => {
-    if (presente) void carregarPlayDaLoja();
-  }, [presente]);
+    if (presente) void carregarPlayDaLoja(false, uid);
+  }, [presente, uid]);
+  // o guardado de OUTRA pessoa (o login mudou e o efeito ainda não rodou) não aparece nem por 1 quadro
+  const doOutro = dono !== undefined && dono !== uid;
   return useMemo(() => {
-    const ofertas = presente ? ofertasMensais(r.produtos) : {};
-    const ativa = presente && r.estado?.disponivel === true && r.aparelho && Object.keys(ofertas).length > 0;
+    const atual = doOutro ? VAZIO : r;
+    const ofertas = presente ? ofertasMensais(atual.produtos) : {};
+    const ativa = presente && atual.estado?.disponivel === true && atual.aparelho && Object.keys(ofertas).length > 0;
     return {
       ativa,
-      carregando: presente && (r.carregando || (!quando && !r.estado)),
-      estado: presente ? r.estado : null,
+      carregando: presente && (doOutro || atual.carregando || (!quando && !atual.estado)),
+      estado: presente ? atual.estado : null,
       ofertas,
       menorPreco: menorPreco(ofertas),
-      recarregar: () => carregarPlayDaLoja(true),
+      recarregar: () => carregarPlayDaLoja(true, uid),
     };
-  }, [presente, r]);
+  }, [presente, r, doOutro, uid]);
 }

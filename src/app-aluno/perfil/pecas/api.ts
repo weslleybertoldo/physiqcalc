@@ -139,7 +139,11 @@ export const MENSAGEM_ERRO_CONTA: Record<string, string> = {
   erro_interno: "Não deu certo agora. Tente de novo.",
 };
 
+/** play-W6 (a revisão, ⚪14): a assinatura da Google Play é cancelada ANTES de apagar — se a exclusão parou depois, a frase conta. */
+export const AVISO_PLAY_JA_CANCELADA = "A sua assinatura da Google Play já foi cancelada: ela não renova mais e vale até o fim do período pago.";
+
 export function mensagemErroConta(e: unknown): string {
   const codigo = e instanceof ErroPerfil ? e.codigo : "erro_interno";
-  return MENSAGEM_ERRO_CONTA[codigo] ?? MENSAGEM_ERRO_CONTA.erro_interno;
+  const frase = MENSAGEM_ERRO_CONTA[codigo] ?? MENSAGEM_ERRO_CONTA.erro_interno;
+  return e instanceof ErroPerfil && e.extra?.play_cancelada === true ? `${frase} ${AVISO_PLAY_JA_CANCELADA}` : frase;
 }

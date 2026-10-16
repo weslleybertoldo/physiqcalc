@@ -65,6 +65,8 @@ describe("/privacidade — W3 da loja (serviços de terceiros, saúde, backups)"
     expect(play).toMatch(/assinatura do plano do app feita na versão da Google Play/);
     expect(play).toMatch(/o número do cartão e os dados de quem paga não passam pelo Physiq/);
     expect(play).toMatch(/só um código da sua matrícula, sem dado pessoal/);
+    // a revisão, ⚪18: o negativo de antes que ainda vale (o Physiq não fala em "faturamento do Google")
+    expect(document.body.textContent).not.toMatch(/faturamento do Google/i);
     expect(document.body.textContent).toMatch(/Quem instala pela Google Play/);
   });
 
