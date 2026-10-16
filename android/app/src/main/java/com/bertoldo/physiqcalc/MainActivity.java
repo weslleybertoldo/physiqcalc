@@ -14,6 +14,8 @@ public class MainActivity extends BridgeActivity {
         }
         registerPlugin(GalleryImagePlugin.class);
         registerPlugin(PushFirebasePlugin.class);
+        // play-W6: a cobrança da Google Play só no playRelease (PlataformaLoja por build type; no APK do site, vazia)
+        PlataformaLoja.registrar(this);
         super.onCreate(savedInstanceState);
 
         WebSettings webSettings = this.bridge.getWebView().getSettings();
