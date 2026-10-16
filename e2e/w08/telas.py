@@ -7,23 +7,32 @@ arquivos do próprio app; no site, o service worker guarda) vêm dos arquivos lo
 
 Casos (na ordem):
   treino_dia       aluno do Calc: o treino do profissional no dia → séries com peso e OK (2 exercícios feitos, o 3º com 2 de 3)
-                   → tela 2 (card, feitos com ✓, o atual com "Série 3 de 3" e a carga, card do descanso com o anel) → exercício
-                   aberto com as séries → ajustes do descanso → termina o treino → "Treino finalizado!" → compartilhar → volta a
-                   internet → as séries (peso × reps), o histórico e o concluído sobem para o staging
+                   → tela 2 (card, feitos com ✓, o atual com "Série 3 de 3" e a carga, card do descanso com o anel; hml-28: a faixa
+                   Seg–Dom cabe em 390 e em 360 px) → exercício
+                   aberto com as séries → ajustes do descanso (hml-28, H-169: "Pausar" → "Continuar" e a fileira dos 3 botões cabe
+                   na folha em 390 e em 360 px; depois volta a "Pausar") → termina o treino → "Treino finalizado!" → compartilhar →
+                   volta a internet → as séries (peso × reps), o histórico e o concluído sobem para o staging
   historico        o calendário do mês com o treino de hoje, o detalhe, compartilhar e excluir (sem internet; a exclusão sobe)
   funcoes          ficha com GIF, histórico do exercício, anotações (o ponto), academia, adicionar/tirar série, reordenar
                    arrastando (a ordem sobe), "Montar o meu" (treino e exercício próprios viram o treino do dia)
   sem_profissional aluno do app (W7b, sem profissional): "Montar o meu" e "Usar um treino pronto" (abre os treinos prontos)
   so_nutricao      negativo: aluno só de Nutrição não tem a aba Treino (a rota volta para a abertura)
   sem_internet     o aviso "Sem internet · o treino fica salvo no aparelho (N mudanças)"
-Uso: python3 e2e/w08/telas.py --base http://localhost:5173 --prefixo local [--casos a,b]
+--seco (hml-28): sem navegador e sem rede — o que os checks do H-169 e da faixa usam existe no código e as regras deles com as medidas da sonda.
+Build de STAGING (hml-28 F5; o /health.json com "schema": "staging" = SEM PowerSync, H-14): o treino_dia prova a faixa Seg–Dom e a folha
+"Descanso" (o descanso guardado no aparelho) e o resto dele fica PULADO; historico, funcoes, sem_profissional e sem_internet ficam PULADOS.
+Uso: python3 e2e/w08/telas.py --base http://localhost:5173 --prefixo local [--casos a,b] [--canal msedge] | --seco
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
+import re
+import socket
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -89,8 +98,211 @@ def series_com_peso(c, ex_id: str, peso: str, quantas: int | None = None) -> int
     return feitas
 
 
+# hml-28 (H-169): a fileira dos 3 botões da folha "Descanso" ([data-descanso-pausar], [data-descanso-recomecar] e
+# [data-descanso-menos15-ajuste]). A borda ÚTIL = o conteúdo do pai da fileira (a raiz [data-ajustes-descanso], já dentro do px-5 do
+# PainelDeslizante); o corpo da folha (o 1º ancestral que rola) não pode rolar para o lado. O scrollWidth do documento sozinho não
+# acusa: a folha é fixa e o "−15 s" que passava (10,5 px em 390) caía no padding — por isso cada botão × a borda útil.
+MEDIR_DESCANSO = """() => {
+  const bs = ['pausar', 'recomecar', 'menos15-ajuste'].map((s) => document.querySelector(`[data-painel] [data-ajustes-descanso] [data-descanso-${s}]`));
+  if (bs.some((b) => !b)) return { botoes: [] };
+  const fil = bs[0].parentElement, pai = fil.parentElement, c = (x) => Math.round(x * 100) / 100;
+  let corpo = pai;
+  while (corpo && corpo !== document.body && getComputedStyle(corpo).overflowX === 'visible') corpo = corpo.parentElement;
+  const cs = getComputedStyle(pai), r = pai.getBoundingClientRect();
+  return {
+    tela: innerWidth, doc: document.documentElement.scrollWidth, fileira: [fil.clientWidth, fil.scrollWidth],
+    corpo: corpo && corpo !== document.body ? [corpo.clientWidth, corpo.scrollWidth] : null,
+    util: [c(r.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth)), c(r.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth))],
+    pausar: bs[0].textContent.trim(),
+    botoes: bs.map((b) => { const q = b.getBoundingClientRect(); return [c(q.left), c(q.right)]; }),
+  };
+}"""
+
+
+def fileira_descanso_cabe(m: dict, largura: int) -> bool:
+    """Com o descanso pausado ("Continuar", o estado mais largo), os 3 botões, cada um dentro da borda útil (0,5 px de folga do
+    arredondamento) e da tela; a fileira e o corpo da folha sem rolar para o lado; a tela e o documento na largura."""
+    bts = m.get("botoes") or []
+    return (m.get("pausar") == "Continuar" and len(bts) == 3 and m.get("corpo") is not None
+            and all(b[0] >= m["util"][0] - 0.5 and b[1] <= m["util"][1] + 0.5 and b[1] <= m["tela"] for b in bts)
+            and m["fileira"][1] <= m["fileira"][0] and m["corpo"][1] <= m["corpo"][0] and m["tela"] <= largura and m["doc"] <= largura)
+
+
+def descanso_pausado_cabe(c) -> None:
+    """hml-28 (H-169): com a folha "Descanso" aberta, toca "Pausar" (vira "Continuar") e mede a fileira em 390 × 844 e em 360 × 800;
+    depois volta a 390 × 844 e toca "Continuar" (o descanso volta a correr e o caso segue como antes). Sem exceção: um botão
+    desligado (o descanso já acabou) vira check falho, não derruba o caso (a limpeza do staging vem depois)."""
+    sel = "[data-ajustes-descanso] [data-descanso-pausar]"
+    if c.pg.locator(sel).count() == 1 and c.pg.locator(sel).is_enabled():
+        c.pg.locator(sel).click()
+    pausou = c.esperar(lambda: B.texto(c, sel) == "Continuar", 5)
+    try:
+        for largura, altura in ((390, 844), (360, 800)):
+            c.pg.set_viewport_size({"width": largura, "height": altura})
+            c.pg.wait_for_timeout(500)   # a troca de tamanho e o toque assentam (o botão afunda por 150 ms no toque)
+            m = c.pg.evaluate(MEDIR_DESCANSO)
+            p.check(pausou and fileira_descanso_cabe(m, largura),
+                    f"a fileira do Descanso ({m.get('pausar')!r}) cabe em {largura} px: cada botão dentro da borda útil {m.get('util')} "
+                    f"(esquerda, direita = {m.get('botoes')}); fileira e corpo client/scroll = {m.get('fileira')} {m.get('corpo')}; "
+                    f"scrollWidth do documento = {m.get('doc')}")
+            c.print(f"descanso_continuar_{largura}")
+    finally:
+        c.pg.set_viewport_size({"width": 390, "height": 844})
+        c.pg.wait_for_timeout(300)
+    if B.texto(c, sel) == "Continuar":
+        c.pg.locator(sel).click()
+    p.check(c.esperar(lambda: B.texto(c, sel) == "Pausar", 5), f"'Continuar' volta o descanso a correr ({B.texto(c, sel)!r})")
+
+
+# hml-28 (achado da W, a decisão de 16/10 08:12): a faixa Seg–Dom da aba Treino (FaixaSemana.tsx, [data-faixa-semana]). Os 7 dias de 44 px +
+# gap 4 = 332 px; em 360 px a página (px-[18px]) dá 324 e o "Dom" passava 8 px da borda útil. A borda ÚTIL = o conteúdo do pai da fileira
+# (a <section>, sem padding: o conteúdo da página). Cabendo, os 44 px de hoje; não cabendo, os 7 encolhem por igual (sem cortar o conteúdo).
+MEDIR_FAIXA = """() => {
+  const dias = [...document.querySelectorAll('[data-faixa-semana] [data-dia-estado]')];
+  if (dias.length !== 7) return { dias: [] };
+  const fil = dias[0].parentElement, pai = fil.parentElement, cs = getComputedStyle(pai), r = pai.getBoundingClientRect();
+  const c = (x) => Math.round(x * 100) / 100;
+  return {
+    tela: innerWidth, doc: document.documentElement.scrollWidth, fileira: [fil.clientWidth, fil.scrollWidth],
+    util: [c(r.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth)), c(r.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth))],
+    dias: dias.map((d) => { const q = d.getBoundingClientRect(); return [c(q.left), c(q.right), d.clientWidth, d.scrollWidth]; }),
+  };
+}"""
+
+
+def faixa_cabe(m: dict, largura: int) -> bool:
+    """Os 7 dias, cada um dentro da borda útil (0,5 px de folga do arredondamento) e sem o conteúdo sair dele; a mesma largura nos 7
+    (0,5 px), nunca mais de 44 px e, cabendo (útil ≥ 332 px), os 44 px de hoje; a fileira sem rolar; a tela e o documento na largura."""
+    ds = m.get("dias") or []
+    if len(ds) != 7:
+        return False
+    ws = [d[1] - d[0] for d in ds]
+    cabe_44 = m["util"][1] - m["util"][0] >= 332
+    return (all(d[0] >= m["util"][0] - 0.5 and d[1] <= m["util"][1] + 0.5 and d[3] <= d[2] + 1 for d in ds)
+            and max(ws) - min(ws) <= 0.5 and max(ws) <= 44.5 and (not cabe_44 or min(ws) >= 43.5)
+            and m["fileira"][1] <= m["fileira"][0] and m["tela"] <= largura and m["doc"] <= largura)
+
+
+def faixa_cabe_em_390_e_360(c) -> None:
+    """hml-28: mede a faixa Seg–Dom em 390 × 844 e em 360 × 800 (set_viewport_size) e volta a 390 × 844 (o caso segue como antes)."""
+    try:
+        for largura, altura in ((390, 844), (360, 800)):
+            c.pg.set_viewport_size({"width": largura, "height": altura})
+            c.pg.wait_for_timeout(400)
+            m = c.pg.evaluate(MEDIR_FAIXA)
+            ds = m.get("dias") or []
+            p.check(faixa_cabe(m, largura),
+                    f"a faixa Seg–Dom cabe em {largura} px: os 7 dias dentro da borda útil {m.get('util')} (o 1º {ds[0][:2] if ds else None}, o último "
+                    f"{ds[-1][:2] if ds else None}; larguras {sorted({round(d[1] - d[0], 2) for d in ds})}); fileira client/scroll = {m.get('fileira')}; "
+                    f"scrollWidth do documento = {m.get('doc')}")
+            if largura == 360:
+                c.print("faixa_360")
+    finally:
+        c.pg.set_viewport_size({"width": 390, "height": 844})
+        c.pg.wait_for_timeout(300)
+
+
+# hml-28 F5: o build de STAGING (vite build com VITE_DB_SCHEMA=staging — o site de teste e o vite preview do dist/) fica SEM PowerSync desde a
+# hml-04c (H-14, src/lib/powersync/instancia.ts: PROD e schema ≠ public → ""): nada sincroniza, o banco local do aparelho fica vazio e a aba
+# Treino fica no esqueleto "Baixando o seu treino" (o primeiroSync do Treino.tsx) — sem o treino do profissional, sem séries e sem a fila que
+# sobe. Nesse build o treino_dia prova o que não depende do banco local (a faixa Seg–Dom e a folha "Descanso") e o que precisa do treino no
+# aparelho fica PULADO, com o motivo (fora do placar; os casos inteiros, sem login nem gravação). O /health.json só existe no build
+# (vite.config.ts, apply: "build") e diz o schema; sem ele (o vite dev) ou com o public, o fluxo de sempre.
+SEM_POWERSYNC = {"sim": False}
+PULADOS: list[str] = []
+MOTIVO_SEM_POWERSYNC = "o build de staging não tem PowerSync (H-14): sem o treino no aparelho nem a fila que sobe"
+PRECISAM_DO_POWERSYNC = {
+    "historico": "terminar um treino, o calendário do mês, o detalhe, compartilhar e excluir",
+    "funcoes": "ficha, histórico, anotações, academia, séries, reordenar e 'Montar o meu'",
+    "sem_profissional": "o vazio com 'Montar o meu' e 'Usar um treino pronto' (sem o 1º sync a aba fica no esqueleto)",
+    "sem_internet": "o aviso sem internet com as mudanças esperando na fila",
+}
+PULADOS_DO_TREINO_DIA = (
+    "o treino do profissional no dia, as miniaturas e 'Começar treino' (3 checks)",
+    "as séries com peso e OK, os feitos com ✓, o atual 'Série 3 de 3' com a carga, o card '2 de N', a pílula e o card do descanso (8 checks)",
+    "o exercício aberto com S1 e S2 feitas (1 check)",
+    "o fim do treino: 'Treino foi concluído?', 'Treino finalizado!', compartilhar e TREINO CONCLUÍDO (5 checks)",
+    "a volta da internet e a subida para o staging: a fila, as séries, o histórico e o concluído (4 checks)",
+)
+# o descanso como o app o guarda no aparelho quando uma série recebe OK (useDescanso.ts: LS_DESCANSO e o EstadoDescansoSalvo); a aba Treino o
+# retoma ao montar ("o descanso sobrevive a recarregar"). O startedAt é o relógio da página; 3 min de descanso, correndo.
+DESCANSO_SEMEADO = {"ativo": True, "startedAt": 0, "pausedRemaining": 180, "isPaused": False, "duracao": 180,
+                    "exercicioNome": "Supino reto (teste E2E)", "numeroSerie": 2, "serieId": "e2e-hml28-descanso",
+                    "depois": "série 3 do Supino reto (teste E2E)"}
+SEMEAR_DESCANSO = "(s) => localStorage.setItem('physiq_rest_timer', JSON.stringify({ ...s, startedAt: Date.now() }))"
+
+
+def build_sem_powersync(base: str) -> bool:
+    """O build em `base` é o de staging (o /health.json com "schema": "staging") → sem PowerSync (H-14)."""
+    try:
+        with urllib.request.urlopen(f"{base.rstrip('/')}/health.json", timeout=20) as r:
+            return json.loads(r.read().decode("utf-8")).get("schema") == "staging"
+    except Exception:  # noqa: BLE001 — sem o arquivo (o vite dev) ou fora do ar: o fluxo de sempre
+        return False
+
+
+def pulado(texto: str) -> None:
+    """O que o build não deixa provar: fora do placar (nem ✅ nem ❌), numa linha ⏭️ e no total do fim."""
+    PULADOS.append(texto)
+    print(f"⏭️ pulado: {texto}", flush=True)
+
+
+def treino_dia_sem_powersync(nav, a) -> None:
+    """hml-28 F5 (o build sem PowerSync): a aba no esqueleto, a faixa Seg–Dom em 390 e 360 px e a folha "Descanso" com o descanso guardado no
+    aparelho (recarregar traz o cartão de volta), com os checks do H-169; o resto do treino_dia fica PULADO. Nada vai ao banco (o descanso só
+    mexe no localStorage); a limpeza do staging roda no fim do mesmo jeito."""
+    desde = B.agora_iso()
+    c = B.Caso(nav, a.base, a.prefixo, "treino_dia", desktop=False)
+    try:
+        c.entrar(B.ALUNO, "/treino", zerar=True)
+        c.fechar_avisos()
+        abriu = c.esperar(lambda: c.tem("[data-aba-treino]") and c.pg.locator("[data-faixa-semana] [data-dia-estado]").count() == 7, 60)
+        p.check(abriu, "[treino_dia] a aba Treino abriu já logada, com a faixa Seg–Dom")
+        p.check("Entrar com o Google" not in c.texto() and not c.caminho().startswith("/entrar"), "[treino_dia] não caiu na tela de entrada")
+        esqueleto = '[data-aba-treino] [data-estado="carregando"][aria-label="Baixando o seu treino"]'
+        p.check(c.esperar(lambda: c.tem(esqueleto), 10) and not c.tem("[data-cartao-treino]") and not c.tem("[data-sem-treino-dia]"),
+                "build sem PowerSync (H-14): a aba no esqueleto 'Baixando o seu treino', sem o cartão do treino (o esperado)")
+        p.check(c.pg.locator("[data-dia-estado]").count() == 7, "faixa Seg–Dom com os 7 dias")
+        c.print("treino_dia")
+        # hml-28: em 360 px o "Dom" da faixa passava 8 px da borda útil da página; os 7 dias têm de caber em 390 e em 360 px
+        faixa_cabe_em_390_e_360(c)
+        # o descanso guardado no aparelho → recarregar → a aba retoma o cartão do descanso (correndo)
+        c.pg.evaluate(SEMEAR_DESCANSO, DESCANSO_SEMEADO)
+        c.pg.reload(wait_until="domcontentloaded")
+        c.fechar_avisos()
+        p.check(c.esperar(lambda: c.tem('[data-descanso="correndo"]') and c.tem("[data-descanso-ajustes]"), 30),
+                f"o cartão do descanso volta ao recarregar (o descanso guardado no aparelho): '{B.texto(c, '[data-descanso-depois]')}'")
+        c.print("descanso_cartao")
+        c.pg.locator("[data-descanso-ajustes]").click()
+        c.esperar(lambda: c.tem("[data-ajustes-descanso]"), 6)
+        p.check(c.tem("[data-descanso-pausar]") and c.tem("[data-descanso-som]") and c.tem("[data-descanso-duracao]"), "ajustes do descanso: pausar, recomeçar, tempo e o som")
+        cortados = c.pg.evaluate("() => [...document.querySelectorAll('[data-ajustes-descanso] button')].filter(b => b.offsetWidth && b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim())")
+        p.check(not cortados, f"os botões do descanso cabem sem cortar o texto ({cortados})")
+        c.print("descanso_ajustes")
+        # hml-28 (H-169): com o descanso pausado, o "−15 s" passava 10,5 px da borda útil em 390 px e saía em parte da tela em 360 px
+        descanso_pausado_cabe(c)
+        dur0 = B.texto(c, "[data-descanso-duracao]")
+        c.pg.locator("[data-descanso-tempo-mais]").click()
+        c.pg.wait_for_timeout(300)
+        p.check(B.texto(c, "[data-descanso-duracao]") != dur0, f"ajustar o tempo do descanso ({dur0} → {B.texto(c, '[data-descanso-duracao]')})")
+        c.pg.keyboard.press("Escape")
+        c.pg.wait_for_timeout(400)
+        c.pg.locator("[data-descanso-pular]").click()
+        p.check(c.esperar(lambda: not c.tem("[data-descanso]"), 6) and c.pg.evaluate("() => localStorage.getItem('physiq_rest_timer')") is None,
+                "'Pular' fecha o descanso (nada fica guardado no aparelho)")
+        for parte in PULADOS_DO_TREINO_DIA:
+            pulado(f"[treino_dia] {parte} — {MOTIVO_SEM_POWERSYNC}")
+    finally:
+        c.fim()
+        time.sleep(2)
+        B.limpar_staging(desde, "treino_dia")
+
+
 @caso
 def caso_treino_dia(nav, a) -> None:
+    if SEM_POWERSYNC["sim"]:
+        treino_dia_sem_powersync(nav, a)
+        return
     desde = B.agora_iso()
     c = B.abrir_treino(nav, a.base, a.prefixo, "treino_dia")
     arquivos_locais(c)
@@ -123,6 +335,8 @@ def caso_treino_dia(nav, a) -> None:
         p.check(c.tem("[data-descanso]") and B.texto(c, "[data-descanso-depois]").startswith("Depois: série 3"), f"card do descanso: '{B.texto(c, '[data-descanso-depois]')}'")
         p.check(c.pg.locator('[data-dia-estado]').count() == 7, "faixa Seg–Dom com os 7 dias")
         c.print("treino_dia")
+        # hml-28: em 360 px o "Dom" da faixa passava 8 px da borda útil da página; os 7 dias têm de caber em 390 e em 360 px
+        faixa_cabe_em_390_e_360(c)
         B.abrir_exercicio(c, e3)
         c.pg.wait_for_timeout(400)
         # as séries acima do card do descanso (que flutua sobre a barra de abas)
@@ -136,6 +350,8 @@ def caso_treino_dia(nav, a) -> None:
         cortados = c.pg.evaluate("() => [...document.querySelectorAll('[data-ajustes-descanso] button')].filter(b => b.offsetWidth && b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim())")
         p.check(not cortados, f"os botões do descanso cabem sem cortar o texto ({cortados})")
         c.print("descanso_ajustes")
+        # hml-28 (H-169): com o descanso pausado, o "−15 s" passava 10,5 px da borda útil em 390 px e saía em parte da tela em 360 px
+        descanso_pausado_cabe(c)
         dur0 = B.texto(c, "[data-descanso-duracao]")
         c.pg.locator("[data-descanso-tempo-mais]").click()
         c.pg.wait_for_timeout(300)
@@ -387,17 +603,119 @@ def caso_sem_internet(nav, a) -> None:
     B.limpar_staging(desde, "sem_internet")
 
 
+# --seco (hml-28): o arquivo → o que tem de estar nele (os seletores, o rótulo e as classes que os checks do H-169 e da faixa usam)
+NO_CODIGO = {
+    "src/treino/ui/CartaoDescanso.tsx": ['className="@container flex flex-col gap-4 pt-1" data-ajustes-descanso',
+                                         'className="grid grid-cols-2 gap-2 @min-[360px]:grid-cols-[1fr_1fr_auto]"',
+                                         'className="col-span-2 px-4 @min-[360px]:col-span-1"', "data-descanso-pausar", "data-descanso-recomecar",
+                                         "data-descanso-menos15-ajuste", '{d.pausado ? "Continuar" : "Pausar"}', "data-descanso-ajustes"],
+    "src/ui/premium/Sheet.tsx": ["data-painel={lado}", 'className="min-h-0 flex-1 overflow-y-auto px-5 pb-5"'],
+    # a faixa Seg–Dom (o achado da W): os seletores do check e o dia sem o flex-none (os 7 encolhem por igual quando não cabem)
+    "src/treino/ui/FaixaSemana.tsx": ["data-faixa-semana={deslocamento}", "data-dia-estado={estado}", 'className="flex justify-between gap-1"',
+                                      '"relative flex h-[62px] w-[44px] flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold transition-colors"'],
+    # hml-28 F5, o caminho do build sem PowerSync: a regra da instância, o esqueleto do 1º sync, o descanso guardado no aparelho (a chave, a aba
+    # que o retoma ao montar, o estado e o Pular do cartão) e o health.json do build com o schema
+    "src/lib/powersync/instancia.ts": ['if (env.PROD && schema !== "public") return "";'],
+    "src/app-aluno/abas/Treino.tsx": ["const primeiroSync = !status.hasSynced && vazio", 'rotulo="Baixando o seu treino"', "ativo: descansoGuardadoAtivo(),"],
+    "src/treino/useDescanso.ts": ['export const LS_DESCANSO = "physiq_rest_timer";'],
+    "src/ui/premium/Estados.tsx": ['aria-label={rotulo} data-estado="carregando"'],
+    "src/treino/ui/CartaoDescanso.tsx#cartao": ['data-descanso={d.acabou ? "acabou" : d.pausado ? "pausado" : "correndo"}', "data-descanso-pular"],
+    "vite.config.ts": ['name: "physiq-health",', 'fileName: "health.json"', "schema: SCHEMAS_DO_BANCO.includes(schema) ? schema : null,"],
+}
+# as medidas da sonda da hml-28 (réplica com as classes do código, Chromium 153 = Edge 154): o código de antes com "Continuar" e o corrigido
+_ANTES = {"pausar": "Continuar", "botoes": [[21, 152.64], [160.64, 302.58], [310.58, 379.5]]}
+_DEPOIS = {"pausar": "Continuar"}
+MEDIDAS_DA_SONDA = {
+    "antes_390": {**_ANTES, "tela": 390, "doc": 390, "util": [21, 369], "fileira": [348, 359], "corpo": [388, 388]},
+    "antes_360": {**_ANTES, "tela": 360, "doc": 360, "util": [21, 339], "fileira": [318, 359], "corpo": [358, 379]},
+    "depois_390": {**_DEPOIS, "tela": 390, "doc": 390, "util": [21, 369], "fileira": [348, 348], "corpo": [388, 388],
+                   "botoes": [[21, 191], [199, 369], [21, 369]]},
+    "depois_360": {**_DEPOIS, "tela": 360, "doc": 360, "util": [21, 339], "fileira": [318, 318], "corpo": [358, 358],
+                   "botoes": [[21, 176], [184, 339], [21, 339]]},
+}
+# a faixa Seg–Dom na sonda da hml-28 (a página com as classes do código): antes e depois em 360 px; os 44 px de hoje em 390 (antes = depois)
+MEDIDAS_DA_FAIXA = {
+    "antes_360": {"tela": 360, "doc": 360, "util": [18, 342], "fileira": [324, 332],
+                  "dias": [[18, 62, 42, 42], [66, 110, 42, 42], [114, 158, 42, 42], [162, 206, 42, 42], [210, 254, 42, 42], [258, 302, 42, 42], [306, 350, 42, 42]]},
+    "depois_360": {"tela": 360, "doc": 360, "util": [18, 342], "fileira": [324, 324],
+                   "dias": [[18, 60.86, 41, 41], [64.86, 107.7, 41, 41], [111.7, 154.56, 41, 41], [158.56, 201.42, 41, 41], [205.42, 248.28, 41, 41],
+                            [252.28, 295.14, 41, 41], [299.14, 342, 41, 41]]},
+    "hoje_390": {"tela": 390, "doc": 390, "util": [18, 372], "fileira": [354, 354],
+                 "dias": [[18, 62, 42, 42], [69.67, 113.67, 42, 42], [121.33, 165.33, 42, 42], [173, 217, 42, 42], [224.67, 268.67, 42, 42],
+                          [276.33, 320.33, 42, 42], [328, 372, 42, 42]]},
+}
+
+
+def seco() -> int:
+    """Sem navegador e sem rede (o socket fica bloqueado): os seletores e as classes do H-169 e da faixa no código e as regras dos checks."""
+    def sem_rede(*_a, **_k):
+        raise RuntimeError("--seco não usa a rede")
+
+    socket.socket.connect = sem_rede  # type: ignore[method-assign]
+    raiz = Path(__file__).resolve().parents[2]
+
+    def fonte(arq: str) -> str:  # "arquivo#rótulo": o mesmo arquivo em mais de uma entrada
+        f = raiz / arq.split("#")[0]
+        return f.read_text(encoding="utf-8") if f.exists() else ""
+
+    falta = [f"{arq} › {x}" for arq, itens in NO_CODIGO.items() for x in itens if x not in fonte(arq)]
+    total = sum(len(v) for v in NO_CODIGO.values())
+    p.check(not falta, f"seco: {total - len(falta)}/{total} seletores, rótulos e classes dos checks do H-169, da faixa e do build sem PowerSync no código"
+            + (f" — falta: {falta}" if falta else ""))
+    m = re.search(r"export interface EstadoDescansoSalvo \{(.*?)\n\}", fonte("src/treino/useDescanso.ts"), re.S)
+    campos = re.findall(r"^\s+(\w+)\??:", m.group(1), re.M) if m else []
+    p.check(bool(campos) and set(campos) == set(DESCANSO_SEMEADO),
+            f"seco: o descanso semeado no build sem PowerSync tem os campos do EstadoDescansoSalvo (useDescanso.ts): {sorted(campos)}")
+    M = MEDIDAS_DA_SONDA
+    p.check(not fileira_descanso_cabe(M["antes_390"], 390) and not fileira_descanso_cabe(M["antes_360"], 360),
+            "seco: a regra acusa o código de antes ('Continuar': o −15 s até 379,5 px, a útil 369 em 390 e 339 em 360)")
+    p.check(fileira_descanso_cabe(M["depois_390"], 390) and fileira_descanso_cabe(M["depois_360"], 360),
+            "seco: a regra passa no corrigido (o −15 s na 2ª linha com a largura toda; cada botão dentro da útil em 390 e em 360)")
+    p.check(not fileira_descanso_cabe({**M["depois_390"], "pausar": "Pausar"}, 390) and not fileira_descanso_cabe({"botoes": []}, 390)
+            and not fileira_descanso_cabe({**M["depois_390"], "corpo": None}, 390),
+            "seco: a regra exige o descanso pausado ('Continuar'), os 3 botões e o corpo da folha (com 'Pausar' ou sem a fileira, falha)")
+    FX = MEDIDAS_DA_FAIXA
+    p.check(not faixa_cabe(FX["antes_360"], 360) and faixa_cabe(FX["depois_360"], 360) and faixa_cabe(FX["hoje_390"], 390),
+            "seco: a regra da faixa acusa o código de antes em 360 px (o 'Dom' até 350, a útil 342) e passa no corrigido (os 7 com 42,86 px) e nos 44 px de 390")
+    d390, d360 = FX["hoje_390"]["dias"], FX["depois_360"]["dias"]
+    p.check(not faixa_cabe({**FX["hoje_390"], "dias": [[d[0], d[0] + 40, 38, 38] for d in d390]}, 390)
+            and not faixa_cabe({**FX["depois_360"], "dias": d360[:6] + [[299.14, 330, 29, 29]]}, 360)
+            and not faixa_cabe({**FX["depois_360"], "dias": [[d[0], d[1], 41, 45] for d in d360]}, 360)
+            and not faixa_cabe({**FX["depois_360"], "dias": d360[:6]}, 360),
+            "seco: a regra da faixa exige os 44 px de hoje quando cabe (encolher em 390 falha), os 7 iguais, o conteúdo dentro do dia e os 7 dias")
+    try:
+        socket.create_connection(("127.0.0.1", 9), timeout=1)
+        bloqueado = False
+    except RuntimeError:
+        bloqueado = True
+    except OSError:
+        bloqueado = False
+    p.check(bloqueado, "seco: a rede fica bloqueada (nada foi ao banco nem ao site)")
+    return p.fim()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:5173")
     ap.add_argument("--prefixo", default="local")
     ap.add_argument("--casos", default=",".join(CASOS))
+    ap.add_argument("--canal", default="chromium", choices=("chromium", "msedge", "chrome"))
+    ap.add_argument("--seco", action="store_true",
+                    help="sem navegador e sem rede: os checks do H-169 e da faixa (seletores, classes e as regras) e as premissas do build sem PowerSync")
     a = ap.parse_args()
+    if a.seco:
+        return seco()
     B.ESTADO["schema"] = "staging"
+    SEM_POWERSYNC["sim"] = build_sem_powersync(a.base)
+    print(f"o build em {a.base}: " + ("de STAGING, SEM PowerSync (H-14) — o que precisa do treino no aparelho fica PULADO" if SEM_POWERSYNC["sim"]
+                                     else "com PowerSync (ou sem o /health.json) — o fluxo completo"), flush=True)
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+        nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox", "--disable-dev-shm-usage"])
         for nome in a.casos.split(","):
             print(f"\n== {nome} ==", flush=True)
+            if SEM_POWERSYNC["sim"] and nome in PRECISAM_DO_POWERSYNC:
+                pulado(f"[{nome}] o caso inteiro: {PRECISAM_DO_POWERSYNC[nome]} — {MOTIVO_SEM_POWERSYNC}")
+                continue
             if not B.saude_treino():
                 p.check(False, f"[{nome}] Banco do Treino fora do normal — parei (sem reiniciar nada)")
                 break
@@ -407,6 +725,8 @@ def main() -> int:
                 p.check(False, f"[{nome}] exceção: {e!r}"[:400])
             time.sleep(4)
         nav.close()
+    if PULADOS:
+        print(f"\n⏭️ {len(PULADOS)} pulados (fora do placar) — {MOTIVO_SEM_POWERSYNC}", flush=True)
     return p.fim()
 
 

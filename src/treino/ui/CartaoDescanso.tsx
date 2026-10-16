@@ -82,19 +82,21 @@ export function CartaoDescanso(props: OpcoesDescanso) {
       )}
 
       <PainelDeslizante aberto={ajustes} aoMudar={setAjustes} titulo="Descanso" descricao={`${props.exercicioNome} — série ${props.numeroSerie}`}>
-        <div className="flex flex-col gap-4 pt-1" data-ajustes-descanso>
+        <div className="@container flex flex-col gap-4 pt-1" data-ajustes-descanso>
           <div className="flex items-center justify-center gap-6">
             <Anel pct={pct} tamanho={120} espessura={9} cor="#A78BFA" gradiente={["#C4B5FD", "#7C3AED"]}>
               <span className="text-[26px] font-bold tabular-nums text-texto">{relogio(d.segundos)}</span>
               <span className="text-[11px] text-texto-3">de {relogio(d.duracao)}</span>
             </Anel>
           </div>
-          <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+          {/* hml-28 (H-169): com "Continuar", os 3 numa linha precisam de 358,5 px (o botão não quebra o texto) e passavam da borda da folha em
+              390 px. Abaixo de 360 px de conteúdo (o @container acima), o "−15 s" desce com a largura toda — o mesmo com "Pausar" e "Continuar". */}
+          <div className="grid grid-cols-2 gap-2 @min-[360px]:grid-cols-[1fr_1fr_auto]">
             <Botao variante="g" icone={d.pausado ? Play : Pause} onClick={d.pausarOuContinuar} disabled={d.acabou} data-descanso-pausar>
               {d.pausado ? "Continuar" : "Pausar"}
             </Botao>
             <Botao variante="g" icone={RotateCcw} onClick={d.recomecar} data-descanso-recomecar>Recomeçar</Botao>
-            <Botao variante="g" className="px-4" onClick={d.menos15} disabled={d.acabou} data-descanso-menos15-ajuste>−15 s</Botao>
+            <Botao variante="g" className="col-span-2 px-4 @min-[360px]:col-span-1" onClick={d.menos15} disabled={d.acabou} data-descanso-menos15-ajuste>−15 s</Botao>
           </div>
           <div>
             <div className="pq-eyebrow mb-2">Tempo de descanso</div>
