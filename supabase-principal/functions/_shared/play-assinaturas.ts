@@ -199,9 +199,9 @@ export async function sincronizar(c: ContextoPlay, token: string, p: PedidoSincr
 
   // o defer da 1ª compra coberta (o que falta do teste ou do mês do MP), UMA vez só (a revisão, 🟡1): a marca adiada_em é RESERVADA no banco
   // antes de ir ao Google (o update atômico: quem não reservou não adia — o RTDN 9 ou o repetido que chega no meio) e, logo depois do 2xx,
-  // gravada com o fim novo da PRÓPRIA resposta do defer, antes de qualquer outra ida. O Google que recusa (resposta que decide) desfaz a
-  // reserva e a próxima sincronia tenta de novo; o Google sem resposta (prazo, rede) MANTÉM a reserva: adiar 2 vezes daria de novo os dias
-  // (a receita some calada) — o log play_adiar_incerto avisa para conferir no Console.
+  // gravada com o fim novo da PRÓPRIA resposta do defer, antes de qualquer outra ida. O Google que recusa (4xx: resposta que decide) desfaz
+  // a reserva e a próxima sincronia tenta de novo; o Google sem resposta (prazo, rede) ou com 5xx MANTÉM a reserva: adiar 2 vezes daria de
+  // novo os dias (a receita some calada) — o log play_adiar_incerto avisa para conferir no Console.
   const dias = p.adiar !== false && resposta.estado === "ativa" && resposta.matricula_ativa === true && resposta.adiar_ate && !resposta.adiada_em
     ? diasParaAdiar(resposta.adiar_ate, atual.inicio) : null;
   if (dias) {
@@ -247,8 +247,12 @@ export async function sincronizar(c: ContextoPlay, token: string, p: PedidoSincr
             if (!(e instanceof PlayIndisponivel)) throw e;
             c.log.aviso({ codigo: "play_pos_adiar_get_falhou", schema: c.schema, ref: p.pacienteId, status: e.status, externo: { google_erro: e.codigo } });
           }
+        } else if (r && r.status >= 500) {
+          // o Google respondeu 5xx: INCERTO, como o prazo esgotado (ele pode ter aplicado o defer e caído depois) — a reserva FICA; adiar
+          // de novo daria os dias 2 vezes (a conferência das correções, DECISÃO 07:08)
+          c.log.erro({ codigo: "play_adiar_incerto", schema: c.schema, ref: p.pacienteId, n: dias, status: r.status, externo: { google_erro: r.erro } });
         } else if (r) {
-          // o Google recusou (resposta que decide): a reserva sai e a próxima sincronia tenta de novo
+          // o Google recusou (resposta que decide: 4xx): a reserva sai e a próxima sincronia tenta de novo
           await desfazerReserva(c.db, token, reservada);
           resposta = { ...resposta, adiada_em: null };
           c.log.erro({ codigo: "play_adiar_falhou", schema: c.schema, ref: p.pacienteId, status: r.status, externo: { google_erro: r.erro } });
