@@ -4,6 +4,8 @@
 #   descartavel <apk> <SHA-256 esperado>  o check da branch: assinado com a chave descartável que o job gerou (a impressão dela)
 #                                         e NUNCA com a chave do site nem com a de upload da Play
 #   site <apk>                            o APK do aparelho (job apk-aparelho): assinado com a chave do site
+#   teste <apk>                           play-W6: o APK "loja + staging" (aab-loja.sh apk-staging): assinado com a chave de DEBUG
+#                                         da máquina — válido, e NUNCA com a chave do site nem com a de upload
 #
 # As impressões são públicas (as mesmas do scripts/ci/aab-loja.sh e do public/.well-known/assetlinks.json). Falhou a leitura → a
 # saída do apksigner vai para o log (só certificado e impressões: nada de segredo).
@@ -81,8 +83,19 @@ case "$modo" in
     fi
     echo "OK APK assinado com a chave do site (SHA-256 $dig)"
     ;;
+  teste)
+    apk="${2:?uso: $0 teste <apk>}"
+    site="$(printf '%s' "$SHA256_SITE" | norm)"
+    upload="$(printf '%s' "$SHA256_UPLOAD" | norm)"
+    dig="$(impressao_do_apk "$apk")"
+    if [ "$dig" = "$site" ] || [ "$dig" = "$upload" ]; then
+      erro "o APK de teste saiu com uma chave REAL ($dig) — ele leva só a chave de debug da máquina"
+      exit 1
+    fi
+    echo "OK APK de teste assinado com a chave de debug da máquina (SHA-256 $dig) — não é a do site nem a de upload"
+    ;;
   *)
-    echo "uso: $0 descartavel <apk> <SHA-256 esperado> | site <apk>" >&2
+    echo "uso: $0 descartavel <apk> <SHA-256 esperado> | site <apk> | teste <apk>" >&2
     exit 2
     ;;
 esac

@@ -16,6 +16,9 @@
 #   sem-master aab  só a conferência (f), sem o Android (sem keytool, bundletool nem Gradle)
 #   local           versao + web + gradle + conferir no notebook, com a chave do ~/keystores/physiq-play-upload.env (lida só
 #                   no Gradle; PLAY_UPLOAD_ENV troca o arquivo), e devolve o build.gradle como estava
+#   apk-staging     play-W6: o APK "loja + staging" no notebook — o playRelease (com a cobrança da Play) num APK assinado com a
+#                   chave de DEBUG da máquina e o site do build:loja no schema staging (o .env.local do staging), para o
+#                   testador de licença instalar por fora e comprar com o cartão de teste. Nunca vai para a loja
 #
 # A conferência falha o job se:
 #   (a) o AAB não estiver assinado só com a chave de upload (SHA-256 abaixo) — sem assinatura, com outra chave ou com a do site;
@@ -25,7 +28,9 @@
 #   (d) o versionCode (e o versionName) do AAB não baterem com o package.json pela fórmula;
 #   (e) com o google-services.json presente, o Gradle não tiver gerado o google_app_id do playRelease (a checagem do APK);
 #   (f) o JS do site dentro do AAB levar o painel master (hml-08: o master é só do site) — o scripts/ci/sem-master.sh nos .js de
-#       base/assets/public/assets/.
+#       base/assets/public/assets/;
+#   (g) play-W6: faltar a cobrança da Play — a permissão com.android.vending.BILLING no manifesto e, no dex, o PlayBillingPlugin e
+#       a Play Billing Library (scripts/ci/cobranca-play.sh tem; o APK do site é conferido ao contrário: cobranca-play.sh sem).
 #
 # hml-16b (H-45): CHECK_DESCARTAVEL=1 (o check da branch, build-apk-check.yml) troca o certificado esperado na (a) pelo da chave
 # DESCARTÁVEL que o job gerou (SHA256_UPLOAD_ESPERADO, impressão dela) — e aí a chave de upload real e a do site viram erro: a
@@ -297,6 +302,9 @@ passo_conferir() {
   # (f) o JS do site dentro do AAB sai sem o painel master (hml-08)
   conferir_sem_master "$aab" || falhas=$((falhas + 1))
 
+  # (g) play-W6: a cobrança da Play está no AAB (a permissão BILLING, o plugin e a biblioteca) — só o playRelease a leva
+  BUNDLETOOL_JAR="$bt" bash "$RAIZ/scripts/ci/cobranca-play.sh" tem "$aab" || falhas=$((falhas + 1))
+
   if [ "$falhas" -gt 0 ]; then
     morre "o AAB NÃO passou: $falhas conferência(s) falharam"
   fi
@@ -326,6 +334,76 @@ passo_local() {
   passo_conferir
 }
 
+# play-W6 (decisão 4 de 16/10/2026) — o APK "loja + staging": o build type playRelease (a cobrança da Play) num APK assinado com
+# a chave de DEBUG desta máquina (PLAY_APK_CHAVE_DEBUG=1 no build.gradle; sem nenhuma chave real no ambiente do Gradle) e o site
+# do build:loja no schema staging. O testador de licença instala por fora ("even debug builds", com o pacote igual) e assina com
+# o cartão de teste: a compra real, com o Google de verdade, no staging. Precisa do .env.local do staging (as VITE_* do staging) e
+# devolve o build.gradle como estava. Não é AAB nem leva a chave de upload: não vai para a loja.
+SAIDA_APK_STAGING="$RAIZ/android/app/build/outputs/apk/playRelease"
+
+conferir_apk_staging() {
+  local apk="$1" falhas=0 perms html saude aapt2 d
+  [ -n "$apk" ] && [ -f "$apk" ] || morre "o assemblePlayRelease não gerou o APK em ${SAIDA_APK_STAGING#"$RAIZ"/}"
+  bash "$RAIZ/scripts/ci/apk-assinatura.sh" teste "$apk" || falhas=$((falhas + 1))
+  aapt2=""
+  while IFS= read -r d; do
+    if [ -x "${d}aapt2" ]; then aapt2="${d}aapt2"; break; fi
+  done < <(find "${ANDROID_HOME:?ANDROID_HOME vazio}/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%p/\n' 2>/dev/null |
+    { grep -E '/[0-9]+(\.[0-9]+)*/$' || true; } | sort -V -r)
+  [ -n "$aapt2" ] || morre "aapt2 não encontrado em $ANDROID_HOME/build-tools"
+  perms="$("$aapt2" dump permissions "$apk")"
+  if ! grep -qF "package: $PACOTE" <<< "$perms"; then
+    erro "(b) o APK de teste não é do pacote $PACOTE (a Play só cobra no pacote igual)"
+    falhas=$((falhas + 1))
+  elif grep -qF 'REQUEST_INSTALL_PACKAGES' <<< "$perms"; then
+    erro "(b) o APK de teste tem REQUEST_INSTALL_PACKAGES (o playRelease tira)"
+    falhas=$((falhas + 1))
+  else
+    log "OK (b) APK de teste do $PACOTE sem REQUEST_INSTALL_PACKAGES"
+  fi
+  html="$(unzip -p "$apk" assets/public/index.html 2>/dev/null || true)"
+  saude="$(unzip -p "$apk" assets/public/health.json 2>/dev/null || true)"
+  if ! grep -qF "$MARCA_LOJA" <<< "$html"; then
+    erro "(c) o site dentro do APK de teste não é o do build:loja (falta $MARCA_LOJA)"
+    falhas=$((falhas + 1))
+  elif ! grep -qF '"schema":"staging"' <<< "$saude"; then
+    erro "(c) o site dentro do APK de teste não aponta para o staging (health.json)"
+    falhas=$((falhas + 1))
+  else
+    log "OK (c) site da loja no schema staging dentro do APK de teste"
+  fi
+  bash "$RAIZ/scripts/ci/cobranca-play.sh" tem "$apk" || falhas=$((falhas + 1))
+  if [ "$falhas" -gt 0 ]; then
+    morre "o APK de teste NÃO passou: $falhas conferência(s) falharam"
+  fi
+  local final
+  final="$SAIDA_APK_STAGING/Physiq-v$(versao_do_pacote)-loja-staging.apk"
+  mv "$apk" "$final"
+  log "APK de teste conferido: ${final#"$RAIZ"/} ($(du -h "$final" | cut -f1)) — instalar por fora só no aparelho do testador de licença"
+}
+
+passo_apk_staging() {
+  [ -f "$RAIZ/.env.local" ] || morre "sem o .env.local do staging (docs/loja-google-play.md › O APK \"loja + staging\")"
+  GRADLE_ORIGINAL="$(mktemp "${TMPDIR:-/tmp}/build.gradle.XXXXXX")"
+  cp "$GRADLE_APP" "$GRADLE_ORIGINAL"
+  passo_versao
+  cd "$RAIZ"
+  VITE_DB_SCHEMA=staging VITE_PRINCIPAL_SCHEMA=staging npm run build:loja
+  grep -qF "$MARCA_LOJA" dist/index.html || morre "o dist/ não é o site da loja (falta $MARCA_LOJA no index.html)"
+  grep -qF '"schema":"staging"' dist/health.json || morre "o dist/ não aponta para o staging (o health.json não diz \"staging\")"
+  bash "$RAIZ/scripts/ci/sem-master.sh" dist
+  npx cap sync android
+  rm -f "$SAIDA_APK_STAGING"/*.apk
+  # nenhuma chave real no ambiente do Gradle: só a de debug da máquina (o build.gradle só a usa com PLAY_APK_CHAVE_DEBUG=1)
+  (
+    unset PLAY_UPLOAD_KEYSTORE_FILE PLAY_UPLOAD_KEYSTORE_BASE64 PLAY_UPLOAD_KEYSTORE_PASSWORD PLAY_UPLOAD_KEY_ALIAS PLAY_UPLOAD_KEY_PASSWORD
+    unset KEYSTORE_FILE KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD
+    export PLAY_APK_CHAVE_DEBUG=1
+    cd "$RAIZ/android" && bash ./gradlew --no-daemon assemblePlayRelease
+  )
+  conferir_apk_staging "$(find "$SAIDA_APK_STAGING" -maxdepth 1 -name '*.apk' | head -1)"
+}
+
 case "${1:-}" in
   versao) passo_versao ;;
   firebase) passo_firebase ;;
@@ -334,8 +412,9 @@ case "${1:-}" in
   conferir) passo_conferir "${2:-}" ;;
   sem-master) conferir_sem_master "${2:?uso: $0 sem-master <arquivo.aab>}" ;;
   local) passo_local ;;
+  apk-staging) passo_apk_staging ;;
   *)
-    echo "uso: $0 <versao|firebase|web|gradle|conferir [arquivo.aab]|sem-master <arquivo.aab>|local>" >&2
+    echo "uso: $0 <versao|firebase|web|gradle|conferir [arquivo.aab]|sem-master <arquivo.aab>|local|apk-staging>" >&2
     exit 2
     ;;
 esac
