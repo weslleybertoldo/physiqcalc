@@ -29,6 +29,16 @@ async function novoDoc(): Promise<JsPdf> {
   return new jsPDF({ unit: "mm", format: "a4" });
 }
 
+/** Quem processou o pagamento (o rodapé do comprovante). play-W6 (a revisão, 🟡5): a forma google_play não cai no "Mercado Pago" — nem a
+ *  infinitepay da W1 (o achado da mesma função, DECISÃO de 16/10 05:23). */
+export function origemDoComprovante(forma: string | null | undefined): string {
+  if (forma === "manual") return "Pagamento registrado pelo profissional";
+  if (forma === "pix_manual") return "Pix na chave do profissional, confirmado por ele";
+  if (forma === "google_play") return "Pagamento processado pela Google Play";
+  if (forma === "infinitepay") return "Pagamento processado pela InfinitePay";
+  return "Pagamento processado pelo Mercado Pago";
+}
+
 /** "Comprovante de pagamento" de uma cobrança do aluno (o do Calc, com a marca Physiq). */
 export async function baixarComprovantePdf(c: CobrancaVista, extra: { aluno: string; profissional: string | null; mp?: DetalheMp | null }): Promise<string> {
   const doc = await novoDoc();
@@ -93,7 +103,7 @@ export async function baixarComprovantePdf(c: CobrancaVista, extra: { aluno: str
   y += 4;
   doc.setFontSize(8);
   doc.setTextColor(...CINZA);
-  const origem = c.forma === "manual" ? "Pagamento registrado pelo profissional" : c.forma === "pix_manual" ? "Pix na chave do profissional, confirmado por ele" : "Pagamento processado pelo Mercado Pago";
+  const origem = origemDoComprovante(c.forma);
   doc.text(`Emitido em ${dataHoraBR(new Date().toISOString())} · ${origem}`, W / 2, y, { align: "center" });
   const nome = `comprovante-physiq-${(c.mes_ref ?? c.vencimento).slice(0, 7)}.pdf`;
   await salvarPdf(doc, nome);

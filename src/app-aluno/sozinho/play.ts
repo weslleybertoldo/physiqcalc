@@ -53,6 +53,9 @@ export interface EstadoPlayServidor {
 
 export async function buscarEstadoPlay(): Promise<EstadoPlayServidor> {
   const r = await chamar<Record<string, unknown>>({ acao: "estado" });
+  // a revisão, 🟡3: o servidor ressincronizou a viva vencida (a renovação ou o EXPIRED que o RTDN não trouxe) — o resumo guardado no
+  // aparelho (10 min) fica velho: a trava e a faixa leem de novo
+  if (r.ressincronizada === true) invalidarResumo();
   const m = r.matricula && typeof r.matricula === "object" ? (r.matricula as Record<string, unknown>) : null;
   return {
     disponivel: r.disponivel === true,
@@ -91,9 +94,9 @@ export type DesfechoAssinatura =
   | { tipo: "cancelada" }
   | { tipo: "erro"; codigo: string };
 
-/** A compra deste produto entre as que a Play devolveu (a do produto pedido; sem ela, a 1ª). */
+/** A compra deste produto entre as que a Play devolveu — só a do produto pedido (a revisão, ⚪19: nunca "a 1ª da lista"). */
 function compraDoProduto(compras: CompraPlay[], produto: CodigoPlay): CompraPlay | null {
-  return compras.find((c) => c.produtos?.includes(produto)) ?? compras[0] ?? null;
+  return compras.find((c) => c.produtos?.includes(produto)) ?? null;
 }
 
 /**
@@ -108,7 +111,9 @@ export async function assinarPelaPlay(p: {
   try {
     let troca: { tokenAntigo: string; produtoAntigo: string; modo: ModoTroca } | undefined;
     if (p.troca) {
-      const atual = (await comprasDaPlay()).find((c) => c.produtos?.includes(p.troca!.produtoAntigo));
+      // a revisão, 🟡6: só a compra DESTA matrícula (a conta Google do aparelho pode ter a assinatura de outra pessoa — o aparelho da
+      // família): sem ela, nada de trocar (a Play substituiria a assinatura de outro)
+      const atual = (await comprasDaPlay()).find((c) => c.produtos?.includes(p.troca!.produtoAntigo) && c.conta === p.matriculaId);
       if (!atual) return { tipo: "erro", codigo: "erro_play" };
       troca = { tokenAntigo: atual.token, produtoAntigo: p.troca.produtoAntigo, modo: p.troca.modo };
     }
@@ -117,12 +122,20 @@ export async function assinarPelaPlay(p: {
     if (r.resultado === "indisponivel") return { tipo: "erro", codigo: "indisponivel" };
     if (r.resultado === "erro") return { tipo: "erro", codigo: "erro_play" };
     if (r.resultado === "ja_tem") {
-      // já comprada (o registrar não chegou): volta ao servidor
-      const n = await recuperarComprasDaPlay(p.matriculaId);
+      // já comprada (o registrar não chegou, ou o RTDN já reconheceu): volta ao servidor — também a reconhecida DESTA matrícula (a revisão, ⚪15)
+      const n = await recuperarComprasDaPlay(p.matriculaId, undefined, { comAsReconhecidas: true });
       return n > 0 ? { tipo: "assinada", registro: null } : { tipo: "erro", codigo: "ja_tem" };
     }
     const compra = compraDoProduto(r.compras, p.oferta.produto);
-    if (!compra) return { tipo: "erro", codigo: "erro_play" };
+    if (!compra) {
+      // a revisão, 🟡2: na troca, a Play pode voltar OK com a lista vazia (o DEFERRED) — a troca foi feita: sucesso + a recuperação pelas
+      // compras do aparelho (a compra nova desta matrícula vai ao servidor)
+      if (troca) {
+        await recuperarComprasDaPlay(p.matriculaId);
+        return { tipo: "assinada", registro: null };
+      }
+      return { tipo: "erro", codigo: "erro_play" };
+    }
     if (compra.estado === "pendente") return { tipo: "pendente" };
     const produto = compra.produtos.find(ehCodigoPlay) ?? p.oferta.produto;
     return { tipo: "assinada", registro: await registrarCompraPlay(compra.token, produto) };
@@ -136,12 +149,14 @@ export async function assinarPelaPlay(p: {
  * aparelho que a Play ainda não tem reconhecidas, desta matrícula (ou sem a matrícula opaca), voltam ao servidor. Devolve quantas
  * o servidor aceitou. Nunca lança.
  */
-export async function recuperarComprasDaPlay(matriculaId: string, compras?: CompraPlay[]): Promise<number> {
+export async function recuperarComprasDaPlay(matriculaId: string, compras?: CompraPlay[], opcoes: { comAsReconhecidas?: boolean } = {}): Promise<number> {
   let feitas = 0;
   try {
     const lista = compras ?? (await comprasDaPlay());
     for (const c of lista) {
-      if (c.estado !== "comprada" || c.reconhecida || (c.conta && c.conta !== matriculaId)) continue;
+      if (c.estado !== "comprada" || (c.conta && c.conta !== matriculaId)) continue;
+      // a reconhecida só entra quando pedida (o "já tem": o RTDN pode ter reconhecido antes do registrar) e só a DESTA matrícula
+      if (c.reconhecida && !(opcoes.comAsReconhecidas && c.conta === matriculaId)) continue;
       const produto = c.produtos.find(ehCodigoPlay);
       if (!produto) continue;
       try {

@@ -163,7 +163,8 @@ export const MENSAGEM_PLAY: Readonly<Record<string, string>> = {
   indisponivel: "A Google Play não está disponível neste aparelho agora. Confira se você está com a conta do Google na Play Store.",
   ja_tem: "Você já tem essa assinatura na Google Play. Abra Gerenciar na Google Play para ver.",
   pendente: "A Google Play ainda está processando o pagamento. Assim que confirmar, o app libera.",
-  compra_invalida: "A Google Play não confirmou esta compra. Nada foi cobrado por aqui — tente de novo.",
+  // a revisão, ⚪17: a Play pode ter cobrado — sem o reconhecimento do servidor, ela devolve o valor sozinha em até 3 dias
+  compra_invalida: "A Google Play não confirmou esta compra. Se ela foi cobrada, a Google Play devolve o valor em até 3 dias — tente de novo.",
   compra_de_outra_conta: "Esta assinatura da Google Play é de outra conta do Physiq.",
   assinatura_duplicada: "Você já tem uma assinatura ativa. A nova compra não vale e a Google Play devolve o valor.",
   google_indisponivel: "Não deu para falar com a Google Play agora. Se você assinou, a assinatura vai aparecer aqui em instantes.",

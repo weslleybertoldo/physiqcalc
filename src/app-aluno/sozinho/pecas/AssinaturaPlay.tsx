@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { App as CapApp } from "@capacitor/app";
 import { useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Repeat, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
@@ -57,9 +58,13 @@ export function FolhaOfertaPlay({
   const play = usePlayDaLoja();
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
+  const [codigoErro, setCodigoErro] = useState("");
 
   useEffect(() => {
-    if (aberto) setErro("");
+    if (aberto) {
+      setErro("");
+      setCodigoErro("");
+    }
   }, [aberto]);
 
   const concluir = async () => {
@@ -75,10 +80,18 @@ export function FolhaOfertaPlay({
     if (!oferta || !matriculaId) return setErro(mensagemPlay("sem_matricula_do_app"));
     setEnviando(true);
     setErro("");
+    setCodigoErro("");
     const d = await assinarPelaPlay({ matriculaId, oferta, troca: troca ?? null });
     setEnviando(false);
     if (d.tipo === "cancelada") return;
-    if (d.tipo === "erro") return setErro(mensagemPlay(d.codigo));
+    if (d.tipo === "erro") {
+      setErro(mensagemPlay(d.codigo));
+      setCodigoErro(d.codigo);
+      // a revisão, ⚪15: o Google fora no registrar (a compra pode ter sido feita: o RTDN grava) e o "já tem" — recarrega a Play e a
+      // situação: o que o servidor já gravou aparece sem esperar os 10 minutos do resumo guardado
+      if (d.codigo === "google_indisponivel" || d.codigo === "ja_tem") await concluir();
+      return;
+    }
     if (d.tipo === "pendente") toast.info(mensagemPlay("pendente"));
     else toast.success(troca ? `Plano trocado para ${nomePlano} pela Google Play.` : `Assinatura feita: ${nomePlano}. Bom treino!`);
     aoFechar();
@@ -115,7 +128,7 @@ export function FolhaOfertaPlay({
           {troca && <p className="text-[12.5px] leading-relaxed text-texto-2" data-play-troca={troca.modo}>{textoDaTroca(troca.modo)}</p>}
           {ResumoAntesDePagar && (
             <Suspense fallback={null}>
-              <ResumoAntesDePagar tela="meu-plano" />
+              <ResumoAntesDePagar tela="loja" />
             </Suspense>
           )}
           <p className="text-[12px] leading-relaxed text-texto-3" data-play-termos>
@@ -125,6 +138,8 @@ export function FolhaOfertaPlay({
             feito na Google Play.
           </p>
           {erro && <MensagemForm data-play-erro>{erro}</MensagemForm>}
+          {/* a revisão, ⚪17: o "já tem" manda abrir a Central de assinaturas — o botão vem junto */}
+          {codigoErro === "ja_tem" && <BotaoGerenciarPlay produto={oferta.produto} className="self-start" />}
         </div>
       )}
     </PainelDeslizante>
@@ -155,7 +170,9 @@ export function BotaoAssinarPlay({
   const play = usePlayDaLoja();
   const [aberto, setAberto] = useState(abrirJa);
   const ofertas = Object.values(play.ofertas).filter((o): o is OfertaMensal => !!o);
-  const oferta = (produto ? play.ofertas[produto as CodigoPlay] : null) ?? ofertas.sort((a, b) => a.micros - b.micros)[0] ?? null;
+  // a revisão, ⚪17: com o plano da matrícula, SÓ a oferta dele (sem ela, nada — vender a mais barata com o nome do outro plano confunde);
+  // sem plano, a mais barata
+  const oferta = produto ? play.ofertas[produto as CodigoPlay] ?? null : ofertas.sort((a, b) => a.micros - b.micros)[0] ?? null;
   const matricula = matriculaId ?? play.estado?.matricula?.id ?? null;
   if (!oferta) return null;
   return (
@@ -223,7 +240,9 @@ export function CartaoAssinaturaPlay({ play, nomePlano }: { play: VistaPlay; nom
 
 /**
  * A compra que ficou no meio: ao abrir o app da loja (com a matrícula do app), as compras do aparelho ainda não reconhecidas voltam ao
- * servidor; e as que chegam por fora da folha (a pendente que concluiu, a reassinatura pela Play) também. Não desenha nada.
+ * servidor; e as que chegam por fora da folha (a pendente que concluiu, a reassinatura pela Play) também — e quando o app volta para a
+ * frente (o appStateChange do @capacitor/app: a folha da Play por cima, o app que ficou no fundo sem o evento — a revisão, ⚪19). Não
+ * desenha nada.
  */
 export function PlayEmSegundoPlano() {
   const play = usePlayDaLoja();
@@ -243,9 +262,13 @@ export function PlayEmSegundoPlano() {
       if (vivo) parar = p;
       else p();
     });
+    const aFrente = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (vivo && isActive) void recuperarComprasDaPlay(matricula).then(aoRegistrar);
+    });
     return () => {
       vivo = false;
       parar();
+      void aFrente.then((o) => o.remove()).catch(() => undefined);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só quando a matrícula muda (o recarregar é sempre o mesmo pedido)
   }, [matricula]);

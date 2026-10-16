@@ -31,6 +31,14 @@ describe("a play-compras", () => {
     });
     expect(h.invoke).toHaveBeenCalledWith("play-compras", { body: { acao: "estado" } });
   });
+  it("a revisão 🟡3: o estado que ressincronizou a viva vencida (a renovação ou o EXPIRED sem o RTDN) invalida o resumo guardado", async () => {
+    h.invoke.mockResolvedValue(ok({ disponivel: true, matricula: { id: "m1", ativo: true }, assinatura: null, automatica_mp: false, ressincronizada: true }));
+    await buscarEstadoPlay();
+    expect(h.invalidar).toHaveBeenCalledTimes(1);
+    h.invoke.mockResolvedValue(ok({ disponivel: true, matricula: { id: "m1", ativo: true }, assinatura: null, automatica_mp: false }));
+    await buscarEstadoPlay();
+    expect(h.invalidar).toHaveBeenCalledTimes(1);
+  });
   it("registrar: o token e o produto; o erro da função vira ErroPlay com o código", async () => {
     h.invoke.mockResolvedValueOnce(ok({ estado: "ativa", expira_em: "x", produto: "app_treino", renova: true, reconhecida: true, adiada: true }));
     expect(await registrarCompraPlay("tok-compra-1", "app_treino")).toMatchObject({ estado: "ativa", reconhecida: true, adiada: true });
@@ -85,6 +93,36 @@ describe("assinar pela Play", () => {
     expect(await assinarPelaPlay({ matriculaId: "m1", oferta: OFERTA })).toEqual({ tipo: "assinada", registro: null });
     h.compras.mockResolvedValue([]);
     expect(await assinarPelaPlay({ matriculaId: "m1", oferta: OFERTA })).toEqual({ tipo: "erro", codigo: "ja_tem" });
+  });
+  it("a revisão 🟡6: a troca só com a compra DESTA matrícula — a do aparelho de outra pessoa (outra conta) não vira o token antigo", async () => {
+    h.compras.mockResolvedValue([compra({ token: "tok-de-outra-pessoa", produtos: ["app_treino"], conta: "outra-matricula" })]);
+    const d = await assinarPelaPlay({ matriculaId: "m1", oferta: { ...OFERTA, produto: "app_treino_alimentacao", token: "tok-ta" },
+      troca: { produtoAntigo: "app_treino", modo: "na_hora" } });
+    expect(d).toEqual({ tipo: "erro", codigo: "erro_play" });
+    expect(h.comprar).not.toHaveBeenCalled();
+  });
+  it("a revisão 🟡2: na troca, o OK com a lista vazia (o DEFERRED pode voltar assim) = sucesso + a recuperação pelas compras do aparelho", async () => {
+    h.compras.mockResolvedValueOnce([compra({ token: "tok-antigo", produtos: ["app_treino_alimentacao"] })])
+      .mockResolvedValueOnce([compra({ token: "tok-novo", produtos: ["app_treino_alimentacao", "app_treino"] })]);
+    h.comprar.mockResolvedValue({ resultado: "comprado", compras: [] });
+    h.invoke.mockResolvedValue(ok({ estado: "ativa" }));
+    const d = await assinarPelaPlay({ matriculaId: "m1", oferta: { ...OFERTA, produto: "app_treino" },
+      troca: { produtoAntigo: "app_treino_alimentacao", modo: "na_renovacao" } });
+    expect(d).toEqual({ tipo: "assinada", registro: null });
+    expect(h.invoke).toHaveBeenCalledWith("play-compras", { body: { acao: "registrar", token: "tok-novo", produto: "app_treino_alimentacao" } });
+  });
+  it("a revisão ⚪19: a compra que volta sem o produto pedido NÃO cai na 1ª da lista (nada é registrado)", async () => {
+    h.comprar.mockResolvedValue({ resultado: "comprado", compras: [compra({ token: "tok-outro", produtos: ["outro_produto"] })] });
+    expect(await assinarPelaPlay({ matriculaId: "m1", oferta: OFERTA })).toEqual({ tipo: "erro", codigo: "erro_play" });
+    expect(h.invoke).not.toHaveBeenCalled();
+  });
+  it("a revisão ⚪15: o já tem com a compra RECONHECIDA desta matrícula (o RTDN já reconheceu) também volta ao servidor", async () => {
+    h.comprar.mockResolvedValue({ resultado: "ja_tem" });
+    h.compras.mockResolvedValue([compra({ token: "tok-reconhecida", reconhecida: true }), compra({ token: "tok-de-outra", reconhecida: true, conta: "outra" })]);
+    h.invoke.mockResolvedValue(ok({ estado: "ativa" }));
+    expect(await assinarPelaPlay({ matriculaId: "m1", oferta: OFERTA })).toEqual({ tipo: "assinada", registro: null });
+    const tokens = h.invoke.mock.calls.map((c) => (c[1] as { body: { token: string } }).body.token);
+    expect(tokens).toEqual(["tok-reconhecida"]);
   });
   it("o servidor que recusa vira o código para a tela (nunca 'assinada')", async () => {
     h.comprar.mockResolvedValue({ resultado: "comprado", compras: [compra()] });

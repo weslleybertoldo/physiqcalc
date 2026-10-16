@@ -107,4 +107,8 @@ describe("a troca (decisão 6) e as mensagens", () => {
     expect(mensagemPlay("compra_de_outra_conta")).toMatch(/outra conta do Physiq/);
     expect(mensagemPlay("inexistente")).toBe("Não deu certo agora. Tente de novo.");
   });
+  it("a revisão ⚪17: o compra_invalida NÃO diz \"Nada foi cobrado\" (a Play cobrou; sem o reconhecimento, ela devolve sozinha em 3 dias)", () => {
+    expect(mensagemPlay("compra_invalida")).not.toMatch(/Nada foi cobrado/i);
+    expect(mensagemPlay("compra_invalida")).toMatch(/devolve/);
+  });
 });
