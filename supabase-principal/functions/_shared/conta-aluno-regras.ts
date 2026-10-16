@@ -69,6 +69,8 @@ export const STATUS_DA_RECUSA: Record<string, number> = {
   profissional: 403,
   assinatura_ativa: 409,
   treino_indisponivel: 502,
+  // play-W6: a assinatura da Google Play não cancelou (o Google fora ou recusou) — nada foi apagado
+  play_nao_cancelada: 502,
 };
 
 /** "Nome Sobrenome" + data → "physiq-meus-dados-2026-09-29.json" (sem nada do e-mail no nome do arquivo). */

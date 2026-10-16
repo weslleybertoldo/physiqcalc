@@ -453,6 +453,8 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
       acessos: { campo: "acao", acoes: ["ler"] },
       "aluno-dia": { campo: "acao", acoes: ["ler"] },
       "treino-acessos": { campo: "acao", acoes: ["ler"] },
+      // play-W6: o `estado` da play-compras (só lê); o `registrar` reconhece no Google → 1 vez
+      "play-compras": { campo: "acao", acoes: ["estado"] },
     });
   });
 
@@ -491,6 +493,9 @@ describe("hml-20a (decisão 18): o POST de LEITURA das funções do jeito 2 repe
     [`${P}/functions/v1/nutricao`, corpo({ acao: "LER" }), false],
     // outra função com o mesmo corpo, subcaminho, corpo ilegível, sem corpo, corpo que não é texto
     [`${P}/functions/v1/pagamentos-aluno`, corpo({ acao: "ler" }), false],
+    // play-W6: o estado repete; o registrar (reconhece a compra no Google) não
+    [`${P}/functions/v1/play-compras`, corpo({ acao: "estado" }), true],
+    [`${P}/functions/v1/play-compras`, corpo({ acao: "registrar", token: "t", produto: "app_treino" }), false],
     [`${P}/functions/v1/nutricao-leitura`, corpo({ acao: "ler" }), false],
     [`${P}/functions/v1/nutricao/extra`, corpo({ acao: "ler" }), false],
     [`${P}/functions/v1/nutricao`, "{acao: ler", false],
