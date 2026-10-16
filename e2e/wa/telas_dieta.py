@@ -5,7 +5,8 @@ A pela função acessos — o interruptor da P4), w13-dono (a 2ª matrícula da 
 Massa do _base.py) e w7b-sozinho (o app sem profissional com Alimentação: os pratos prontos — só lê). Casos (na ordem; cada um depende do anterior):
   D0  o build é o de STAGING (a faixa "Ambiente de teste" na /entrar; --loja: a marca da loja no index.html) — senão nada roda com conta
   D1  d_travada        a Dieta "Só ver" (o padrão): a tela de hoje — nenhum botão da dieta liberada, a folha sem "Tirar hoje"; ao abrir, 0
-                       gravação e ≥ 1 `ler` q=dia (data-dieta-dia-livre = travada)
+                       gravação e ≥ 1 `ler` q=dia (data-dieta-dia-livre = travada) · d_folha_rodape (hml-27, H-129): o rodapé da folha
+                       ("Marcar como feita" + "Foto pro diário") cabe em 390 px — cada botão dentro da borda útil, sem rolar para o lado
   D2  d_liberada       a nutri libera (acessos › salvar dieta=mexer): "Nova refeição" e "Meus alimentos e receitas" aparecem
   D3  d_tirar          a folha da 1ª refeição com alimento: "Tirar hoje" no último item → riscado + "Voltar"; no banco o "tirado" de hoje;
                        "Voltar" → desfeito; tira de novo (fica para o anel); sem internet (o navegador offline) → os botões desligados
@@ -86,6 +87,9 @@ NO_CODIGO = {
     "src/rotinas/ui/RotinasDeHoje.tsx": ['"data-card-rotinas-dieta"'],
     "src/nutricao/app/ui/LinhaRefeicao.tsx": ["data-refeicao-abrir", 'data-refeicao-marcar="feito"', 'data-refeicao-marcar="desmarcar"', "data-refeicao-kcal"],
     "src/nutricao/app/ui/CartaoPlano.tsx": ["data-kcal-marcadas="],
+    # hml-27 (H-129): o D1 mede o rodapé da folha da refeição (os 2 botões dentro da folha) — e a fileira quebra a linha quando não cabe
+    "src/nutricao/app/ui/SheetRefeicao.tsx": ["data-folha-refeicao={refeicao.id}", "data-folha-marcar=", "data-folha-foto>", 'className="flex flex-wrap gap-2.5"'],
+    "src/ui/premium/Sheet.tsx": ["data-painel={lado}"],
 }
 
 
@@ -294,6 +298,31 @@ def kcal_da_linha(t: B.Tela, refeicao: str) -> float:
     return numero(t.texto(f'[data-refeicao="{refeicao}"] [data-refeicao-kcal] b'))
 
 
+# hml-27 (H-129): o rodapé da folha aberta (a fileira dos botões [data-folha-marcar] e [data-folha-foto], dentro do rodapé do PainelDeslizante).
+# A borda ÚTIL = a direita do rodapé sem o padding (px-5) e a borda. O scrollWidth do documento sozinho não acusa: a folha é fixa e o botão que
+# passava (15 px em 390) caía no padding, ainda dentro da tela — por isso a fileira (client × scroll) e cada botão × a borda útil.
+MEDIR_RODAPE = """() => {
+  const bs = [...document.querySelectorAll('[data-painel] [data-folha-marcar], [data-painel] [data-folha-foto]')];
+  const fil = bs[0] ? bs[0].parentElement : null, rod = fil ? fil.parentElement : null;
+  if (!fil || !rod) return { botoes: [] };
+  const cs = getComputedStyle(rod), r = rod.getBoundingClientRect(), c = (x) => Math.round(x * 100) / 100;
+  const mb = bs.find((b) => b.hasAttribute('data-folha-marcar'));
+  return {
+    tela: innerWidth, doc: document.documentElement.scrollWidth, fileira: [fil.clientWidth, fil.scrollWidth],
+    util: c(r.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth)),
+    marcar: mb ? mb.getAttribute('data-folha-marcar') : null,
+    botoes: bs.map((b) => { const q = b.getBoundingClientRect(); return [c(q.left), c(q.right)]; }),
+  };
+}"""
+
+
+def rodape_cabe(m: dict, largura: int) -> bool:
+    """Os 2 botões, cada um dentro da borda útil (0,5 px de folga do arredondamento) e da tela; a fileira sem rolar; a tela e o documento na largura."""
+    bts = m.get("botoes") or []
+    return (len(bts) == 2 and all(b[0] >= 0 and b[1] <= m["util"] + 0.5 and b[1] <= m["tela"] for b in bts)
+            and m["fileira"][1] <= m["fileira"][0] and m["tela"] <= largura and m["doc"] <= largura)
+
+
 def caso_build(o, nav, R: Rodada, loja: bool) -> bool:
     t = R.tela(nav, "build")
     try:
@@ -321,6 +350,15 @@ def caso_travada(o, nav, R: Rodada) -> None:
         t.clicar(f'[data-refeicao="{e["r1"]}"] [data-refeicao-abrir]')
         ok = t.esperar(lambda: t.tem(f'[data-folha-refeicao="{e["r1"]}"]'), 20)
         o.ok(ok and t.n("[data-item-tirar]") == 0 and t.n("[data-dieta-adicionar]") == 0, "D1 a folha da refeição como hoje (sem 'Tirar hoje' nem 'Adicionar alimento')")
+        # hml-27 (H-129): "Marcar como feita" + "Foto pro diário" lado a lado passavam 15 px da borda útil em 390 px (colados na borda da
+        # tela). O rodapé quebra a linha quando não cabe; os 2 botões têm de caber na largura do celular.
+        t.esperar(lambda: t.n("[data-painel] [data-folha-marcar]") == 1 and t.n("[data-painel] [data-folha-foto]") == 1, 15)
+        t.pg.wait_for_timeout(400)   # a folha sobe em 300 ms (só no eixo vertical: a medida é a horizontal)
+        m = t.pg.evaluate(MEDIR_RODAPE)
+        o.ok(rodape_cabe(m, t.largura), f"D1 o rodapé da folha ({m.get('marcar')!r} + foto) cabe em {t.largura} px: cada botão dentro da borda útil "
+                                        f"{m.get('util')} (esquerda, direita = {m.get('botoes')}); fileira client/scroll = {m.get('fileira')}; "
+                                        f"scrollWidth do documento = {m.get('doc')}")
+        R.print(t, "d_folha_rodape")
     finally:
         t.fim()
 
