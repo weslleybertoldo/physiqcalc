@@ -281,10 +281,16 @@ async function desfazerReserva(db: SupabaseClient, token: string, reservada: str
   if (error) throw error;
 }
 
+/** A linha mudou depois da play_aplicar? O estado ou o fim (o mesmo instante, em qualquer formato da data). */
+function mudou(antes: Pick<LinhaPlayBanco, "estado" | "expira_em">, depois: RespostaAplicar): boolean {
+  const instante = (v: string | null | undefined) => (v ? Date.parse(v) : null);
+  return (depois.estado ?? antes.estado) !== antes.estado || instante(depois.expira_em) !== instante(antes.expira_em);
+}
+
 /**
  * O `estado` da play-compras (a revisão, 🟡3): as linhas "vivas" desta matrícula cujo fim já passou — a renovação ou o EXPIRED que o RTDN
  * não trouxe (atrasado, perdido, ou sem o Pub/Sub — a alternativa "sem cartão" do §7.14) — voltam ao Google: o GET + a play_aplicar, sem
- * reconhecer nem adiar. O Google fora = segue com o que o banco tem (log). Devolve quantas gravou. Erro do banco lança.
+ * reconhecer nem adiar. O Google fora = segue com o que o banco tem (log). Devolve quantas MUDARAM (o estado ou o fim). Erro do banco lança.
  */
 export async function ressincronizarVencidas(c: ContextoPlay, pacienteId: string): Promise<number> {
   const { data, error } = await c.db.from("play_assinaturas").select(COLUNAS).eq("paciente_id", pacienteId)
@@ -297,8 +303,11 @@ export async function ressincronizarVencidas(c: ContextoPlay, pacienteId: string
   for (const l of (data ?? []) as LinhaPlayBanco[]) {
     try {
       const r = await sincronizar(c, l.token, { pacienteId, reconhecer: false, adiar: false });
-      if (r.ok) n++;
-      else c.log.aviso({ codigo: "play_ressincronia_recusada", schema: c.schema, ref: pacienteId, resultado: (r as { erro: string }).erro });
+      // conta só a que MUDOU (o estado ou o fim): a suspensa/pausada tem o fim sempre no passado e volta igual — contá-la faria o app
+      // invalidar o resumo a cada estado (a conferência das correções, DECISÃO 07:08)
+      if (r.ok) {
+        if (mudou(l, r.resposta)) n++;
+      } else c.log.aviso({ codigo: "play_ressincronia_recusada", schema: c.schema, ref: pacienteId, resultado: (r as { erro: string }).erro });
     } catch (e) {
       if (!(e instanceof PlayIndisponivel)) throw e;
       c.log.aviso({ codigo: "play_ressincronia_falhou", schema: c.schema, ref: pacienteId, status: e.status, externo: { google_erro: e.codigo } });
