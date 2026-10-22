@@ -8,8 +8,13 @@ Conta de TESTE teste@teste.com ("aluno-calc"), o treino próprio "Teste 3D" de d
 2. SEM internet até o fim (o P20 da W8: a tela é o SQLite do aparelho; a fila morre com o contexto, nada sobe pro staging): OK em
    todas as séries de 2 exercícios → os 2 cinza e riscados (nome e linha de baixo, miniatura sem cor); o atual não.
 
-Uso: PYTHONDONTWRITEBYTECODE=1 python3 e2e/treino_visual/telas.py --base http://localhost:8080 [--canal msedge]
-Prints (390 × 844 × 3,4): ~/projetos/physiqcalc-scratch/prints/treino_visual/local_*.png
+--rotulo prod (https://physiqcalc.com.br, SÓ LEITURA): a Guarda da hml-17 barra toda escrita e o app fica sem internet logo depois do
+1º sync — o minimizar (fica no aparelho), o "Começar treino" e os OKs vivem no SQLite do aparelho, que some com o contexto; antes e depois,
+o public sem nenhuma série nova da conta de teste no domingo. Sem o Início e voltar (sem internet a outra aba pode não carregar).
+
+Uso: PYTHONDONTWRITEBYTECODE=1 python3 e2e/treino_visual/telas.py --base http://localhost:8080 [--rotulo local] [--canal msedge]
+     PYTHONDONTWRITEBYTECODE=1 python3 e2e/treino_visual/telas.py --rotulo prod --base https://physiqcalc.com.br [--canal msedge]
+Prints (390 × 844 × 3,4): ~/projetos/physiqcalc-scratch/prints/treino_visual/<rotulo>_*.png
 """
 from __future__ import annotations
 
@@ -33,6 +38,8 @@ def _carregar(nome: str, caminho: Path):
 
 
 B8 = _carregar("_base_w08_treino_visual", RAIZ / "w08" / "_base.py")
+sys.path.insert(0, str(RAIZ / "hml17"))
+B17 = _carregar("_base_hml17_treino_visual", RAIZ / "hml17" / "_base.py")
 from playwright.sync_api import sync_playwright  # noqa: E402
 
 p = B8.p
@@ -218,17 +225,81 @@ def caso_local(nav, base: str) -> None:
         B8.limpar_staging(desde, "treino_visual")
 
 
+def series_do_domingo(dia: dt.date) -> int:
+    r = B8.sql_treino(f"select count(*)::int n from public.tb_treino_series where user_id = '{B8.USER_TESTE}' and data_treino = '{dia.isoformat()}'")
+    return int(r[0]["n"]) if r else -1
+
+
+def caso_prod(nav, base: str) -> None:
+    rotulo = "prod"
+    dia = domingo()
+    antes = series_do_domingo(dia)
+    guarda = B17.Guarda()
+    c = B8.Caso(nav, base, rotulo, "aluno", desktop=False)
+    guarda.instalar(c.ctx)
+    try:
+        c.entrar(B8.ALUNO, "/treino", zerar=False)
+        c.fechar_avisos()
+        ok = c.esperar(lambda: c.tem("[data-aba-treino]") and (c.tem("[data-cartao-treino]") or c.tem("[data-sem-treino-dia]")), 120)
+        p.check(ok, f"[{rotulo}] a aba Treino abriu já logada")
+        c.esperar(lambda: not c.tem('[data-sync="primeira"]'), 90)
+        c.pg.wait_for_timeout(1200)
+        B8.sem_internet(c)  # nada sobe: a tela é o SQLite do aparelho, que some com o contexto
+        B8.ir_para_dia(c, dia)
+        ok = c.esperar(lambda: c.pg.locator(f"{SLOT} [data-exercicio-id]").count() > 2, 40)
+        p.check(ok, f"[{rotulo}] o treino \"{GRUPO}\" de domingo ({dia:%d/%m}) com 3+ exercícios")
+        if not ok:
+            return
+        c.esperar(lambda: not B8.texto(c, f"{SLOT} [data-treino-series]").startswith("0 "), 40)
+        m = tocar_no_nome(c)
+        p.check(m["minimizado"] == "1" and m["inert"] and m["expandido"] == "false" and m["altura"] == 0, f"[{rotulo}] tocar no nome minimiza a lista ({m})")
+        p.check(m["largura"] <= m["janela"] and m["linhasNome"] == 1, f"[{rotulo}] sem rolagem lateral e o nome numa linha ({m['largura']}/{m['janela']})")
+        topo_do_cartao(c)
+        print("   print:", c.print("1_minimizado"))
+        m = tocar_no_nome(c)
+        p.check(m["minimizado"] == "0" and not m["inert"] and m["altura"] > 100 and m["recorta"] == "visible", f"[{rotulo}] tocar de novo mostra a lista ({m})")
+        ids = c.pg.locator(f"{SLOT} [data-exercicio-id]").evaluate_all("els => els.map(e => e.getAttribute('data-exercicio-id'))")
+        feitos: list[str] = []
+        for ex in ids:
+            if len(feitos) >= 2:
+                break
+            p.check(abrir(c, ex), f"[{rotulo}] {ex[:8]}: as séries abrem")
+            if B8.linha(c, ex).locator("input[aria-label^='Peso']").count() == 0:
+                B8.linha(c, ex).locator("[data-exercicio-abrir]").click()
+                c.pg.wait_for_timeout(300)
+                continue
+            ok_em_todas(c, ex, "20")
+            if riscado(c, ex)["estado"] == "feito":
+                feitos.append(ex)
+        p.check(len(feitos) == 2, f"[{rotulo}] OK em todas as séries de 2 exercícios ({len(feitos)})")
+        for ex in feitos:
+            r = riscado(c, ex)
+            p.check("line-through" in r["nome"] and "line-through" in r["sub"] and "grayscale" in r["filtro"],
+                    f"[{rotulo}] {ex[:8]} feito: riscado, cinza e a miniatura sem cor ({r})")
+        if feitos:
+            B8.linha(c, feitos[0]).evaluate("el => el.scrollIntoView({ block: 'center' })")
+            c.pg.wait_for_timeout(500)
+            print("   print:", c.print("2_feitos_cinza_riscados"))
+    finally:
+        c.fim()  # SEM voltar a internet
+    depois = series_do_domingo(dia)
+    p.check(antes == depois, f"[{rotulo}] produção intacta: séries da conta de teste no domingo {antes} → {depois}")
+    treino = [x for x in guarda.bloqueadas if "tb_treino_series" in x or "tb_academia_pesos" in x]
+    p.check(not treino, f"[{rotulo}] a Guarda não precisou barrar série nem peso da academia ({treino[:4]})")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--rotulo", choices=("local", "prod"), default="local")
     ap.add_argument("--base", required=True)
     ap.add_argument("--canal", default="msedge", choices=("chromium", "msedge", "chrome"))
     a = ap.parse_args()
-    B8.ESTADO["schema"] = "staging"
+    B8.ESTADO["schema"] = "public" if a.rotulo == "prod" else "staging"
     PRINTS.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as pw:
         nav = pw.chromium.launch(channel=a.canal, args=["--no-sandbox"])
         try:
-            caso_local(nav, a.base.rstrip("/"))
+            (caso_prod if a.rotulo == "prod" else caso_local)(nav, a.base.rstrip("/"))
         finally:
             nav.close()
     return p.fim()
