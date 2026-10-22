@@ -7,6 +7,7 @@ import {
   estadoDoCronometro,
   formatarSegundos,
   lerSegundos,
+  linhaParaEnviar,
   metaSegundos,
   relogio,
   textoDaSerie,
@@ -101,5 +102,25 @@ describe("série por tempo — o cronômetro (relógio real desde o início)", (
     expect(estadoDoCronometro({ inicio, meta: null, agora: inicio })).toEqual({ mostrado: 0, segurado: 0, acabou: false });
     expect(estadoDoCronometro({ inicio, meta: null, agora: inicio + 47_900 })).toEqual({ mostrado: 47, segurado: 47, acabou: false });
     expect(estadoDoCronometro({ inicio, meta: null, agora: inicio + 3_600_000 }).segurado).toBe(600);
+  });
+});
+
+describe("linhaParaEnviar (o PUT do envio da fila)", () => {
+  it("a série da Prancha e da Prancha Lateral vai com peso e repetições nulos explícitos (o banco tem padrão 0 e 10)", () => {
+    expect(linhaParaEnviar("tb_treino_series", { exercicio_id: PRANCHA_ID, tempo_segundos: 45 })).toEqual({
+      exercicio_id: PRANCHA_ID, tempo_segundos: 45, peso: null, reps: null,
+    });
+    expect(linhaParaEnviar("tb_treino_series", { exercicio_id: PRANCHA_LATERAL_ID, peso: 0, reps: 10 })).toEqual({
+      exercicio_id: PRANCHA_LATERAL_ID, peso: null, reps: null,
+    });
+  });
+
+  it("as outras séries e as outras tabelas não mudam", () => {
+    const escalador = { exercicio_id: "32b7d001-7a57-5443-b6da-87ec6ac7c1ee", peso: 0, reps: 12 };
+    expect(linhaParaEnviar("tb_treino_series", escalador)).toBe(escalador);
+    const proprio = { exercicio_id: null, exercicio_usuario_id: PRANCHA_ID };
+    expect(linhaParaEnviar("tb_treino_series", proprio)).toBe(proprio);
+    const pesos = { exercicio_id: PRANCHA_ID, peso: 20 };
+    expect(linhaParaEnviar("tb_academia_pesos", pesos)).toBe(pesos);
   });
 });

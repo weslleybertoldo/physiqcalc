@@ -105,6 +105,7 @@ def caso_local(nav, base: str) -> None:
         c.pg.locator(f'[data-exercicio-id="{PRANCHA}"]').scroll_into_view_if_needed()
         ver_linhas(c, rotulo)
         B8.abrir_exercicio(c, PRANCHA)
+        c.esperar(lambda: c.pg.locator(f'[data-exercicio-id="{PRANCHA}"] [data-serie-iniciar]').count() > 0, 10)
         n_tempo = c.pg.locator(f'[data-exercicio-id="{PRANCHA}"] [data-serie-tempo]').count()
         p.check(n_tempo >= 1 and c.pg.locator(f'[data-exercicio-id="{PRANCHA}"] [data-serie-iniciar]').count() == n_tempo,
                 f"[{rotulo}] Prancha aberta: {n_tempo} séries com o campo Tempo e o ▶ (sem peso × reps)")
@@ -121,8 +122,9 @@ def caso_local(nav, base: str) -> None:
         c.esperar(lambda: mostrado(c, PRANCHA) >= "00:05", 10)
         segurou = mostrado(c, PRANCHA)
         serie(c, PRANCHA, 1).locator("[data-serie-parar]").click()
-        c.pg.wait_for_timeout(600)
-        if c.tem("[data-descanso-pular]"):
+        # o Parar conclui a série: a linha vira "feita" quando o SQLite do aparelho grava, e o descanso abre como no OK
+        c.esperar(lambda: serie(c, PRANCHA, 1).get_attribute("data-serie-feita") is not None, 10)
+        if c.esperar(lambda: c.tem("[data-descanso-pular]"), 5):
             print("   print:", c.print("3_descanso_depois_da_prancha"))
         B8.pular_descanso(c)
         feita = serie(c, PRANCHA, 1)
@@ -136,7 +138,8 @@ def caso_local(nav, base: str) -> None:
         c.pg.wait_for_timeout(300)
         p.check(serie(c, PRANCHA, 2).locator("input").input_value() == "00:40", f"[{rotulo}] S2: digitou 40 → o campo mostra 00:40")
         serie(c, PRANCHA, 2).locator("[data-serie-ok]").click()
-        c.pg.wait_for_timeout(600)
+        c.esperar(lambda: serie(c, PRANCHA, 2).get_attribute("data-serie-feita") is not None, 10)
+        c.esperar(lambda: c.tem("[data-descanso-pular]"), 5)
         B8.pular_descanso(c)
         p.check("40 s" in serie(c, PRANCHA, 2).inner_text(), f"[{rotulo}] S2 feita com 40 s ({serie(c, PRANCHA, 2).inner_text().strip()!r})")
 
@@ -163,14 +166,18 @@ def caso_local(nav, base: str) -> None:
 
         # a Prancha Lateral também; o Escalador (o mesmo movimento) continua por repetições
         B8.abrir_exercicio(c, LATERAL)
-        p.check(c.pg.locator(f'[data-exercicio-id="{LATERAL}"] [data-serie-iniciar]').count() >= 1, f"[{rotulo}] a Prancha Lateral com o ▶")
+        p.check(c.esperar(lambda: c.pg.locator(f'[data-exercicio-id="{LATERAL}"] [data-serie-iniciar]').count() >= 1, 10),
+                f"[{rotulo}] a Prancha Lateral com o ▶")
+        serie(c, LATERAL, 1).scroll_into_view_if_needed()
+        print("   print:", c.print("6_prancha_lateral"))
         if c.pg.locator(f'[data-exercicio-id="{ESCALADOR}"]').count():
-            B8.abrir_exercicio(c, ESCALADOR)
+            B8.abrir_exercicio(c, ESCALADOR)  # abrir um exercício fecha o outro
+            c.esperar(lambda: c.pg.locator(f'[data-exercicio-id="{ESCALADOR}"] [data-serie]').count() > 0, 10)
             p.check(c.pg.locator(f'[data-exercicio-id="{ESCALADOR}"] [data-serie-iniciar]').count() == 0
                     and c.pg.locator(f'[data-exercicio-id="{ESCALADOR}"] input[aria-label^="Repetições"]').count() >= 1,
                     f"[{rotulo}] o Escalador continua com peso × repetições (sem o ▶)")
-        serie(c, LATERAL, 1).scroll_into_view_if_needed()
-        print("   print:", c.print("6_prancha_lateral"))
+            serie(c, ESCALADOR, 1).scroll_into_view_if_needed()
+            print("   print:", c.print("7_escalador_por_repeticoes"))
 
         # volta a internet: a fila sobe pro STAGING com SÓ o tempo
         B8.sem_internet(c, False)
@@ -213,7 +220,8 @@ def caso_prod(nav, base: str) -> None:
         c.pg.locator(f'[data-exercicio-id="{PRANCHA}"]').scroll_into_view_if_needed()
         ver_linhas(c, rotulo)
         B8.abrir_exercicio(c, PRANCHA)
-        p.check(c.pg.locator(f'[data-exercicio-id="{PRANCHA}"] [data-serie-iniciar]').count() >= 1, f"[{rotulo}] a Prancha com o campo Tempo e o ▶ (o bundle novo)")
+        p.check(c.esperar(lambda: c.pg.locator(f'[data-exercicio-id="{PRANCHA}"] [data-serie-iniciar]').count() >= 1, 10),
+                f"[{rotulo}] a Prancha com o campo Tempo e o ▶ (o bundle novo)")
         serie(c, PRANCHA, 1).scroll_into_view_if_needed()
         print("   print:", c.print("1_prancha_aberta"))
         serie(c, PRANCHA, 1).locator("[data-serie-iniciar]").click()

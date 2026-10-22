@@ -15,6 +15,16 @@ export function ehPorTempo(exercicioId: string | null | undefined): boolean {
   return !!exercicioId && EXERCICIOS_POR_TEMPO.has(exercicioId);
 }
 
+/**
+ * A linha que o envio da fila (PowerSync → Banco do Treino) grava no PUT: a série da Prancha vai com peso e repetições NULOS
+ * explícitos. O PowerSync não manda as colunas nulas de um PUT e, no banco, `peso` e `reps` têm padrão 0 e 10 — sem isto a série
+ * nova da Prancha chegava lá como "0 kg × 10" junto do tempo (achado no E2E de 22/10/2026). As outras linhas seguem iguais.
+ */
+export function linhaParaEnviar(tabela: string, dados: Record<string, unknown>): Record<string, unknown> {
+  if (tabela !== "tb_treino_series" || !ehPorTempo(dados.exercicio_id as string | null | undefined)) return dados;
+  return { ...dados, peso: null, reps: null };
+}
+
 /** Maior tempo aceito numa série ou meta (10 min). */
 export const TEMPO_MAX_SEGUNDOS = 600;
 
