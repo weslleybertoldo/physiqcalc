@@ -125,6 +125,9 @@ async function aplicarDevolvida(c: ContextoConferir, d: DevolvidaGoogle, n: Cont
     c.log.info({ codigo: "play_devolucao_sem_compra", schema: c.schema, ref: linha.paciente_id, n: marcadas });
     return;
   }
+  // o EXPIRED da devolvida = revogada (a regra do aviso de devolução de antes: o GET não separa a expirada da revogada). A que teve um
+  // pedido devolvido SEM corte e expirou enquanto a devolvida ainda estava na folga da janela sai revogada — as 2 sem acesso, fora das
+  // vivas e de toda leitura do aluno
   const r = await sincronizar(c, d.token, {
     pacienteId: linha.paciente_id, assinatura: a, revogada: a.estadoGoogle === EXPIRADA_NO_GOOGLE, devolvidoPedido: d.pedido,
     reconhecer: false, adiar: false,
