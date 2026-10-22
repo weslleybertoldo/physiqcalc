@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Physiq play-W6 — SIMULADOR LOCAL da Google Play (só para o e2e/playw6/api.py --local). Escuta só em 127.0.0.1. Nada aqui é o Google de
-verdade: a conta de serviço, a chave do OIDC, os tokens de compra e os pedidos são FALSOS e só valem aqui.
+"""Physiq play-W6 — SIMULADOR LOCAL da Google Play (só para o e2e/playw6/api.py --local e o telas.py). Escuta só em 127.0.0.1. Nada aqui é o
+Google de verdade: a conta de serviço, os tokens de compra e os pedidos são FALSOS e só valem aqui. 22/10/2026: sem o aviso do Google pelo
+Pub/Sub (o RTDN saiu: sem faturamento no Google Cloud não há Pub/Sub) — saíram o JWKS e o push assinado; entrou a Voided Purchases API (a
+conferência de hora em hora da play-conferir lê as devolvidas por ela).
 
   POST /token          o OAuth da conta de serviço (grant jwt-bearer): confere a asserção RS256 com a chave pública da conta de serviço FALSA
                        do simulador, o iss (o client_email), o scope (androidpublisher) e o prazo → {access_token, expires_in, token_type};
@@ -15,17 +17,22 @@ verdade: a conta de serviço, a chave do OIDC, os tokens de compra e os pedidos 
   POST …/subscriptionsv2/tokens/<token>:defer    {deferralContext: {etag, deferDuration}} → o fim + a duração (de 1 dia a 1 ano), etag novo;
                        o etag velho → 409; fora de 1 dia..1 ano → 400
   POST …/subscriptionsv2/tokens/<token>:revoke   {revocationContext: {fullRefund|proratedRefund}} → EXPIRED na hora (revogada)
-  GET  /jwks           as chaves públicas do OIDC do push (o JWKS do Google no lugar — PLAY_OIDC_JWKS do Deno local)
+  GET  /androidpublisher/v3/applications/<pacote>/purchases/voidedpurchases?startTime&endTime&type&token
+                       a Voided Purchases API (os nomes e o formato do discovery da API v3, 22/10/2026): as devolvidas que o "Google" VIU na
+                       janela (ms); só com type=1 vêm as assinaturas (o padrão, 0, = só os produtos avulsos — nenhum aqui); startTime de mais
+                       de 30 dias → 400; páginas pelo tokenPagination.nextPageToken (o tamanho no cenário "voided_por_pagina"); a resposta
+                       voidedPurchases[] {kind, purchaseToken, orderId, purchaseTimeMillis, voidedTimeMillis, voidedSource, voidedReason};
+                       cenário "voided_status" (ex.: 503)
   Administração (só o e2e — POST, 127.0.0.1):
     /_zerar · /_conta_servico (o JSON da conta de serviço FALSA → o PLAY_SERVICE_ACCOUNT do Deno local; a chave é desta execução)
     /_compra {produto, conta?, estado?, teste?, ligada?, modo?, dias?, preco?} → {token, pedido} (com `ligada` + `modo`, a TROCA: na_hora =
              o produto novo já vale, mesmo fim, pedido novo; na_renovacao = o atual segue até renovar, com a troca marcada)
     /_mudar {token, acao}  renovar · carencia · suspender · pausar · recuperar · expirar · cancelar_usuario · reativar · devolver (devolve o
-             último pedido e revoga) → {estado, pedido?}
-    /_push {url, tipo: assinatura|devolucao|teste|outro, notificacao?, token?, pedido?, pacote?, oidc: valido|ausente|forjado|aud|email|
-            nao_verificado|expirado|kid, audiencia?, conta?, repetir_id?} → {status} (o aviso do Pub/Sub, ASSINADO com a chave do simulador)
+             último pedido PAGO e revoga: a devolvida entra na Voided Purchases API) · devolver_sem_revogar (devolve o último pedido pago e o
+             acesso segue: só a devolvida entra na lista) → {estado, pedido?}
     /_cenario {chaves} (as que não vierem voltam ao padrão; + deferred_nova_primeiro: a ordem das 2 linhas do DEFERRED; falhas_get_pos_defer: n GETs
-             com 503 logo depois de cada defer) · /_pedidos [?desde=n] (método, ação, status e o NÚMERO da compra — nunca o token)
+             com 503 logo depois de cada defer; voided_status; voided_por_pagina) · /_pedidos [?desde=n] (método, ação, status e o NÚMERO da
+             compra — nunca o token; na voided: o type, a janela em segundos e quantas vieram)
     /_compra_info {token} (o estado interno: produto, estado, fim, reconhecida, cancelamento, adiada — para o e2e conferir)
 Testes: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest e2e/playw6/test_simulador_play.py    Uso: python3 e2e/playw6/simulador_play.py --porta 8796
 """
@@ -39,9 +46,9 @@ import re
 import secrets
 import threading
 import time
-import urllib.error
-import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+from urllib.parse import parse_qs, urlsplit
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
@@ -53,18 +60,14 @@ PRODUTOS = ("app_treino", "app_treino_alimentacao")
 PRECOS = {"app_treino": ("29", 900_000_000), "app_treino_alimentacao": ("49", 900_000_000)}
 ESCOPO = "https://www.googleapis.com/auth/androidpublisher"
 CONTA_SERVICO_EMAIL = "play-api@physiq-br-sim.iam.gserviceaccount.com"
-EMISSOR = "https://accounts.google.com"
-# os padrões da função (supabase-principal/functions/_shared/play-regras.ts): a audiência e a conta do push
-AUDIENCIA_PADRAO = "https://api-principal.physiqcalc.com.br/functions/v1/play-rtdn"
-CONTA_PUSH_PADRAO = "play-rtdn-push@physiq-br.iam.gserviceaccount.com"
-KID = "sim-oidc-1"
 DIA_S = 86_400
 PADRAO: dict = {"oauth_status": None, "get_status": None, "cancelar_status": None, "ack_status": None, "defer_status": None,
-                "deferred_nova_primeiro": False, "falhas_get_pos_defer": 0}
+                "deferred_nova_primeiro": False, "falhas_get_pos_defer": 0, "voided_status": None, "voided_por_pagina": 1000}
 PREFIXO_API = "/androidpublisher/v3/applications/"
 RX_GET = re.compile(r"^/androidpublisher/v3/applications/([^/]+)/purchases/subscriptionsv2/tokens/([^/:]+)$")
 RX_V2 = re.compile(r"^/androidpublisher/v3/applications/([^/]+)/purchases/subscriptionsv2/tokens/([^/:]+):(cancel|defer|revoke)$")
 RX_ACK = re.compile(r"^/androidpublisher/v3/applications/([^/]+)/purchases/subscriptions/([^/]+)/tokens/([^/:]+):acknowledge$")
+RX_VOIDED = re.compile(r"^/androidpublisher/v3/applications/([^/]+)/purchases/voidedpurchases$")
 
 
 def b64u(b: bytes) -> str:
@@ -87,12 +90,6 @@ def nova_chave() -> rsa.RSAPrivateKey:
     return rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
 
-def jwk_publica(chave: rsa.RSAPrivateKey, kid: str) -> dict:
-    n = chave.public_key().public_numbers()
-    tam = lambda x: (x.bit_length() + 7) // 8  # noqa: E731
-    return {"kty": "RSA", "alg": "RS256", "use": "sig", "kid": kid, "n": b64u(n.n.to_bytes(tam(n.n), "big")), "e": b64u(n.e.to_bytes(tam(n.e), "big"))}
-
-
 def assinar_jwt(chave: rsa.RSAPrivateKey, cabecalho: dict, claims: dict) -> str:
     entrada = f"{b64u(json.dumps(cabecalho, separators=(',', ':')).encode())}.{b64u(json.dumps(claims, separators=(',', ':')).encode())}"
     assinatura = chave.sign(entrada.encode(), padding.PKCS1v15(), hashes.SHA256())
@@ -110,13 +107,11 @@ def conferir_jwt(publica, jwt: str) -> dict | None:
 
 
 class Simulador:
-    """O estado do simulador (thread-safe pela trava): as compras, os tokens de acesso, o cenário e os pedidos."""
+    """O estado do simulador (thread-safe pela trava): as compras, as devolvidas, os tokens de acesso, o cenário e os pedidos."""
 
     def __init__(self) -> None:
         self.trava = threading.RLock()
         self.chave_servico = nova_chave()      # a conta de serviço FALSA (a chave privada vai ao Deno local pelo /_conta_servico)
-        self.chave_oidc = nova_chave()         # o OIDC do push (a pública no /jwks)
-        self.chave_forjada = nova_chave()      # o "forjado": mesma kid, outra chave
         self.zerar()
 
     def zerar(self) -> None:
@@ -126,7 +121,8 @@ class Simulador:
             self.acessos: dict[str, float] = {}
             self.cenario = dict(PADRAO)
             self.pedidos: list[dict] = []
-            self.avisos = 0
+            # a Voided Purchases API: cada devolvida com a hora em que o "Google" a VIU (o filtro da janela é por ela)
+            self.devolvidas: list[dict] = []
 
     # ───── a conta de serviço FALSA ─────
     def conta_servico(self) -> dict:
@@ -205,12 +201,49 @@ class Simulador:
                 c["estado"], c["renova"], c["cancelamento"] = "SUBSCRIPTION_STATE_ACTIVE", True, None
             elif acao == "devolver":
                 saida["pedido"] = c["pago"]
+                self.anular(c, c["pago"])
                 c["estado"], c["renova"], c["expira"], c["revogada"] = "SUBSCRIPTION_STATE_EXPIRED", False, t, True
+            elif acao == "devolver_sem_revogar":
+                # a devolução de um pedido (ex.: a renovação) com o acesso seguindo: só a devolvida entra na Voided Purchases API
+                saida["pedido"] = c["pago"]
+                self.anular(c, c["pago"])
             else:
                 raise ValueError("acao")
             c["etag"] = secrets.token_hex(8)
             saida["estado"] = c["estado"]
             return saida
+
+    def anular(self, c: dict, pedido: str | None) -> None:
+        """Uma devolvida na Voided Purchases API (quem: o desenvolvedor, 1; por quê: arrependimento, 1), vista agora."""
+        if not pedido:
+            return
+        self.devolvidas.append({"token": c["token"], "pedido": pedido, "visto_ms": int(time.time() * 1000),
+                                "compra_ms": int(c["inicio"].timestamp() * 1000), "origem": 1, "motivo": 1})
+
+    def lista_de_devolvidas(self, q: dict) -> tuple[int, dict, dict]:
+        """A Voided Purchases API: (status, corpo, o registro sem token nem pedido)."""
+        agora_ms = int(time.time() * 1000)
+        try:
+            de = int(q.get("startTime") or agora_ms - 30 * DIA_S * 1000)
+            ate = int(q.get("endTime") or agora_ms)
+        except ValueError:
+            return 400, {"error": {"code": 400, "status": "INVALID_ARGUMENT", "errors": [{"reason": "invalidValue"}]}}, {}
+        if de < agora_ms - 30 * DIA_S * 1000 - 60_000 or ate > agora_ms + 120_000 or de > ate:
+            # "cannot be older than 30 days" / "cannot be greater than the current time" (1–2 min de tolerância do relógio)
+            return 400, {"error": {"code": 400, "status": "INVALID_ARGUMENT", "errors": [{"reason": "invalidValue"}]}}, {}
+        with self.trava:
+            todas = [d for d in self.devolvidas if de <= d["visto_ms"] <= ate] if q.get("type") == "1" else []
+            por_pagina = max(1, int(self.cenario.get("voided_por_pagina") or 1000))
+        inicio = int(q["token"]) if str(q.get("token") or "").isdigit() else 0
+        pagina = todas[inicio:inicio + por_pagina]
+        corpo: dict = {"pageInfo": {"totalResults": len(todas), "resultPerPage": por_pagina, "startIndex": inicio}}
+        if pagina:
+            corpo["voidedPurchases"] = [{"kind": "androidpublisher#voidedPurchase", "purchaseToken": d["token"], "orderId": d["pedido"],
+                                         "purchaseTimeMillis": str(d["compra_ms"]), "voidedTimeMillis": str(d["visto_ms"]),
+                                         "voidedSource": d["origem"], "voidedReason": d["motivo"]} for d in pagina]
+        if inicio + por_pagina < len(todas):
+            corpo["tokenPagination"] = {"nextPageToken": str(inicio + por_pagina)}
+        return 200, corpo, {"n": len(pagina), "inicio_s": de // 1000, "fim_s": ate // 1000}
 
     def vista(self, c: dict) -> dict:
         """O SubscriptionPurchaseV2 (o formato da API v3)."""
@@ -276,70 +309,6 @@ class Simulador:
             fim = self.acessos.get(autorizacao[7:])
         return bool(fim and fim > time.time())
 
-    # ───── o push assinado ─────
-    def oidc(self, modo: str, audiencia: str, conta: str) -> str | None:
-        if modo == "ausente":
-            return None
-        t = int(time.time())
-        claims = {"iss": EMISSOR, "aud": audiencia, "email": conta, "email_verified": True, "iat": t, "exp": t + 3600, "sub": "100000000000000000001",
-                  "azp": "100000000000000000001"}
-        cab = {"alg": "RS256", "kid": KID, "typ": "JWT"}
-        chave = self.chave_oidc
-        if modo == "forjado":
-            chave = self.chave_forjada
-        elif modo == "aud":
-            claims["aud"] = "https://outra.audiencia.example/fn"
-        elif modo == "email":
-            claims["email"] = "outra-conta@physiq-br.iam.gserviceaccount.com"
-        elif modo == "nao_verificado":
-            claims["email_verified"] = False
-        elif modo == "expirado":
-            claims["iat"], claims["exp"] = t - 7200, t - 3600
-        elif modo == "kid":
-            cab["kid"] = "kid-que-nao-existe"
-        elif modo != "valido":
-            raise ValueError("oidc")
-        return assinar_jwt(chave, cab, claims)
-
-    def envelope(self, d: dict) -> dict:
-        with self.trava:
-            self.avisos += 1
-            n = self.avisos
-        pacote = d.get("pacote") or PACOTE
-        tipo = d.get("tipo") or "assinatura"
-        aviso: dict = {"version": "1.0", "packageName": pacote, "eventTimeMillis": str(int(time.time() * 1000))}
-        if tipo == "assinatura":
-            aviso["subscriptionNotification"] = {"version": "1.0", "notificationType": int(d.get("notificacao") or 2), "purchaseToken": d.get("token")}
-        elif tipo == "devolucao":
-            aviso["voidedPurchaseNotification"] = {"purchaseToken": d.get("token"), "orderId": d.get("pedido"), "productType": 1, "refundType": 1}
-        elif tipo == "teste":
-            aviso["testNotification"] = {"version": "1.0"}
-        else:
-            aviso["oneTimeProductNotification"] = {"version": "1.0", "notificationType": 1, "purchaseToken": "x", "sku": "x"}
-        mid = str(d.get("repetir_id") or (9_000_000_000 + n))
-        return {"message": {"data": base64.b64encode(json.dumps(aviso).encode()).decode(), "messageId": mid, "message_id": mid,
-                            "publishTime": iso(agora())}, "subscription": "projects/physiq-br/subscriptions/play-rtdn-push"}
-
-    def empurrar(self, d: dict) -> dict:
-        url = d.get("url") or ""
-        if not url.startswith("http://127.0.0.1:"):
-            raise ValueError("url")
-        jwt = self.oidc(d.get("oidc") or "valido", d.get("audiencia") or AUDIENCIA_PADRAO, d.get("conta") or CONTA_PUSH_PADRAO)
-        corpo = json.dumps(self.envelope(d)).encode()
-        cab = {"Content-Type": "application/json", "User-Agent": "APIs-Google; (+https://developers.google.com/webmasters/APIs-Google.html)"}
-        if jwt:
-            cab["Authorization"] = f"Bearer {jwt}"
-        req = urllib.request.Request(url, data=corpo, method="POST", headers=cab)
-        abrir = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        try:
-            with abrir.open(req, timeout=60) as r:
-                return {"status": r.status}
-        except urllib.error.HTTPError as e:
-            try:
-                return {"status": e.code}
-            finally:
-                e.close()
-
 
 def criar_servidor(porta: int, sim: Simulador | None = None) -> ThreadingHTTPServer:
     sim = sim or Simulador()
@@ -383,12 +352,13 @@ def criar_servidor(porta: int, sim: Simulador | None = None) -> ThreadingHTTPSer
 
         def do_GET(self) -> None:  # noqa: N802
             caminho = self.path.split("?")[0]
-            if caminho == "/jwks":
-                return self._json(200, {"keys": [jwk_publica(sim.chave_oidc, KID)]})
             if caminho == "/_pedidos":
                 desde = int((self.path.split("desde=")[1].split("&")[0]) if "desde=" in self.path else 0)
                 with sim.trava:
                     return self._json(200, {"n": len(sim.pedidos), "pedidos": sim.pedidos[desde:]})
+            m = RX_VOIDED.match(caminho)
+            if m:
+                return self._voided(m.group(1))
             m = RX_GET.match(caminho)
             if m:
                 pacote, token = m.group(1), m.group(2)
@@ -430,6 +400,23 @@ def criar_servidor(porta: int, sim: Simulador | None = None) -> ThreadingHTTPSer
             if m:
                 return self._v2(m.group(1), m.group(2), m.group(3), d)
             return self._json(404, {"error": "rota"})
+
+        def _voided(self, pacote: str) -> None:
+            q = {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()}
+            extra = {"type": q.get("type"), "pagina": bool(q.get("token"))}
+            if not sim.acesso_valido(self.headers.get("Authorization") or ""):
+                self._anotar("voided", 401, None, extra)
+                return self._json(401, self._erro_google(401, "UNAUTHENTICATED", "authError"))
+            st = sim.cenario.get("voided_status")
+            if st:
+                self._anotar("voided", int(st), None, extra)
+                return self._json(int(st), self._erro_google(int(st), "UNAVAILABLE", "backendError"))
+            if pacote != PACOTE:
+                self._anotar("voided", 404, None, extra)
+                return self._json(404, self._erro_google(404, "NOT_FOUND", "applicationNotFound"))
+            st, corpo, registro = sim.lista_de_devolvidas(q)
+            self._anotar("voided", st, None, {**extra, **registro})
+            return self._json(st, corpo)
 
         def _ack(self, pacote: str, produto: str, token: str) -> None:
             if not sim.acesso_valido(self.headers.get("Authorization") or ""):
@@ -521,8 +508,6 @@ def criar_servidor(porta: int, sim: Simulador | None = None) -> ThreadingHTTPSer
                     return self._json(200, sim.nova_compra(d))
                 if caminho == "/_mudar":
                     return self._json(200, sim.mudar(str(d.get("token") or ""), str(d.get("acao") or "")))
-                if caminho == "/_push":
-                    return self._json(200, sim.empurrar(d))
                 if caminho == "/_compra_info":
                     with sim.trava:
                         c = sim.compras.get(str(d.get("token") or ""))

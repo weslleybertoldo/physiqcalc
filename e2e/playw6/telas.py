@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Physiq play-W6 — E2E de TELA da assinatura pela Google Play, LOCAL: o build de STAGING servido pelo e2e/hml15/servidor_dist.py (os mesmos
 cabeçalhos do vercel.json) na :5173, o banco do staging (a migration da play-W6 já lá) e as funções NOVAS no Deno local (a play-compras, a
-play-rtdn, a pagamentos-aluno e a excluir-minha-conta do e2e/playw6/api.py, com o simulador da Play e o Treino falso): o Playwright
+play-conferir, a pagamentos-aluno e a excluir-minha-conta do e2e/playw6/api.py, com o simulador da Play e o Treino falso): o Playwright
 encaminha só essas 3 que a tela chama (play-compras, pagamentos-aluno, excluir-minha-conta) para o Deno local; o resto vai às funções
 publicadas do staging, como sempre. Conta de TESTE: w7b-treino (a matrícula do app vencida) — a foto e a limpeza CONFERIDA são as do api.py.
 
@@ -21,7 +21,8 @@ publicadas do staging, como sempre. Conta de TESTE: w7b-treino (a matrícula do 
   --site   o build do SITE com a assinatura da Play viva (registrada pela API local antes):
              S1 Meu plano: o cartão da Play + o link "Gerenciar na Google Play" (a Central de assinaturas do produto), sem Pagar/trocar
              S2 Pagamentos: o cartão da Play, sem Pagar (o Pix do site o servidor recusa: o 409 do api.py)
-             S3 a Play suspensa (o aviso ON_HOLD pelo play-rtdn) → a trava "Assinatura suspensa" com "Atualizar na Google Play"
+             S3 a Play suspensa (a conferência de hora em hora traz o ON_HOLD — a play-conferir; o aviso do Google pelo Pub/Sub saiu em
+                22/10/2026) → a trava "Assinatura suspensa" com "Atualizar na Google Play"
   --seco   sem rede: a ponte da Play (node --check), cada data-* que a rodada usa existe no src/ e o canal dos 2 builds (health.json)
   --limpar só desfaz uma rodada que caiu no meio (o arquivo de estado do api.py)
 Builds (antes, pelo um.sh): VITE_DISTRIBUICAO=play VITE_APP_NATIVO=1 npx vite build --outDir <tmp>/dist-loja --emptyOutDir · npx vite build
@@ -395,7 +396,7 @@ def caso_site(nav, mid: str) -> None:
     p.check(ok and not c.tem("[data-pagar-mensalidade]"), "[site] S2 Pagamentos: o cartão da Play, sem Pagar")
     foto(c, "S2_site_pagamentos")
     API.mudar(c0["token"], "suspender")
-    st = API.empurrar(tipo="assinatura", notificacao=5, token=c0["token"])
+    st, _r = API.conferir()
     # o resumo do aluno fica guardado no aparelho por 10 min (useResumoFinanceiro, src/financeiro/api.ts): a rodada não espera os 10 min —
     # apaga o guardado, como depois deles (o app lê o banco de novo)
     c.pg.evaluate("() => localStorage.removeItem('physiq_financeiro_resumo')")
@@ -403,9 +404,9 @@ def caso_site(nav, mid: str) -> None:
     c.fechar_avisos()
     trava = '[data-trava-app="play-travada"]'
     ok = c.esperar(lambda: c.tem(trava), 60)
-    p.check(st == 204 and ok and "Assinatura suspensa" in c.texto() and c.tem(f'{trava} [data-play-gerenciar="link"]')
+    p.check(st == 200 and ok and "Assinatura suspensa" in c.texto() and c.tem(f'{trava} [data-play-gerenciar="link"]')
             and "Atualizar na Google Play" in texto_de(c, f'{trava} [data-play-gerenciar="link"]'),
-            f"[site] S3 a Play suspensa (o aviso ON_HOLD → {st}) → a trava \"Assinatura suspensa\" com \"Atualizar na Google Play\"")
+            f"[site] S3 a Play suspensa (a conferência traz o ON_HOLD → {st}) → a trava \"Assinatura suspensa\" com \"Atualizar na Google Play\"")
     foto(c, "S3_site_play_suspensa")
     c.fim()
 

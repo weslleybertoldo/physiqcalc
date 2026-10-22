@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Physiq play-W6 — os testes do simulador da Google Play (e2e/playw6/simulador_play.py): o OAuth da conta de serviço FALSA, a API (get,
-acknowledge, cancel, defer, revoke), as mudanças de estado (renovar, carência, suspensão, devolução, a troca na hora e na renovação), o
-JWKS e o push ASSINADO (a assinatura confere com o JWKS; os forjados não). Tudo em 127.0.0.1, sem rede de fora.
+acknowledge, cancel, defer, revoke), as mudanças de estado (renovar, carência, suspensão, pausa, devolução com e sem cortar o acesso, a troca
+na hora e na renovação) e a Voided Purchases API (22/10/2026: a lista das devolvidas com o type, a janela e as páginas — a conferência de
+hora em hora, no lugar do aviso do Google pelo Pub/Sub, que saiu junto com o JWKS e o push assinado). Tudo em 127.0.0.1, sem rede de fora.
 Uso: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest e2e/playw6/test_simulador_play.py
 """
 from __future__ import annotations
 
-import base64
 import json
 import socket
 import sys
@@ -56,40 +56,6 @@ def http(metodo: str, url: str, corpo=None, cab: dict | None = None, form: bool 
             e.close()
 
 
-def publica_do_jwk(jwk: dict):
-    n = int.from_bytes(SIM.de64u(jwk["n"]), "big")
-    e = int.from_bytes(SIM.de64u(jwk["e"]), "big")
-    return rsa.RSAPublicNumbers(e, n).public_key()
-
-
-class Recebedor:
-    """Um servidor local que guarda os avisos que chegam (o lugar da play-rtdn) e responde com o status pedido."""
-
-    def __init__(self) -> None:
-        self.recebidos: list[dict] = []
-        self.status = 204
-        dono = self
-
-        class H(BaseHTTPRequestHandler):
-            def log_message(self, *_a) -> None:
-                return
-
-            def do_POST(self) -> None:  # noqa: N802
-                n = int(self.headers.get("Content-Length") or 0)
-                dono.recebidos.append({"auth": self.headers.get("Authorization"), "corpo": json.loads(self.rfile.read(n) or b"{}")})
-                self.send_response(dono.status)
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-
-        self.porta = porta_livre()
-        self.srv = ThreadingHTTPServer(("127.0.0.1", self.porta), H)
-        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
-
-    def fechar(self) -> None:
-        self.srv.shutdown()
-        self.srv.server_close()
-
-
 class TesteSimulador(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -97,13 +63,11 @@ class TesteSimulador(unittest.TestCase):
         cls.srv = SIM.criar_servidor(cls.porta)
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
         cls.base = f"http://127.0.0.1:{cls.porta}"
-        cls.rec = Recebedor()
 
     @classmethod
     def tearDownClass(cls) -> None:
         cls.srv.shutdown()
         cls.srv.server_close()
-        cls.rec.fechar()
 
     def setUp(self) -> None:
         http("POST", f"{self.base}/_zerar", {})
@@ -206,8 +170,12 @@ class TesteSimulador(unittest.TestCase):
         self.assertEqual(v["latestOrderId"], f"{c['pedido']}..1")                              # o recusado
         http("POST", f"{self.base}/_mudar", {"token": c["token"], "acao": "suspender"})
         self.assertEqual(self.api("GET", f"/subscriptionsv2/tokens/{c['token']}", acesso=a)[1]["subscriptionState"], "SUBSCRIPTION_STATE_ON_HOLD")
+        http("POST", f"{self.base}/_mudar", {"token": c["token"], "acao": "pausar"})
+        self.assertEqual(self.api("GET", f"/subscriptionsv2/tokens/{c['token']}", acesso=a)[1]["subscriptionState"], "SUBSCRIPTION_STATE_PAUSED")
+        http("POST", f"{self.base}/_mudar", {"token": c["token"], "acao": "recuperar"})
+        self.assertEqual(self.api("GET", f"/subscriptionsv2/tokens/{c['token']}", acesso=a)[1]["subscriptionState"], "SUBSCRIPTION_STATE_ACTIVE")
         r = http("POST", f"{self.base}/_mudar", {"token": c["token"], "acao": "devolver"})[1]
-        self.assertEqual((r["estado"], r["pedido"]), ("SUBSCRIPTION_STATE_EXPIRED", f"{c['pedido']}..0"))
+        self.assertEqual((r["estado"], r["pedido"]), ("SUBSCRIPTION_STATE_EXPIRED", f"{c['pedido']}..2"))
 
     def test_troca_na_hora_e_na_renovacao(self) -> None:
         a = self.acesso()
@@ -246,42 +214,55 @@ class TesteSimulador(unittest.TestCase):
         self.assertEqual((info["adiada_dias"], info["adiamentos"]), (2, 1))
         http("POST", f"{self.base}/_cenario", {})
 
-    # ───── o JWKS e o push assinado ─────
-    def test_push_valido_assinado_e_os_forjados(self) -> None:
-        jwks = http("GET", f"{self.base}/jwks")[1]
-        publica = publica_do_jwk(jwks["keys"][0])
-        url = f"http://127.0.0.1:{self.rec.porta}/play-rtdn"
-        c = self.compra()
-        self.rec.recebidos.clear()
-        st, r = http("POST", f"{self.base}/_push", {"url": url, "tipo": "assinatura", "notificacao": 2, "token": c["token"]})
-        self.assertEqual((st, r["status"]), (200, 204))
-        rec = self.rec.recebidos[-1]
-        claims = SIM.conferir_jwt(publica, rec["auth"][7:])
-        self.assertEqual((claims["iss"], claims["aud"], claims["email"], claims["email_verified"]),
-                         (SIM.EMISSOR, SIM.AUDIENCIA_PADRAO, SIM.CONTA_PUSH_PADRAO, True))
-        aviso = json.loads(base64.b64decode(rec["corpo"]["message"]["data"]))
-        self.assertEqual(aviso["packageName"], SIM.PACOTE)
-        self.assertEqual(aviso["subscriptionNotification"], {"version": "1.0", "notificationType": 2, "purchaseToken": c["token"]})
-        # o forjado não confere com o JWKS; o ausente não tem o cabeçalho; aud/email/expirado vêm assinados certo, com a claim errada
-        http("POST", f"{self.base}/_push", {"url": url, "oidc": "forjado", "token": c["token"]})
-        self.assertIsNone(SIM.conferir_jwt(publica, self.rec.recebidos[-1]["auth"][7:]))
-        http("POST", f"{self.base}/_push", {"url": url, "oidc": "ausente", "token": c["token"]})
-        self.assertIsNone(self.rec.recebidos[-1]["auth"])
-        for modo, chave, valor in (("aud", "aud", "https://outra.audiencia.example/fn"), ("email", "email", "outra-conta@physiq-br.iam.gserviceaccount.com"),
-                                   ("nao_verificado", "email_verified", False)):
-            http("POST", f"{self.base}/_push", {"url": url, "oidc": modo, "token": c["token"]})
-            self.assertEqual(SIM.conferir_jwt(publica, self.rec.recebidos[-1]["auth"][7:])[chave], valor)
-        http("POST", f"{self.base}/_push", {"url": url, "oidc": "expirado", "token": c["token"]})
-        self.assertLess(SIM.conferir_jwt(publica, self.rec.recebidos[-1]["auth"][7:])["exp"], time.time())
-        # a devolução, o de teste e o id repetido
-        http("POST", f"{self.base}/_push", {"url": url, "tipo": "devolucao", "token": c["token"], "pedido": c["pedido"], "repetir_id": "777"})
-        corpo = self.rec.recebidos[-1]["corpo"]
-        self.assertEqual(corpo["message"]["messageId"], "777")
-        self.assertEqual(json.loads(base64.b64decode(corpo["message"]["data"]))["voidedPurchaseNotification"]["orderId"], c["pedido"])
-        http("POST", f"{self.base}/_push", {"url": url, "tipo": "teste"})
-        self.assertIn("testNotification", json.loads(base64.b64decode(self.rec.recebidos[-1]["corpo"]["message"]["data"])))
-        # só para 127.0.0.1
-        self.assertEqual(http("POST", f"{self.base}/_push", {"url": "https://example.com/x"})[0], 400)
+    # ───── a Voided Purchases API (a conferência de hora em hora, 22/10/2026) ─────
+    def voided(self, acesso: str | None = None, **q) -> tuple[int, object]:
+        consulta = "&".join(f"{k}={v}" for k, v in q.items())
+        return http("GET", f"{self.base}/androidpublisher/v3/applications/{SIM.PACOTE}/purchases/voidedpurchases?{consulta}", None,
+                    {"Authorization": f"Bearer {acesso or self.acesso()}"})
+
+    def test_devolvidas_pela_voided_purchases_api(self) -> None:
+        a = self.acesso()
+        agora_ms = int(time.time() * 1000)
+        c1 = self.compra()
+        renovado = http("POST", f"{self.base}/_mudar", {"token": c1["token"], "acao": "renovar"})[1]["pedido"]
+        # a devolução de um pedido SEM cortar o acesso: o pedido entra na lista; a assinatura segue ativa
+        r = http("POST", f"{self.base}/_mudar", {"token": c1["token"], "acao": "devolver_sem_revogar"})[1]
+        self.assertEqual((r["estado"], r["pedido"]), ("SUBSCRIPTION_STATE_ACTIVE", renovado))
+        c2 = self.compra()
+        http("POST", f"{self.base}/_mudar", {"token": c2["token"], "acao": "devolver"})
+        st, v = self.voided(a, startTime=agora_ms - 3_600_000, endTime=agora_ms + 60_000, type=1)
+        self.assertEqual(st, 200)
+        self.assertEqual([(x["purchaseToken"], x["orderId"]) for x in v["voidedPurchases"]], [(c1["token"], renovado), (c2["token"], c2["pedido"])])
+        x = v["voidedPurchases"][0]
+        self.assertEqual((x["kind"], x["voidedSource"], x["voidedReason"]), ("androidpublisher#voidedPurchase", 1, 1))
+        self.assertTrue(x["voidedTimeMillis"].isdigit() and x["purchaseTimeMillis"].isdigit())
+        self.assertNotIn("tokenPagination", v)
+        # sem type=1 (o padrão, 0): só os produtos avulsos — nenhum aqui
+        self.assertNotIn("voidedPurchases", self.voided(a, startTime=agora_ms - 3_600_000, endTime=agora_ms + 60_000)[1])
+        self.assertNotIn("voidedPurchases", self.voided(a, startTime=agora_ms - 3_600_000, endTime=agora_ms + 60_000, type=0)[1])
+        # a janela: o que o Google VIU antes do startTime fica de fora
+        self.assertNotIn("voidedPurchases", self.voided(a, startTime=int(time.time() * 1000) + 1, endTime=int(time.time() * 1000) + 60_000, type=1)[1])
+        # o teto da API: o startTime de mais de 30 dias → 400
+        self.assertEqual(self.voided(a, startTime=agora_ms - 31 * 86_400_000, endTime=agora_ms, type=1)[0], 400)
+        # as páginas (o nextPageToken)
+        http("POST", f"{self.base}/_cenario", {"voided_por_pagina": 1})
+        st, p1 = self.voided(a, startTime=agora_ms - 3_600_000, endTime=agora_ms + 60_000, type=1)
+        self.assertEqual((st, len(p1["voidedPurchases"])), (200, 1))
+        st, p2 = self.voided(a, startTime=agora_ms - 3_600_000, endTime=agora_ms + 60_000, type=1, token=p1["tokenPagination"]["nextPageToken"])
+        self.assertEqual([x["purchaseToken"] for x in p2["voidedPurchases"]], [c2["token"]])
+        self.assertNotIn("tokenPagination", p2)
+        # o Google fora e sem o acesso
+        http("POST", f"{self.base}/_cenario", {"voided_status": 503})
+        self.assertEqual(self.voided(a, type=1)[0], 503)
+        http("POST", f"{self.base}/_cenario", {})
+        self.assertEqual(self.voided("x", type=1)[0], 401)
+        # o registro do simulador: o type, a janela (segundos) e quantas — nunca o token nem o pedido
+        pedidos = [x for x in http("GET", f"{self.base}/_pedidos")[1]["pedidos"] if x["acao"] == "voided"]
+        self.assertEqual(pedidos[0]["type"], "1")
+        self.assertEqual(pedidos[0]["n"], 2)
+        self.assertEqual(pedidos[0]["inicio_s"], (agora_ms - 3_600_000) // 1000)
+        self.assertNotIn(c1["token"], json.dumps(pedidos))
+        self.assertNotIn(renovado, json.dumps(pedidos))
 
 
 if __name__ == "__main__":
