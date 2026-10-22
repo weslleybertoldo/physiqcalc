@@ -484,6 +484,24 @@ describe("o banco (S8): a versão que vale do {schema}.espelho_disparar() lê s�
     expect(script).toContain('vault="physiq_mp_renovar_segredo", arquivo=".physiq-segredo-mp-renovar", disparo="mp_contas_renovar_disparar",');
   });
 
+  it("S11 (play-W6, 22/10/2026): o {schema}.play_conferir_disparar() lê só o Vault da conferência, manda o x-espelho-segredo e roda de hora em hora", () => {
+    const { arquivo, corpo } = ultimaDefinicao("play_conferir_disparar");
+    expect(arquivo >= "20261016010000").toBe(true);
+    const vaults = [...corpo.matchAll(/vault\.decrypted_secrets\b[^;]*?\bname\s*=\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(vaults).toEqual(["physiq_play_conferir_segredo"]);
+    expect(corpo.match(/vault\./g)).toHaveLength(1);
+    expect(corpo).toMatch(/security definer set search_path = '' as \$\$/);
+    expect(corpo).toContain("'x-espelho-segredo', v_segredo");
+    expect(corpo).toContain("/functions/v1/play-conferir'");
+    // o job de hora em hora no minuto 25 (livre: os outros jobs do principal usam 0/10/20/30/40/50, 0/15/30/45, 7 e 41)
+    expect(ler(`supabase-principal/migrations/${arquivo}`)).toContain(
+      "select cron.schedule('play-conferir-{schema}', '25 * * * *', $$select {schema}.play_conferir_disparar()$$);");
+    // o mesmo nome no script dos segredos (scripts/segredos/servidor.py, a finalidade S11 play_conferir) e na função que confere
+    const script = ler("scripts/segredos/servidor.py");
+    expect(script).toContain('Finalidade("play_conferir", "S11", "SEGREDO_PLAY_CONFERIR", "principal", "principal", (), ("play-conferir",),');
+    expect(script).toContain('vault="physiq_play_conferir_segredo", arquivo=".physiq-segredo-play-conferir", disparo="play_conferir_disparar",');
+  });
+
   it("controle negativo: o corpo de antes (a 20261010010000, com a reserva) não passaria", () => {
     const antes = ler("supabase-principal/migrations/20261010010000_hml16c_segredo_fila.sql");
     const vaults = [...antes.matchAll(/vault\.decrypted_secrets\b[^;]*?\bname\s*=\s*'([^']+)'/g)].map((m) => m[1]);
