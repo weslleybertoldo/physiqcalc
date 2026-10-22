@@ -1,0 +1,545 @@
+{
+ "uuid": "0e8c848c-96b3-5ad1-b266-7fe01ff398df",
+ "nome": "Paralela na Máquina (Mergulho)",
+ "cena": "paralela_na_maquina_mergulho",
+ "grupo": "Tríceps",
+ "subgrupo": "Tríceps · deltoide anterior · peitoral inferior",
+ "padrao_movimento": "mergulho",
+ "equipamento": "maquina",
+ "variacao": "sentado, pegadores dos lados do corpo",
+ "alvos": [
+  "triceps"
+ ],
+ "auxiliares": [
+  "deltoide",
+  "peitoral"
+ ],
+ "camera": {
+  "az": 50,
+  "el": 10,
+  "dist": 3.7,
+  "alvo": [
+   0.0,
+   0.02,
+   0.72
+  ]
+ },
+ "camera_vistas": {
+  "dist": 3.6,
+  "alvo": [
+   0.0,
+   0.02,
+   0.74
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na máquina de paralela, com o glúteo, as costas e a cabeça encostados no encosto, o tronco em pé, a cabeça alinhada com o tronco e os pés chapados no chão, segura um pegador de cada lado do quadril com as palmas viradas para dentro (pegada neutra) e o punho reto. Começa com os cotovelos dobrados em cerca de 90°, apontando para trás, perto do tronco, e os ombros baixos (sem encolher). Empurra os pegadores para baixo esticando os cotovelos, com os braços descendo junto do corpo e os cotovelos sem abrir para os lados, até os braços ficarem estendidos ao lado do tronco, com as mãos do lado do assento, sem travar os cotovelos; volta devagar até os cotovelos dobrarem de novo em cerca de 90°, sem passar disso. O tronco, o quadril e os pés não saem do lugar: só os braços mexem.",
+ "cinesiologia": {
+  "plano": "sagital: extensão do cotovelo com flexão do ombro (o braço sai de trás do tronco e desce até o lado dele), cadeia cinética aberta — o corpo fica parado no assento e as mãos empurram os pegadores, que giram em volta do eixo dos braços da máquina, atrás do encosto",
+  "articulacoes": "cotovelo (extensão quando os pegadores descem, de ~90° de flexão até ~10°, sem travar; flexão na volta); ombro (flexão quando os pegadores descem: de ~45° de extensão, com o cotovelo atrás do tronco, até o braço ficar ao lado do tronco; extensão na volta, sem passar da amplitude normal); escápulas baixadas e paradas no encosto, sem encolher nem rolar pra frente; punho firme e quase reto, na pegada neutra; quadril, joelhos e tornozelos parados (sentado, pés chapados)",
+  "agonistas": "tríceps braquial (ExRx: alvo; eGym M18 Triceps: músculo primário; Hammer Strength Seated Dip: \"primarily targets the triceps\")",
+  "sinergistas": "deltoide anterior, peitoral maior (porções esternal e clavicular), peitoral menor, romboides, levantador da escápula, latíssimo do dorso e coracobraquial (ExRx); deltoide anterior e peitoral maior como secundários (eGym M18; Hammer Strength: \"particularly the lower pecs and anterior deltoids\")",
+  "estabilizadores": "trapézio inferior; bíceps braquial como estabilizador dinâmico (ExRx); o encosto, o assento e os pés chapados no chão estabilizam o tronco (NSCA: \"five-point body contact position\")",
+  "fases": "descida dos pegadores concêntrica (o tríceps estica o cotovelo), volta excêntrica controlada até o cotovelo a ~90° (eGym: \"Return to the starting position in a controlled motion, keeping your shoulders lowered and upper body stable.\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Triceps Dip. https://exrx.net/WeightExercises/Triceps/LVTriDip (o site responde 403 direto; lido na cópia do Internet Archive de 05/01/2024, em 21/10/2026): \"Utility: Basic\", \"Mechanics: Compound\", \"Force: Push\"; Preparation: \"If possible, place handles in narrow position. Sit on seat with back against pad. Grasp handles and position elbows back.\"; Execution: \"Push levers down by straightening arms downward. Allow lever bar to raise with elbows pointing back until shoulders are slightly stretched. Repeat.\"; músculos: Target \"Triceps Brachii\"; Synergists \"Deltoid, Anterior\", \"Pectoralis Major, Sternal\", \"Pectoralis Major, Clavicular\", \"Pectoralis Minor\", \"Rhomboids\", \"Levator Scapulae\", \"Latissimus Dorsi\"; Dynamic Stabilizers \"Biceps Brachii\"; Stabilizers \"Trapezius, Lower\".",
+  "ExRx.net — Lever Triceps Dip (plate loaded). https://exrx.net/WeightExercises/Triceps/LVTriDipH (cópia do Internet Archive de 09/06/2026): Preparation: \"Sit upright on seat. If possible, place handles in narrow position. Grasp handles.\"; Execution: \"Push levers down with elbows pointing back. Allow lever bar to raise until shoulders are slightly stretched. Repeat.\"; os mesmos músculos, com \"Coracobrachialis\" entre os sinergistas.",
+  "ExRx.net — Lever Chest Dip. https://exrx.net/WeightExercises/PectoralSternal/LVChestDip (cópia do Internet Archive de 29/04/2025), a versão de PEITO, pra diferenciar: \"If possible, place handles in wide position . Sit on seat and grasp handles with oblique grip. Lean forward slightly and allow elbows to flare out.\"; \"Push lever down by straightening arms. Return lever up with elbows flaring out until chest is slightly stretched.\"; Target \"Pectoralis Major, Sternal\".",
+  "American Council on Exercise (ACE) — Seated Close-Grip Chest Press (Equipment: \"Weight Machines / Selectorized\"; https://www.acefitness.org/resources/everyone/exercise-library/189/seated-close-grip-chest-press/, lido em 21/10/2026; a biblioteca do ACE não tem a paralela na máquina: estas são as regras dele pra empurrar na máquina com os cotovelos do lado do corpo, o jeito que \"shifts more load into the triceps\"): \"Sit with your back firmly supported against the backrest.\"; \"Grasp the handles firmly with a full grip (thumbs clasped around the handles) and maintain a neutral wrist position (i.e., wrists in line with your forearms)and bring your elbwos down to the sides of your body.\"; \"Position your feet firmly on the floor or on the foot rests to stabilize your body.\"; \"Maintain the natural arch in your low back and avoid arching your back throughout the exercise.\"; \"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"; \"head aligned with your spine\"; \"Continue pressing until your elbows are fully extended, but not locked.  Your shoulder blades should continue to make contact with the backrest and not round themselves forward.\"",
+  "American Council on Exercise (ACE). Follow-up Q and A: Dangerous Dips. ACE Certified News, setembro de 2011. https://www.acefitness.org/certifiednewsarticle/1657/follow-up-q-and-a-dangerous-dips/ (lido em 21/10/2026): \"Dips also push the glenohumeral joint beyond the normal anatomical range of shoulder extension, stretching the joint capsule and reducing its ability stabilize and produce force, again rendering it more prone to injury.\"; \"Additionally, as the humerus extends during the lowering phase of the exercise it internally rotates, adding to the potential for impingement, while also forcing a rounding of the shoulders that compromises stability within the entire scapulothoracic region.\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15.1 (https://app.achievable.me/study/cscs/learn/exercise-technique-for-free-weight-and-machine-training-fundamentals-of-exercise-technique, lido em 21/10/2026): \"Neutral grip - knuckles point laterally (like a handshake)\"; \"For seated/supine exercises: use the five-point body contact position\": \"Head on the bench or pad\", \"Shoulders/upper back on the bench\", \"Buttocks on the bench or seat\", \"Right foot flat on the floor\", \"Left foot flat on the floor\"; \"This positioning helps maintain spinal stability and balance throughout the movement.\"",
+  "eGym (fabricante) — Smart Strength, M18 Triceps (https://knowledge.egym.com/en/smart-strength/work-out-on-smart-strength/exercises, lido em 21/10/2026; a máquina de tríceps da eGym em que se empurra pra baixo, sentado): Primary muscles \"Triceps brachii\"; Secondary muscles \"Anconeus\", \"Anterior deltoid\", \"Pectoralis major\"; \"Start with your elbows bent at approximately a right angle.\"; \"Extend your arms downward against the resistance. Stop when your elbows are slightly bent.\"; Caution: \"Do not lock your elbows.\"; \"Return to the starting position in a controlled motion, keeping your shoulders lowered and upper body stable.\" (a M18 tem um apoio das coxas e pede o tronco um pouco inclinado pra frente — \"Lean your upper body slightly forward while keeping your back straight.\" —; a máquina daqui tem encosto, e o tronco fica em pé e encostado, como no ExRx: \"Sit upright on seat\", \"Sit on seat with back against pad\").",
+  "Life Fitness (fabricante) — Hammer Strength Plate Loaded Seated Dip, PL-DIP (https://www.lifefitness.com/en-us/catalog/strength-training/plate-loaded/plate-loaded-seated-dip, lido em 21/10/2026): \"The Hammer Strength Seated Dip primarily targets the triceps\"; \"It also engages the chest and shoulders, particularly the lower pecs and anterior deltoids, as secondary muscles.\"; \"Dimensions (L x W x H)\": \"66 in x 49 in x 43 in (168 cm x 124 cm x 109 cm)\". Life Fitness Plate Loaded Seated Dip, SPLDIP (https://lifefitness.com/en-gb/catalog/strength-training/plate-loaded/life-fitness-seated-dip): \"69 in x 41 in x 37 in (176 cm x 105 cm x 94 cm)\"; \"Hand grips are an extruded thermo rubber compound\". Life Fitness Insignia Series Triceps Press, SS-TP: \"rotating oversized pressing handles and traditional dip-style handles\".",
+  "Medidas de máquina de verdade — Titan Fitness, Plate-Loadable Seated Dip Machine (https://titan.fitness/products/plate-loadable-seated-dip-machine, lido em 21/10/2026): \"Seat Bench Dimensions: 10.25-in. x 11-in.\", \"Seat Back Dimensions: 33-in. x 9.5-in.\" (encosto estreito: os braços passam dos lados dele), \"Adjustable Seat Height: 16.75-in. – 22-in.\", \"Handle Diameter: 38mm\". HOIST RS-2101 Seated Dip (https://www.hoistfitness.com/collections/roc-it/products/seated-dip): \"This machine replicates the functional motion of a traditional bar dip\" \"while providing the stability and comfort of a seated position.\"; \"Adjustable exercise handles provide proper positioning and reduce excessive shoulder stress and instability\".",
+  "Amplitude normal das juntas (apostila de goniometria da CSJM University, https://gyansanchay.csjmu.ac.in/wp-content/uploads/2021/11/GONIOMETER.pdf, a mesma das fichas dos outros mergulhos): ombro \"Extension – 0-60°\"; punho \"Radial deviation – 0-20°\", \"Ulnar deviation – 0-35° or 40°\". O limites.py da fábrica usa Norkin & White (AAOS).",
+  "Referência do movimento e da forma da máquina (só referência, nada copiado): 2 prints do Google Imagens que o Weslley mandou em 21/10/2026 (MundoBoaForma, \"Tríceps sentado no aparelho\") — começo com os cotovelos dobrados e pra trás, as mãos nos pegadores do lado da cintura; fim com os braços estendidos e as mãos do lado do assento."
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: na paralela a alavanca não fica alinhada com uma junta só (o empurrão é do cotovelo e do ombro juntos) — o eixo dos braços da máquina fica atrás do encosto, à mesma distância do pegador no começo e no fim, e o pegador desce num arco pelo lado do corpo. A regulagem certa é a dos pegadores estreitos, do lado do quadril (ExRx: \"If possible, place handles in narrow position.\")",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "paralela_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — five-point body contact (\"Buttocks on the bench or seat\"); ExRx — Lever Triceps Dip (plate loaded) (\"Sit upright on seat.\")"
+   },
+   {
+    "nome": "parte de cima das costas no encosto",
+    "equipamento": "paralela_encosto",
+    "partes": [
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (\"Sit on seat with back against pad.\"); ACE — Seated Close-Grip Chest Press (\"Sit with your back firmly supported against the backrest.\"); NSCA (Achievable CSCS) (\"Shoulders/upper back on the bench\")"
+   },
+   {
+    "nome": "glúteo encostado no encosto",
+    "equipamento": "paralela_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (\"Sit on seat with back against pad.\"); ACE — Seated Close-Grip Chest Press (\"Sit with your back firmly supported against the backrest.\")"
+   },
+   {
+    "nome": "cabeça encostada na almofada da cabeça",
+    "equipamento": "paralela_encosto",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — five-point body contact (\"Head on the bench or pad\")"
+   },
+   {
+    "nome": "mão esquerda passa do lado do assento sem encostar",
+    "equipamento": "paralela_assento",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3"
+    ],
+    "mm": [
+     15,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley: os pegadores descem pelos lados do corpo, sem bater no assento nem nas coxas; ExRx — Lever Triceps Dip (\"place handles in narrow position\")"
+   },
+   {
+    "nome": "mão direita passa do lado do assento sem encostar",
+    "equipamento": "paralela_assento",
+    "partes": [
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     15,
+     1000000000000000.0
+    ],
+    "fonte": "pedido do Weslley: os pegadores descem pelos lados do corpo, sem bater no assento nem nas coxas"
+   },
+   {
+    "nome": "braços, antebraços e mãos passam do lado do encosto sem encostar",
+    "equipamento": "paralela_encosto",
+    "partes": [
+     "LeftArm",
+     "RightArm",
+     "LeftForeArm",
+     "RightForeArm",
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "mm": [
+     10,
+     1000000000000000.0
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (\"Grasp handles and position elbows back.\"): o cotovelo vai pra trás do plano das costas, do lado do encosto estreito (Titan: \"Seat Back Dimensions: 33-in. x 9.5-in.\")"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos passam do lado do quadril e das coxas sem encostar",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3"
+    ],
+    "com": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg",
+     "Spine",
+     "Spine1",
+     "Spine2"
+    ],
+    "mm": [
+     15,
+     2000
+    ],
+    "fonte": "pedido do Weslley: os pegadores descem pelos lados do corpo, sem bater no assento nem nas coxas"
+   },
+   {
+    "nome": "antebraços passam do lado do tronco e do quadril sem encostar",
+    "partes": [
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     10,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); cotovelos perto do tronco sem raspar nele"
+   }
+  ],
+  "folgas": [
+   {
+    "nome": "braço esquerdo da máquina (com o pegador) × estrutura",
+    "equipamento": "paralela_braco_esq",
+    "de": "paralela_estrutura",
+    "mm": [
+     3,
+     5000
+    ]
+   },
+   {
+    "nome": "braço direito da máquina (com o pegador) × estrutura",
+    "equipamento": "paralela_braco_dir",
+    "de": "paralela_estrutura",
+    "mm": [
+     3,
+     5000
+    ]
+   },
+   {
+    "nome": "braço esquerdo da máquina (com o pegador) × assento",
+    "equipamento": "paralela_braco_esq",
+    "de": "paralela_assento",
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "pedido do Weslley: os pegadores descem pelos lados do corpo, sem bater no assento"
+   },
+   {
+    "nome": "braço direito da máquina (com o pegador) × assento",
+    "equipamento": "paralela_braco_dir",
+    "de": "paralela_assento",
+    "mm": [
+     20,
+     5000
+    ],
+    "fonte": "pedido do Weslley: os pegadores descem pelos lados do corpo, sem bater no assento"
+   },
+   {
+    "nome": "braço esquerdo da máquina × encosto",
+    "equipamento": "paralela_braco_esq",
+    "de": "paralela_encosto",
+    "mm": [
+     20,
+     5000
+    ]
+   },
+   {
+    "nome": "braço direito da máquina × encosto",
+    "equipamento": "paralela_braco_dir",
+    "de": "paralela_encosto",
+    "mm": [
+     20,
+     5000
+    ]
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelo a ~90° no começo (sem descer além)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     82,
+     98
+    ],
+    "fonte": "eGym — M18 Triceps (\"Start with your elbows bent at approximately a right angle.\"); ExRx — Lever Triceps Dip (\"Allow lever bar to raise with elbows pointing back until shoulders are slightly stretched.\"); ACE — Dangerous Dips 2011 (\"Dips also push the glenohumeral joint beyond the normal anatomical range of shoulder extension\")"
+   },
+   {
+    "nome": "braço esticado no fim, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     5,
+     18
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (\"Push levers down by straightening arms downward.\"); eGym — M18 Triceps (\"Stop when your elbows are slightly bent.\"; \"Do not lock your elbows.\"); ACE — Seated Close-Grip Chest Press (\"fully extended, but not locked\")"
+   },
+   {
+    "nome": "cotovelo atrás do tronco no começo (ombro só um pouco alongado)",
+    "medida": "braco_frente",
+    "t": 0.0,
+    "graus": [
+     -58,
+     -38
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (\"position elbows back\"; \"until shoulders are slightly stretched\"); goniometria (CSJM): ombro \"Extension – 0-60°\""
+   },
+   {
+    "nome": "ombro nunca passa da extensão normal (até 60°)",
+    "medida": "braco_frente",
+    "t": "todos",
+    "graus": [
+     -60,
+     15
+    ],
+    "fonte": "Goniometria (CSJM University): ombro \"Extension – 0-60°\"; ACE — Dangerous Dips 2011 (\"Dips also push the glenohumeral joint beyond the normal anatomical range of shoulder extension\")"
+   },
+   {
+    "nome": "braço ao lado do tronco no fim (mão do lado do quadril)",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     -15,
+     12
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (\"Push levers down by straightening arms downward.\"); referência do movimento (prints do Weslley): no fim as mãos ficam do lado do assento"
+   },
+   {
+    "nome": "cotovelos pra trás, perto do tronco (sem abrir pro lado)",
+    "medida": "cotovelo_tronco",
+    "t": "todos",
+    "graus": [
+     -3,
+     15
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (\"Grasp handles and position elbows back.\"; \"with elbows pointing back\"); ACE — Seated Close-Grip Chest Press (\"bring your elbwos down to the sides of your body\"); abrir o cotovelo é da versão de peito (ExRx — Lever Chest Dip: \"allow elbows to flare out\")"
+   },
+   {
+    "nome": "pegadores estreitos (mãos do lado do quadril)",
+    "medida": "pegada_largura",
+    "t": "todos",
+    "faixa": [
+     1.1,
+     1.6
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (\"If possible, place handles in narrow position.\"); a versão de peito usa os pegadores abertos (ExRx — Lever Chest Dip: \"place handles in wide position\"). A medida divide a distância entre as bases dos dedos médios pela distância entre as articulações dos ombros (~0,39 m no boneco)"
+   },
+   {
+    "nome": "pegada neutra (palmas pra dentro)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     60,
+     90
+    ],
+    "fonte": "NSCA (Achievable CSCS) (\"Neutral grip - knuckles point laterally (like a handshake)\"); Life Fitness Insignia Triceps Press (\"traditional dip-style handles\")"
+   },
+   {
+    "nome": "punho reto (sem dobrar pra frente nem pra trás)",
+    "medida": "punho_flexao",
+    "t": "todos",
+    "graus": [
+     -20,
+     15
+    ],
+    "fonte": "ACE — Seated Close-Grip Chest Press (\"maintain a neutral wrist position (i.e., wrists in line with your forearms)\")"
+   },
+   {
+    "nome": "punho reto (sem desviar pro lado do polegar nem do mínimo)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -20,
+     15
+    ],
+    "fonte": "ACE — Seated Close-Grip Chest Press (\"maintain a neutral wrist position (i.e., wrists in line with your forearms)\"); goniometria (CSJM): punho \"Radial deviation – 0-20°\", \"Ulnar deviation – 0-35° or 40°\". Na pegada neutra o pegador gira junto com o braço da máquina e o antebraço gira mais que ele: o punho desvia um pouco pro lado do mínimo no começo e pro lado do polegar no fim"
+   },
+   {
+    "nome": "ombros baixos (sem encolher)",
+    "medida": "inclinacao",
+    "segmento": [
+     "Shoulder",
+     "Arm"
+    ],
+    "t": "todos",
+    "graus": [
+     18,
+     35
+    ],
+    "fonte": "eGym — M18 Triceps (\"keeping your shoulders lowered\"); ACE — Seated Close-Grip Chest Press (\"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"). Linha do ombro caída como no repouso (no encolhimento ela fica na horizontal)"
+   },
+   {
+    "nome": "escápulas paradas no encosto (o ombro não rola pra frente)",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "ACE — Seated Close-Grip Chest Press (\"Your shoulder blades should continue to make contact with the backrest and not round themselves forward.\"); ACE — Dangerous Dips 2011 (\"forcing a rounding of the shoulders that compromises stability within the entire scapulothoracic region\")"
+   },
+   {
+    "nome": "tronco em pé, encostado e parado",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     0,
+     9
+    ],
+    "fonte": "ExRx — Lever Triceps Dip (plate loaded) (\"Sit upright on seat.\"); ExRx — Lever Triceps Dip (\"Sit on seat with back against pad.\"); inclinar o tronco pra frente é da versão de peito (ExRx — Lever Chest Dip: \"Lean forward slightly\")"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Close-Grip Chest Press (\"Maintain the natural arch in your low back and avoid arching your back throughout the exercise.\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Seated Close-Grip Chest Press (\"head aligned with your spine\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   },
+   {
+    "nome": "quadril parado (sentado, ~95° entre o tronco e a coxa)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     80,
+     95
+    ],
+    "fonte": "a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 − inclinação do tronco pra trás)"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ACE — Seated Close-Grip Chest Press (\"Position your feet firmly on the floor\"); NSCA (Achievable CSCS) (\"Right foot flat on the floor\", \"Left foot flat on the floor\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   }
+  ]
+ }
+}
