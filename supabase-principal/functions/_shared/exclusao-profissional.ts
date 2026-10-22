@@ -23,6 +23,9 @@
 // ANTES do login — o Storage falhou → 500 e o login fica (a pessoa pede de novo); o cancelamento das assinaturas dos alunos que
 // lança para a ordem no passo 2, antes de apagar qualquer coisa: erro do banco → 500; MP sem resposta → o 502
 // cobranca_nao_cancelada de sempre.
+// play-W6 (16/10/2026): no mesmo passo 2, a assinatura da Google Play da matrícula do app DELE (quem também é aluno do app) — cancelarPlay,
+// _shared/play-assinaturas.ts (DEVELOPER_REQUESTED_STOP_PAYMENTS: vale até o fim, sem devolver); o Google falhou → o mesmo 502. Sem linha
+// da Play, nada vai ao Google.
 import { createClient, type SupabaseClient, type User } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { assinaturaSoNoBanco } from "./app-sem-profissional-regras.ts";
 import { chaveDoAmbiente } from "./cifra-mp.ts";
@@ -33,6 +36,7 @@ import { schemaDaCredencial } from "./financeiro-mp.ts";
 import type { Log } from "./log.ts";
 import { MpContaSemAcesso, cancelarAssinaturasPorCredencial, oauthDoAmbiente, schemaTemW2, type ContextoMpConta } from "./mp-conta.ts";
 import { todasAsPaginas } from "./paginas.ts";
+import { cancelarPlayNaExclusao } from "./play-assinaturas.ts";
 import { ORCAMENTO_MS, prazo as novoPrazo, type Prazo } from "./tempo.ts";
 import { chamarTreino } from "./treino-servidor.ts";
 
@@ -165,6 +169,10 @@ export async function excluirContaProfissionalNaBorda(p: PedidoExclusao): Promis
       }
     },
     cancelarSolta: async (id) => id.startsWith("sim-") || (await cancelarNoMp(credencial, id, p.log, mp)) !== null,
+    cancelarPlay: async () => {
+      const r = await cancelarPlayNaExclusao({ db, schema: p.schema, log: p.log, prazo: mp.prazo }, uid);
+      return { canceladas: r.canceladas, falhas: r.falhas };
+    },
     dispararEspelho: async () => {
       const { error } = await db.rpc("espelho_disparar");
       if (error) throw error;

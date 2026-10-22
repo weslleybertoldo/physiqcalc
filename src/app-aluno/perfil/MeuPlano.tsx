@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dumbbell, ListChecks, Receipt, Repeat, Salad, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -8,8 +8,11 @@ import { dataBR, mensagemErroFinanceiro } from "@/financeiro/regras";
 import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { buscarMeuPlano, ErroApp, mudarObjetivo, trocarPlano } from "@/app-aluno/sozinho/api";
+import { BotaoAssinarPlay, CartaoAssinaturaPlay, FolhaOfertaPlay } from "@/app-aluno/sozinho/pecas/AssinaturaPlay";
 import { SeletorObjetivo, SeletorPlano } from "@/app-aluno/sozinho/pecas/Seletores";
+import { ehCodigoPlay, modoDaTroca, playRenovando, playViva, porMes, type CodigoPlay, type ModoTroca } from "@/app-aluno/sozinho/playRegras";
 import { mensagemApp, precoMensal, situacaoDoPlano, type Objetivo, type PlanoApp } from "@/app-aluno/sozinho/regras";
+import { usePlayDaLoja } from "@/app-aluno/sozinho/usePlayDaLoja";
 import { CLASSE_PAGINA_APP, TopoItem } from "@/app-aluno/perfil/pecas/TopoItem";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
@@ -31,6 +34,10 @@ const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy((
  * objetivo (as listas de treinos e pratos prontos). Vincular a um profissional pelo código no Perfil encerra o plano do app.
  * W1 da loja: na versão da Google Play, só o plano e a situação (sem preço, sem Pagar/Assinar e sem trocar de plano — a mensalidade
  * do app vai para o Play Billing na W6); o objetivo, os treinos prontos e os Pagamentos continuam.
+ * play-W6: na loja com a Play valendo (usePlayDaLoja), o preço é o da PLAY e o plano se assina pela Google Play (a folha da oferta; o
+ * ?assinar=1 da faixa abre direto); com a assinatura viva, "Assinatura pela Google Play · até · renova" + Gerenciar e a troca pela Play
+ * (para o completo na hora; para o Treino na renovação). Com a automática do MP ainda viva, sem oferta ("Seu plano é pago no cartão").
+ * No site e no APK do site, quem tem a assinatura da Play viva vê ela + o link de gerenciar, sem Pagar, automática nem trocar.
  */
 export default function MeuPlano() {
   const navigate = useNavigate();
@@ -38,7 +45,10 @@ export default function MeuPlano() {
   const qc = useQueryClient();
   const { recarregarSituacao } = useSessao();
   const consulta = useQuery({ queryKey: ["plano-app"], queryFn: buscarMeuPlano, staleTime: 15_000, retry: 1, networkMode: "online" });
+  const play = usePlayDaLoja();
+  const [params, setParams] = useSearchParams();
   const [troca, setTroca] = useState<PlanoApp | null>(null);
+  const [trocaPlay, setTrocaPlay] = useState<{ produto: CodigoPlay; nome: string; modo: ModoTroca; antigo: CodigoPlay } | null>(null);
   const [salvando, setSalvando] = useState(false);
   const d = consulta.data;
   const m = d?.matricula?.ativo ? d.matricula : null;
@@ -46,6 +56,25 @@ export default function MeuPlano() {
   const planoAtual = d?.planos.find((p) => p.codigo === m?.plano) ?? null;
   const temAlimentacao = !!m?.modulos.includes("nutricao");
   const automatica = m?.assinatura?.status === "authorized";
+  // play-W6
+  const comPlay = ehLoja && play.ativa;
+  const vistaPlay = playViva(m?.play) ? m!.play! : null;
+  const ofertaAtual = m?.plano && ehCodigoPlay(m.plano) ? play.ofertas[m.plano] ?? null : null;
+  const precosPlay = useMemo(
+    () => (comPlay ? Object.fromEntries(Object.values(play.ofertas).flatMap((o) => (o ? [[o.produto, porMes(o.preco)]] : []))) : undefined),
+    [comPlay, play.ofertas],
+  );
+  const planosDaLoja = (d?.planos ?? []).filter((p) => !comPlay || (ehCodigoPlay(p.codigo) && !!play.ofertas[p.codigo]));
+  const pedeAssinar = params.get("assinar") === "1";
+  useEffect(() => {
+    if (!pedeAssinar) return;
+    setParams((a) => {
+      const q = new URLSearchParams(a);
+      q.delete("assinar");
+      return q;
+    }, { replace: true });
+  }, [pedeAssinar, setParams]);
+  const [abrirOferta] = useState(pedeAssinar);
 
   const recarregar = async () => {
     await Promise.all([qc.invalidateQueries({ queryKey: ["plano-app"] }), qc.invalidateQueries({ queryKey: ["pagamentos-aluno"] })]);
@@ -78,6 +107,31 @@ export default function MeuPlano() {
     }
   };
 
+  /** Trocar de plano: com a assinatura da Play renovando, pela Play (o modo da decisão 6); sem ela, a troca de sempre (sem cobrança). */
+  const escolherPlano = (codigo: string) => {
+    const p = d?.planos.find((x) => x.codigo === codigo);
+    if (!p || !m || p.codigo === m.plano) return;
+    if (comPlay && vistaPlay && playRenovando(vistaPlay) && ehCodigoPlay(p.codigo) && ehCodigoPlay(vistaPlay.produto)) {
+      const modo = modoDaTroca(vistaPlay.produto, p.codigo);
+      if (modo) setTrocaPlay({ produto: p.codigo, nome: p.nome, modo, antigo: vistaPlay.produto });
+      return;
+    }
+    setTroca(p);
+  };
+
+  // na loja com a Play e sem assinatura viva: a automática do MP ainda viva (sem oferta) ou o Assinar
+  const blocoDaLoja = comPlay && situacao?.tipo !== "isento" && m && !vistaPlay ? (
+    automatica ? (
+      <p className="text-[12.5px] leading-relaxed text-texto-2" data-meu-plano-play-cartao>
+        Seu plano é pago no cartão (cobrança automática). Para passar para a Google Play, cancele a cobrança em Pagamentos — os dias pagos
+        continuam e a assinatura começa depois deles.
+      </p>
+    ) : (
+      <BotaoAssinarPlay produto={m.plano} nomePlano={planoAtual?.nome ?? m.plano_nome ?? "do app"} matriculaId={m.paciente_id}
+        cobertoAte={m.pago_ate} className="w-full" abrirJa={abrirOferta} />
+    )
+  ) : null;
+
   return (
     <div data-pagina-meu-plano={m ? "app" : d?.com_profissional ? "com-profissional" : "sem-plano"} className={CLASSE_PAGINA_APP}>
       <TopoItem titulo="Meu plano" />
@@ -108,6 +162,9 @@ export default function MeuPlano() {
                   <>
                     <div className="truncate text-[12px] font-medium text-texto-2">Plano do app</div>
                     <b className="block truncate text-[24px] font-bold tracking-[-0.03em] text-texto" data-meu-plano-nome>{planoAtual?.nome ?? m.plano_nome ?? "Treino"}</b>
+                    {comPlay && ofertaAtual && (
+                      <div className="mt-0.5 text-[12.5px] font-semibold tabular-nums text-texto-2" data-meu-plano-preco-play>{porMes(ofertaAtual.preco)} pela Google Play</div>
+                    )}
                   </>
                 ) : (
                   <>
@@ -118,7 +175,7 @@ export default function MeuPlano() {
               </div>
               {situacao && <Chip tom={situacao.tom} className="ml-auto flex-none" data-meu-plano-situacao={situacao.tipo}>{situacao.texto}</Chip>}
             </div>
-            {(!ehLoja || situacao?.tipo === "isento") && (
+            {(!ehLoja || situacao?.tipo === "isento") && !vistaPlay && (
               <p className="text-[12.5px] leading-relaxed text-texto-2" data-meu-plano-linha>
                 {situacao?.tipo === "teste"
                   ? `Depois dos dias grátis, ${precoMensal(m.valor)} por Pix ou cartão. Sem pagar, o app fecha até você pagar.`
@@ -129,24 +186,33 @@ export default function MeuPlano() {
                       : "Pague por Pix ou cartão, ou ligue a cobrança automática no cartão."}
               </p>
             )}
-            {ResumoAntesDePagar && !ehLoja && situacao?.tipo !== "isento" && !automatica && (
+            {/* play-W6: a assinatura da Play viva (no site e no APK do site, sem Pagar, automática nem trocar; na loja, + a troca pela Play) */}
+            {vistaPlay && <CartaoAssinaturaPlay play={vistaPlay} nomePlano={planoAtual?.nome ?? m.plano_nome} />}
+            {ResumoAntesDePagar && !ehLoja && situacao?.tipo !== "isento" && !automatica && !vistaPlay && (
               <Suspense fallback={null}>
                 <ResumoAntesDePagar tela="meu-plano" />
               </Suspense>
             )}
-            {!ehLoja && situacao?.tipo !== "isento" && !automatica && (
+            {!ehLoja && situacao?.tipo !== "isento" && !automatica && !vistaPlay && (
               <Botao variante="w" icone={Wallet} className="w-full" onClick={() => navigate("/perfil/pagamentos?pagar=mensalidade")} data-meu-plano-pagar>
                 {situacao?.tipo === "teste" ? `Assinar por ${precoMensal(m.valor)}` : `Pagar ${precoMensal(m.valor)}`}
               </Botao>
             )}
+            {blocoDaLoja}
           </Cartao>
 
-          {!ehLoja && (
+          {!ehLoja && !vistaPlay && (
             <Cartao className="flex flex-col gap-3 px-4 py-4" data-meu-plano-trocar>
               <SeletorPlano rotulo="Trocar de plano" planos={d?.planos ?? []} valor={m.plano} aoMudar={(c) => {
                 const p = d?.planos.find((x) => x.codigo === c);
                 if (p && p.codigo !== m.plano) setTroca(p);
               }} />
+            </Cartao>
+          )}
+          {/* play-W6: na loja com a Play, a troca com o preço da Play (pela Play com a assinatura renovando; sem ela, a de sempre) */}
+          {comPlay && situacao?.tipo !== "isento" && (!vistaPlay || playRenovando(vistaPlay)) && planosDaLoja.length > 1 && (
+            <Cartao className="flex flex-col gap-3 px-4 py-4" data-meu-plano-trocar-play>
+              <SeletorPlano rotulo="Trocar de plano" planos={planosDaLoja} valor={m.plano} aoMudar={escolherPlano} precos={precosPlay} />
             </Cartao>
           )}
 
@@ -162,14 +228,16 @@ export default function MeuPlano() {
           <p className="px-1 text-[11.5px] leading-relaxed text-texto-3">
             <Repeat aria-hidden className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
             {ehLoja
-              ? "Tem um profissional? Coloque o código dele no Perfil para treinar com ele."
-              : "Tem um profissional? Coloque o código dele no Perfil: a mensalidade do app para (a cobrança automática é cancelada) e você passa a pagar como combinar com ele."}
+              ? `Tem um profissional? Coloque o código dele no Perfil para treinar com ele.${vistaPlay ? " A assinatura da Google Play é cancelada e vale até o fim do mês pago." : ""}`
+              : vistaPlay
+                ? "Tem um profissional? Coloque o código dele no Perfil: a assinatura da Google Play é cancelada (vale até o fim do mês pago) e você passa a pagar como combinar com ele."
+                : "Tem um profissional? Coloque o código dele no Perfil: a mensalidade do app para (a cobrança automática é cancelada) e você passa a pagar como combinar com ele."}
           </p>
         </>
       )}
 
       <PainelDeslizante aberto={!!troca} aoMudar={(v) => !v && !salvando && setTroca(null)} titulo="Trocar de plano?"
-        descricao={troca ? `${troca.nome} · ${precoMensal(troca.valor)}` : undefined} lado="baixo"
+        descricao={troca ? `${troca.nome} · ${comPlay ? precosPlay?.[troca.codigo] ?? "" : precoMensal(troca.valor)}` : undefined} lado="baixo"
         rodape={
           <div className="flex gap-2">
             <Botao className="flex-1" disabled={salvando} onClick={() => setTroca(null)} data-troca-cancelar>Cancelar</Botao>
@@ -182,9 +250,15 @@ export default function MeuPlano() {
           {troca?.modulos.includes("nutricao")
             ? "Você ganha os pratos prontos pelo seu objetivo, com calorias e macros."
             : "Os pratos prontos saem do seu app (o treino continua igual)."}{" "}
-          O valor novo vale a partir do próximo pagamento{automatica ? " e a cobrança automática no cartão passa para ele" : ""}.
+          {comPlay
+            ? "Quando você assinar pela Google Play, é este o plano."
+            : <>O valor novo vale a partir do próximo pagamento{automatica ? " e a cobrança automática no cartão passa para ele" : ""}.</>}
         </p>
       </PainelDeslizante>
+      {trocaPlay && m && (
+        <FolhaOfertaPlay aberto={!!trocaPlay} aoFechar={() => setTrocaPlay(null)} oferta={play.ofertas[trocaPlay.produto] ?? null}
+          nomePlano={trocaPlay.nome} matriculaId={m.paciente_id} cobertoAte={null} troca={{ produtoAntigo: trocaPlay.antigo, modo: trocaPlay.modo }} />
+      )}
     </div>
   );
 }

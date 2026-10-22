@@ -142,6 +142,12 @@ jobs:
           fi
           echo "Firebase no APK: plugin google-services aplicado (google_app_id em $f)"
 
+      - name: Conferir que o APK do site sai sem a cobrança da Play
+        # play-W6: a Play Billing Library, a permissão com.android.vending.BILLING e o plugin de cobrança são só do playRelease (o AAB)
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          bash scripts/ci/cobranca-play.sh sem "$APK"
+
       - name: Rename APK
         run: |
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)

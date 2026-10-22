@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LayoutDashboard, TriangleAlert, Wallet } from "lucide-react";
 import { toast } from "sonner";
+import { normalizarVistaPlay, playViva } from "@/app-aluno/sozinho/playRegras";
 import { Campo, MensagemForm } from "@/entrada/pecas/Campo";
+import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
 import { useSessao } from "@/nucleo/sessao";
 import { CONTATO_SUPORTE, linkDoSuporte } from "@/nucleo/suporte";
 import { lembrarArea } from "@/ui/casca/area";
@@ -79,6 +81,12 @@ export function SheetExcluir({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState("");
   const [excluindo, setExcluindo] = useState(false);
+  // play-W6: a assinatura da Google Play ainda renovando é cancelada pelo servidor ANTES de apagar (vale até o fim, sem devolver)
+  const { resumo: financeiro } = useResumoFinanceiro({ atrasoMs: 0, ativo: aberto });
+  const comPlay = (financeiro ?? []).some((r) => {
+    const v = r.app ? normalizarVistaPlay(r.play) : null;
+    return playViva(v) && v.estado !== "cancelada";
+  });
 
   useEffect(() => {
     if (!aberto) return;
@@ -192,6 +200,12 @@ export function SheetExcluir({ aberto, aoMudar }: { aberto: boolean; aoMudar: (v
                 {resumo.apaga.map((l) => <li key={l}>{l}</li>)}
               </ul>
             </div>
+            {comPlay && (
+              <p className="flex items-start gap-2 rounded-2xl border border-linha bg-superficie px-3.5 py-3 text-[12.5px] leading-relaxed text-texto-2" data-excluir-play>
+                <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />
+                <span>A sua assinatura da Google Play é cancelada antes de excluir: ela para de renovar e não há devolução do mês já pago.</span>
+              </p>
+            )}
             {resumo.fica.length > 0 && (
               <div className="rounded-2xl border border-linha bg-superficie px-3.5 py-3" data-excluir-fica>
                 <b className="block text-[13px] font-semibold text-texto">Fica com o seu profissional, sem ligação com o seu login</b>

@@ -28,7 +28,17 @@ vi.mock("@/lib/distribuicao", () => ({
     return h.loja ? "play" : "site";
   },
 }));
-vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: () => h.nativo, getPlatform: () => (h.nativo ? "android" : "web") }, registerPlugin: () => ({}) }));
+// play-W6 (a revisão, ⚪18): a loja nativa COM o plugin da Play (o AAB) e a trava play_billing DESLIGADA — o servidor diz "não vale" e a
+// tela tem de ser a loja de hoje (os casos abaixo não mudam). O estado da Play é o já carregado (o do app aberto): nada a esperar.
+vi.mock("@capacitor/core", () => ({
+  Capacitor: { isNativePlatform: () => h.nativo, getPlatform: () => (h.nativo ? "android" : "web"), isPluginAvailable: (nome: string) => h.nativo && nome === "PlayBilling" },
+  registerPlugin: () => ({}),
+}));
+vi.mock("@/app-aluno/sozinho/usePlayDaLoja", () => ({
+  usePlayDaLoja: () => ({ ativa: false, carregando: false, estado: { disponivel: false, matricula: null, assinatura: null, automatica_mp: false },
+    ofertas: {}, menorPreco: null, recarregar: async () => {} }),
+  carregarPlayDaLoja: async () => {},
+}));
 vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "public", supabase: {} }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => h.sessao }));
 vi.mock("@/financeiro/useResumoFinanceiro", () => ({ useResumoFinanceiro: () => ({ resumo: h.resumo, carregando: false, erro: false }) }));

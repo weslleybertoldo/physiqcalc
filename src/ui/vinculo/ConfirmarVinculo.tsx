@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { CircleAlert, RefreshCw, UserRoundCheck, Wallet } from "lucide-react";
+import { normalizarVistaPlay, playViva } from "@/app-aluno/sozinho/playRegras";
 import { reais } from "@/financeiro/regras";
+import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
+import { ehLoja } from "@/lib/distribuicao";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSessao } from "@/nucleo/sessao";
 import { MENSAGEM_VINCULO, type ErroVinculo, type ResultadoVinculo } from "@/nucleo/situacao";
@@ -39,6 +42,14 @@ export function ConfirmarVinculo({
 }) {
   const { vincularCodigo } = useSessao();
   const celular = useIsMobile();
+  // play-W6: a assinatura da Google Play viva (e ainda renovando) da matrícula do app também é cancelada no vínculo (vale até o fim do
+  // mês pago, sem devolver — igual à automática do MP); o servidor cancela, a prévia avisa (o resumo do aluno sabe; a prévia da
+  // vincular-aluno não muda)
+  const { resumo } = useResumoFinanceiro({ atrasoMs: 0, ativo: aberto });
+  const playAtiva = (resumo ?? []).some((r) => {
+    const v = r.app ? normalizarVistaPlay(r.play) : null;
+    return playViva(v) && v.estado !== "cancelada";
+  });
   const [previa, setPrevia] = useState<PreviaVinculo | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
@@ -142,8 +153,9 @@ export function ConfirmarVinculo({
                   <p className="flex items-start gap-2 rounded-2xl border border-linha bg-superficie px-3.5 py-3 text-[12.5px] leading-relaxed text-texto-2" data-vinculo-app>
                     <Wallet aria-hidden className="mt-0.5 h-4 w-4 flex-none text-violeta-3" />
                     <span>
-                      A mensalidade do app{previa.app.valor ? ` (${reais(previa.app.valor)}/mês)` : ""} para aqui
-                      {previa.app.assinatura_ativa ? " e a cobrança automática no cartão é cancelada" : ""}. Daqui em diante, você paga como combinar com {primeiro}.
+                      A mensalidade do app{previa.app.valor && !ehLoja ? ` (${reais(previa.app.valor)}/mês)` : ""} para aqui
+                      {previa.app.assinatura_ativa ? " e a cobrança automática no cartão é cancelada" : ""}
+                      {playAtiva ? " e a assinatura da Google Play é cancelada (vale até o fim do mês pago, sem devolução)" : ""}. Daqui em diante, você paga como combinar com {primeiro}.
                     </span>
                   </p>
                 )}

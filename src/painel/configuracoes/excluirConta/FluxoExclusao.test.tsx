@@ -210,12 +210,12 @@ describe("Configurações › Excluir minha conta (W2 da loja)", () => {
     expect(container.textContent).not.toMatch(proibido);
   });
 
-  it("versão da loja: a recusa da cobrança no cartão do aluno não mostra botão de pagamentos", async () => {
+  it("versão da loja: a recusa da cobrança no cartão do aluno mostra o Abrir Pagamentos (play-W6, decisão 8: cancelar não é vender)", async () => {
     h.loja = true;
     h.erroConferencia = { codigo: "assinatura_ativa" };
     montar();
     expect(await screen.findByText(/Cancele em Perfil › Pagamentos/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Abrir Pagamentos/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Abrir Pagamentos/ })).toBeInTheDocument();
   });
 });
 

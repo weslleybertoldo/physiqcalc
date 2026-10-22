@@ -60,6 +60,8 @@ export interface ExternoLog {
   principal_erro?: unknown;
   /** Telegram: o message_id do aviso enviado. */
   telegram_id?: unknown;
+  /** Google (Play Developer API e OAuth — play-W6): o status ou o reason do erro (ex.: "NOT_FOUND", "purchaseTokenNotFound", "invalid_grant"). */
+  google_erro?: unknown;
 }
 
 /** Os campos de uma linha. Só `codigo` é obrigatório; o que não vier não aparece; o que vier fora do formato vira "?". */
@@ -138,6 +140,7 @@ const EXTERNO: ReadonlyArray<readonly [keyof ExternoLog, (v: unknown) => unknown
   ["treino_erro", (v) => noFormato(v, /^[a-z_]{1,40}$/)],
   ["principal_erro", (v) => noFormato(v, /^[a-z_]{1,40}$/)],
   ["telegram_id", (v) => inteiro(v, Number.MAX_SAFE_INTEGER)],
+  ["google_erro", (v) => noFormato(v, /^[A-Za-z0-9_.-]{1,64}$/)],
 ];
 
 function externoValido(v: unknown): Record<string, unknown> | "?" {

@@ -244,8 +244,9 @@ export function FluxoExclusao({ conferenciaInicial = null }: { conferenciaInicia
               <LifeBuoy aria-hidden /> Falar com o suporte
             </a>
           )}
-          {/* W1 da loja: na versão da Google Play, nenhum botão que leve a pagamentos — o texto diz onde cancelar */}
-          {recusa.codigo === "assinatura_ativa" && !ehLoja && (
+          {/* play-W6 (decisão 8 de 16/10/2026): o "Abrir Pagamentos" também na versão da Google Play — cancelar a automática que já
+              existe não é vender (o aluno já cancela por lá; a W1 tinha tirado o botão só no caminho do profissional) */}
+          {recusa.codigo === "assinatura_ativa" && (
             <Botao icone={Wallet} onClick={() => { lembrarArea("aluno"); navigate("/perfil/pagamentos"); }} data-exclusao-pagamentos>Abrir Pagamentos</Botao>
           )}
           {recusa.codigo === "nao_profissional" && (

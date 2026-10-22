@@ -182,6 +182,18 @@ describe("cada campo no formato fixo; fora dele vira \"?\"", () => {
     log.erro({ codigo: "x", externo: { mp_causas: "2067" } });
     expect(ultima().externo).toEqual({ mp_causas: "?" });
   });
+
+  it("play-W6: google_erro — o status ou o reason do Google (o código curto); texto livre, e-mail ou token viram \"?\"", () => {
+    const log = semAviso();
+    log.erro({ codigo: "play_google_falhou", externo: { google_erro: "purchaseTokenNotFound" } });
+    expect(ultima().externo).toEqual({ google_erro: "purchaseTokenNotFound" });
+    log.erro({ codigo: "play_google_falhou", externo: { google_erro: "NOT_FOUND" } });
+    expect(ultima().externo).toEqual({ google_erro: "NOT_FOUND" });
+    for (const ruim of ["The purchase token was not found", "maria@gmail.com", "eyJhbGciOiJSUzI1NiJ9", "a".repeat(65)]) {
+      log.erro({ codigo: "play_google_falhou", externo: { google_erro: ruim } });
+      expect(ultima().externo).toEqual({ google_erro: "?" });
+    }
+  });
 });
 
 describe("log.excecao — name, pg e msg limpa; nunca details, hint, pilha ou o objeto", () => {

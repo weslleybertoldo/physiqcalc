@@ -183,6 +183,9 @@ export interface DepsExclusao {
   cancelarDosAlunos(pacienteIds: string[]): Promise<{ canceladas: number; falhas: number }>;
   /** cancela no Mercado Pago uma assinatura antiga do Calc que só o Treino conhece */
   cancelarSolta(preapprovalId: string): Promise<boolean>;
+  /** play-W6: cancela a assinatura da Google Play da matrícula do app DELE (o profissional que também é aluno do app); sem linha da Play,
+   *  { 0, 0 } sem ida ao Google. Falhou → conta como falha (o 502 cobranca_nao_cancelada de sempre, nada apagado) */
+  cancelarPlay?(): Promise<{ canceladas: number; falhas: number }>;
   /** espelho_disparar(): a equipe e os alunos chegam ao Treino agora (melhor esforço) */
   dispararEspelho(): Promise<void>;
   /** arquivos do diário (parte de aluno) + a foto do Perfil; devolve quantos saíram (melhor esforço) */
@@ -215,6 +218,8 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
   const log = d.registrar ?? (() => {});
   if (e.papelAuth === "master" || e.papelAuth === "admin") return recusa("profissional", { motivo: "master" });
   if (!e.simular && !confirmacaoValida(e.confirmacao)) return recusa("confirmacao_invalida");
+  // a Play já cancelada (o passo 2) vai em toda recusa depois dele — também no 500 do catch
+  let cancelou: Record<string, unknown> = {};
   try {
     // 1. confere
     const pre = obj(await d.conferir());
@@ -243,17 +248,28 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
       if (await d.cancelarSolta(id)) canceladas++;
       else falhas++;
     }
+    // play-W6: a da Google Play (a matrícula do app dele, quando também é aluno) — antes de apagar qualquer coisa
+    let playCanceladas = 0;
+    if (d.cancelarPlay) {
+      const r = await d.cancelarPlay();
+      canceladas += r.canceladas;
+      falhas += r.falhas;
+      playCanceladas = r.canceladas;
+    }
     if (falhas > 0) return recusa("cobranca_nao_cancelada", { canceladas, falhas });
+    // a revisão, ⚪14: daqui em diante, a recusa CONTA que a assinatura da Play já foi cancelada (sem volta; vale até o fim do período pago)
+    // — também o 500 do catch (a conferência das correções, DECISÃO 07:08)
+    if (playCanceladas > 0) cancelou = { play_cancelada: true };
 
     // 3. Banco do Treino
     const t = await d.treino("excluir_profissional");
-    if (t.passo === "profissional") return recusa("profissional", { motivo: "treino" });
-    if (t.passo === "conta_real") return recusa("conta_real_no_staging", { motivo: "dados_em_producao" });
-    if (t.passo === "indisponivel") return recusa("treino_indisponivel");
+    if (t.passo === "profissional") return recusa("profissional", { motivo: "treino", ...cancelou });
+    if (t.passo === "conta_real") return recusa("conta_real_no_staging", { motivo: "dados_em_producao", ...cancelou });
+    if (t.passo === "indisponivel") return recusa("treino_indisponivel", cancelou);
 
     // 4. banco principal
     const fim = obj(await d.excluir());
-    if (fim.ok !== true) return recusa(String(fim.erro ?? "erro_interno"), fim.motivo ? { motivo: fim.motivo } : {});
+    if (fim.ok !== true) return recusa(String(fim.erro ?? "erro_interno"), { ...(fim.motivo ? { motivo: fim.motivo } : {}), ...cancelou });
 
     // 4b. W2 (revisão I-2): o Mercado Pago DA CONTA das contas dele sai do ar — só depois do SQL de verdade; a falha não volta a exclusão
     const contasDele = lista(fim.contas_dono).map((c) => texto(c.id)).filter((id): id is string => id !== null);
@@ -280,7 +296,7 @@ export async function excluirContaProfissional(e: EntradaExclusao, d: DepsExclus
     };
   } catch (err) {
     log(`erro: ${(err as Error)?.message ?? String(err)}`);
-    return recusa("erro_interno");
+    return recusa("erro_interno", cancelou);
   }
 }
 

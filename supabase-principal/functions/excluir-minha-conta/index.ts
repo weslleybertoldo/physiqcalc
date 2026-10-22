@@ -34,6 +34,9 @@
 // Treino — o aviso de erro diz esta função); o catch final avisa (log.excecao) e devolve o mesmo 500.
 // hml-14 (H-32): um prazo por pedido limita as chamadas ao Treino (orcamentoDoPedido); a foto do Perfil sai INTEIRA (todas as
 // páginas do Storage) e, se o Storage falhar, a resposta é 500 ANTES de apagar o login (a pessoa pede de novo).
+// play-W6 (16/10/2026): a assinatura da Google Play das matrículas do app é cancelada ANTES de apagar qualquer coisa (o passo 1b:
+// DEVELOPER_REQUESTED_STOP_PAYMENTS — vale até o fim, sem devolver); o Google falhou → 502 play_nao_cancelada e nada é apagado. Sem linha
+// da Play, nada vai ao Google (o caminho de hoje). O 409 assinatura_ativa do MP fica (decisão 8). Segredo novo: PLAY_SERVICE_ACCOUNT.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
@@ -43,6 +46,7 @@ import { chamarTreino } from "../_shared/treino-servidor.ts";
 import { fluxoDoPedido } from "../_shared/exclusao-profissional-regras.ts";
 import { apagarFotosDoPerfil, excluirContaProfissionalNaBorda } from "../_shared/exclusao-profissional.ts";
 import type { Schema } from "../_shared/cobranca-mp.ts";
+import { cancelarPlayNaExclusao } from "../_shared/play-assinaturas.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -153,6 +157,8 @@ Deno.serve(async (req) => {
   if (papelAuth === "master" || papelAuth === "admin") return recusa("profissional", origin, { motivo: "master" });
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema: schema as "public" }, auth: { persistSession: false } });
+  // a conferência das correções (DECISÃO 07:08): a Play já cancelada no 1b vai também no 500 do catch (o erro que lança depois dele)
+  let playCancelada = false;
   try {
     // 1. confere nos 2 bancos antes de mexer em qualquer coisa
     const { data: pre, error: ep } = await db.rpc("excluir_dados_aluno", { p_uid: user.id, p_simular: true });
@@ -172,18 +178,25 @@ Deno.serve(async (req) => {
       }, 200, origin);
     }
 
-    // 2. Banco do Treino (dados de treino + login de lá)
+    // 1b. play-W6: a assinatura da Google Play cancela ANTES de apagar (o Google falhou → 502, nada apagado)
+    const play = await cancelarPlayNaExclusao({ db, schema: schema as Schema, log, prazo: p }, user.id);
+    if (!play.ok) return recusa("play_nao_cancelada", origin);
+
+    // 2. Banco do Treino (dados de treino + login de lá) — a revisão, ⚪14: se parar aqui, a resposta CONTA que a assinatura da Play já foi
+    // cancelada no 1b (sem volta: DEVELOPER_REQUESTED_STOP_PAYMENTS; vale até o fim do período pago)
+    playCancelada = play.canceladas > 0;
+    const cancelou = playCancelada ? { play_cancelada: true } : {};
     const treino = await chamarTreino(schema, "excluir", user.id, log, { prazo: p });
-    if (treino.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
+    if (treino.passo === "profissional") return recusa("profissional", origin, { motivo: "treino", ...cancelou });
     if (treino.passo === "conta_real") return dadosEmProducao(origin);
-    if (treino.passo === "indisponivel") return recusa("treino_indisponivel", origin);
+    if (treino.passo === "indisponivel") return recusa("treino_indisponivel", origin, cancelou);
     const t = treino.passo === "sem_vinculo" ? null : treino.corpo;
 
     // 3. banco principal: o que o aluno enviou + a matrícula desligada
     const { data: fim, error: ef } = await db.rpc("excluir_dados_aluno", { p_uid: user.id, p_simular: false });
     if (ef) throw ef;
     const feito = (fim ?? {}) as Record<string, unknown>;
-    if (feito.ok !== true) return recusa(String(feito.erro ?? "erro_interno"), origin);
+    if (feito.ok !== true) return recusa(String(feito.erro ?? "erro_interno"), origin, cancelou);
     const arquivos = (Array.isArray(feito.arquivos) ? feito.arquivos : []) as Array<{ bucket: string; path: string }>;
     const porBucket = new Map<string, string[]>();
     for (const a of arquivos) if (a?.bucket && a?.path) porBucket.set(a.bucket, [...(porBucket.get(a.bucket) ?? []), a.path]);
@@ -210,6 +223,6 @@ Deno.serve(async (req) => {
     }, 200, origin);
   } catch (e) {
     log.excecao(e, { acao: simular ? "simular" : "excluir", schema });
-    return json({ ok: false, erro: "erro_interno" }, 500, origin);
+    return json({ ok: false, erro: "erro_interno", ...(playCancelada ? { play_cancelada: true } : {}) }, 500, origin);
   }
 });

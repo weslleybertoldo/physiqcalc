@@ -1,6 +1,7 @@
 // Physiq W7b — regras PURAS do aluno SEM profissional (a "conta do app"): objetivos, planos do app (Treino R$ 29,90 · Treino +
 // Alimentação R$ 49,90 — os preços vêm do banco), teste grátis, treinos prontos (o que vira treino próprio do aluno) e pratos
 // prontos (TACO: kcal e macros calculados pelo banco). Sem rede e sem banco: testadas em regras.test.ts.
+import { normalizarVistaPlay, type VistaPlay } from "./playRegras";
 import { dataBR, diaSP, diasEntre, hojeSP, reais } from "@/financeiro/regras";
 
 // ───────────────────────── objetivos, níveis e planos ─────────────────────────
@@ -92,6 +93,8 @@ export interface MatriculaApp {
   encerrada_motivo: string | null;
   aguardando: boolean;
   assinatura: AssinaturaApp | null;
+  /** play-W6 — a assinatura da Google Play viva (null = sem ela; o banco de antes não manda) */
+  play?: VistaPlay | null;
 }
 
 export interface MeuPlanoApp {
@@ -136,6 +139,8 @@ export function normalizarMeuPlano(bruto: unknown): MeuPlanoApp {
           encerrada_em: (m.encerrada_em as string) ?? null,
           encerrada_motivo: (m.encerrada_motivo as string) ?? null,
           aguardando: m.aguardando === true,
+          // play-W6: a assinatura da Google Play viva (nunca o token)
+          play: normalizarVistaPlay(m.play),
           assinatura: m.assinatura && typeof m.assinatura === "object"
             ? {
                 status: String((m.assinatura as Record<string, unknown>).status ?? ""),

@@ -135,6 +135,10 @@
 // Pix no MP → 400 mp_conta_sem_chave_pix + aviso ao dono (decisão 16); o cartão de outro mundo (sandbox no public) não é aplicado (MENOR 20); a
 // coluna nova só pela regra (C2: colunasAssinatura, COLUNAS_COBRANCA_W2, collectorDaLinha); o I5 da W1 também na mensalidade do MP aguardando
 // (decisão 15). Ficam no MP do Physiq: o aluno_app_plano e o cancelarAssinaturasDoAppEncerrado (a conta do app). Peças: ./mp-credencial.ts.
+// play-W6 (16/10/2026 — a assinatura do aluno sem profissional pela Google Play): com a assinatura da Play VIVA na matrícula do app, as 5
+// ações de pagar (aluno_mp_pix, aluno_mp_cartao, aluno_mp_assinar, aluno_app_plano, aluno_ip_link) → 409 assinatura_play (nada de cobrar
+// 2 vezes pelo site ou pelo APK antigo); o aluno_status ganha play { estado, renova, expira_em, produto } (chave nova; nunca o token).
+// O cancelarAssinaturasDoAppEncerrado (a rede do aluno_status) também cancela a da Play da matrícula encerrada pelo vínculo.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog, emSegundoPlano } from "../_shared/log.ts";
@@ -198,6 +202,7 @@ import {
 import { textoDoAvisoDaFila, type ResultadoValor } from "../_shared/planos-automatica.ts";
 import { trocarValorDaAutomatica, type TrocaDoValor } from "../_shared/planos-automatica-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
+import { assinaturaVivaDa, vistaDaPlay } from "../_shared/play-assinaturas.ts";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 import { ORCAMENTO_MS, prazo } from "../_shared/tempo.ts";
 import { POR_PAGINA, PaginaInvalida, lerPagina, paginaDasMensalidades, type AlunoDoResumo } from "./mensalidades.ts";
@@ -436,6 +441,11 @@ Deno.serve(async (req) => {
     if (error) throw error;
     if (!data) falhar("cobranca_inexistente", 404);
     return data as unknown as Cobranca;
+  };
+
+  /** play-W6: com a assinatura da Google Play viva na matrícula do app, nada de cobrar de novo pelo site ou pelo APK antigo (409). */
+  const semPlayViva = async (m: Matricula): Promise<void> => {
+    if (ehDoApp(m) && (await assinaturaVivaDa(db, m.id))) falhar("assinatura_play", 409);
   };
 
   /** A matrícula do aluno logado (a pedida, ou a 1ª ativa). */
@@ -1221,6 +1231,9 @@ Deno.serve(async (req) => {
           // W2: só na matrícula do MP do personal (nas outras, null — o APK antigo não lê)
           mp: modo === "mercadopago_conta"
             ? { disponivel: mpDaConta?.status === "ativa", chave_publica: mpDaConta?.status === "ativa" ? mpDaConta.mp_public_key : null } : null,
+          // play-W6: a assinatura viva da Google Play da matrícula do app ({ estado, renova, expira_em, produto }; nunca o token) — null
+          // nas outras e sem a Play (chave nova: o APK antigo não lê)
+          play: ehDoApp(atual) ? vistaDaPlay(await assinaturaVivaDa(db, atual.id)) : null,
         });
       }
       return json({ ok: true, ambiente: schema, simulacao: schema === "staging", hoje, agora: new Date().toISOString(), matriculas }, 200, origin);
@@ -1333,6 +1346,7 @@ Deno.serve(async (req) => {
 
     if (acao === "aluno_mp_pix" || acao === "aluno_mp_cartao") {
       const m = await minhaMatricula(body.paciente_id);
+      await semPlayViva(m);
       // W2: o MP do Physiq ou o da conta do personal (sem acesso a ela → 409 mp_conta_indisponivel) — a MESMA credencial em todas as idas daqui
       const cred = await credencialParaPagar(m);
       const alvo = await alvoDoPagamento(m, body.cobranca_id);
@@ -1490,6 +1504,7 @@ Deno.serve(async (req) => {
 
     if (acao === "aluno_mp_assinar") {
       const m = await minhaMatricula(body.paciente_id);
+      await semPlayViva(m);
       // W2: o MP do Physiq ou o da conta do personal (sem acesso a ela → 409 mp_conta_indisponivel) — a MESMA credencial nos POST daqui
       const cred = await credencialParaPagar(m);
       if (!m.mensalidade_valor || m.cobranca_pausada) falhar("sem_mensalidade");
@@ -1593,6 +1608,7 @@ Deno.serve(async (req) => {
     if (acao === "aluno_app_plano") {
       const m = await minhaMatricula(body.paciente_id);
       if (!ehDoApp(m)) falhar("nao_e_do_app");
+      await semPlayViva(m);
       const plano = String(body.plano || "");
       if (!/^app_[a-z_]{1,40}$/.test(plano)) falhar("plano_invalido");
       const { data: r0, error: et } = await db.rpc("app_trocar_plano", { p_paciente: m.id, p_plano: plano, p_por: user.id });
@@ -1694,6 +1710,7 @@ Deno.serve(async (req) => {
     // ════════════════════════════ W1 — O ALUNO PAGA PELA INFINITEPAY ════════════════════════════
     if (acao === "aluno_ip_link") {
       const m = await minhaMatricula(body.paciente_id);
+      await semPlayViva(m);
       const handle = await exigirInfinitePay(m);
       if (!permitido(`ip-link:${user.id}`, 10, 600_000)) falhar("rate_limited", 429);
       await fecharVencidas(db, m.id);
