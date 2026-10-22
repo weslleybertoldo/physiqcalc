@@ -1,55 +1,68 @@
 #!/usr/bin/env python3
-"""Physiq play-W6 — E2E de SERVIDOR da assinatura da Google Play, LOCAL (o molde do e2e/mpc/api.py --local): a play-compras, a play-rtdn,
-a pagamentos-aluno e a excluir-minha-conta no Deno LOCAL (e2e/w1/servir_local.ts) contra o banco do STAGING (x-schema staging — outro
-schema nunca; a migration da play-W6 já no staging) e o SIMULADOR da Play (e2e/playw6/simulador_play.py: a API, o OAuth da conta de serviço
-FALSA e o push ASSINADO por chave local — o JWKS dele no lugar do do Google pelo PLAY_OIDC_JWKS, que a produção não tem). O Deno só alcança
-127.0.0.1 e o Supabase (--allow-net): o Google e o Mercado Pago de verdade nem são alcançáveis.
+"""Physiq play-W6 — E2E de SERVIDOR da assinatura da Google Play, LOCAL (o molde do e2e/mpc/api.py --local): a play-compras, a
+play-conferir, a pagamentos-aluno e a excluir-minha-conta no Deno LOCAL (e2e/w1/servir_local.ts) contra o banco do STAGING (x-schema staging —
+outro schema nunca; a migration da play-W6 já no staging — a versão de 16/10: a §8, a rotina do pg_cron, só entra na F4, e esta prova não
+precisa dela: a play-conferir é chamada aqui direto, como o pg_net faria) e o SIMULADOR da Play (e2e/playw6/simulador_play.py: a API — o GET,
+o acknowledge, o cancel, o defer, o revoke e a Voided Purchases API — e o OAuth da conta de serviço FALSA). O Deno só alcança 127.0.0.1 e o
+Supabase (--allow-net): o Google e o Mercado Pago de verdade nem são alcançáveis.
+22/10/2026: o aviso do Google pelo Pub/Sub (o RTDN, a play-rtdn com o OIDC) saiu — sem faturamento no Google Cloud não há Pub/Sub —; no
+lugar, a play-conferir (de hora em hora pelo pg_cron, com o segredo S11): os casos dela tomam o lugar dos casos do aviso.
 
-Contas de TESTE (staging): w7b-treino (vencida: as compras, o RTDN, a troca e o vínculo), w7b-removido (no teste grátis: o defer; e a
+Contas de TESTE (staging): w7b-treino (vencida: as compras, a conferência, a troca e o vínculo), w7b-removido (no teste grátis: o defer; e a
 exclusão), w7b-vence (coberta pelo mês do MP: a corrida com a automática e o 409 do site); a matrícula do w7b-novo só como "outro dono"
 (sem login). Casos (--local, na ordem):
-  oidc         o push: OIDC válido (a notificação de teste → 204 + log play_rtdn_teste) · ausente · outra chave · outra audiência · outro e-mail
-               · e-mail não verificado · vencido · kid desconhecido → 401
+  conferir_porta  a porta da play-conferir (verify_jwt false): sem o segredo e com o errado → o MESMO 401 segredo_invalido; GET → 405;
+               schema fora → 400 schema_invalido; limite 0 → 400 limite_invalido
+  janela       a 1ª rodada lê a Voided Purchases API com type=1 e a janela de 24 h (sem o marcador) e grava o marcador app_config
+               play_conferir; a seguinte começa no marcador menos 10 min
   registrar    a compra conferida no Google, gravada (ativa; a cobertura = o fim da Play; 1 cobrança google_play paga) e reconhecida; 2× = 1 linha
   outro_dono   a compra de OUTRA matrícula → 409 compra_de_outra_conta (nada gravado nem reconhecido)
   token_falso  o token que o Google não conhece → 400 compra_invalida; fora do formato → 400 pedido_invalido
   estado       disponivel, a matrícula, a assinatura (só estado, renova, expira_em e produto: sem token nem pedido)
   teste_defer  no teste grátis: a 1ª compra é adiada pelos dias que faltam (≥ 1 dia) e a cobertura vai ao fim novo — com o GET de depois do
-               defer CAINDO (a marca já gravada) e o RTDN 9 (DEFERRED) que chega em seguida SEM adiar de novo (a revisão, 🟡1)
+               defer CAINDO (a marca já gravada) e a conferência de hora em hora que roda em seguida SEM adiar de novo (a revisão, 🟡1)
   mp_vivo      com a automática do MP viva (a corrida; a automática SIMULADA "sim-playw6-…", que só existe no banco): a do MP cancelada, a
                Play segue, adiada pelo que o MP pagou
-  rtdn         RENEWED → +1 cobrança e a cobertura anda · o mesmo aviso de novo = nada · IN_GRACE → cobre · ON_HOLD → trava · RECOVERED · CANCELED
-               → vale até o fim · EXPIRED → trava · REVOKED → revogada, trava · VOIDED → a cobrança devolvida
-  troca        para o completo NA HORA (a anterior substituída, o plano na hora) · para o Treino NA RENOVAÇÃO (o plano só no RENEWED; o GET
-               do token novo com as 2 linhas da doc, a nova primeiro — a revisão, 🟡2)
-  ressincroniza a viva vencida no banco (o RTDN perdido): o estado lê o Google e grava — a renovação sem RTDN (+1 cobrança, sem reconhecer
-               nem adiar) e a cancelada vencida (fora do aluno_status; gravada expirada) (a revisão, 🟡3)
-  devolucao_velha  o aviso de devolução de um token que o Google esqueceu (GET 410): a cobrança devolvida pelo orderId (a revisão, ⚪13)
+  conferir     cada mudança no Google entra na rodada seguinte da play-conferir: renovada → +1 cobrança e a cobertura anda · a rodada de
+               novo = nada (idempotente) · carência → cobre · suspensa → trava · pausada → trava · recuperada · cancelada → vale até o fim ·
+               expirada → trava · a devolução SEM cortar o acesso (Voided) → só a cobrança daquele pedido · a devolução que corta (Voided) →
+               revogada + a cobrança devolvida, trava
+  troca        para o completo NA HORA (a anterior substituída, o plano na hora) · para o Treino NA RENOVAÇÃO (o plano só na renovação, que a
+               conferência traz; o GET do token novo com as 2 linhas da doc, a nova primeiro — a revisão, 🟡2)
+  ressincroniza a viva vencida no banco (a conferência que ainda não passou): o estado lê o Google e grava — a renovação (+1 cobrança, sem
+               reconhecer nem adiar) e a cancelada vencida (fora do aluno_status; gravada expirada) (a revisão, 🟡3)
+  devolucao_velha  a devolvida (Voided) de um token que o Google esqueceu (GET 410): a cobrança devolvida pelo orderId (a revisão, ⚪13)
+  sobra        o limite por rodada: com limite 1, 1 conferida e o resto contado como sobra; a rodada seguinte confere OUTRA (a que está há mais
+               tempo sem conferir)
   vinculo      2 matrículas do app SINTÉTICAS ("PLAYW6 Vínculo A/B" do w7b-treino, encerradas pelo vínculo — o molde do e2e/w19) com a Play
-               viva: o aviso RENEWED da A → a rede do play-rtdn cancela; o aluno_status (a rede da pagamentos-aluno) cancela a B — as 2 com
-               DEVELOPER_REQUESTED_STOP_PAYMENTS (vale até o fim, sem devolver)
+               viva: a A renova → a rede da conferência cancela; depois a B: o aluno_status (a rede da pagamentos-aluno) cancela — as 2
+               com DEVELOPER_REQUESTED_STOP_PAYMENTS (vale até o fim, sem devolver)
   exclusao     o Google fora → 502 play_nao_cancelada e nada apagado (o Treino nem é chamado para excluir); o Google ok → a da Play cancelada
                ANTES e o Treino (FALSO, local: o "excluir" falha) → 502 treino_indisponivel com play_cancelada (a revisão, ⚪14) — nada
                apagado no principal nem no login
   site_409     com a Play viva, o Pix do site/APK antigo → 409 assinatura_play; o aluno_status traz o play (sem o token)
   mp_409       o registrar recusado (outra Play viva → 409) NÃO cancela a automática do MP (a revisão, ⚪12)
-  log          o log do Deno da rodada sem os valores de teste (os tokens de compra, os pedidos, os e-mails): 0 ocorrência
-A FOTO (antes de gravar, em ~/projetos/physiqcalc-scratch/hml/playw6/local/api-estado.json, 600): as matrículas das 3 contas. No fim (ou no
---limpar): saem as assinaturas da Play da rodada (token "simtok-"), as cobranças google_play delas, a automática simulada ("sim-playw6-"),
-as matrículas sintéticas ("PLAYW6 ") e os eventos de plano da rodada; o plano volta ao da foto e a cobertura é recalculada; a conferência
-(SQL SÓ LEITURA pelo ~/projetos/physiqcalc-scratch/hml/sqlro.py, só contagens) pede 0 linha com a marca da rodada e as 3 matrículas iguais
-à foto. Os logins (1 por conta usada) saem com logout local no fim.
+  sem_credencial  um 5º Deno, só da play-conferir e SEM o PLAY_SERVICE_ACCOUNT: 200 pulou play_sem_credencial + o log; nada vai ao Google
+  log          o log do Deno da rodada sem os valores de teste (os tokens de compra, os pedidos, os e-mails, os segredos da rodada): 0 ocorrência
+A FOTO (antes de gravar, em ~/projetos/physiqcalc-scratch/hml/playw6/local/api-estado.json, 600): as matrículas das 3 contas e o marcador
+app_config play_conferir (que a play-conferir da rodada grava). No fim (ou no --limpar): saem as assinaturas da Play da rodada (token
+"simtok-"), as cobranças google_play delas, a automática simulada ("sim-playw6-"), as matrículas sintéticas ("PLAYW6 ") e os eventos de plano
+da rodada; o plano volta ao da foto e a cobertura é recalculada; o marcador volta ao da foto (sem ele antes: sai); a conferência (SQL SÓ
+LEITURA pelo ~/projetos/physiqcalc-scratch/hml/sqlro.py, só contagens) pede 0 linha com a marca da rodada, as 3 matrículas iguais à foto e o
+marcador igual ao da foto. Os logins (1 por conta usada) saem com logout local no fim. O segredo S11 da rodada nasce aqui (só na memória:
+ao Deno vai só o sha256, na SEGREDO_PLAY_CONFERIR_ACEITOS).
 Saída sem dado pessoal nem segredo: códigos, status, contagens e booleanos.
-Precisa: ~/.pc-pat, as senhas das contas de TESTE, o ~/.deno/bin/deno e as portas 8791–8796 livres.
+Precisa: ~/.pc-pat, as senhas das contas de TESTE, o ~/.deno/bin/deno e as portas 8791–8797 livres.
 O vermelho das correções: PLAYW6_FUNCOES_DE=<as funções de antes, por git archive, fora do repo> roda os mesmos casos contra o código velho.
 Uso: python3 e2e/playw6/api.py --seco
-     python3 e2e/playw6/api.py --local [--casos registrar,rtdn,...]
+     python3 e2e/playw6/api.py --local [--casos registrar,conferir,...]
      python3 e2e/playw6/api.py --limpar
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import math
 import os
@@ -79,20 +92,22 @@ SQLRO = CASA / "projetos" / "physiqcalc-scratch" / "hml" / "sqlro.py"
 DENO = CASA / ".deno" / "bin" / "deno"
 # só para provar o VERMELHO das correções: as funções de antes (git archive do commit velho, fora do repo); o padrão é a worktree
 FUNCOES_DIR = Path(os.environ.get("PLAYW6_FUNCOES_DE") or (RAIZ / "supabase-principal" / "functions"))
-PORTAS = {"compras": 8791, "rtdn": 8792, "pag": 8793, "excluir": 8794, "treino": 8795, "sim": 8796}
-FUNCOES = {"compras": "play-compras", "rtdn": "play-rtdn", "pag": "pagamentos-aluno", "excluir": "excluir-minha-conta"}
+PORTAS = {"compras": 8791, "conferir": 8792, "pag": 8793, "excluir": 8794, "treino": 8795, "sim": 8796, "conferir_sem": 8797}
+FUNCOES = {"compras": "play-compras", "conferir": "play-conferir", "pag": "pagamentos-aluno", "excluir": "excluir-minha-conta"}
 CONTAS = ("w7b-treino", "w7b-removido", "w7b-vence")
 OUTRO_DONO = "w7b-novo"
 MARCA_AUTOMATICA = "sim-playw6-"
 MARCA_SINTETICA = "PLAYW6 "
 CANCELAMENTO = "DEVELOPER_REQUESTED_STOP_PAYMENTS"
-CASOS = ("oidc", "registrar", "outro_dono", "token_falso", "estado", "teste_defer", "mp_vivo", "rtdn", "troca", "ressincroniza", "devolucao_velha",
-         "vinculo", "exclusao", "site_409", "mp_409", "log")
+CASOS = ("conferir_porta", "janela", "registrar", "outro_dono", "token_falso", "estado", "teste_defer", "mp_vivo", "conferir", "troca",
+         "ressincroniza", "devolucao_velha", "sobra", "vinculo", "exclusao", "site_409", "mp_409", "sem_credencial", "log")
+ESTADOS_VIVOS = ("pendente", "ativa", "cancelada", "carencia", "suspensa", "pausada")
 CAMPOS_FOTO = ("ativo", "plano_id", "valor", "pago_ate", "teste_ate", "encerrada_em", "encerrada_motivo")
 
 B = None   # a base da W7b (e2e/w07b/_base.py: as contas de TESTE, o login e o SQL) — carregada no --local/--limpar (o --seco não abre rede)
 p = None
-CTX: dict = {"tokens": [], "pedidos": [], "freio": [], "logins": []}
+# o segredo S11 da rodada (só na memória; ao Deno vai só o sha256) e os errados que o caso da porta manda (a busca no log)
+CTX: dict = {"tokens": [], "pedidos": [], "freio": [], "logins": [], "segredo": secrets.token_urlsafe(48), "segredos_errados": []}
 _ABRIR = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
@@ -249,8 +264,18 @@ def info(token: str) -> dict:
     return sim("/_compra_info", {"token": token})
 
 
-def empurrar(**d) -> int:
-    return int(sim("/_push", {"url": f"http://127.0.0.1:{PORTAS['rtdn']}/play-rtdn", **d}).get("status") or 0)
+def conferir(limite: int | None = None, segredo: str | None = None, corpo: dict | None = None, porta: str = "conferir") -> tuple[int, dict]:
+    """Uma rodada da play-conferir local — o que o pg_net faz de hora em hora —, com o segredo S11 desta rodada no x-espelho-segredo
+    (segredo="" = sem o cabeçalho)."""
+    c = corpo if corpo is not None else {"schema": S, **({"limite": limite} if limite else {})}
+    cab = {} if segredo == "" else {"x-espelho-segredo": segredo or CTX["segredo"]}
+    st, r = rede("POST", f"http://127.0.0.1:{PORTAS[porta]}", c, cab)
+    return st, (r if isinstance(r, dict) else {})
+
+
+def voided_desde(n0: int) -> list[dict]:
+    """As idas à Voided Purchases API desde o pedido n0 do simulador (o type, a janela em segundos e quantas)."""
+    return [x for x in sim_pedidos(n0) if x.get("acao") == "voided"]
 
 
 class TreinoFalso:
@@ -300,7 +325,8 @@ def ambiente_deno(conta_servico: dict) -> dict:
         "SUPABASE_URL": B.PRINCIPAL_URL, "SUPABASE_SERVICE_ROLE_KEY": B.service(B.PRINCIPAL_REF), "SUPABASE_ANON_KEY": B.anon(B.PRINCIPAL_REF),
         # a Play: a conta de serviço FALSA do simulador (a chave é desta execução) e as 3 trocas que só o teste local tem
         "PLAY_SERVICE_ACCOUNT": json.dumps(conta_servico), "PLAY_API_BASE": base_sim, "PLAY_OAUTH_URL": f"{base_sim}/token",
-        "PLAY_OIDC_JWKS": f"{base_sim}/jwks",
+        # o S11 da play-conferir: só o sha256 do segredo desta rodada (o molde do e2e/w2/api.py com o S10)
+        "SEGREDO_PLAY_CONFERIR_ACEITOS": hashlib.sha256(CTX["segredo"].encode()).hexdigest(),
         # o MP num endereço FECHADO (a automática da rodada é simulada: cancela só no banco)
         "MP_API_BASE": "http://127.0.0.1:19", "MP_ACCESS_TOKEN_TEST": "TEST-0-playw6-fechado", "MP_ACCESS_TOKEN_PROD": "APP_USR-0-playw6-fechado",
         "INFINITEPAY_API": "http://127.0.0.1:19",
@@ -338,6 +364,7 @@ def subir(rotulo: str = "e2e/playw6/api.py --local") -> dict:
         raise RuntimeError("o simulador não subiu")
     CTX["treino"] = TreinoFalso(PORTAS["treino"])
     env = ambiente_deno(sim("/_conta_servico"))
+    CTX["env"] = env
     rede_ = f"127.0.0.1,{B.PRINCIPAL_REF}.supabase.co"
     for nome, funcao in FUNCOES.items():
         procs[nome] = subprocess.Popen([str(DENO), "run", f"--allow-net={rede_}", "--allow-env", "--allow-read", "e2e/w1/servir_local.ts",
@@ -462,8 +489,14 @@ def play_aplicar_direto(pid: str, token: str, expira: str) -> dict:
 
 # ───────────────────────── a foto e o desfazer ─────────────────────────
 
+def marcador() -> str | None:
+    """O marcador app_config play_conferir (o JSON em texto; None = sem a linha) — a play-conferir da rodada grava nele."""
+    r = um(f"select valor::text as v from {S}.app_config where chave = 'play_conferir'")
+    return r["v"] if r else None
+
+
 def foto() -> dict:
-    est = {"inicio": agora().isoformat(), "uid_treino": B.uid("w7b-treino"), "matriculas": {}}
+    est = {"inicio": agora().isoformat(), "uid_treino": B.uid("w7b-treino"), "matriculas": {}, "marca": marcador()}
     for c in CONTAS:
         m = matricula(c)
         est["matriculas"][c] = {"id": m["id"], **{k: m[k] for k in CAMPOS_FOTO}}
@@ -486,6 +519,10 @@ def comandos_do_desfazer(est: dict) -> list[str]:
         f"and em >= {lit(est['inicio'])}::timestamptz",
         f"delete from {S}.pacientes where id in ({sinteticas})",
     ]
+    if "marca" in est:
+        # o marcador da Voided Purchases API volta ao da foto (sem ele antes: sai — a migration de 16/10 no staging não o cria)
+        cmds.append(f"delete from {S}.app_config where chave = 'play_conferir'" if est["marca"] is None else
+                    f"update {S}.app_config set valor = {lit(est['marca'])}::jsonb where chave = 'play_conferir'")
     for m in est["matriculas"].values():
         # o plano volta ao da foto (a troca da rodada); o ativo e o encerramento a rodada não toca (a conferência prova)
         cmds.append(f"update {S}.pacientes set plano_aluno_id = {lit(m['plano_id'])}::uuid, mensalidade_valor = {lit(m['valor'])}::numeric "
@@ -507,7 +544,10 @@ def sql_da_conferencia(est: dict) -> str:
              and p.app_teste_ate is not distinct from {lit(m['teste_ate'])}::timestamptz
              and p.app_encerrada_em is not distinct from {lit(m['encerrada_em'])}::timestamptz
              and p.app_encerrada_motivo is not distinct from {lit(m['encerrada_motivo'])})""" for m in ids)
+    marca = ("(select count(*) from {S}.app_config where chave = 'play_conferir') = 0" if est.get("marca") is None else
+             f"exists (select 1 from {S}.app_config where chave = 'play_conferir' and valor = {lit(est['marca'])}::jsonb)").replace("{S}", S)
     return f"""select
+  ({marca}) as marca,
   (select count(*) from {S}.play_assinaturas where token like 'simtok-%') as play,
   (select count(*) from {S}.cobrancas where paciente_id in ({lista}) and forma = 'google_play') as cobrancas,
   (select count(*) from {S}.aluno_assinaturas where mp_preapproval_id like '{MARCA_AUTOMATICA}%') as automaticas,
@@ -523,9 +563,10 @@ def desfazer(est: dict) -> bool:
     r = (sql_so_leitura(sql_da_conferencia(est)) or [{}])[0]
     marca = {k: int(r.get(k, -1)) for k in ("play", "cobrancas", "automaticas", "sinteticas", "eventos")}
     iguais = int(r.get("iguais", -1))
-    ok = all(v == 0 for v in marca.values()) and iguais == len(est["matriculas"])
+    marcador_igual = str(r.get("marca")).lower() in ("true", "t") or "marca" not in est
+    ok = all(v == 0 for v in marca.values()) and iguais == len(est["matriculas"]) and marcador_igual
     p.check(ok, f"a limpeza CONFERIDA (sqlro, só leitura): {', '.join(f'{k} {v}' for k, v in marca.items())} (todos 0) · "
-                f"{iguais}/{len(est['matriculas'])} matrículas iguais à foto")
+                f"{iguais}/{len(est['matriculas'])} matrículas iguais à foto · o marcador play_conferir igual à foto: {marcador_igual}")
     if ok:
         ESTADO_ARQ.unlink(missing_ok=True)
     return ok
@@ -544,14 +585,45 @@ def sair_local() -> int:
 
 # ───────────────────────── os casos ─────────────────────────
 
-def caso_oidc() -> None:
-    n0 = tamanho_do_log()
-    st = empurrar(tipo="teste", oidc="valido")
-    p.check(st == 204, f"oidc · válido (a notificação de teste do Console) → 204 ({st})")
-    p.check("play_rtdn_teste" in log_desde(n0), "oidc · o log play_rtdn_teste")
-    for modo in ("ausente", "forjado", "aud", "email", "nao_verificado", "expirado", "kid"):
-        st = empurrar(tipo="teste", oidc=modo)
-        p.check(st == 401, f"oidc · {modo} → 401 ({st})")
+def caso_conferir_porta() -> None:
+    """A porta da play-conferir (verify_jwt false, o segredo S11): sem o segredo e com o errado → o MESMO 401, sem detalhe; só POST; o corpo
+    conferido (o schema e o limite) — nada disto chega à rodada (nenhuma ida ao "Google")."""
+    errado = secrets.token_urlsafe(48)
+    CTX["segredos_errados"].append(errado)
+    n0 = sim_n()
+    st1, r1 = conferir(segredo="")
+    st2, r2 = conferir(segredo=errado)
+    p.check(st1 == 401 and st2 == 401 and r1 == r2 == {"ok": False, "erro": "segredo_invalido"},
+            f"conferir_porta · sem o segredo e com o errado → o MESMO 401 segredo_invalido ({st1}, {st2})")
+    st, _r = rede("GET", f"http://127.0.0.1:{PORTAS['conferir']}", None, {"x-espelho-segredo": CTX["segredo"]})
+    p.check(st == 405, f"conferir_porta · GET → 405 ({st})")
+    st, r = conferir(corpo={"schema": "outro"})
+    p.check(st == 400 and r.get("erro") == "schema_invalido", f"conferir_porta · o schema fora → 400 schema_invalido ({st})")
+    st, r = conferir(corpo={"schema": S, "limite": 0})
+    p.check(st == 400 and r.get("erro") == "limite_invalido", f"conferir_porta · o limite 0 → 400 limite_invalido ({st})")
+    p.check(sim_n() == n0, "conferir_porta · nenhuma ida ao Google (simulador) nos 5 pedidos recusados")
+
+
+def caso_janela(est: dict) -> None:
+    """A Voided Purchases API: a 1ª rodada lê com type=1 e, sem o marcador, as últimas 24 h; a janela inteira lida → o marcador app_config
+    play_conferir = o fim dela; a rodada seguinte começa no marcador menos a folga (10 min)."""
+    n0 = sim_n()
+    t0 = time.time()
+    st, r = conferir()
+    v = voided_desde(n0)
+    marca = (um(f"select valor ->> 'voided_ate' as v from {S}.app_config where chave = 'play_conferir'") or {}).get("v")
+    antes = json.loads(est["marca"]).get("voided_ate") if est.get("marca") else None
+    inicio_esperado = (ts(antes).timestamp() - 600) if antes else (t0 - 86400)
+    p.check(st == 200 and r.get("ok") is True and len(v) == 1 and v[0].get("type") == "1" and abs(v[0].get("inicio_s", 0) - inicio_esperado) <= 120
+            and r.get("devolvidas_completa") is True,
+            f"janela · a 1ª rodada: a Voided com type=1 e a janela {'do marcador − 10 min' if antes else 'de 24 h (sem o marcador)'} — {st}")
+    fim = v[0].get("fim_s", 0) if v else 0
+    p.check(bool(marca) and abs(ts(marca).timestamp() - fim) <= 2, "janela · a janela inteira lida: o marcador play_conferir = o fim dela")
+    n1 = sim_n()
+    st2, _r2 = conferir()
+    v2 = voided_desde(n1)
+    p.check(st2 == 200 and len(v2) == 1 and bool(marca) and abs(v2[0].get("inicio_s", 0) - (ts(marca).timestamp() - 600)) <= 2,
+            f"janela · a rodada seguinte começa no marcador menos a folga (10 min) — {st2}")
 
 
 def caso_registrar(m: dict) -> str:
@@ -605,8 +677,8 @@ def caso_estado(m: dict, token: str) -> None:
 
 
 def caso_teste_defer(m: dict) -> str:
-    """🟡1 da revisão: o GET logo DEPOIS do defer cai (o cenário falhas_get_pos_defer) e o RTDN 9 (SUBSCRIPTION_DEFERRED) chega em seguida —
-    a marca adiada_em já está no banco (gravada logo depois do 2xx, com o fim novo da resposta do defer): nada de 2º defer."""
+    """🟡1 da revisão: o GET logo DEPOIS do defer cai (o cenário falhas_get_pos_defer) e a conferência de hora em hora roda em seguida — a
+    marca adiada_em já está no banco (gravada logo depois do 2xx, com o fim novo da resposta do defer): nada de 2º defer."""
     antes = ts(m["pago_ate"])
     p.check(antes is not None and antes > agora() + dt.timedelta(days=1), "teste_defer · a matrícula no teste grátis, coberta por mais de 1 dia")
     c = comprar("app_treino", m["id"])
@@ -625,10 +697,10 @@ def caso_teste_defer(m: dict) -> str:
             f"teste_defer · o defer no Google = os dias que faltam ({i['adiada_dias']} = {dias}; {i['adiamentos']} defer)")
     p.check(perto(cobertura(m["id"]), ts(i["expira"])) and ts(i["expira"]) > antes + dt.timedelta(days=29),
             "teste_defer · a cobertura vai ao fim novo (o da resposta do defer; o mês pago começa depois do teste)")
-    st9 = empurrar(tipo="assinatura", notificacao=9, token=c["token"])
+    st9, _r9 = conferir()
     i = info(c["token"])
-    p.check(st9 == 204 and i["adiamentos"] == 1 and i["adiada_dias"] == dias and perto(cobertura(m["id"]), ts(i["expira"])),
-            f"teste_defer · o RTDN 9 (DEFERRED) que chega depois NÃO adia de novo ({i['adiamentos']} defer, {i['adiada_dias']} dias) — {st9}")
+    p.check(st9 == 200 and i["adiamentos"] == 1 and i["adiada_dias"] == dias and perto(cobertura(m["id"]), ts(i["expira"])),
+            f"teste_defer · a conferência que roda depois NÃO adia de novo ({i['adiamentos']} defer, {i['adiada_dias']} dias) — {st9}")
     return c["token"]
 
 
@@ -651,54 +723,73 @@ def caso_mp_vivo(m: dict) -> str:
     return c["token"]
 
 
-def caso_rtdn(m: dict, token: str) -> None:
+def devolvidas_de(pid: str) -> int:
+    return sum(1 for x in cobrancas_play(pid) if x["status"] == "cancelada" and x["reembolsada"])
+
+
+def caso_conferir(m: dict, token: str) -> None:
+    """A conferência de hora em hora (no lugar do aviso do Google pelo Pub/Sub): cada mudança no Google entra na rodada seguinte da
+    play-conferir — o GET de TODAS as vivas e as devolvidas da Voided Purchases API, pela mesma sincronia do registrar."""
     pid = m["id"]
     mudar(token, "renovar")
-    st = empurrar(tipo="assinatura", notificacao=2, token=token, repetir_id="playw6-renovado")
+    st, r = conferir()
     i = info(token)
-    p.check(st == 204 and len(cobrancas_play(pid)) == 2 and perto(cobertura(pid), ts(i["expira"])),
-            f"rtdn · RENEWED → 204, +1 cobrança (2) e a cobertura anda — {st}")
-    st = empurrar(tipo="assinatura", notificacao=2, token=token, repetir_id="playw6-renovado")
-    p.check(st == 204 and len(cobrancas_play(pid)) == 2 and assinatura(token).get("estado") == "ativa", f"rtdn · o mesmo aviso de novo = nada novo — {st}")
+    p.check(st == 200 and r.get("ok") is True and len(cobrancas_play(pid)) == 2 and perto(cobertura(pid), ts(i["expira"]))
+            and int(r.get("mudaram") or 0) >= 1, f"conferir · renovada → +1 cobrança (2) e a cobertura anda — {st}, mudaram {r.get('mudaram')}")
+    st, r = conferir()
+    p.check(st == 200 and len(cobrancas_play(pid)) == 2 and assinatura(token).get("estado") == "ativa" and r.get("mudaram") == 0
+            and r.get("devolvidas_marcadas") == 0, f"conferir · a rodada de novo = nada novo (idempotente) — {st}, mudaram {r.get('mudaram')}")
     mudar(token, "carencia")
-    st = empurrar(tipo="assinatura", notificacao=6, token=token)
+    st, _r = conferir()
     i = info(token)
-    p.check(st == 204 and assinatura(token).get("estado") == "carencia" and perto(cobertura(pid), ts(i["expira"])) and len(cobrancas_play(pid)) == 2,
-            f"rtdn · IN_GRACE_PERIOD → carência: cobre até o fim estendido, sem cobrança do pedido recusado — {st}")
+    p.check(st == 200 and assinatura(token).get("estado") == "carencia" and perto(cobertura(pid), ts(i["expira"])) and len(cobrancas_play(pid)) == 2,
+            f"conferir · carência: cobre até o fim estendido, sem cobrança do pedido recusado — {st}")
     mudar(token, "suspender")
-    st = empurrar(tipo="assinatura", notificacao=5, token=token)
-    p.check(st == 204 and assinatura(token).get("estado") == "suspensa" and travada(cobertura(pid)), f"rtdn · ON_HOLD → suspensa, trava — {st}")
+    st, _r = conferir()
+    p.check(st == 200 and assinatura(token).get("estado") == "suspensa" and travada(cobertura(pid)), f"conferir · suspensa → trava — {st}")
     st_e, r_e = compras("w7b-treino", {"acao": "estado"})
     p.check(st_e == 200 and (r_e.get("assinatura") or {}).get("estado") == "suspensa" and "ressincronizada" not in r_e,
-            f"rtdn · o estado com a suspensa (o fim no passado) NÃO vem ressincronizada (nada mudou no Google) — {st_e}")
+            f"conferir · o estado com a suspensa (o fim no passado) NÃO vem ressincronizada (nada mudou no Google) — {st_e}")
+    mudar(token, "pausar")
+    st, _r = conferir()
+    p.check(st == 200 and assinatura(token).get("estado") == "pausada" and travada(cobertura(pid)), f"conferir · pausada → trava — {st}")
     mudar(token, "recuperar")
-    st = empurrar(tipo="assinatura", notificacao=1, token=token)
-    p.check(st == 204 and assinatura(token).get("estado") == "ativa" and len(cobrancas_play(pid)) == 3 and not travada(cobertura(pid)),
-            f"rtdn · RECOVERED → ativa, +1 cobrança (3), cobre — {st}")
+    st, _r = conferir()
+    p.check(st == 200 and assinatura(token).get("estado") == "ativa" and len(cobrancas_play(pid)) == 3 and not travada(cobertura(pid)),
+            f"conferir · recuperada → ativa, +1 cobrança (3), cobre — {st}")
     mudar(token, "cancelar_usuario")
-    st = empurrar(tipo="assinatura", notificacao=3, token=token)
+    st, _r = conferir()
     a = assinatura(token)
     i = info(token)
-    p.check(st == 204 and a.get("estado") == "cancelada" and a.get("renova") is False and a.get("cancelada_por") == "google"
-            and perto(cobertura(pid), ts(i["expira"])) and not travada(cobertura(pid)), f"rtdn · CANCELED → cancelada (google), vale até o fim — {st}")
+    p.check(st == 200 and a.get("estado") == "cancelada" and a.get("renova") is False and a.get("cancelada_por") == "google"
+            and perto(cobertura(pid), ts(i["expira"])) and not travada(cobertura(pid)), f"conferir · cancelada (google) → vale até o fim — {st}")
     mudar(token, "expirar")
-    st = empurrar(tipo="assinatura", notificacao=13, token=token)
-    p.check(st == 204 and assinatura(token).get("estado") == "expirada" and travada(cobertura(pid)), f"rtdn · EXPIRED → expirada, trava — {st}")
-    # REVOKED: uma compra nova (a anterior já venceu), o Google revoga
-    t2 = comprar("app_treino", pid)["token"]
-    st0, _ = registrar("w7b-treino", t2, "app_treino")
-    mudar(t2, "devolver")
-    st = empurrar(tipo="assinatura", notificacao=12, token=t2)
-    p.check(st0 == 200 and st == 204 and assinatura(t2).get("estado") == "revogada" and travada(cobertura(pid)), f"rtdn · REVOKED → revogada, trava — {st}")
-    # VOIDED: a devolução do pedido
+    st, _r = conferir()
+    p.check(st == 200 and assinatura(token).get("estado") == "expirada" and travada(cobertura(pid)), f"conferir · expirada → trava — {st}")
+    # a devolução de um pedido SEM cortar o acesso (a Voided Purchases API): só a cobrança daquele pedido; a assinatura segue ativa
+    c2 = comprar("app_treino", pid)
+    st0, _ = registrar("w7b-treino", c2["token"], "app_treino")
+    mudar(c2["token"], "renovar")
+    st1, _ = conferir()
+    n_cob = len(cobrancas_play(pid))
+    dev0 = devolvidas_de(pid)
+    mudar(c2["token"], "devolver_sem_revogar")
+    st, r = conferir()
+    p.check(st0 == 200 and st1 == 200 and st == 200 and devolvidas_de(pid) == dev0 + 1 and len(cobrancas_play(pid)) == n_cob
+            and assinatura(c2["token"]).get("estado") == "ativa" and not travada(cobertura(pid)) and int(r.get("devolvidas_marcadas") or 0) == 1,
+            f"conferir · a devolução SEM cortar o acesso (Voided): só a cobrança do pedido devolvida; a assinatura segue ativa — {st}")
+    mudar(c2["token"], "expirar")
+    st, _r = conferir()
+    p.check(st == 200 and assinatura(c2["token"]).get("estado") == "expirada", f"conferir · (o ensaio) a 2ª compra expira — {st}")
+    # a devolução que CORTA o acesso (o Google revoga; a Voided Purchases API traz o pedido): revogada + a cobrança devolvida, trava
     c3 = comprar("app_treino", pid)
     st0, _ = registrar("w7b-treino", c3["token"], "app_treino")
-    pedido = mudar(c3["token"], "devolver")["pedido"]
-    devolvidas0 = sum(1 for x in cobrancas_play(pid) if x["status"] == "cancelada" and x["reembolsada"])
-    st = empurrar(tipo="devolucao", token=c3["token"], pedido=pedido)
-    devolvidas = sum(1 for x in cobrancas_play(pid) if x["status"] == "cancelada" and x["reembolsada"])
-    p.check(st0 == 200 and st == 204 and devolvidas == devolvidas0 + 1 and assinatura(c3["token"]).get("estado") == "revogada" and travada(cobertura(pid)),
-            f"rtdn · VOIDED → a cobrança do pedido devolvida (cancelada + reembolsado_em) e a assinatura revogada, trava — {st}")
+    dev0 = devolvidas_de(pid)
+    mudar(c3["token"], "devolver")
+    st, r = conferir()
+    p.check(st0 == 200 and st == 200 and devolvidas_de(pid) == dev0 + 1 and assinatura(c3["token"]).get("estado") == "revogada"
+            and travada(cobertura(pid)) and int(r.get("devolvidas_aplicadas") or 0) >= 1,
+            f"conferir · a devolução que corta o acesso (Voided): a cobrança devolvida e a assinatura revogada, trava — {st}")
 
 
 def caso_troca(m: dict) -> str:
@@ -723,18 +814,18 @@ def caso_troca(m: dict) -> str:
             and len(cobrancas_play(pid)) == n_cob,
             f"troca · para o Treino NA RENOVAÇÃO: o plano segue o completo até renovar, sem cobrança nova — {st}")
     mudar(t3, "renovar")
-    st = empurrar(tipo="assinatura", notificacao=2, token=t3)
+    st, _r = conferir()
     mm = matricula("w7b-treino")
-    p.check(st == 204 and mm["plano"] == "app_treino" and float(mm["valor"]) == 29.9 and len(cobrancas_play(pid)) == n_cob + 1,
-            f"troca · no RENEWED o plano vira o Treino (R$ 29,90) e a renovação cobra — {st}")
+    p.check(st == 200 and mm["plano"] == "app_treino" and float(mm["valor"]) == 29.9 and len(cobrancas_play(pid)) == n_cob + 1,
+            f"troca · a renovação (a conferência a traz) vira o plano para o Treino (R$ 29,90) e cobra — {st}")
     return t3
 
 
 def caso_ressincroniza(m: dict, token: str) -> None:
-    """🟡3 da revisão: a viva que já venceu no banco (o RTDN perdido): o estado da play-compras lê o Google e grava, sem reconhecer nem adiar;
-    e a cancelada vencida sai das leituras de "viva" do servidor (a regra da play_aplicar)."""
+    """🟡3 da revisão: a viva que já venceu no banco (a conferência de hora em hora ainda não passou): o estado da play-compras lê o Google e
+    grava, sem reconhecer nem adiar; e a cancelada vencida sai das leituras de "viva" do servidor (a regra da play_aplicar)."""
     pid = m["id"]
-    # (a) a renovação que o RTDN não trouxe: o Google renovou; no banco, o fim gravado já passou (o tempo, simulado no fim gravado)
+    # (a) a renovação que a conferência ainda não trouxe: o Google renovou; no banco, o fim gravado já passou (o tempo, simulado no fim gravado)
     mudar(token, "renovar")
     n_cob = len(cobrancas_play(pid))
     sql(f"update {S}.play_assinaturas set expira_em = now() - interval '1 minute' where token = {lit(token)}")
@@ -747,8 +838,8 @@ def caso_ressincroniza(m: dict, token: str) -> None:
     p.check(st == 200 and (r.get("assinatura") or {}).get("estado") == "ativa" and perto(ts(a.get("expira_em")), ts(i["expira"]))
             and not travada(cobertura(pid)) and len(cobrancas_play(pid)) == n_cob + 1 and "get" in acoes
             and "acknowledge" not in acoes and "defer" not in acoes and r.get("ressincronizada") is True,
-            f"ressincroniza · a renovação sem o RTDN: o estado lê o Google e grava (o fim novo, +1 cobrança; sem reconhecer nem adiar) — {st}")
-    # (b) a cancelada que venceu sem o EXPIRED (o aviso perdido): não é mais "viva" e o estado grava a expirada
+            f"ressincroniza · a renovação antes da conferência: o estado lê o Google e grava (o fim novo, +1 cobrança; sem reconhecer nem adiar) — {st}")
+    # (b) a cancelada que venceu e a conferência ainda não passou: não é mais "viva" e o estado grava a expirada
     mudar(token, "cancelar_usuario")
     mudar(token, "expirar")
     sql(f"update {S}.play_assinaturas set estado = 'cancelada', renova = false, expira_em = now() - interval '1 minute' where token = {lit(token)}")
@@ -762,19 +853,44 @@ def caso_ressincroniza(m: dict, token: str) -> None:
 
 
 def caso_devolucao_velha(m: dict) -> None:
-    """⚪13 da revisão: o aviso de devolução de um token que o Google já esqueceu (o GET 410): a cobrança do pedido devolvida pelo orderId."""
+    """⚪13 da revisão: a devolvida (a Voided Purchases API) de um token que o Google já esqueceu (o GET 410): a cobrança do pedido devolvida
+    pelo orderId, sem o GET."""
     pid = m["id"]
     c4 = comprar("app_treino", pid)
     st0, _r = registrar("w7b-treino", c4["token"], "app_treino")
-    antes = sum(1 for x in cobrancas_play(pid) if x["status"] == "cancelada" and x["reembolsada"])
+    antes = devolvidas_de(pid)
+    mudar(c4["token"], "devolver")
     sim("/_cenario", {"get_status": 410})
     try:
-        st = empurrar(tipo="devolucao", token=c4["token"], pedido=c4["pedido"])
+        st, r = conferir()
     finally:
         sim("/_cenario", {})
-    depois = sum(1 for x in cobrancas_play(pid) if x["status"] == "cancelada" and x["reembolsada"])
-    p.check(st0 == 200 and st == 204 and depois == antes + 1,
+    depois = devolvidas_de(pid)
+    p.check(st0 == 200 and st == 200 and depois == antes + 1,
             f"devolucao_velha · o token que o Google esqueceu (GET 410): a cobrança do pedido devolvida pelo orderId — {st0} {st}, {antes}→{depois}")
+    # (o ensaio) a rodada seguinte, com o Google de volta, assenta a compra (revogada) — a matrícula fica sem Play viva
+    st, _r = conferir()
+    p.check(st == 200 and assinatura(c4["token"]).get("estado") == "revogada", f"devolucao_velha · (o ensaio) a rodada seguinte assenta a revogada — {st}")
+
+
+def vivas_da_rodada() -> list[dict]:
+    return sql(f"""select token, atualizada_em::text as em from {S}.play_assinaturas where token like 'simtok-%'
+                   and estado in ({', '.join(lit(e) for e in ESTADOS_VIVOS)}) order by atualizada_em desc""")
+
+
+def caso_sobra() -> None:
+    """O limite por rodada: com limite 1, só 1 vai ao Google e o resto conta como sobra; a rodada seguinte confere OUTRA — a que está há
+    mais tempo sem conferir (o atualizada_em)."""
+    st0, _r = conferir()   # assenta as devolvidas da janela e as vivas
+    vivas = vivas_da_rodada()
+    st1, r1 = conferir(limite=1)
+    topo1 = (vivas_da_rodada() or [{}])[0].get("token")
+    st2, r2 = conferir(limite=1)
+    topo2 = (vivas_da_rodada() or [{}])[0].get("token")
+    n = len(vivas)
+    p.check(st0 == 200 and n >= 2 and st1 == 200 and r1.get("conferidas") == 1 and r1.get("sobraram") == n - 1
+            and st2 == 200 and r2.get("conferidas") == 1 and r2.get("sobraram") == n - 1 and topo1 and topo2 and topo1 != topo2,
+            f"sobra · limite 1 com {n} vivas: 1 conferida e {n - 1} de sobra; a rodada seguinte confere OUTRA (a mais antiga) — {st1} {st2}")
 
 
 def caso_mp_409(m: dict) -> None:
@@ -792,26 +908,31 @@ def caso_mp_409(m: dict) -> None:
 
 def caso_vinculo(est: dict) -> None:
     uid = est["uid_treino"]
-    a_id, b_id = sintetica(uid, "A"), sintetica(uid, "B")
-    ca, cb = comprar("app_treino", a_id), comprar("app_treino", b_id)
+    # A: a matrícula encerrada pelo vínculo com a Play viva; ela renova → a rede da conferência cancela
+    a_id = sintetica(uid, "A")
+    ca = comprar("app_treino", a_id)
     ra = play_aplicar_direto(a_id, ca["token"], info(ca["token"])["expira"])
-    rb = play_aplicar_direto(b_id, cb["token"], info(cb["token"])["expira"])
-    p.check(ra.get("ok") is True and rb.get("ok") is True and ra.get("matricula_ativa") is False,
-            "vinculo · a massa: 2 matrículas do app encerradas pelo vínculo, cada uma com a Play viva (ativa, renova)")
-    # A: o aviso RENEWED chega para a matrícula que saiu do app → a rede do play-rtdn cancela
+    p.check(ra.get("ok") is True and ra.get("matricula_ativa") is False,
+            "vinculo · a massa A: a matrícula do app encerrada pelo vínculo, com a Play viva (ativa, renova)")
+    mudar(ca["token"], "renovar")
     n0 = sim_n()
-    st = empurrar(tipo="assinatura", notificacao=2, token=ca["token"])
+    st, r = conferir()
     canc = cancelamentos_desde(n0)
     a = assinatura(ca["token"])
-    p.check(st == 204 and len(canc) == 1 and canc[0].get("tipo") == CANCELAMENTO and a.get("estado") == "cancelada" and a.get("cancelada_por") == "vinculo",
-            f"vinculo · o aviso da matrícula encerrada: o play-rtdn cancela ({CANCELAMENTO}), vale até o fim — {st}, {len(canc)} cancel")
-    # B: a rede do aluno_status (pagamentos-aluno) — a mesma da vincular-aluno e da pos-login (cancelarAssinaturasDoAppEncerrado)
+    p.check(st == 200 and len(canc) == 1 and canc[0].get("tipo") == CANCELAMENTO and a.get("estado") == "cancelada" and a.get("cancelada_por") == "vinculo"
+            and r.get("canceladas_rede") == 1,
+            f"vinculo · a renovação da matrícula encerrada: a conferência cancela ({CANCELAMENTO}), vale até o fim — {st}, {len(canc)} cancel")
+    # B (nasce DEPOIS da conferência — senão ela cancelaria as 2): a rede do aluno_status (pagamentos-aluno) — a mesma da vincular-aluno e
+    # da pos-login (cancelarAssinaturasDoAppEncerrado)
+    b_id = sintetica(uid, "B")
+    cb = comprar("app_treino", b_id)
+    rb = play_aplicar_direto(b_id, cb["token"], info(cb["token"])["expira"])
     n0 = sim_n()
     st, _r = pag("w7b-treino", "aluno_status")
     canc = cancelamentos_desde(n0)
     b = assinatura(cb["token"])
-    p.check(st == 200 and len(canc) == 1 and canc[0].get("tipo") == CANCELAMENTO and b.get("estado") == "cancelada" and b.get("cancelada_por") == "vinculo"
-            and b.get("renova") is False and info(cb["token"])["revogada"] is False,
+    p.check(rb.get("ok") is True and st == 200 and len(canc) == 1 and canc[0].get("tipo") == CANCELAMENTO and b.get("estado") == "cancelada"
+            and b.get("cancelada_por") == "vinculo" and b.get("renova") is False and info(cb["token"])["revogada"] is False,
             f"vinculo · o aluno_status cancela a da Play da matrícula encerrada ({CANCELAMENTO}; sem devolver) — {st}, {len(canc)} cancel")
 
 
@@ -848,13 +969,32 @@ def caso_site_409(m: dict, token: str) -> None:
             f"site_409 · o aluno_status traz o play (ativa), sem token nem pedido — {st}")
 
 
+def caso_sem_credencial() -> None:
+    """Sem o PLAY_SERVICE_ACCOUNT, a play-conferir pula com o log play_sem_credencial — nada quebra e nada vai ao Google: um 5º Deno, só da
+    play-conferir e sem o segredo da Play, de pé só durante este caso."""
+    env = {k: v for k, v in (CTX.get("env") or {}).items() if k != "PLAY_SERVICE_ACCOUNT"}
+    rede_ = f"127.0.0.1,{B.PRINCIPAL_REF}.supabase.co"
+    pr = subprocess.Popen([str(DENO), "run", f"--allow-net={rede_}", "--allow-env", "--allow-read", "e2e/w1/servir_local.ts",
+                           str(FUNCOES_DIR / "play-conferir" / "index.ts"), str(PORTAS["conferir_sem"])],
+                          cwd=RAIZ, env=env, stdout=CTX["saida"], stderr=CTX["saida"])
+    CTX["procs"]["conferir_sem"] = pr
+    if not esperar(lambda: porta_aberta(PORTAS["conferir_sem"]), 240, 1.0):
+        p.check(False, "sem_credencial · o 5º Deno não subiu em 240 s")
+        return
+    n_log, n_sim = tamanho_do_log(), sim_n()
+    st, r = conferir(porta="conferir_sem")
+    p.check(st == 200 and r == {"ok": True, "pulou": "play_sem_credencial"} and sim_n() == n_sim and "play_sem_credencial" in log_desde(n_log),
+            f"sem_credencial · sem o PLAY_SERVICE_ACCOUNT: 200 pulou play_sem_credencial + o log; nada foi ao Google — {st}")
+
+
 def caso_log() -> None:
     texto = log_desde(CTX.get("log_inicio", 0))
-    valores = [*CTX["tokens"], *CTX["pedidos"], *(B.EMAIL[c] for c in (*CONTAS, OUTRO_DONO)), SIM.CONTA_SERVICO_EMAIL]
+    valores = [*CTX["tokens"], *CTX["pedidos"], *(B.EMAIL[c] for c in (*CONTAS, OUTRO_DONO)), SIM.CONTA_SERVICO_EMAIL, CTX["segredo"],
+               *CTX["segredos_errados"]]
     achados = sum(texto.count(v) for v in valores if v)
     p.check(achados == 0 and len(CTX["tokens"]) >= 10 and len(CTX["pedidos"]) >= 10,
-            f"log · o log do Deno da rodada sem tokens, pedidos e e-mails de teste: {achados} ocorrência(s) "
-            f"({len(CTX['tokens'])} tokens, {len(CTX['pedidos'])} pedidos e {len(CONTAS) + 2} e-mails procurados)")
+            f"log · o log do Deno da rodada sem tokens, pedidos, e-mails de teste e os segredos da rodada: {achados} ocorrência(s) "
+            f"({len(CTX['tokens'])} tokens, {len(CTX['pedidos'])} pedidos, {len(CONTAS) + 2} e-mails e {1 + len(CTX['segredos_errados'])} segredos procurados)")
 
 
 def rodar_local(casos: set[str]) -> int:
@@ -866,24 +1006,28 @@ def rodar_local(casos: set[str]) -> int:
     try:
         subir()
         sim("/_zerar")
-        if "oidc" in casos:
-            caso_oidc()
-        tok = caso_registrar(m["w7b-treino"]) if casos & {"registrar", "estado", "rtdn", "troca", "ressincroniza", "devolucao_velha"} else None
+        if "conferir_porta" in casos:
+            caso_conferir_porta()
+        if "janela" in casos:
+            caso_janela(est)   # a 1ª rodada da play-conferir da rodada (o marcador da foto decide a janela esperada)
+        tok = caso_registrar(m["w7b-treino"]) if casos & {"registrar", "estado", "conferir", "troca", "ressincroniza", "devolucao_velha"} else None
         if "outro_dono" in casos:
             caso_outro_dono(m["w7b-treino"])
         if "token_falso" in casos:
             caso_token_falso()
         if "estado" in casos and tok:
             caso_estado(m["w7b-treino"], tok)
-        tok_teste = caso_teste_defer(m["w7b-removido"]) if casos & {"teste_defer", "exclusao"} else None
-        tok_mp = caso_mp_vivo(m["w7b-vence"]) if casos & {"mp_vivo", "site_409", "mp_409"} else None
-        if casos & {"rtdn", "troca", "ressincroniza", "devolucao_velha"} and tok:
-            caso_rtdn(m["w7b-treino"], tok)   # a troca precisa da matrícula sem a Play viva: o rtdn deixa a última revogada
+        tok_teste = caso_teste_defer(m["w7b-removido"]) if casos & {"teste_defer", "exclusao", "sobra"} else None
+        tok_mp = caso_mp_vivo(m["w7b-vence"]) if casos & {"mp_vivo", "site_409", "mp_409", "sobra"} else None
+        if casos & {"conferir", "troca", "ressincroniza", "devolucao_velha"} and tok:
+            caso_conferir(m["w7b-treino"], tok)   # a troca precisa da matrícula sem a Play viva: a conferência deixa a última revogada
         tok_troca = caso_troca(m["w7b-treino"]) if casos & {"troca", "ressincroniza", "devolucao_velha"} else None
         if casos & {"ressincroniza", "devolucao_velha"} and tok_troca:
             caso_ressincroniza(m["w7b-treino"], tok_troca)   # a devolução velha precisa da matrícula sem a Play viva: a ressincronia expira a da troca
         if "devolucao_velha" in casos and tok_troca:
             caso_devolucao_velha(m["w7b-treino"])
+        if "sobra" in casos:
+            caso_sobra()   # as vivas do defer (w7b-removido) e da corrida com o MP (w7b-vence)
         if "vinculo" in casos:
             caso_vinculo(est)
         if "exclusao" in casos and tok_teste:
@@ -892,6 +1036,8 @@ def rodar_local(casos: set[str]) -> int:
             caso_site_409(m["w7b-vence"], tok_mp)
         if "mp_409" in casos and tok_mp:
             caso_mp_409(m["w7b-vence"])
+        if "sem_credencial" in casos:
+            caso_sem_credencial()
     except Exception as e:  # noqa: BLE001 — a rodada cai, mas o desfazer roda; só o tipo do erro sai (nada de dado)
         p.check(False, f"a rodada parou: {type(e).__name__} (veja o log do Deno; o desfazer roda agora)")
     finally:
@@ -914,14 +1060,19 @@ def rodar_seco() -> int:
                        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
     ultima = (r.stderr.strip().splitlines() or ["?"])[-1]
     p.check(r.returncode == 0, f"seco · os testes do simulador ({ultima})")
-    est = {"inicio": "2026-10-16T00:00:00+00:00", "uid_treino": "00000000-0000-4000-8000-000000000009",
+    est = {"inicio": "2026-10-16T00:00:00+00:00", "uid_treino": "00000000-0000-4000-8000-000000000009", "marca": None,
            "matriculas": {c: {"id": f"00000000-0000-4000-8000-00000000000{n}", "ativo": True, "plano_id": None, "valor": "29.90", "pago_ate": None,
                               "teste_ate": None, "encerrada_em": None, "encerrada_motivo": None} for n, c in enumerate(CONTAS, 1)}}
     cmds = comandos_do_desfazer(est)
     p.check(all(f" {S}." in c for c in cmds) and not any(" public." in c for c in cmds), f"seco · o desfazer só toca o staging ({len(cmds)} comandos)")
     apagar = [c for c in cmds if c.startswith("delete")]
     p.check(all(("simtok-" in c) or (MARCA_AUTOMATICA in c) or (MARCA_SINTETICA in c) or ("google_play" in c and "GPA." in c)
-                or ("conta_eventos" in c and "em >=" in c) for c in apagar), f"seco · cada delete do desfazer leva a marca da rodada ({len(apagar)})")
+                or ("conta_eventos" in c and "em >=" in c) or ("app_config" in c and "chave = 'play_conferir'" in c) for c in apagar),
+            f"seco · cada delete do desfazer leva a marca da rodada (ou é o marcador play_conferir que não existia na foto) ({len(apagar)})")
+    com_marca = comandos_do_desfazer({**est, "marca": '{"voided_ate": "2026-10-22T20:00:00.000Z"}'})
+    p.check(any(c.startswith(f"update {S}.app_config set valor = ") for c in com_marca) and not any("app_config" in c and c.startswith("delete")
+                                                                                                for c in com_marca),
+            "seco · com o marcador na foto, o desfazer o devolve ao valor da foto (não apaga)")
     conf = sql_da_conferencia(est).lower()
     p.check(not any(w in conf for w in ("insert ", "update ", "delete ", "begin", "commit")), "seco · a conferência é só leitura")
     return p.fim()

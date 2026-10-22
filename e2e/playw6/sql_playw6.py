@@ -621,7 +621,7 @@ begin
 
 
     if 16 in quais:
-        # a revisão, 🟡3: a cancelada que já venceu (o RTDN EXPIRED atrasou ou se perdeu) NÃO é "viva" nas leituras do aluno — a mesma regra
+        # a revisão, 🟡3: a cancelada que já venceu (a expiração que ainda não chegou ao banco) NÃO é "viva" nas leituras do aluno — a mesma regra
         # da play_aplicar (a vaga) e das leituras do servidor; a cancelada ainda no prazo continua aparecendo
         r = caso(16, f"""
 declare
