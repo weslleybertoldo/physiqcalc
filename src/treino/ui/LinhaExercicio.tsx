@@ -7,8 +7,9 @@ import { MiniaturaGif } from "./MiniaturaGif";
 export type EstadoLinha = "feito" | "atual" | "pendente";
 
 /**
- * Linha do exercício (tela 2, `.ex`): miniatura do GIF com play, nome e "4 × 10 · 60 s · 60 kg"; ✓ verde quando todas as
- * séries têm OK; o atual (1º com série por fazer) ganha o contorno violeta, "Série 3 de 3" e os tracinhos das séries.
+ * Linha do exercício (tela 2, `.ex`): miniatura do GIF com play, nome e "4 × 10 · 60 s · 60 kg"; quando todas as séries têm
+ * OK, ✓ verde e a linha cinza e riscada (a miniatura sem cor); o atual (1º com série por fazer) ganha o contorno violeta,
+ * "Série 3 de 3" e os tracinhos das séries.
  * Tocar abre as séries e as ações (ficha, histórico, anotações, trocar, remover).
  */
 export function LinhaExercicio({
@@ -72,13 +73,16 @@ export function LinhaExercicio({
       style={atual ? { boxShadow: "0 0 0 1px rgba(139,92,246,.25), 0 14px 34px -12px rgba(139,92,246,.55)" } : undefined}
     >
       <div className="flex items-center gap-3 py-2 pl-2 pr-3">
-        <button type="button" onClick={aoFicha} aria-label={`Ver ${nome} (GIF e dicas)`} data-exercicio-ficha className="flex-none rounded-[14px]">
+        <button type="button" onClick={aoFicha} aria-label={`Ver ${nome} (GIF e dicas)`} data-exercicio-ficha
+          className={cn("flex-none rounded-[14px] transition-[filter,opacity] duration-300", feito && "opacity-55 grayscale")}>
           <MiniaturaGif url={imagemUrl} exercicioId={exercicioId} nome={nome} />
         </button>
         <button type="button" onClick={aoAbrir} aria-expanded={aberto} data-exercicio-abrir className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <span className="min-w-0 flex-1">
-            <b className={cn("block truncate text-[14.5px] font-semibold", feito ? "text-texto-2" : "text-texto")} data-exercicio-nome>{nome}</b>
-            <span className="mt-[3px] block truncate text-[12px] text-texto-2" data-exercicio-linha>{sub}</span>
+            {/* feito (todas as séries com OK): a linha fica cinza e riscada (pedido do Weslley, 22/10/2026) */}
+            <b className={cn("block truncate text-[14.5px] font-semibold transition-colors duration-300",
+              feito ? "text-texto-3 line-through decoration-texto-3 decoration-[1.5px]" : "text-texto")} data-exercicio-nome>{nome}</b>
+            <span className={cn("mt-[3px] block truncate text-[12px]", feito ? "text-texto-4 line-through decoration-texto-4" : "text-texto-2")} data-exercicio-linha>{sub}</span>
             {trocado && <span className="mt-0.5 block truncate text-[11px] text-violeta-3" data-exercicio-trocado>trocado · no lugar de {trocado}</span>}
             {atual && total > 0 && (
               <span className="mt-1.5 flex gap-1" aria-hidden data-exercicio-tracos>

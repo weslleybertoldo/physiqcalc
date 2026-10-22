@@ -103,17 +103,23 @@ const LinhaSerie = memo(function LinhaSerie({
   const [dist, setDist] = useState(serie.distancia_km ? String(serie.distancia_km) : "");
   const feita = !!serie.concluida;
   const iniciou = useRef(false);
+  const campoPeso = useRef<HTMLInputElement>(null);
+  const campoReps = useRef<HTMLInputElement>(null);
+  const campoTempo = useRef<HTMLInputElement>(null);
+  const campoDist = useRef<HTMLInputElement>(null);
 
   // 1ª vez sempre sincroniza; depois só quando a série foi gravada (não passa por cima do que a pessoa digita). Peso 0 vira
-  // campo vazio (a troca de academia zera séries sem referência).
+  // campo vazio (a troca de academia zera séries sem referência). O campo em foco nunca é refeito (22/10/2026): o km digitado
+  // enquanto o Tempo ainda gravava sumia quando a série voltava salva, e o salvamento do km saía sem a distância.
   useEffect(() => {
+    const emFoco = (c: { current: HTMLInputElement | null }) => !!c.current && c.current === document.activeElement;
     if (!corrida) {
-      if (!serie.concluida && (!iniciou.current || serie.salva)) setPeso(serie.peso > 0 ? String(serie.peso) : "");
-      if (!serie.concluida && serie.reps > 0 && (!iniciou.current || serie.salva)) setReps(String(serie.reps));
+      if (!emFoco(campoPeso) && !serie.concluida && (!iniciou.current || serie.salva)) setPeso(serie.peso > 0 ? String(serie.peso) : "");
+      if (!emFoco(campoReps) && !serie.concluida && serie.reps > 0 && (!iniciou.current || serie.salva)) setReps(String(serie.reps));
       iniciou.current = true;
     } else {
-      setTempo(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
-      setDist(serie.distancia_km ? String(serie.distancia_km) : "");
+      if (!emFoco(campoTempo)) setTempo(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
+      if (!emFoco(campoDist)) setDist(serie.distancia_km ? String(serie.distancia_km) : "");
     }
   }, [serie.peso, serie.reps, serie.tempo_segundos, serie.distancia_km, serie.concluida, serie.salva, corrida]);
 
@@ -169,13 +175,13 @@ const LinhaSerie = memo(function LinhaSerie({
         {rotulo}
         <label className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-[10.5px] font-medium text-texto-3">Tempo</span>
-          <input type="text" inputMode="numeric" value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="00:00"
+          <input ref={campoTempo} type="text" inputMode="numeric" value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="00:00"
             onBlur={() => { const tt = parseTempo(tempo); const dd = parseFloat(dist); if (tt) aoSalvar(0, 0, tt, dd || undefined); }}
             aria-label={`Tempo da série ${serie.numero_serie} de ${nome} (MM:SS)`} className={CLASSE_CAMPO} />
         </label>
         <label className="flex w-[74px] flex-none flex-col gap-0.5">
           <span className="text-[10.5px] font-medium text-texto-3">Km</span>
-          <input type="number" inputMode="decimal" step="0.1" min="0" value={dist} onChange={(e) => setDist(e.target.value)} placeholder="0,0"
+          <input ref={campoDist} type="number" inputMode="decimal" step="0.1" min="0" value={dist} onChange={(e) => setDist(e.target.value)} placeholder="0,0"
             onBlur={() => { const tt = parseTempo(tempo); const dd = parseFloat(dist); if (tt || dd) aoSalvar(0, 0, tt || undefined, dd || undefined); }}
             aria-label={`Distância da série ${serie.numero_serie} de ${nome} (km)`} className={CLASSE_CAMPO} />
         </label>
@@ -194,14 +200,14 @@ const LinhaSerie = memo(function LinhaSerie({
     <div data-serie={serie.numero_serie} className="flex items-center gap-2">
       {rotulo}
       <label className="relative flex min-w-0 flex-1">
-        <input type="number" inputMode="decimal" value={peso} onChange={(e) => setPeso(e.target.value)} placeholder="0"
+        <input ref={campoPeso} type="number" inputMode="decimal" value={peso} onChange={(e) => setPeso(e.target.value)} placeholder="0"
           onBlur={() => aoSalvar(parseFloat(peso) || 0, parseInt(reps) || 0)}
           aria-label={`Peso da série ${serie.numero_serie} de ${nome} (kg)`} className={cn(CLASSE_CAMPO, "w-full pr-7")} />
         <span aria-hidden className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-texto-3">kg</span>
       </label>
       <span aria-hidden className="flex-none text-[13px] text-texto-3">×</span>
       <label className="relative flex w-[74px] flex-none">
-        <input type="number" inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} placeholder="reps"
+        <input ref={campoReps} type="number" inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} placeholder="reps"
           onBlur={() => aoSalvar(parseFloat(peso) || 0, parseInt(reps) || 0)}
           aria-label={`Repetições da série ${serie.numero_serie} de ${nome}`} className={cn(CLASSE_CAMPO, "w-full")} />
       </label>

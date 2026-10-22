@@ -38,6 +38,8 @@ const h = vi.hoisted(() => {
     getAll: vi.fn(async (sql: string) => (sql.includes("SELECT 1 FROM tb_exercicios") ? [{ 1: 1 }] : [])),
     execute: vi.fn(async () => {}),
     getUploadQueueStats: vi.fn(async () => ({ count: 0 })),
+    // a série é gravada numa transação (procurar + gravar juntos): os comandos dela caem no mesmo execute
+    writeTransaction: async <T,>(fn: (tx: { execute: typeof db.execute; getAll: typeof db.getAll }) => Promise<T>) => fn({ execute: db.execute, getAll: db.getAll }),
   };
   return { cache, estado, chave, db };
 });

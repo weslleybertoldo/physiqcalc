@@ -6,10 +6,12 @@ import { Share2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePowerSync } from "@powersync/react";
 import { chaveTreino } from "@/lib/seriesPadrao";
+import { cn } from "@/lib/utils";
 import { Botao } from "@/ui/premium/Botao";
 import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { carregarAnotacao } from "../anotacoes";
 import { fotoDoSlot } from "../foto";
+import { useListaMinimizada } from "../minimizado";
 import { ehPorTempo, metaSegundos } from "../porTempo";
 import { cargaDaLinha, formatarCarga, linhaDoExercicio, observacaoDoTreino, prescricaoDoExercicio, type Prescricao, type PrescricaoTreino } from "../prescricao";
 import { proximaSerie } from "../proxima";
@@ -68,6 +70,18 @@ export function TreinoDoSlot(p: PropsSlot) {
   const [comAnotacao, setComAnotacao] = useState<Set<string>>(new Set());
   const [trocar, setTrocar] = useState<{ ex: Exercicio; origemId: string; pessoal: boolean; substituindo: InfoSubstituicao | null } | null>(null);
   const [remover, setRemover] = useState<{ ex: Exercicio; origemId: string } | null>(null);
+  const [minimizado, setMinimizado] = useListaMinimizada(p.dateKey, slot.slot_idx);
+  // o minimizado vale mesmo sem exercício (ao reabrir a aba os exercícios chegam um instante depois: a lista nasce fechada, sem
+  // abrir e fechar) e, minimizada, o nome continua tocável — sem exercício nada a minimizar, mas nunca preso escondido (os
+  // Removidos ficam dentro da lista)
+  const podeMinimizar = minimizado || itens.length > 0;
+  // a lista só corta o que passa da borda enquanto fecha/está fechada: aberta, o brilho do exercício atual fica inteiro
+  const [recortar, setRecortar] = useState(minimizado);
+  useEffect(() => {
+    if (minimizado) return setRecortar(true);
+    const t = window.setTimeout(() => setRecortar(false), 320);
+    return () => window.clearTimeout(t);
+  }, [minimizado]);
 
   const seriesDe = (exId: string) => p.series.filter((s) => s.exercicio_id === exId || s.exercicio_usuario_id === exId).sort((a, b) => a.numero_serie - b.numero_serie);
 
@@ -226,7 +240,12 @@ export function TreinoDoSlot(p: PropsSlot) {
         foto={fotoDoSlot(slot)}
         concluido={p.concluido}
         podeComecar={p.podeComecar && !p.concluido && itens.length > 0}
-        aoComecar={p.aoComecar}
+        aoComecar={() => {
+          setMinimizado(false);
+          p.aoComecar();
+        }}
+        minimizado={minimizado}
+        aoMinimizar={podeMinimizar ? () => setMinimizado(!minimizado) : undefined}
         aoAcademia={p.aoAcademia}
         aoOpcoes={() => setOpcoes(true)}
         observacao={observacaoDoTreino(p.mapaPresc, grupoKey)}
@@ -242,40 +261,47 @@ export function TreinoDoSlot(p: PropsSlot) {
         </div>
       )}
 
-      {itens.length === 0 ? (
-        <p className="px-1 py-2 text-[13px] text-texto-2">Nenhum exercício neste treino.</p>
-      ) : reordenar ? (
-        <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={aoSoltar}>
-          <SortableContext items={itens.map((g) => g.exercicio_id)} strategy={verticalListSortingStrategy}>
+      {/* tocar no nome do treino minimiza/mostra a lista (altura animada; fechada, nada nela recebe toque nem foco) */}
+      <div data-exercicios-minimizados={minimizado ? "1" : "0"} inert={minimizado}
+        className={cn("grid grid-cols-[minmax(0,1fr)] transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+          minimizado ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100")}>
+        <div className={cn("flex min-h-0 min-w-0 flex-col gap-2", recortar && "overflow-hidden")}>
+          {itens.length === 0 ? (
+            <p className="px-1 py-2 text-[13px] text-texto-2">Nenhum exercício neste treino.</p>
+          ) : reordenar ? (
+            <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={aoSoltar}>
+              <SortableContext items={itens.map((g) => g.exercicio_id)} strategy={verticalListSortingStrategy}>
+                <div className="flex flex-col gap-2" data-lista-exercicios>
+                  {itens.map((ge) => (
+                    <ItemArrastavel key={ge.exercicio_id} id={ge.exercicio_id}>
+                      {(alca) => linhaDe(ge, alca)}
+                    </ItemArrastavel>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
             <div className="flex flex-col gap-2" data-lista-exercicios>
-              {itens.map((ge) => (
-                <ItemArrastavel key={ge.exercicio_id} id={ge.exercicio_id}>
-                  {(alca) => linhaDe(ge, alca)}
-                </ItemArrastavel>
+              {itens.map((ge) => linhaDe(ge))}
+            </div>
+          )}
+
+          {(slot.removidos?.length ?? 0) > 0 && (
+            <div className="flex flex-col gap-1.5 rounded-2xl border border-dashed border-linha-2 px-3.5 py-2.5" data-removidos>
+              <span className="pq-eyebrow">Removidos</span>
+              {slot.removidos!.map((r) => (
+                <div key={r.exercicio_id} className="flex items-center gap-2 text-[12.5px]">
+                  <span className="min-w-0 flex-1 truncate text-texto-3 line-through">{r.nome}</span>
+                  <span className="pq-chip pq-chip-g h-5 px-2 text-[9.5px]">{r.escopo === "dia" ? "SÓ HOJE" : "DE VEZ"}</span>
+                  <button type="button" onClick={() => void restaurar(r)} data-restaurar={r.exercicio_id} className="flex items-center gap-1 font-semibold text-violeta-3">
+                    <Undo2 aria-hidden className="h-3.5 w-3.5" /> Restaurar
+                  </button>
+                </div>
               ))}
             </div>
-          </SortableContext>
-        </DndContext>
-      ) : (
-        <div className="flex flex-col gap-2" data-lista-exercicios>
-          {itens.map((ge) => linhaDe(ge))}
+          )}
         </div>
-      )}
-
-      {(slot.removidos?.length ?? 0) > 0 && (
-        <div className="flex flex-col gap-1.5 rounded-2xl border border-dashed border-linha-2 px-3.5 py-2.5" data-removidos>
-          <span className="pq-eyebrow">Removidos</span>
-          {slot.removidos!.map((r) => (
-            <div key={r.exercicio_id} className="flex items-center gap-2 text-[12.5px]">
-              <span className="min-w-0 flex-1 truncate text-texto-3 line-through">{r.nome}</span>
-              <span className="pq-chip pq-chip-g h-5 px-2 text-[9.5px]">{r.escopo === "dia" ? "SÓ HOJE" : "DE VEZ"}</span>
-              <button type="button" onClick={() => void restaurar(r)} data-restaurar={r.exercicio_id} className="flex items-center gap-1 font-semibold text-violeta-3">
-                <Undo2 aria-hidden className="h-3.5 w-3.5" /> Restaurar
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
 
       <SheetOpcoesTreino
         aberto={opcoes}
@@ -287,6 +313,7 @@ export function TreinoDoSlot(p: PropsSlot) {
         aoAlternarConcluido={() => void acoes.alternarConcluido()}
         aoReordenar={() => {
           setAbertoId(null);
+          setMinimizado(false);
           setReordenar(true);
         }}
         aoOrdemPadrao={() => void voltarOrdemPadrao()}
