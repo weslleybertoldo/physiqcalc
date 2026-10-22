@@ -429,6 +429,7 @@ def rodar(modo: str, canal: str) -> int:
     mid = est["matriculas"][CONTA]["id"]
     nav = None
     try:
+        API.preparar(est)   # a w7b-treino VENCIDA (o W8 renova o grátis dela no staging): a trava da loja; volta ao da foto no desfazer
         API.subir(f"e2e/playw6/telas.py --{modo}")
         API.sim("/_zerar")
         servir(modo)

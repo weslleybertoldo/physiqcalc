@@ -221,6 +221,11 @@ def travada(cob: dt.datetime | None) -> bool:
     return cob is None or cob <= agora()
 
 
+def coberta_por(cob: dt.datetime | None, dias: float) -> bool:
+    """A cobertura vai além de agora + `dias`?"""
+    return cob is not None and cob > agora() + dt.timedelta(days=dias)
+
+
 # ───────────────────────── o simulador e o Treino falso ─────────────────────────
 
 def sim(caminho: str, corpo: dict | None = None) -> dict:
@@ -506,6 +511,27 @@ def foto() -> dict:
     return est
 
 
+def preparar(est: dict) -> None:
+    """Os casos pedem as contas de TESTE em 3 estados, e o staging muda com o tempo (22/10/2026: o W8 renova por 30 dias o grátis do app
+    da w7b-treino — e2e/w08/telas.py › garantir_gratis_do_app —; o grátis da w7b-removido acabou; o mês pago da w7b-vence anda para o
+    fim). Só o teste grátis do app (app_teste_ate) é ajustado aqui, com a cobertura recalculada — e volta ao da FOTO no desfazer (a
+    conferência confere o teste_ate e a cobertura):
+      w7b-treino   VENCIDA (o grátis acabou há 2 dias): as compras sem adiar e as travas;
+      w7b-removido no teste grátis (mais 5 dias): o defer da 1ª compra;
+      w7b-vence    coberta por mais de 3 dias (o mês pago pelo MP; sem ele, o grátis por mais 10 dias): o defer da corrida com o MP."""
+    ids = {c: est["matriculas"][c]["id"] for c in CONTAS}
+    vence = matricula("w7b-vence")
+    cmds = [f"update {S}.pacientes set app_teste_ate = now() - interval '2 days' where id = {lit(ids['w7b-treino'])}::uuid",
+            f"update {S}.pacientes set app_teste_ate = now() + interval '5 days' where id = {lit(ids['w7b-removido'])}::uuid"]
+    if not coberta_por(ts(vence["pago_ate"]), 3):
+        cmds.append(f"update {S}.pacientes set app_teste_ate = now() + interval '10 days' where id = {lit(ids['w7b-vence'])}::uuid")
+    cmds += [f"select {S}.mensalidade_recalcular({lit(i)}::uuid)" for i in ids.values()]
+    sql("begin;\n" + ";\n".join(cmds) + ";\ncommit;")
+    t_, r_, v_ = (matricula(c) for c in CONTAS)
+    p.check(travada(ts(t_["pago_ate"])) and coberta_por(ts(r_["pago_ate"]), 1) and coberta_por(ts(v_["pago_ate"]), 3),
+            "preparar · a w7b-treino vencida, a w7b-removido no teste grátis e a w7b-vence coberta (só o teste grátis; volta ao da foto)")
+
+
 def comandos_do_desfazer(est: dict) -> list[str]:
     ids = [m["id"] for m in est["matriculas"].values()]
     lista = ", ".join(f"{lit(i)}::uuid" for i in ids)
@@ -524,6 +550,9 @@ def comandos_do_desfazer(est: dict) -> list[str]:
         cmds.append(f"delete from {S}.app_config where chave = 'play_conferir'" if est["marca"] is None else
                     f"update {S}.app_config set valor = {lit(est['marca'])}::jsonb where chave = 'play_conferir'")
     for m in est["matriculas"].values():
+        # o teste grátis volta ao da foto (o preparar mexe nele)
+        cmds.append(f"update {S}.pacientes set app_teste_ate = {lit(m['teste_ate'])}::timestamptz "
+                    f"where id = {lit(m['id'])}::uuid and app_teste_ate is distinct from {lit(m['teste_ate'])}::timestamptz")
         # o plano volta ao da foto (a troca da rodada); o ativo e o encerramento a rodada não toca (a conferência prova)
         cmds.append(f"update {S}.pacientes set plano_aluno_id = {lit(m['plano_id'])}::uuid, mensalidade_valor = {lit(m['valor'])}::numeric "
                     f"where id = {lit(m['id'])}::uuid and (plano_aluno_id is distinct from {lit(m['plano_id'])}::uuid "
@@ -705,9 +734,15 @@ def caso_teste_defer(m: dict) -> str:
 
 
 def caso_mp_vivo(m: dict) -> str:
+    # a automática simulada vence no fim do que já está coberto (o mês pago): a âncora dela (o dia do vencimento) não encurta a cobertura
+    # (mensalidade_recalcular › financeiro_proxima_ancora) — com outro dia, o mês pago encolheria e não haveria o que adiar
+    fim = ts(m["pago_ate"])
+    vence = lit(fim.isoformat()) + "::timestamptz" if coberta_por(fim, 2) else "now() + interval '20 days'"
     sql(f"""insert into {S}.aluno_assinaturas (paciente_id, conta_id, mp_preapproval_id, status, valor, proximo_vencimento, payload)
             values ({lit(m['id'])}::uuid, {S}.conta_do_app(), '{MARCA_AUTOMATICA}{secrets.token_hex(6)}', 'authorized', 29.90,
-                    now() + interval '20 days', jsonb_build_object('simulada', true, 'playw6', true))""")
+                    {vence}, jsonb_build_object('simulada', true, 'playw6', true))""")
+    antes = cobertura(m["id"])
+    p.check(coberta_por(antes, 1), "mp_vivo · (o ensaio) com a automática viva, a matrícula coberta por mais de 1 dia")
     st0, r0 = compras("w7b-vence", {"acao": "estado"})
     p.check(st0 == 200 and r0.get("automatica_mp") is True, "mp_vivo · o estado mostra a automática do MP viva (a tela não oferece a Play)")
     c = comprar("app_treino", m["id"])
@@ -780,7 +815,10 @@ def caso_conferir(m: dict, token: str) -> None:
             f"conferir · a devolução SEM cortar o acesso (Voided): só a cobrança do pedido devolvida; a assinatura segue ativa — {st}")
     mudar(c2["token"], "expirar")
     st, _r = conferir()
-    p.check(st == 200 and assinatura(c2["token"]).get("estado") == "expirada", f"conferir · (o ensaio) a 2ª compra expira — {st}")
+    # a devolução dela ainda está na folga da janela da Voided (10 min): a rodada relê a devolvida, o GET diz EXPIRED e ela sai como
+    # revogada (a regra do aviso de devolução de antes: o GET não separa) — expirada ou revogada, as 2 sem acesso e fora das vivas
+    e2 = assinatura(c2["token"]).get("estado")
+    p.check(st == 200 and e2 in ("expirada", "revogada"), f"conferir · (o ensaio) a 2ª compra sai das vivas ({e2}) — {st}")
     # a devolução que CORTA o acesso (o Google revoga; a Voided Purchases API traz o pedido): revogada + a cobrança devolvida, trava
     c3 = comprar("app_treino", pid)
     st0, _ = registrar("w7b-treino", c3["token"], "app_treino")
@@ -1004,6 +1042,8 @@ def rodar_local(casos: set[str]) -> int:
     est = foto()
     m = {c: dict(est["matriculas"][c]) for c in CONTAS}
     try:
+        preparar(est)
+        m = {c: matricula(c) for c in CONTAS}   # depois do preparar (o teste grátis e a cobertura de agora)
         subir()
         sim("/_zerar")
         if "conferir_porta" in casos:
