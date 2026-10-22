@@ -15,7 +15,9 @@ Modos:
                                       letra por letra (depois da reversa). Só staging ou local (o public nunca recebe o bloco).
   --so-catalogo [--schema S]          SÓ LEITURA (vale no public): a tabela com RLS e sem policy, os grants (o app e o visitante não leem
                                       nem gravam; só o service_role executa a play_aplicar), os gatilhos, a forma no CHECK, o índice do
-                                      pedido e a trava play_billing (false no public, true no staging).
+                                      pedido e a trava play_billing (false no public, true no staging); a rotina de hora em hora (22/10):
+                                      o play_conferir_disparar só do servidor, o job play-conferir-<schema> no minuto 25 e o marcador
+                                      play_conferir (não público). O staging tem a versão de 16/10 até reaplicar (F4): lá, a rotina falha.
   (sem modo)                          os casos — SÓ no ensaio local (PHYSIQ_SQL_LOCAL; a massa sintética do
                                       ~/projetos/physiqcalc-scratch/hml/playw6/ferramentas/massa_playw6.sql):
    1 estados        cada estado do Google → o nosso: ativa, cancelada e carência cobrem até o expira_em; pendente, suspensa, pausada,
@@ -38,6 +40,10 @@ Modos:
   14 leituras       financeiro_do_aluno e meu_plano_app com a Play viva: 'play' {estado, renova, expira_em, produto}, sem token nem pedido
   15 gatilho        apagar a assinatura recalcula a cobertura
   16 vencida        a cancelada que já venceu fora das leituras do aluno (a revisão, 🟡3); a cancelada no prazo continua
+  17 rotina         a conferência de hora em hora (22/10/2026, no lugar do RTDN): o play_conferir_disparar() sem assinatura da Play não
+                    chama; sem o segredo do Vault (ou curto) não chama; com os 2, 1 pedido do pg_net para a play-conferir com o schema, o
+                    x-espelho-segredo e 120 s; o job play-conferir-<schema> no minuto 25; o marcador play_conferir no app_config (não
+                    público; a migration não pisa no que a função gravou)
 Uso: python3 e2e/playw6/sql_playw6.py [--casos 1,2,…] [--schema staging|public]   (local)
      python3 e2e/playw6/sql_playw6.py --foto <arq> | --comparar <arq> [--funcoes-iguais] | --so-catalogo  [--schema …]
 Saída sem dado pessoal: só contagens, códigos, estados e booleanos (nenhum id, token ou pedido).
@@ -204,7 +210,15 @@ select
   (select a.valor ->> 'liberada' from {s}.app_config a where a.chave = 'play_billing') as trava,
   (select a.publica from {s}.app_config a where a.chave = 'play_billing') as trava_publica,
   (select count(*) from pg_proc pr join pg_namespace n on n.oid = pr.pronamespace where n.nspname = '{s}'
-      and pr.proname in ('mensalidade_recalcular', 'financeiro_do_aluno', 'meu_plano_app') and pr.prosrc like '%play_assinaturas%') as leem_play
+      and pr.proname in ('mensalidade_recalcular', 'financeiro_do_aluno', 'meu_plano_app') and pr.prosrc like '%play_assinaturas%') as leem_play,
+  (select pr.prosecdef and coalesce(pr.proconfig, '{{}}') @> array['search_path=""'] from pg_proc pr
+    where pr.oid = to_regprocedure('{s}.play_conferir_disparar()')) as disparo_definer,
+  has_function_privilege('anon', to_regprocedure('{s}.play_conferir_disparar()'), 'execute') as anon_disparo,
+  has_function_privilege('authenticated', to_regprocedure('{s}.play_conferir_disparar()'), 'execute') as auth_disparo,
+  has_function_privilege('service_role', to_regprocedure('{s}.play_conferir_disparar()'), 'execute') as srv_disparo,
+  (select count(*) from cron.job j where j.jobname = 'play-conferir-{s}' and j.schedule = '25 * * * *'
+      and j.command = 'select {s}.play_conferir_disparar()') as job,
+  (select count(*) from {s}.app_config a where a.chave = 'play_conferir' and not a.publica) as marca
 """)[0]
     P.check(r["rls"] is True and r["policies"] == 0, f"[{s}] play_assinaturas com RLS ligado e SEM policy")
     P.check(r["anon_tab"] is False and r["auth_tab"] is False and r["srv_tab"] is True,
@@ -217,6 +231,11 @@ select
     esperado = "true" if s == "staging" else "false"
     P.check(r["trava"] == esperado and r["trava_publica"] is False, f"[{s}] a trava play_billing liberada = {r['trava']} (esperado {esperado}), não pública")
     P.check(r["leem_play"] == 3, f"[{s}] as 3 funções trocadas leem a play_assinaturas ({r['leem_play']}/3)")
+    # a rotina de hora em hora (22/10/2026, no lugar do aviso do Google pelo Pub/Sub)
+    P.check(r["disparo_definer"] is True and r["anon_disparo"] is False and r["auth_disparo"] is False and r["srv_disparo"] is True,
+            f"[{s}] play_conferir_disparar SECURITY DEFINER com o search_path vazio; só o service_role executa")
+    P.check(r["job"] == 1, f"[{s}] o job play-conferir-{s} de hora em hora no minuto 25 ({r['job']})")
+    P.check(r["marca"] == 1, f"[{s}] o marcador play_conferir no app_config, não público ({r['marca']})")
 
 
 # ───────────────────────── os casos (blocos desfeitos; só no ensaio local) ─────────────────────────
@@ -626,6 +645,50 @@ begin
         P.check(r.get("fin_no_prazo") == "cancelada" and r.get("plano_no_prazo") == "cancelada",
                 f"[{s}] 16 a cancelada ainda no prazo continua nas leituras (vale até o fim)")
 
+    if 17 in quais:
+        # a rotina de hora em hora (22/10/2026): o disparo pelo pg_net (o stub local guarda o pedido em net.http_request_queue, como o de
+        # verdade; o bloco desfaz) — o molde do mp_contas_renovar_disparar da W2
+        r = caso(17, f"""
+declare
+  r_sem_play bigint; r_sem_segredo bigint; r_curto bigint; r_ok bigint;
+  q record;
+  m0 jsonb; m1 jsonb;
+begin
+  delete from @S@.play_assinaturas;
+  delete from vault.secrets where name = 'physiq_play_conferir_segredo';
+  perform vault.create_secret(repeat('s', 48), 'physiq_play_conferir_segredo');
+  r_sem_play := @S@.play_conferir_disparar();
+  perform {ap("'paciente_id', '@A5@'::uuid", "'token', 'playw6-e2e-c17'", "'produto', 'app_treino'", "'estado', 'ativa'",
+              "'expira_em', now() + interval '20 days'", "'renova', true")};
+  delete from vault.secrets where name = 'physiq_play_conferir_segredo';
+  r_sem_segredo := @S@.play_conferir_disparar();
+  perform vault.create_secret(repeat('c', 20), 'physiq_play_conferir_segredo');
+  r_curto := @S@.play_conferir_disparar();
+  delete from vault.secrets where name = 'physiq_play_conferir_segredo';
+  perform vault.create_secret(repeat('s', 48), 'physiq_play_conferir_segredo');
+  r_ok := @S@.play_conferir_disparar();
+  select * into q from net.http_request_queue where id = r_ok;
+  -- a migration de novo NÃO pisa no marcador que a função gravou (on conflict do nothing)
+  update @S@.app_config set valor = jsonb_build_object('voided_ate', '2026-10-22T20:00:00.000Z') where chave = 'play_conferir';
+  insert into @S@.app_config (chave, valor, publica) values ('play_conferir', '{{}}'::jsonb, false) on conflict (chave) do nothing;
+  select a.valor into m1 from @S@.app_config a where a.chave = 'play_conferir';
+  raise exception 'RESULTADO<<%>>', jsonb_build_object(
+    'sem_play', r_sem_play is null, 'sem_segredo', r_sem_segredo is null, 'curto', r_curto is null, 'chamou', r_ok is not null,
+    'url', q.url, 'schema', q.body ->> 'schema', 'segredo_certo', (q.headers ->> 'x-espelho-segredo') = repeat('s', 48),
+    'tempo', q.timeout_milliseconds, 'metodo', q.method,
+    'job', (select jsonb_build_object('quando', j.schedule, 'comando', j.command) from cron.job j where j.jobname = 'play-conferir-@S@'),
+    'marca_publica', (select a.publica from @S@.app_config a where a.chave = 'play_conferir'),
+    'marca_ficou', m1 ->> 'voided_ate')::text;""", s)
+        P.check(r.get("sem_play") is True, f"[{s}] 17 sem assinatura da Play no schema, o disparo não chama a função")
+        P.check(r.get("sem_segredo") is True and r.get("curto") is True, f"[{s}] 17 sem o segredo do Vault (ou com menos de 32), não chama")
+        P.check(r.get("chamou") is True and r.get("metodo") == "POST" and r.get("url") == "https://hkxvtsbwctxkrqzkkdoz.supabase.co/functions/v1/play-conferir"
+                and r.get("schema") == s and r.get("segredo_certo") is True and r.get("tempo") == 120000,
+                f"[{s}] 17 com os 2: 1 POST do pg_net para a play-conferir com o schema, o x-espelho-segredo e 120 s")
+        P.check(r.get("job") == {"quando": "25 * * * *", "comando": f"select {s}.play_conferir_disparar()"},
+                f"[{s}] 17 o job play-conferir-{s} de hora em hora no minuto 25")
+        P.check(r.get("marca_publica") is False and r.get("marca_ficou") == "2026-10-22T20:00:00.000Z",
+                f"[{s}] 17 o marcador play_conferir não público; aplicar de novo não pisa no que a função gravou")
+
 
 def main() -> int:
     ap_ = argparse.ArgumentParser()
@@ -658,7 +721,7 @@ def main() -> int:
         return P.fim()
     if not B.LOCAL:
         raise SystemExit("os casos usam a massa sintética do PG local: rode com PHYSIQ_SQL_LOCAL (ferramentas/local_playw6.py)")
-    quais = {int(x) for x in a.casos.split(",") if x.strip()} or set(range(1, 17))
+    quais = {int(x) for x in a.casos.split(",") if x.strip()} or set(range(1, 18))
     casos(s, quais)
     catalogo(s)
     return P.fim()

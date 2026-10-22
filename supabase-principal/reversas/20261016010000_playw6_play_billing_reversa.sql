@@ -1,14 +1,15 @@
 -- Reversa da play-W6 (supabase-principal/migrations/20261016010000_playw6_play_billing.sql). Idempotente: roda com ou sem a migration
 -- aplicada. Devolve o "hoje": os 3 corpos de antes letra por letra — a mensalidade_recalcular (20261011010000_wp_planos_modalidades.sql:
 -- 121-196), a financeiro_do_aluno (20261011200000_w1_infinitepay.sql:320-365) e a meu_plano_app (20260929190000_w07b_sem_profissional.sql:
--- 252-273) — e tira o gatilho da cobertura da Play, a play_aplicar, a guarda cobrancas_guard_play e a trava play_billing.
+-- 252-273) — e tira o gatilho da cobertura da Play, a play_aplicar, a guarda cobrancas_guard_play, a trava play_billing e a rotina de hora
+-- em hora (22/10/2026: o job play-conferir-{schema} do pg_cron, o play_conferir_disparar e o marcador app_config.play_conferir).
 -- FICAM, se existirem: a tabela play_assinaturas e as linhas google_play de cobrancas (por isso a forma 'google_play' no CHECK, a coluna
 -- play_pedido e o índice dela também ficam — sem eles essas linhas ficariam inválidas). Depois, a cobertura das matrículas com assinatura
 -- da Play é recalculada pelo corpo de antes (as cobranças google_play pagas passam a contar como as do MP: 1 mês cada, do pagamento).
 -- ⚠️ AVISO: só vale enquanto nenhuma migration mais nova mexer nas 3 funções — ela regrava o texto de 16/10/2026 e desfaria, calada, a
 -- mudança mais nova (antes de rodar: git log das migrations depois de 20261016010000).
 -- Junto com ela (docs/loja-google-play.md e o §5 do contrato da play-W6): a trava desligada já tira a oferta; as funções mexidas voltam ao
--- 7c266196; a play-compras e a play-rtdn param de gravar (a play_aplicar sai); a assinatura push do Pub/Sub sai.
+-- 7c266196; a play-compras e a play-conferir param de gravar (a play_aplicar sai) e a rotina de hora em hora para (o job sai).
 -- ⚠️ COM ASSINATURA DA PLAY VIVA, A VOLTA É SÓ A TRAVA (play_billing = {"liberada": false}) — a revisão, 🟡8: sem a play_aplicar e com as
 -- funções velhas, nenhuma renovação entra no banco (a cobertura vence e o assinante trava com o Google cobrando) e a pagamentos-aluno
 -- velha volta a aceitar o MP de quem tem a Play. Esta reversa (e as funções da 7c266196) só com 0 assinatura viva: conte antes (SQL só
@@ -183,6 +184,18 @@ drop function if exists {schema}.play_aplicar(jsonb);
 drop trigger if exists trg_cobrancas_guard_play on {schema}.cobrancas;
 drop function if exists {schema}.cobrancas_guard_play();
 delete from {schema}.app_config where chave = 'play_billing';
+-- a rotina de hora em hora (22/10/2026): o job do pg_cron (só se existir: o unschedule de um nome que não existe dá erro), o disparo e o
+-- marcador da Voided Purchases API
+do $j$
+begin
+  if to_regclass('cron.job') is not null then
+    if exists (select 1 from cron.job where jobname = 'play-conferir-{schema}') then
+      perform cron.unschedule('play-conferir-{schema}');
+    end if;
+  end if;
+end $j$;
+drop function if exists {schema}.play_conferir_disparar();
+delete from {schema}.app_config where chave = 'play_conferir';
 
 -- ============================================================================================================
 -- 3. A cobertura das matrículas com assinatura da Play, pelo corpo de antes
@@ -209,11 +222,16 @@ begin
     raise exception 'playw6 (reversa): uma das 3 funções de {schema} ainda lê a play_assinaturas';
   end if;
   if to_regprocedure('{schema}.play_aplicar(jsonb)') is not null or to_regprocedure('{schema}.cobrancas_guard_play()') is not null
-     or to_regprocedure('{schema}.play_assinaturas_recalcular()') is not null then
+     or to_regprocedure('{schema}.play_assinaturas_recalcular()') is not null or to_regprocedure('{schema}.play_conferir_disparar()') is not null then
     raise exception 'playw6 (reversa): ficou função da play-W6 em {schema}';
   end if;
-  if exists (select 1 from {schema}.app_config a where a.chave = 'play_billing') then
-    raise exception 'playw6 (reversa): a trava play_billing ficou em {schema}';
+  if exists (select 1 from {schema}.app_config a where a.chave in ('play_billing', 'play_conferir')) then
+    raise exception 'playw6 (reversa): a trava play_billing ou o marcador play_conferir ficou em {schema}';
+  end if;
+  if to_regclass('cron.job') is not null then
+    if exists (select 1 from cron.job where jobname = 'play-conferir-{schema}') then
+      raise exception 'playw6 (reversa): o job play-conferir-{schema} ficou no pg_cron';
+    end if;
   end if;
 end $c$;
 

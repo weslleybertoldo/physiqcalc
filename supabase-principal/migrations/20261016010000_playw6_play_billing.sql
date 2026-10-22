@@ -24,9 +24,15 @@
 --   meu_plano_app()           o corpo de hoje (20260929190000_w07b_sem_profissional.sql:252-273) + 'play' na matrícula.
 --   app_config.play_billing   a trava de liberação ({"liberada": false} no public, true no staging; publica = false — só a função
 --                             play-compras lê; o molde do mercadopago_conta). Ligar = SQL, com o OK do dono, depois da compra de teste.
+--   play_conferir_disparar()  NOVA (22/10/2026; SECURITY DEFINER, search_path '', só o service_role) + o job play-conferir-{schema} do
+--                             pg_cron (de hora em hora, no minuto 25) + o marcador app_config.play_conferir (publica = false; só a função
+--                             play-conferir grava): a conferência de hora em hora das assinaturas, no lugar do aviso do Google pelo Pub/Sub
+--                             (o RTDN saiu: sem faturamento no Google Cloud não há Pub/Sub) — o molde do mp_contas_renovar_disparar da W2.
 --
--- Quem chama (conferido em 16/10/2026): play_aplicar só as funções play-compras e play-rtdn (service role); as 3 trocadas mantêm
--- assinatura, atributos e grants (create or replace). Nenhuma policy, view ou job muda.
+-- Quem chama (conferido em 22/10/2026): play_aplicar só as funções play-compras e play-conferir (service role); as 3 trocadas mantêm
+-- assinatura, atributos e grants (create or replace). Nenhuma policy nem view muda; 1 job novo (play-conferir-{schema}).
+-- O staging recebeu a versão de 16/10 (sem a §8, a rotina de hora em hora) em 16/10 às 03:18 e às 05:40: ele fica uma versão atrás até
+-- esta ser reaplicada --so staging (idempotente: o que já existe fica igual; entram o disparo, o job e o marcador).
 -- A conferência do fim (desfaz tudo se algo sair diferente): a tabela com RLS, sem policy e sem acesso do app/visitante; a play_aplicar
 -- definer, search_path '' e só do servidor; o gatilho; a trava com o valor do schema.
 -- Aplicar (backup ANTES em produção — scripts/backup/backup_principal.py):
@@ -253,7 +259,7 @@ create trigger trg_play_assinaturas_recalcular after insert or delete or update 
   on {schema}.play_assinaturas for each row execute function {schema}.play_assinaturas_recalcular();
 
 -- ============================================================================================================
--- 5. play_aplicar: o que o Google disse, numa transação (só o servidor: play-compras e play-rtdn)
+-- 5. play_aplicar: o que o Google disse, numa transação (só o servidor: play-compras e play-conferir)
 -- ============================================================================================================
 -- Entrada (jsonb; a função lê do GET purchases.subscriptionsv2, a fonte da verdade):
 --   paciente_id (a matrícula do app dona da compra) · token · token_anterior (o linkedPurchaseToken) · produto (o vigente) · plano_base
@@ -480,7 +486,7 @@ language sql stable security definer set search_path = '' as $$
                 (select jsonb_build_object('estado', a.estado, 'renova', a.renova, 'expira_em', a.expira_em, 'produto', a.produto)
                    from {schema}.play_assinaturas a
                   where a.paciente_id = p.id and a.estado in ('pendente', 'ativa', 'cancelada', 'carencia', 'suspensa', 'pausada')
-                    -- a cancelada que já venceu (o RTDN EXPIRED atrasou ou se perdeu) não é viva: a regra da play_aplicar
+                    -- a cancelada que já venceu (a expiração que ainda não chegou ao banco) não é viva: a regra da play_aplicar
                     and not (a.estado = 'cancelada' and a.expira_em is not null and a.expira_em < now())
                   order by a.atualizada_em desc limit 1) end
     ) as j
@@ -513,7 +519,7 @@ language sql stable security definer set search_path = '' as $$
                                                         'produto', a.produto)
                                 from {schema}.play_assinaturas a
                                where a.paciente_id = p.id and a.estado in ('pendente', 'ativa', 'cancelada', 'carencia', 'suspensa', 'pausada')
-                    -- a cancelada que já venceu (o RTDN EXPIRED atrasou ou se perdeu) não é viva: a regra da play_aplicar
+                    -- a cancelada que já venceu (a expiração que ainda não chegou ao banco) não é viva: a regra da play_aplicar
                     and not (a.estado = 'cancelada' and a.expira_em is not null and a.expira_em < now())
                                order by a.atualizada_em desc limit 1))
                     from {schema}.pacientes p left join {schema}.planos_aluno pa on pa.id = p.plano_aluno_id
@@ -531,12 +537,48 @@ values ('play_billing', jsonb_build_object('liberada', '{schema}' = 'staging'), 
 on conflict (chave) do nothing;
 
 -- ============================================================================================================
--- 8. A conferência do fim (qualquer diferença desfaz a migration inteira)
+-- 8. A rotina de hora em hora (22/10/2026): a play-conferir, chamada pelo banco — no lugar do aviso do Google pelo Pub/Sub (o RTDN)
+-- ============================================================================================================
+-- o marcador da Voided Purchases API (a última janela lida inteira): só a função play-conferir grava (publica = false); sem ele, a janela
+-- é das últimas 24 h. Aplicar de novo não pisa no que a função gravou.
+insert into {schema}.app_config (chave, valor, publica)
+values ('play_conferir', '{}'::jsonb, false)
+on conflict (chave) do nothing;
+
+-- o disparo (o molde do mp_contas_renovar_disparar da W2): a play-conferir pelo pg_net, com o segredo S11 do Vault no x-espelho-segredo, SÓ
+-- quando o schema tem assinatura da Play (antes da 1ª compra, nenhuma chamada); sem o pg_net ou sem o segredo (ou curto), nada
+create or replace function {schema}.play_conferir_disparar() returns bigint
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  v_segredo text;
+  v_id bigint;
+begin
+  if not exists (select 1 from {schema}.play_assinaturas) then return null; end if;
+  if not exists (select 1 from pg_extension where extname = 'pg_net') then return null; end if;
+  select s.decrypted_secret into v_segredo from vault.decrypted_secrets s where s.name = 'physiq_play_conferir_segredo' limit 1;
+  if v_segredo is null or length(v_segredo) < 32 then return null; end if;
+  select net.http_post(
+    url := 'https://hkxvtsbwctxkrqzkkdoz.supabase.co/functions/v1/play-conferir',
+    body := jsonb_build_object('schema', '{schema}'),
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-espelho-segredo', v_segredo),
+    timeout_milliseconds := 120000) into v_id;
+  return v_id;
+end;
+$$;
+revoke all on function {schema}.play_conferir_disparar() from public, anon, authenticated;
+grant execute on function {schema}.play_conferir_disparar() to service_role;
+
+-- de hora em hora, no minuto 25 (livre: os outros jobs do principal usam 0/10/20/30/40/50, 0/15/30/45, 7 e 41; o mesmo nome ATUALIZA o job)
+select cron.schedule('play-conferir-{schema}', '25 * * * *', $$select {schema}.play_conferir_disparar()$$);
+
+-- ============================================================================================================
+-- 9. A conferência do fim (qualquer diferença desfaz a migration inteira)
 -- ============================================================================================================
 do $c$
 declare
   v_t oid := '{schema}.play_assinaturas'::regclass;
   v_f oid := '{schema}.play_aplicar(jsonb)'::regprocedure;
+  v_d oid := '{schema}.play_conferir_disparar()'::regprocedure;
   v_cfg jsonb;
 begin
   if not (select c.relrowsecurity from pg_class c where c.oid = v_t) then
@@ -563,6 +605,20 @@ begin
   select a.valor into v_cfg from {schema}.app_config a where a.chave = 'play_billing' and not a.publica;
   if v_cfg is null or jsonb_typeof(v_cfg -> 'liberada') <> 'boolean' then
     raise exception 'playw6: a trava play_billing de {schema} não está lá (ou é pública)';
+  end if;
+  -- a rotina de hora em hora (§8): o disparo só do servidor, o job e o marcador
+  if not (select pr.prosecdef and coalesce(pr.proconfig, '{}') @> array['search_path=""'] from pg_proc pr where pr.oid = v_d) then
+    raise exception 'playw6: {schema}.play_conferir_disparar sem SECURITY DEFINER ou sem o search_path vazio';
+  end if;
+  if has_function_privilege('anon', v_d, 'execute') or has_function_privilege('authenticated', v_d, 'execute')
+     or not has_function_privilege('service_role', v_d, 'execute') then
+    raise exception 'playw6: o EXECUTE da {schema}.play_conferir_disparar não é só do servidor';
+  end if;
+  if not exists (select 1 from cron.job j where j.jobname = 'play-conferir-{schema}' and j.schedule = '25 * * * *') then
+    raise exception 'playw6: o job play-conferir-{schema} não está no pg_cron';
+  end if;
+  if not exists (select 1 from {schema}.app_config a where a.chave = 'play_conferir' and not a.publica) then
+    raise exception 'playw6: o marcador play_conferir de {schema} não está lá (ou é público)';
   end if;
 end $c$;
 
