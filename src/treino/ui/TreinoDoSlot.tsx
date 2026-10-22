@@ -263,7 +263,7 @@ export function TreinoDoSlot(p: PropsSlot) {
 
       {/* tocar no nome do treino minimiza/mostra a lista (altura animada; fechada, nada nela recebe toque nem foco) */}
       <div data-exercicios-minimizados={minimizado ? "1" : "0"} inert={minimizado}
-        className={cn("grid grid-cols-[minmax(0,1fr)] transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+        className={cn("grid grid-cols-[minmax(0,1fr)] transition-[grid-template-rows,opacity] duration-300 ease-out",
           minimizado ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100")}>
         <div className={cn("flex min-h-0 min-w-0 flex-col gap-2", recortar && "overflow-hidden")}>
           {itens.length === 0 ? (
