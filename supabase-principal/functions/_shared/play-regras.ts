@@ -1,12 +1,12 @@
 // Physiq play-W6 (16/10/2026) — as regras PURAS da assinatura da Google Play (sem Deno, sem rede, sem banco): o Vitest importa este
 // arquivo (src/lib/playRegrasServidor.test.ts). Quem usa: _shared/play-api.ts (as idas ao Google), _shared/play-assinaturas.ts (o banco e
-// a ordem), play-compras e play-rtdn.
+// a ordem), play-compras e play-conferir.
 //   · o estado do Google (purchases.subscriptionsv2 — a fonte da verdade) → o nosso, e se ele cobre (dá acesso);
 //   · a leitura do GET (o produto vigente, o fim do período, o pedido PAGO, o preço, o dono pela matrícula opaca, a ligação com a compra
 //     anterior) e a conferência da compra (pacote, produto, dono);
-//   · o aviso do Pub/Sub (o RTDN em base64: o de assinatura, o de devolução e o de teste) e o token OIDC do push (emissor, aud, email,
-//     email_verified, exp);
-//   · o defer (≥ 1 dia e ≤ 1 ano por chamada) e o modo da troca (para o completo na hora; para o Treino na renovação).
+//   · o defer (≥ 1 dia e ≤ 1 ano por chamada) e o modo da troca (para o completo na hora; para o Treino na renovação);
+//   · a conferência de hora em hora (22/10/2026): a página da Voided Purchases API e a janela dela. O aviso do Google pelo Pub/Sub (o
+//     RTDN em base64 e o token OIDC do push) saiu junto com a play-rtdn em 22/10/2026: sem faturamento no Google Cloud não há Pub/Sub.
 // Decisões de 16/10/2026 (sessão principal): o vínculo e a exclusão cancelam SEM devolver (DEVELOPER_REQUESTED_STOP_PAYMENTS: vale até o
 // fim — igual ao MP); o modo mora numa constante só (CANCELAMENTO_NO_VINCULO_E_NA_EXCLUSAO) — trocar para devolver o que falta é o
 // revoke com proratedRefund (play-api.ts › revogar).
@@ -24,18 +24,8 @@ export const PLANO_BASE = "mensal";
 export const ESCOPO_PLAY = "https://www.googleapis.com/auth/androidpublisher";
 /** A API da Google Play (o simulador local troca por http://127.0.0.1:<porta> — baseLocal). */
 export const API_PLAY = "https://androidpublisher.googleapis.com";
-/** As chaves públicas do Google que assinam o token OIDC do push (o jwks_uri de accounts.google.com/.well-known/openid-configuration). */
-export const JWKS_GOOGLE = "https://www.googleapis.com/oauth2/v3/certs";
-/** Os emissores do token OIDC do Google (docs.cloud.google.com/pubsub/docs/authenticate-push-subscriptions). */
-export const EMISSORES_GOOGLE = ["https://accounts.google.com", "accounts.google.com"] as const;
-/** A audiência do push (a URL da função no domínio próprio da API); o segredo PLAY_RTDN_AUDIENCIA troca. */
-export const AUDIENCIA_PADRAO = "https://api-principal.physiqcalc.com.br/functions/v1/play-rtdn";
-/** A conta de serviço que assina o push; o segredo PLAY_RTDN_CONTA troca. */
-export const CONTA_PUSH_PADRAO = "play-rtdn-push@physiq-br.iam.gserviceaccount.com";
 /** Decisão 7 (16/10/2026): o vínculo e a exclusão cancelam SEM devolver — vale até o fim do período pago (igual ao MP). */
 export const CANCELAMENTO_NO_VINCULO_E_NA_EXCLUSAO = "DEVELOPER_REQUESTED_STOP_PAYMENTS" as const;
-/** O corpo do aviso do Pub/Sub (um aviso pequeno; acima disto, 413). */
-export const LIMITE_CORPO_RTDN = 16 * 1024;
 /** O defer: de 1 dia a 1 ano por chamada ([PBL] subscriptions). */
 export const DIA_MS = 86_400_000;
 export const MAX_DIAS_ADIAR = 365;
@@ -62,8 +52,8 @@ const DO_GOOGLE: Record<string, EstadoPlay> = {
 };
 
 /**
- * O estado do Google → o nosso. `revogada` = o aviso disse que o Google REVOGOU (RTDN 12) ou devolveu com o acesso cortado: o
- * EXPIRED vira "revogada" (o Google não separa no GET). Desconhecido (UNSPECIFIED, vazio) = null (não grava).
+ * O estado do Google → o nosso. `revogada` = o Google devolveu com o acesso cortado (a devolvida da Voided Purchases API cujo GET diz
+ * EXPIRED): o EXPIRED vira "revogada" (o Google não separa no GET). Desconhecido (UNSPECIFIED, vazio) = null (não grava).
  */
 export function estadoDoGoogle(estadoGoogle: unknown, revogada = false): EstadoPlay | null {
   const e = typeof estadoGoogle === "string" ? DO_GOOGLE[estadoGoogle] ?? null : null;
@@ -308,7 +298,7 @@ export function modoDaTroca(de: string | null | undefined, para: string | null |
 }
 
 // ─────────────────────────────── a conferência de hora em hora (a play-conferir) ───────────────────────────────
-// 22/10/2026: no lugar do aviso do Google pelo Pub/Sub (o RTDN, que saiu: sem faturamento no Google Cloud não há Pub/Sub), a play-conferir
+// 22/10/2026: no lugar do aviso do Google pelo Pub/Sub (que saiu: sem faturamento no Google Cloud não há Pub/Sub), a play-conferir
 // confere de hora em hora TODAS as vivas pelo GET e lê as devolvidas pela Voided Purchases API (purchases.voidedpurchases.list; os
 // parâmetros e o formato conferidos no discovery da API v3 em 22/10/2026: startTime/endTime em ms, type, token; a resposta voidedPurchases[]
 // + tokenPagination.nextPageToken).
@@ -368,100 +358,6 @@ export function janelaDasDevolvidas(marca: unknown, agoraMs: number): { inicioMs
   return { inicioMs: Math.max(inicio, agoraMs - MAX_JANELA_DEVOLVIDAS_MS), fimMs: agoraMs };
 }
 
-// ─────────────────────────────── o aviso do Pub/Sub (RTDN) ───────────────────────────────
-
-/** Os tipos do subscriptionNotification ([PBL] rtdn-reference). */
-export const TIPOS_RTDN: Readonly<Record<number, string>> = {
-  1: "recovered", 2: "renewed", 3: "canceled", 4: "purchased", 5: "on_hold", 6: "in_grace_period", 7: "restarted",
-  8: "price_change_confirmed", 9: "deferred", 10: "paused", 11: "pause_schedule_changed", 12: "revoked", 13: "expired",
-  17: "items_changed", 18: "cancellation_scheduled", 19: "price_change_updated", 20: "pending_purchase_canceled",
-  22: "price_step_up_consent_updated",
-};
-export const RTDN_REVOGADA = 12;
-
-export type AvisoRtdn =
-  | { tipo: "teste"; pacote: string }
-  | { tipo: "assinatura"; pacote: string; notificacao: number; nome: string; token: string }
-  | { tipo: "devolucao"; pacote: string; token: string; pedido: string | null; reembolso: number | null; produtoTipo: number | null }
-  | { tipo: "outro"; pacote: string }
-  | { tipo: "invalido"; motivo: "envelope" | "base64" | "json" | "pacote" | "token" };
-
-function decodificarBase64(dado: string): string | null {
-  try {
-    const bin = atob(dado.replace(/-/g, "+").replace(/_/g, "/"));
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * O corpo do push do Pub/Sub ({ message: { data (base64), messageId, … }, subscription }) → o aviso do Google (DeveloperNotification).
- * Nada do que vem aqui é dado pessoal, mas o token e o pedido nunca vão para o log.
- */
-export function lerAvisoRtdn(corpo: unknown): AvisoRtdn {
-  const msg = obj(obj(corpo).message);
-  const dado = txt(msg.data, 64 * 1024);
-  if (!dado) return { tipo: "invalido", motivo: "envelope" };
-  const texto = decodificarBase64(dado);
-  if (texto === null) return { tipo: "invalido", motivo: "base64" };
-  let n: Record<string, unknown>;
-  try {
-    n = obj(JSON.parse(texto));
-  } catch {
-    return { tipo: "invalido", motivo: "json" };
-  }
-  const pacote = txt(n.packageName, 200);
-  if (!pacote) return { tipo: "invalido", motivo: "pacote" };
-  if (n.testNotification !== undefined) return { tipo: "teste", pacote };
-  if (n.subscriptionNotification !== undefined) {
-    const s = obj(n.subscriptionNotification);
-    const token = txt(s.purchaseToken);
-    const notificacao = Number(s.notificationType);
-    if (!token || !Number.isInteger(notificacao)) return { tipo: "invalido", motivo: "token" };
-    return { tipo: "assinatura", pacote, notificacao, nome: TIPOS_RTDN[notificacao] ?? "desconhecido", token };
-  }
-  if (n.voidedPurchaseNotification !== undefined) {
-    const v = obj(n.voidedPurchaseNotification);
-    const token = txt(v.purchaseToken);
-    if (!token) return { tipo: "invalido", motivo: "token" };
-    const numero = (x: unknown) => (Number.isInteger(Number(x)) && x !== null && x !== undefined && x !== "" ? Number(x) : null);
-    return { tipo: "devolucao", pacote, token, pedido: txt(v.orderId, 200), reembolso: numero(v.refundType), produtoTipo: numero(v.productType) };
-  }
-  return { tipo: "outro", pacote };
-}
-
-/** O id do aviso do Pub/Sub (pode repetir: a play_aplicar é idempotente) — só para o log (o formato do ref). */
-export function idDoAviso(corpo: unknown): string | null {
-  const msg = obj(obj(corpo).message);
-  const id = txt(msg.messageId, 64) ?? txt(msg.message_id, 64);
-  return id && /^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : null;
-}
-
-// ─────────────────────────────── o token OIDC do push ───────────────────────────────
-
-export type MotivoOidc = "emissor" | "aud" | "email" | "email_verified" | "exp";
-
-/**
- * As claims do token OIDC do push (a assinatura já conferida pelo JWKS do Google): o emissor do Google, a audiência da assinatura push,
- * o e-mail da conta do push (verificado) e o prazo.
- */
-export function conferirClaimsDoPush(
-  payload: Record<string, unknown> | null | undefined,
-  e: { audiencia: string; conta: string; agoraSeg: number },
-): { ok: true } | { ok: false; motivo: MotivoOidc } {
-  const p = payload ?? {};
-  if (!(EMISSORES_GOOGLE as readonly unknown[]).includes(p.iss)) return { ok: false, motivo: "emissor" };
-  const aud = Array.isArray(p.aud) ? p.aud : [p.aud];
-  if (!aud.includes(e.audiencia)) return { ok: false, motivo: "aud" };
-  if (typeof p.email !== "string" || p.email.toLowerCase() !== e.conta.toLowerCase()) return { ok: false, motivo: "email" };
-  if (p.email_verified !== true && p.email_verified !== "true") return { ok: false, motivo: "email_verified" };
-  if (typeof p.exp !== "number" || p.exp <= e.agoraSeg) return { ok: false, motivo: "exp" };
-  return { ok: true };
-}
-
 // ─────────────────────────────── as bases do teste local ───────────────────────────────
 
 const LOCAL = /^http:\/\/127\.0\.0\.1:\d{2,5}$/;
@@ -472,7 +368,7 @@ export function baseDaApi(valor: string | null | undefined): string {
   return typeof valor === "string" && LOCAL.test(valor) ? valor : API_PLAY;
 }
 
-/** Uma URL do teste local (o OAuth e o JWKS do simulador): só http://127.0.0.1:<porta>/<caminho>; outra coisa = null (vale a do Google). */
+/** Uma URL do teste local (o OAuth do simulador): só http://127.0.0.1:<porta>/<caminho>; outra coisa = null (vale a do Google). */
 export function urlLocal(valor: string | null | undefined): string | null {
   return typeof valor === "string" && LOCAL_COM_CAMINHO.test(valor) ? valor : null;
 }

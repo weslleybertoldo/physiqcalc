@@ -87,7 +87,8 @@ export function FolhaOfertaPlay({
     if (d.tipo === "erro") {
       setErro(mensagemPlay(d.codigo));
       setCodigoErro(d.codigo);
-      // a revisão, ⚪15: o Google fora no registrar (a compra pode ter sido feita: o RTDN grava) e o "já tem" — recarrega a Play e a
+      // a revisão, ⚪15: o Google fora no registrar (a compra pode ter sido feita: a recuperação ao abrir e ao voltar ao app manda de novo —
+      // sem o aviso do Google, a conferência de hora em hora só vê o que já está no banco) e o "já tem" — recarrega a Play e a
       // situação: o que o servidor já gravou aparece sem esperar os 10 minutos do resumo guardado
       if (d.codigo === "google_indisponivel" || d.codigo === "ja_tem") await concluir();
       return;

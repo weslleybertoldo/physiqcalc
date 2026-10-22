@@ -31,7 +31,7 @@ describe("a play-compras", () => {
     });
     expect(h.invoke).toHaveBeenCalledWith("play-compras", { body: { acao: "estado" } });
   });
-  it("a revisão 🟡3: o estado que ressincronizou a viva vencida (a renovação ou o EXPIRED sem o RTDN) invalida o resumo guardado", async () => {
+  it("a revisão 🟡3: o estado que ressincronizou a viva vencida (a renovação ou o EXPIRED que a conferência ainda não trouxe) invalida o resumo guardado", async () => {
     h.invoke.mockResolvedValue(ok({ disponivel: true, matricula: { id: "m1", ativo: true }, assinatura: null, automatica_mp: false, ressincronizada: true }));
     await buscarEstadoPlay();
     expect(h.invalidar).toHaveBeenCalledTimes(1);
@@ -116,7 +116,7 @@ describe("assinar pela Play", () => {
     expect(await assinarPelaPlay({ matriculaId: "m1", oferta: OFERTA })).toEqual({ tipo: "erro", codigo: "erro_play" });
     expect(h.invoke).not.toHaveBeenCalled();
   });
-  it("a revisão ⚪15: o já tem com a compra RECONHECIDA desta matrícula (o RTDN já reconheceu) também volta ao servidor", async () => {
+  it("a revisão ⚪15: o já tem com a compra RECONHECIDA desta matrícula (a conferência de hora em hora já reconheceu) também volta ao servidor", async () => {
     h.comprar.mockResolvedValue({ resultado: "ja_tem" });
     h.compras.mockResolvedValue([compra({ token: "tok-reconhecida", reconhecida: true }), compra({ token: "tok-de-outra", reconhecida: true, conta: "outra" })]);
     h.invoke.mockResolvedValue(ok({ estado: "ativa" }));

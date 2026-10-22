@@ -1,10 +1,11 @@
-// Physiq play-W6 (16/10/2026) — a assinatura da Google Play no banco e a ORDEM de cada compra/aviso, a mesma no registrar (play-compras)
-// e no aviso do Google (play-rtdn):
+// Physiq play-W6 (16/10/2026) — a assinatura da Google Play no banco e a ORDEM de cada compra, a mesma no registrar (play-compras) e na
+// conferência de hora em hora (play-conferir — no lugar do aviso do Google pelo Pub/Sub, a play-rtdn, que saiu em 22/10/2026: sem
+// faturamento no Google Cloud não há Pub/Sub):
 //   o GET (a fonte da verdade) → a play_aplicar (a assinatura, a anterior substituída, o plano, a cobrança, a devolução — numa transação)
 //   → reconhecer se faltar (só a matrícula do app que vale; a encerrada fica sem: o Google devolve sozinho em 3 dias) → o defer da 1ª
 //   compra coberta (o teste grátis ou o mês pago pelo MP: o que falta, ≥ 1 dia) → de novo o GET + a play_aplicar com o fim novo.
 // E o cancelamento do vínculo e da exclusão (cancelarPlayDasMatriculas: DEVELOPER_REQUESTED_STOP_PAYMENTS — vale até o fim, sem devolver,
-// decisão 7) e o dono de um token novo no aviso (acharDono: a matrícula opaca, a compra anterior ou a que venceu).
+// decisão 7) e as vivas para a conferência (vivasParaConferir: as há mais tempo sem conferir primeiro).
 // Compatível por construção: sem linha da Play, nenhuma ida ao Google (o caminho de hoje); sem o segredo PLAY_SERVICE_ACCOUNT, o
 // cancelamento conta como falha com o log play_sem_credencial (quem chama decide, como no MP); a tabela que ainda não existe (a função
 // publicada antes da migration) = sem Play. O banco é o de quem chama (o service role, sempre: a play_assinaturas é só do servidor).
@@ -85,7 +86,7 @@ export async function assinaturaDoToken(db: SupabaseClient, token: string): Prom
   return (data as LinhaPlayBanco | null) ?? null;
 }
 
-/** A cancelada que já venceu NÃO é viva (o RTDN EXPIRED atrasou ou se perdeu): a mesma regra da play_aplicar (a revisão, 🟡3). */
+/** A cancelada que já venceu NÃO é viva (a expiração que ainda não chegou ao banco): a mesma regra da play_aplicar (a revisão, 🟡3). */
 const naoVencida = (agora = new Date()): string => `estado.neq.cancelada,expira_em.is.null,expira_em.gte.${agora.toISOString()}`;
 
 /** A assinatura VIVA da matrícula (uma no máximo — play_assinaturas_viva_uq; a cancelada vencida fica de fora); null = nenhuma. */
@@ -148,12 +149,12 @@ export interface PedidoSincronia {
   pacienteId: string;
   /** o GET já lido (quem chama conferiu o dono com ele) — sem ele, a sincronia lê */
   assinatura?: AssinaturaGoogle | null;
-  /** o aviso disse que o Google revogou (RTDN 12) */
+  /** o Google revogou (a devolvida da Voided Purchases API com o acesso cortado) */
   revogada?: boolean;
   /** o pedido devolvido (o voidedPurchaseNotification) */
   devolvidoPedido?: string | null;
   canceladaPor?: "vinculo" | "exclusao" | "google" | null;
-  /** reconhecer se faltar (o registrar e o aviso: sim) */
+  /** reconhecer se faltar (o registrar e a conferência das vivas: sim) */
   reconhecer: boolean;
   /** o defer da 1ª compra coberta (o padrão: sim; a ressincronia do estado: não) */
   adiar?: boolean;
@@ -163,7 +164,7 @@ export type ResultadoSincronia =
   | { ok: true; resposta: RespostaAplicar; assinatura: AssinaturaGoogle; reconheceu: boolean; adiou: boolean }
   | { ok: false; erro: string; assinatura: AssinaturaGoogle | null };
 
-/** A play_aplicar com a outra viva conferida: a outra (sem ligação) pode ter vencido sem o aviso — lê no Google, grava e tenta de novo 1 vez. */
+/** A play_aplicar com a outra viva conferida: a outra (sem ligação) pode ter vencido sem chegar ao banco — lê no Google, grava e tenta de novo 1 vez. */
 async function aplicarComAOutraConferida(c: ContextoPlay, entrada: EntradaAplicar): Promise<RespostaAplicar> {
   const r = await aplicar(c.db, entrada);
   if (r.ok || r.erro !== "outra_viva") return r;
@@ -179,9 +180,9 @@ async function aplicarComAOutraConferida(c: ContextoPlay, entrada: EntradaAplica
 }
 
 /**
- * A ordem de uma compra ou de um aviso: o GET → a play_aplicar → reconhecer (se faltar) → o defer (1 vez) → o GET + a play_aplicar de
+ * A ordem de uma compra (o registrar) ou da conferência: o GET → a play_aplicar → reconhecer (se faltar) → o defer (1 vez) → o GET + a play_aplicar de
  * novo. Lança PlayIndisponivel (o Google sem resposta no GET) e o erro do banco; reconhecer e adiar que falham vão ao log e ficam para a
- * próxima vez (a compra que ficou no meio volta pelo app e o aviso repete).
+ * próxima vez (a compra que ficou no meio volta pelo app e a conferência de hora em hora repete).
  */
 export async function sincronizar(c: ContextoPlay, token: string, p: PedidoSincronia): Promise<ResultadoSincronia> {
   const a = p.assinatura !== undefined ? p.assinatura : await lerDoGoogle(c, token);
@@ -214,7 +215,8 @@ export async function sincronizar(c: ContextoPlay, token: string, p: PedidoSincr
   }
 
   // o defer da 1ª compra coberta (o que falta do teste ou do mês do MP), UMA vez só (a revisão, 🟡1): a marca adiada_em é RESERVADA no banco
-  // antes de ir ao Google (o update atômico: quem não reservou não adia — o RTDN 9 ou o repetido que chega no meio) e, logo depois do 2xx,
+  // antes de ir ao Google (o update atômico: quem não reservou não adia — a conferência ou o registrar repetido que chega no meio) e, logo
+  // depois do 2xx,
   // gravada com o fim novo da PRÓPRIA resposta do defer, antes de qualquer outra ida. O Google que recusa (4xx: resposta que decide) desfaz
   // a reserva e a próxima sincronia tenta de novo; o Google sem resposta (prazo, rede) ou com 5xx MANTÉM a reserva: adiar 2 vezes daria de
   // novo os dias (a receita some calada) — o log play_adiar_incerto avisa para conferir no Console.
@@ -304,8 +306,8 @@ export function mudou(antes: Pick<LinhaPlayBanco, "estado" | "expira_em">, depoi
 }
 
 /**
- * O `estado` da play-compras (a revisão, 🟡3): as linhas "vivas" desta matrícula cujo fim já passou — a renovação ou o EXPIRED que o RTDN
- * não trouxe (atrasado, perdido, ou sem o Pub/Sub — a alternativa "sem cartão" do §7.14) — voltam ao Google: o GET + a play_aplicar, sem
+ * O `estado` da play-compras (a revisão, 🟡3): as linhas "vivas" desta matrícula cujo fim já passou — a renovação ou o EXPIRED que a
+ * conferência de hora em hora ainda não trouxe — voltam ao Google: o GET + a play_aplicar, sem
  * reconhecer nem adiar. O Google fora = segue com o que o banco tem (log). Devolve quantas MUDARAM (o estado ou o fim). Erro do banco lança.
  */
 export async function ressincronizarVencidas(c: ContextoPlay, pacienteId: string): Promise<number> {
@@ -334,7 +336,7 @@ export async function ressincronizarVencidas(c: ContextoPlay, pacienteId: string
 }
 
 /**
- * A devolução de um token que o Google já esqueceu (o GET 404/410 — mais de 60 dias): o pedido do aviso basta para marcar a cobrança dele
+ * A devolução de um token que o Google já esqueceu (o GET 404/410 — mais de 60 dias): o pedido da devolvida basta para marcar a cobrança dele
  * como devolvida (cancelada + reembolsado_em), sem o GET (a revisão, ⚪13). Devolve quantas marcou. Erro do banco lança.
  */
 export async function devolverPedidoSemCompra(db: SupabaseClient, pacienteId: string, pedido: string): Promise<number> {
@@ -395,50 +397,7 @@ export async function cancelarPlayDasMatriculas(c: ContextoPlay, pacienteIds: st
   return { canceladas, falhas };
 }
 
-export interface DonoDaCompra {
-  schema: Schema;
-  pacienteId: string;
-  /** por onde achou: a linha do token, a matrícula opaca, a compra anterior, a que venceu */
-  via: "token" | "conta" | "anterior" | "expirada";
-}
-
-/** A matrícula do app com este id, no schema (a matrícula opaca da compra). */
-async function matriculaDoApp(db: SupabaseClient, id: string): Promise<boolean> {
-  const { data, error } = await db.from("pacientes").select("conta_id").eq("id", id).maybeSingle();
-  if (error) throw error;
-  const conta = (data as { conta_id: string | null } | null)?.conta_id;
-  if (!conta) return false;
-  const { data: c, error: ec } = await db.from("contas").select("id").eq("id", conta).eq("origem", "app").limit(1);
-  if (ec) throw ec;
-  return ((c ?? []) as unknown[]).length > 0;
-}
-
-/**
- * O dono de uma compra que chegou pelo aviso: a linha do token (no public, depois no staging); senão a matrícula opaca da compra
- * (obfuscatedExternalAccountId); senão a compra anterior (linkedPurchaseToken); senão a que venceu (outOfAppPurchaseContext). null = sem dono.
- */
-export async function acharDono(dbs: Record<Schema, SupabaseClient>, token: string, a: AssinaturaGoogle | null): Promise<DonoDaCompra | null> {
-  const schemas: Schema[] = ["public", "staging"];
-  for (const s of schemas) {
-    const l = await assinaturaDoToken(dbs[s], token);
-    if (l) return { schema: s, pacienteId: l.paciente_id, via: "token" };
-  }
-  if (!a) return null;
-  for (const [conta, via] of [[a.conta, "conta"], [a.contaExpirada, "expirada"]] as const) {
-    if (!ehUuid(conta)) continue;
-    for (const s of schemas) if (await matriculaDoApp(dbs[s], conta)) return { schema: s, pacienteId: conta, via };
-  }
-  for (const [anterior, via] of [[a.tokenAnterior, "anterior"], [a.tokenExpirado, "expirada"]] as const) {
-    if (!anterior) continue;
-    for (const s of schemas) {
-      const l = await assinaturaDoToken(dbs[s], anterior);
-      if (l) return { schema: s, pacienteId: l.paciente_id, via };
-    }
-  }
-  return null;
-}
-
-/** A situação da matrícula para a rede do aviso: ativa, encerrada pelo vínculo, apagada. */
+/** A situação da matrícula para a rede da conferência: ativa, encerrada pelo vínculo, apagada. */
 export async function situacaoDaMatricula(db: SupabaseClient, pacienteId: string): Promise<{ ativa: boolean; encerrada: boolean; apagada: boolean } | null> {
   const { data, error } = await db.from("pacientes").select("ativo, deleted_at, app_encerrada_em").eq("id", pacienteId).maybeSingle();
   if (error) throw error;
