@@ -345,6 +345,8 @@ Deno.serve(async (req) => {
           observacao: treino ? prescricao.get(treino)?.obs ?? null : null,
           exercicios: exercicios.map((e) => ({
             nome: e.nome,
+            // o id do catálogo (22/10/2026): o PDF mostra a Prancha por tempo ("3 × 30 s"); exercício próprio do aluno = null
+            exercicio_id: e.exercicio_id ?? null,
             grupo_muscular: e.grupo_muscular ?? null,
             subgrupo: e.subgrupo ?? null,
             num_series: numSeriesDe(treino, e.exercicio_id, e.exercicio_usuario_id),

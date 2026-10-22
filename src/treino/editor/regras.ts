@@ -11,6 +11,7 @@ import type { VolumeBloco } from "@/lib/volumeSemanal";
 import { estimarDuracaoMin, resumoDaSemana } from "@/app-aluno/inicio/pecas/regras";
 import { DIAS_SEMANA, chaveData, datasDaSemana } from "@/treino/datas";
 import { letrasDaSemana } from "@/treino/letras";
+import { ehPorTempo, formatarSegundos, lerSegundos, metaSegundos, TEMPO_MAX_SEGUNDOS } from "@/treino/porTempo";
 import { formatarCarga, formatarDescanso, mapaPrescricao, observacaoDoTreino, prescricaoDoExercicio } from "@/treino/prescricao";
 import type { SemanaConfig } from "@/treino/tipos";
 import type { ConfigDia, DadosEditor, ExercicioDoTreino, ExercicioEditor, GrupoDisponivel, PrescricaoEditavel, SemanaAtual, TreinoEditor } from "./tipos";
@@ -122,14 +123,17 @@ export function montarTreinos(d: DadosEditor | null | undefined): TreinoEditor[]
   });
 }
 
-/** "4 × 10 · 60 s · 60 kg" — a linha do exercício que o aluno vê na aba Treino (tela 2) quando tudo está preenchido. */
-export function linhaDoAluno(e: Pick<ExercicioEditor, "series" | "reps" | "descanso" | "carga" | "corrida">, descansoPadrao: number): string {
+/** "4 × 10 · 60 s · 60 kg" — a linha do exercício que o aluno vê na aba Treino (tela 2) quando tudo está preenchido. Série por
+ * tempo (Prancha): "3 × 30 s · 60 s" (a meta em segundos; sem meta, "3 séries · 60 s"), sem carga. */
+export function linhaDoAluno(e: Pick<ExercicioEditor, "series" | "reps" | "descanso" | "carga" | "corrida"> & { porTempo?: boolean }, descansoPadrao: number): string {
   const partes: string[] = [];
-  partes.push(e.corrida ? `${e.series} ${e.series === 1 ? "série" : "séries"}` : e.reps ? `${e.series} × ${e.reps}` : `${e.series} ${e.series === 1 ? "série" : "séries"}`);
+  const nSeries = `${e.series} ${e.series === 1 ? "série" : "séries"}`;
+  const meta = e.porTempo ? metaSegundos(e.reps) : null;
+  partes.push(e.porTempo ? (meta ? `${e.series} × ${formatarSegundos(meta)}` : nSeries) : e.corrida ? nSeries : e.reps ? `${e.series} × ${e.reps}` : nSeries);
   const desc = formatarDescanso(e.descanso ?? descansoPadrao);
   if (desc) partes.push(desc);
   const carga = formatarCarga(e.carga);
-  if (carga && !e.corrida) partes.push(carga);
+  if (carga && !e.corrida && !e.porTempo) partes.push(carga);
   return partes.join(" · ");
 }
 
@@ -153,6 +157,15 @@ export function lerReps(texto: string): Leitura<string | null> {
   if (a < 1) return { ok: false, valor: null, erro: "Repetições a partir de 1" };
   if (b !== null && b <= a) return { ok: false, valor: null, erro: "Na faixa, o 2º número é maior (8-12)" };
   return { ok: true, valor: b !== null ? `${a}-${b}` : String(a) };
+}
+
+/** A meta da série por tempo (Prancha) em segundos: "30", "30 s", "45 seg", "1:30", "2 min" → "30" (o texto que o app lê como
+ * segundos); vazio = sem meta (o cronômetro do aluno conta pra cima). */
+export function lerMetaSegundos(texto: string): Leitura<string | null> {
+  if (!texto.trim()) return { ok: true, valor: null };
+  const seg = lerSegundos(texto);
+  if (seg === null) return { ok: false, valor: null, erro: `Use segundos (30) ou minutos (1:30), até ${Math.round(TEMPO_MAX_SEGUNDOS / 60)} min` };
+  return { ok: true, valor: String(seg) };
 }
 
 /** Descanso: "60", "60 s", "90s", "1:30", "2 min", "1 min 30"; vazio = o padrão do aluno. */
@@ -190,7 +203,8 @@ export function prescricaoComCampo(ex: ExercicioEditor, campo: CampoPrescricaoNo
     return { ok: true, valor: { ...atual, series: clampSeries(n) } };
   }
   if (campo === "reps") {
-    const r = lerReps(texto);
+    // Prancha e Prancha Lateral: as "repetições" são a meta em segundos
+    const r = ehPorTempo(ex.exercicio_id) ? lerMetaSegundos(texto) : lerReps(texto);
     return r.ok ? { ok: true, valor: { ...atual, reps: r.valor } } : { ok: false, erro: r.erro };
   }
   if (campo === "descanso") {

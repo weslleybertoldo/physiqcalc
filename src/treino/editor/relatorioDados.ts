@@ -11,6 +11,8 @@ export interface SerieRow {
   numero_serie: number;
   peso: number | null;
   reps: number | null;
+  /** série por tempo (Prancha) ou corrida — a função passou a mandar em 22/10/2026 */
+  tempo_segundos?: number | null;
   concluida: boolean | null;
   exercicio_id: string;
   exercicio_usuario_id: string | null;
@@ -41,7 +43,7 @@ export interface ExercicioAgrupado {
   nome: string;
   grupo: string;
   emoji: string;
-  series: { numero: number; peso: number; reps: number }[];
+  series: { numero: number; peso: number; reps: number; tempo?: number | null }[];
 }
 
 export interface DiaAgrupado {
@@ -110,11 +112,10 @@ function agruparPorExercicio(series: SerieRow[]): ExercicioAgrupado[] {
         emoji: info?.emoji ?? "🏋️",
         series: []
         };
-    mapa[id].series.push({
-      numero: s.numero_serie,
-      peso: Number(s.peso ?? 0),
-      reps: Number(s.reps ?? 0)
-        });
+    const tempo = Number(s.tempo_segundos ?? 0);
+    mapa[id].series.push(tempo > 0
+      ? { numero: s.numero_serie, peso: 0, reps: 0, tempo }
+      : { numero: s.numero_serie, peso: Number(s.peso ?? 0), reps: Number(s.reps ?? 0) });
   });
   return Object.values(mapa);
 }

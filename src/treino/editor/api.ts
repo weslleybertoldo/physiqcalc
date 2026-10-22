@@ -263,7 +263,7 @@ export interface TreinoDoHistorico {
   iniciado_em: string;
   concluido_em: string;
   duracao_segundos: number;
-  exercicios_concluidos: { nome: string; academia_nome?: string | null; series?: { numero_serie: number; peso: number; reps: number }[]; series_concluidas?: number }[];
+  exercicios_concluidos: { nome: string; academia_nome?: string | null; series?: { numero_serie: number; peso: number; reps: number; tempo_segundos?: number | null }[]; series_concluidas?: number }[];
   sem_cronometro?: boolean;
 }
 

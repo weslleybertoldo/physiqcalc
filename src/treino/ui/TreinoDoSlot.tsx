@@ -10,6 +10,7 @@ import { Botao } from "@/ui/premium/Botao";
 import { useConfirmar } from "@/ui/premium/useConfirmar";
 import { carregarAnotacao } from "../anotacoes";
 import { fotoDoSlot } from "../foto";
+import { ehPorTempo, metaSegundos } from "../porTempo";
 import { cargaDaLinha, formatarCarga, linhaDoExercicio, observacaoDoTreino, prescricaoDoExercicio, type Prescricao, type PrescricaoTreino } from "../prescricao";
 import { proximaSerie } from "../proxima";
 import { restaurarExercicio } from "../remocao";
@@ -170,6 +171,8 @@ export function TreinoDoSlot(p: PropsSlot) {
     const ss = seriesDe(ex.id);
     const presc = prescricaoDoExercicio(p.mapaPresc, grupoKey, ge.exercicio_usuario_id ? null : ge.exercicio_id, ge.exercicio_usuario_id ?? null);
     const corrida = ex.tipo === "corrida";
+    // Prancha e Prancha Lateral: a série é por tempo (o cronômetro da série; a meta = as "repetições" do profissional em segundos)
+    const porTempo = ehPorTempo(ex.id);
     const info = estados.get(ex.id) ?? { feitas: 0, total: ss.length, estado: "pendente" as EstadoLinha };
     return (
       <LinhaExercicio
@@ -177,8 +180,8 @@ export function TreinoDoSlot(p: PropsSlot) {
         exercicioId={ex.id}
         nome={ex.nome}
         imagemUrl={ex.imagem_url}
-        linha={linhaDoExercicio({ prescricao: presc, series: ss, descansoPadrao: p.descansoPadrao, corrida })}
-        carga={corrida ? null : formatarCarga(cargaDaLinha(presc, ss))}
+        linha={linhaDoExercicio({ prescricao: presc, series: ss, descansoPadrao: p.descansoPadrao, corrida, porTempo })}
+        carga={corrida || porTempo ? null : formatarCarga(cargaDaLinha(presc, ss))}
         estado={info.estado}
         feitas={info.feitas}
         total={info.total}
@@ -198,6 +201,8 @@ export function TreinoDoSlot(p: PropsSlot) {
           nome={ex.nome}
           series={ss}
           corrida={corrida}
+          porTempo={porTempo}
+          metaSegundos={porTempo ? metaSegundos(presc.reps) : null}
           podeEditar={!p.seriesTravadas}
           aoSalvar={(num, peso, reps, t, d) => void acoes.salvarSerie(ex.id, num, peso, reps, t, d)}
           aoConcluir={(num, peso, reps, t, d) => void acoes.concluirSerie(ex.id, ex.nome, num, peso, reps, t, d)}

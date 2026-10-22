@@ -2,21 +2,26 @@ import { memo, useEffect, useRef, useState } from "react";
 import { Check, Minus, Plus, Undo2 } from "lucide-react";
 import { calcularPace, formatPace, formatTempo, parseTempo } from "@/lib/corrida";
 import { cn } from "@/lib/utils";
+import { formatarSegundos } from "../porTempo";
 import type { SerieComMemoria } from "../tipos";
+import { LinhaSerieTempo } from "./SerieTempo";
 
 const CLASSE_CAMPO =
   "h-10 min-w-0 rounded-xl border border-linha-2 bg-superficie px-2 text-center text-[15px] font-semibold tabular-nums text-texto outline-none transition-colors placeholder:text-texto-4 focus:border-violeta-2";
 
 /**
- * As séries do exercício aberto (C64): peso × repetições (musculação) ou tempo, distância e pace (corrida). OK conclui a
- * série (liga o cronômetro e o descanso); Refazer desfaz; − tira e "Adicionar série" soma (menos com o cadeado do
- * profissional). Série que ainda não foi gravada hoje mostra "do último treino".
+ * As séries do exercício aberto (C64): peso × repetições (musculação), tempo, distância e pace (corrida) ou só o tempo com o
+ * cronômetro da série (Prancha e Prancha Lateral — `porTempo`, decisão do Weslley 21/10/2026). OK conclui a série (liga o
+ * cronômetro e o descanso); Refazer desfaz; − tira e "Adicionar série" soma (menos com o cadeado do profissional). Série que
+ * ainda não foi gravada hoje mostra "do último treino".
  */
 export function SeriesDoExercicio({
   exercicioId,
   nome,
   series,
   corrida,
+  porTempo = false,
+  metaSegundos = null,
   podeEditar,
   aoSalvar,
   aoConcluir,
@@ -28,6 +33,10 @@ export function SeriesDoExercicio({
   nome: string;
   series: SerieComMemoria[];
   corrida: boolean;
+  /** série por tempo (cronômetro da série; grava só o tempo) */
+  porTempo?: boolean;
+  /** a meta do profissional em segundos (série por tempo; null = conta pra cima) */
+  metaSegundos?: number | null;
   podeEditar: boolean;
   aoSalvar: (num: number, peso: number, reps: number, tempo?: number, dist?: number) => void;
   aoConcluir: (num: number, peso: number, reps: number, tempo?: number, dist?: number) => void;
@@ -40,9 +49,12 @@ export function SeriesDoExercicio({
       {series.map((s) => (
         <LinhaSerie
           key={`${exercicioId}-${s.numero_serie}`}
+          exercicioId={exercicioId}
           serie={s}
           nome={nome}
           corrida={corrida}
+          porTempo={porTempo}
+          meta={metaSegundos}
           aoSalvar={(p, r, t, d) => aoSalvar(s.numero_serie, p, r, t, d)}
           aoConcluir={(p, r, t, d) => aoConcluir(s.numero_serie, p, r, t, d)}
           aoDesfazer={() => aoDesfazer(s.numero_serie)}
@@ -62,17 +74,23 @@ export function SeriesDoExercicio({
 }
 
 const LinhaSerie = memo(function LinhaSerie({
+  exercicioId,
   serie,
   nome,
   corrida,
+  porTempo,
+  meta,
   aoSalvar,
   aoConcluir,
   aoDesfazer,
   aoRemover,
 }: {
+  exercicioId: string;
   serie: SerieComMemoria;
   nome: string;
   corrida: boolean;
+  porTempo: boolean;
+  meta: number | null;
   aoSalvar: (peso: number, reps: number, tempo?: number, dist?: number) => void;
   aoConcluir: (peso: number, reps: number, tempo?: number, dist?: number) => void;
   aoDesfazer: () => void;
@@ -109,7 +127,9 @@ const LinhaSerie = memo(function LinhaSerie({
         <Check aria-hidden className="h-3.5 w-3.5 flex-none text-verde-2" strokeWidth={3} />
         {rotulo}
         <span className="min-w-0 flex-1 truncate text-[14px] font-semibold tabular-nums text-forte">
-          {corrida && serie.tempo_segundos
+          {porTempo
+            ? formatarSegundos(serie.tempo_segundos)
+            : corrida && serie.tempo_segundos
             ? `${formatTempo(serie.tempo_segundos)} · ${serie.distancia_km ?? 0} km${serie.pace_segundos_km ? ` · pace ${formatPace(serie.pace_segundos_km)}` : ""}`
             : `${serie.peso} kg × ${serie.reps}`}
         </span>
@@ -117,6 +137,26 @@ const LinhaSerie = memo(function LinhaSerie({
           <Undo2 aria-hidden className="h-3.5 w-3.5" /> Refazer
         </button>
       </div>
+    );
+  }
+
+  if (porTempo) {
+    return (
+      <LinhaSerieTempo
+        serie={serie}
+        exercicioId={exercicioId}
+        nome={nome}
+        meta={meta}
+        rotulo={rotulo}
+        aoSalvar={(t) => aoSalvar(0, 0, t)}
+        aoConcluir={(t) => aoConcluir(0, 0, t)}
+        botoes={(concluir) => (
+          <>
+            <BotaoOk aoTocar={concluir} />
+            {aoRemover && <BotaoMenos aoTocar={aoRemover} />}
+          </>
+        )}
+      />
     );
   }
 

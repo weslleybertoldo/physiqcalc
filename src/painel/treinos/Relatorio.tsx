@@ -6,6 +6,7 @@ import { tmbEscolhida } from "@/lib/avaliacao";
 import { cn } from "@/lib/utils";
 import { formatarDataCurta } from "@/utils/formatDate";
 import { MESES } from "@/lib/meses";
+import { formatarSegundos } from "@/treino/porTempo";
 import { agruparPorSemana, carregarDadosUsuario, carregarRelatorioCompleto, type SemanaAgrupada } from "@/treino/editor/relatorioDados";
 import { Avatar } from "@/ui/premium/Avatar";
 import { Botao } from "@/ui/premium/Botao";
@@ -69,7 +70,7 @@ function Semana({ s, aberta, aoAlternar }: { s: SemanaAgrupada; aberta: boolean;
                         <div className="mt-1 flex flex-wrap gap-1">
                           {ex.series.map((sr) => (
                             <span key={sr.numero} className="rounded-md bg-[rgba(255,255,255,.05)] px-2 py-0.5 text-[11.5px] tabular-nums text-texto-2">
-                              S{sr.numero}: {String(sr.peso).replace(".", ",")} kg × {sr.reps}
+                              S{sr.numero}: {sr.tempo ? formatarSegundos(sr.tempo) : `${String(sr.peso).replace(".", ",")} kg × ${sr.reps}`}
                             </span>
                           ))}
                         </div>

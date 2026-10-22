@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { CalendarClock, ChevronRight, Dumbbell, History, MapPin, Timer } from "lucide-react";
 import { formatDuracao } from "@/lib/treinoResumo";
+import { textoDaSerie } from "@/treino/porTempo";
 import { carregarTreinoDoHistorico, type ItemHistorico } from "@/treino/editor/api";
 import { MESES } from "@/lib/meses";
 import { Botao } from "@/ui/premium/Botao";
@@ -20,7 +21,7 @@ import type { AlunoDaLista, QuemMexe } from "./tipos";
 import { mensagemDoErro } from "./useTreinos";
 
 /** exercicios_concluidos pode vir como JSON em texto (1 ou 2 vezes) — a mesma leitura do histórico do app */
-function exerciciosDe(raw: unknown): { nome: string; series?: { numero_serie: number; peso: number; reps: number }[]; series_concluidas?: number }[] {
+function exerciciosDe(raw: unknown): { nome: string; series?: { numero_serie: number; peso: number; reps: number; tempo_segundos?: number | null }[]; series_concluidas?: number }[] {
   let v = raw;
   for (let i = 0; i < 3 && typeof v === "string"; i++) {
     try {
@@ -32,8 +33,8 @@ function exerciciosDe(raw: unknown): { nome: string; series?: { numero_serie: nu
   return Array.isArray(v) ? (v as never[]) : [];
 }
 
-const textoSeries = (e: { series?: { peso: number; reps: number }[]; series_concluidas?: number }) =>
-  (e.series ?? []).length ? (e.series ?? []).map((s) => `${String(s.peso).replace(".", ",")} kg × ${s.reps}`).join(" · ") : `${e.series_concluidas ?? 0} séries`;
+const textoSeries = (e: { series?: { peso: number; reps: number; tempo_segundos?: number | null }[]; series_concluidas?: number }) =>
+  (e.series ?? []).length ? (e.series ?? []).map(textoDaSerie).join(" · ") : `${e.series_concluidas ?? 0} séries`;
 
 /**
  * Painel › Treinos › Histórico (C44): os treinos feitos no mês pelos alunos do profissional (todos ou um), com o detalhe de cada

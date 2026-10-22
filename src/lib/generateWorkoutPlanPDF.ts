@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { salvarPdf } from "@/lib/salvarPdf";
+import { ehPorTempo, formatarSegundos, metaSegundos } from "@/treino/porTempo";
 import {
   desenharCabecalho, desenharTituloSecao, desenharCard,
   desenharRodape, novaPagina, pintarFundo, estiloTabela, hexToRgb,
@@ -23,6 +24,8 @@ export interface WorkoutProfile {
 
 export interface WorkoutExercicio {
   nome: string;
+  /** o id do catálogo (a função manda desde 22/10/2026): a Prancha é série por tempo */
+  exercicio_id?: string | null;
   grupo_muscular: string | null;
   /** nº de séries configurado pro aluno (edge `admin-get-workout-plan`); ausente = padrão */
   num_series?: number | null;
@@ -50,9 +53,14 @@ const SERIES_MAX = 10;
  * Coluna "Séries": "N × 8-12" com o N configurado pro aluno (exercício > treino > padrão, resolvido na edge).
  * Até 18/09/2026 saía "3" fixo pra todo mundo — a Lívia tinha ABS com 1 série e o PDF mostrava 3.
  */
-export function textoSeries(numSeries: number | null | undefined, repsAlvo?: string | null): string {
+export function textoSeries(numSeries: number | null | undefined, repsAlvo?: string | null, porTempo = false): string {
   const n = Number(numSeries);
   const v = Number.isFinite(n) && n >= 1 ? Math.min(SERIES_MAX, Math.round(n)) : SERIES_PADRAO;
+  // série por tempo (Prancha, 22/10/2026): a meta em segundos ("3 × 30 s"); sem meta, só as séries (nunca a faixa de repetições)
+  if (porTempo) {
+    const meta = metaSegundos(repsAlvo);
+    return meta ? `${v} × ${formatarSegundos(meta)}` : `${v} ${v === 1 ? "série" : "séries"}`;
+  }
   // W15: com as repetições prescritas pelo profissional (NF1), elas; sem, a faixa genérica de sempre
   const reps = typeof repsAlvo === "string" && repsAlvo.trim() ? repsAlvo.trim() : REPS_PADRAO;
   return `${v} × ${reps}`;
@@ -86,7 +94,7 @@ export function linhasTabelaDiaCompleta(dia: WorkoutDia, descansoPadrao: number 
     ? dia.exercicios.map((e) => [
         limparTexto(e.nome),
         e.grupo_muscular ? limparTexto(e.grupo_muscular) : "—",
-        textoSeries(e.num_series, e.reps_alvo),
+        textoSeries(e.num_series, e.reps_alvo, ehPorTempo(e.exercicio_id)),
         textoDescansoPdf(e.descanso_segundos ?? descansoPadrao),
         textoCargaPdf(e.carga_sugerida_kg),
       ])
@@ -99,7 +107,7 @@ export function linhasTabelaDia(dia: WorkoutDia): string[][] {
     ? dia.exercicios.map((e) => [
         limparTexto(e.nome),
         e.grupo_muscular ? limparTexto(e.grupo_muscular) : "—",
-        textoSeries(e.num_series, e.reps_alvo),
+        textoSeries(e.num_series, e.reps_alvo, ehPorTempo(e.exercicio_id)),
       ])
     : [["Sem exercícios cadastrados", "—", "—"]];
 }

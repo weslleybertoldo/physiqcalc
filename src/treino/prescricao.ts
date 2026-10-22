@@ -6,6 +6,7 @@
  * Linha do exercício da tela 2: "4 × 10 · 60 s · 60 kg" (séries × repetições · descanso · carga).
  */
 import { chaveExercicio, chaveSeries, chaveTreino } from "@/lib/seriesPadrao";
+import { formatarSegundos, metaSegundos } from "./porTempo";
 
 export interface LinhaPrescricao {
   grupo_id: string | null;
@@ -137,18 +138,25 @@ export function cargaDaLinha(p: Prescricao, series: SerieParaLinha[]): number | 
 /**
  * Linha do exercício ("4 × 10 · 60 s"): séries × repetições · descanso. A carga vai à parte (no fim da linha quando o
  * exercício está feito — "4 × 10 · 60 s · 60 kg" — e no chip da direita enquanto não está, como na tela 2).
- * Corrida: "3 séries · 2 min".
+ * Corrida: "3 séries · 2 min". Série por tempo (Prancha): "3 × 30 s · 60 s" — a meta do profissional em segundos; sem meta,
+ * "3 séries · 60 s".
  */
 export function linhaDoExercicio(opts: {
   prescricao: Prescricao;
   series: SerieParaLinha[];
   descansoPadrao: number | null;
   corrida?: boolean;
+  porTempo?: boolean;
 }): string {
   const n = opts.series.length;
   const descanso = formatarDescanso(opts.prescricao.descanso ?? opts.descansoPadrao);
+  const nSeries = n ? `${n} ${n === 1 ? "série" : "séries"}` : null;
+  if (opts.porTempo) {
+    const meta = metaSegundos(opts.prescricao.reps);
+    return [n ? (meta ? `${n} × ${formatarSegundos(meta)}` : nSeries) : null, descanso].filter(Boolean).join(" · ");
+  }
   if (opts.corrida) {
-    return [n ? `${n} ${n === 1 ? "série" : "séries"}` : null, descanso].filter(Boolean).join(" · ");
+    return [nSeries, descanso].filter(Boolean).join(" · ");
   }
   const reps = repsDaLinha(opts.prescricao, opts.series);
   const partes = [n ? (reps ? `${n} × ${reps}` : `${n} ${n === 1 ? "série" : "séries"}`) : null, descanso];

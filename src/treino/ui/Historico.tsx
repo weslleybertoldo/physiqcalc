@@ -10,6 +10,7 @@ import { EstadoVazio } from "@/ui/premium/Estados";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { chaveData, chaveMes, gradeDoMes, ROTULO_DIA, rotuloData, rotuloMes } from "../datas";
 import { formatarCronometro, formatarDuracao } from "../cronometro";
+import { formatarSegundos } from "../porTempo";
 import { formatarCarga } from "../prescricao";
 import { SheetCompartilhar } from "./SheetCompartilhar";
 import { lerExercicios } from "../historico";
@@ -237,7 +238,7 @@ export function Historico({ userId, aoVoltar }: { userId: string; aoVoltar: () =
                     {ex.series.length > 0 ? (
                       <div className="mt-1 flex flex-wrap gap-x-3.5 gap-y-0.5 text-[12px] tabular-nums text-texto-2">
                         {ex.series.map((s) => (
-                          <span key={s.numero_serie}>{s.numero_serie}ª <b className="font-semibold text-forte">{s.peso} kg × {s.reps}</b></span>
+                          <span key={s.numero_serie}>{s.numero_serie}ª <b className="font-semibold text-forte">{s.tempo_segundos ? formatarSegundos(s.tempo_segundos) : `${s.peso} kg × ${s.reps}`}</b></span>
                         ))}
                       </div>
                     ) : (

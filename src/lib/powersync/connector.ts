@@ -6,6 +6,7 @@ import {
 } from "@powersync/web";
 import { supabase, DB_SCHEMA } from "@/integrations/supabase/client";
 import { avisarErro } from "@/lib/avisoDeErro";
+import { linhaParaEnviar } from "@/treino/porTempo";
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { instanciaPowerSync } from "./instancia";
 
@@ -79,7 +80,8 @@ class SupabaseConnector implements PowerSyncBackendConnector {
 
         switch (op.op) {
           case UpdateType.PUT:
-            result = await table.upsert({ ...prepared, id: op.id });
+            // o PUT não traz as colunas nulas: a série da Prancha leva peso e repetições nulos explícitos (porTempo.ts)
+            result = await table.upsert({ ...linhaParaEnviar(op.table, prepared), id: op.id });
             break;
           case UpdateType.PATCH:
             result = await table.update(prepared).eq("id", op.id);
