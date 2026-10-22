@@ -5,6 +5,7 @@
 //   cancelar   POST purchases.subscriptionsv2/tokens/{token}:cancel     — o vínculo e a exclusão (DEVELOPER_REQUESTED_STOP_PAYMENTS)
 //   adiar      POST purchases.subscriptionsv2/tokens/{token}:defer      — o etag + a duração (1 dia a 1 ano)
 //   revogar    POST purchases.subscriptionsv2/tokens/{token}:revoke     — fullRefund/proratedRefund (o acesso acaba na hora)
+//   listarDevolvidas GET purchases/voidedpurchases?type=1               — a Voided Purchases API (a conferência de hora em hora, 22/10/2026)
 // Cada ida com o tempo do Google (TEMPO_MS.google, 8 s) e, quando vem, o prazo do pedido. A base só troca para o simulador local
 // (PLAY_API_BASE = http://127.0.0.1:<porta>) e o token do OAuth idem (PLAY_OAUTH_URL); a produção não tem essas variáveis.
 // O token de compra vai na URL (a API pede assim): a URL e o corpo da resposta NUNCA vão para o log — só o status e o código curto
@@ -109,6 +110,17 @@ export function cancelar(token: string, tipo: "USER_REQUESTED_STOP_RENEWALS" | "
 /** Adia a próxima cobrança (v2): o etag do GET mais novo + a duração ("432000s"). */
 export function adiar(token: string, etag: string, duracao: string, opcoes: OpcoesPlay = {}): Promise<RespostaPlay<Record<string, unknown>>> {
   return chamar("POST", `${caminhoV2(token)}:defer`, { deferralContext: { etag, deferDuration: duracao } }, opcoes);
+}
+
+/**
+ * As compras devolvidas, canceladas ou estornadas que o Google VIU na janela (a Voided Purchases API, purchases.voidedpurchases.list):
+ * type=1 traz as assinaturas também (o padrão, 0, só os produtos avulsos); `pagina` = o nextPageToken da anterior (com ele, o Google ignora
+ * a janela). Sem maxResults: o tamanho padrão da página do Google. A resposta (os tokens e os pedidos) nunca vai ao log.
+ */
+export function listarDevolvidas(q: { inicioMs: number; fimMs: number; pagina?: string | null }, opcoes: OpcoesPlay = {}): Promise<RespostaPlay<Record<string, unknown>>> {
+  const p = new URLSearchParams({ startTime: String(Math.floor(q.inicioMs)), endTime: String(Math.floor(q.fimMs)), type: "1" });
+  if (q.pagina) p.set("token", q.pagina);
+  return chamar("GET", `/androidpublisher/v3/applications/${PACOTE}/purchases/voidedpurchases?${p}`, null, opcoes);
 }
 
 /** Revoga (v2): devolve tudo (integral) ou o que falta (proporcional) e corta o acesso na hora. */

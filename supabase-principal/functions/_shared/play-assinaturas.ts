@@ -63,7 +63,7 @@ export interface ContextoPlay {
 const opcoesDe = (c: ContextoPlay): OpcoesPlay => ({ prazo: c.prazo, buscar: c.buscar });
 
 /** A tabela ainda não está no schema (a função publicada antes da migration): é "sem Play", não erro. */
-function semTabela(error: unknown): boolean {
+export function semTabela(error: unknown): boolean {
   const e = (error ?? {}) as { code?: unknown; message?: unknown };
   return e.code === "42P01" || e.code === "PGRST205" || (typeof e.message === "string" && /play_assinaturas/.test(e.message) && /does not exist|could not find/i.test(e.message));
 }
@@ -109,6 +109,22 @@ export async function vivasDasMatriculas(db: SupabaseClient, pacienteIds: string
     throw error;
   }
   return (data ?? []) as LinhaPlayBanco[];
+}
+
+/**
+ * A conferência de hora em hora (a play-conferir): as vivas DESTE schema, as que estão há mais tempo sem conferir primeiro (o atualizada_em
+ * — a play_aplicar grava a hora a cada sincronia), até `limite`; `total` = quantas vivas há (o resto fica para a próxima hora). A tabela que
+ * ainda não existe (a função publicada antes da migration) = nenhuma. Erro do banco lança.
+ */
+export async function vivasParaConferir(db: SupabaseClient, limite: number): Promise<{ linhas: LinhaPlayBanco[]; total: number }> {
+  const { data, error, count } = await db.from("play_assinaturas").select(COLUNAS, { count: "exact" })
+    .in("estado", ESTADOS_VIVOS as string[]).order("atualizada_em", { ascending: true }).order("token").limit(limite);
+  if (error) {
+    if (semTabela(error)) return { linhas: [], total: 0 };
+    throw error;
+  }
+  const linhas = (data ?? []) as LinhaPlayBanco[];
+  return { linhas, total: Math.max(typeof count === "number" ? count : 0, linhas.length) };
 }
 
 /** O que o app e as leituras mostram da assinatura (nunca o token nem o pedido). */
@@ -282,7 +298,7 @@ async function desfazerReserva(db: SupabaseClient, token: string, reservada: str
 }
 
 /** A linha mudou depois da play_aplicar? O estado ou o fim (o mesmo instante, em qualquer formato da data). */
-function mudou(antes: Pick<LinhaPlayBanco, "estado" | "expira_em">, depois: RespostaAplicar): boolean {
+export function mudou(antes: Pick<LinhaPlayBanco, "estado" | "expira_em">, depois: RespostaAplicar): boolean {
   const instante = (v: string | null | undefined) => (v ? Date.parse(v) : null);
   return (depois.estado ?? antes.estado) !== antes.estado || instante(depois.expira_em) !== instante(antes.expira_em);
 }
