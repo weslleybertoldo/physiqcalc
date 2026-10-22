@@ -218,6 +218,19 @@ describe("aba Treino (tela 2)", () => {
     expect(document.querySelector("[data-treino-painel]")).not.toBeNull();
   });
 
+  it("exercício com todas as séries feitas: o nome e a linha de baixo ficam cinza e riscados; o atual não", async () => {
+    comTreino();
+    abrir();
+    await waitFor(() => expect(document.querySelector('[data-exercicio-id="e1"]')?.getAttribute("data-exercicio-estado")).toBe("feito"));
+    const feito = document.querySelector('[data-exercicio-id="e1"]')!;
+    expect(feito.querySelector("[data-exercicio-nome]")!.className).toMatch(/\bline-through\b.*\btext-texto-3\b|\btext-texto-3\b.*\bline-through\b/);
+    expect(feito.querySelector("[data-exercicio-linha]")!.className).toContain("line-through");
+    expect(feito.querySelector("[data-exercicio-ficha]")!.className).toContain("grayscale");
+    const atual = document.querySelector('[data-exercicio-id="e2"]')!;
+    expect(atual.querySelector("[data-exercicio-nome]")!.className).not.toContain("line-through");
+    expect(atual.querySelector("[data-exercicio-linha]")!.className).not.toContain("line-through");
+  });
+
   it("cronômetro rodando: pílula vermelha com o tempo no cabeçalho", async () => {
     comTreino();
     localStorage.setItem("physiq_workout_timer", JSON.stringify({ ativo: true, startedAt: Date.now() - (32 * 60 + 10) * 1000, dateKey: "2026-10-01", grupoNome: "Peito e Tríceps", avisos: [] }));
@@ -230,5 +243,87 @@ describe("aba Treino (tela 2)", () => {
     expect(pilula.textContent).toMatch(/32:1\d/);
     expect(pilula.className).toContain("pq-chip-r");
     expect(document.querySelector("[data-comecar-treino]")).toBeNull();
+  });
+});
+
+// Tocar no nome do treino minimiza os exercícios e tocar de novo mostra (pedido do Weslley, 22/10/2026).
+describe("aba Treino — minimizar os exercícios pelo nome do treino", () => {
+  const lista = () => document.querySelector("[data-exercicios-minimizados]")!;
+  const nome = () =>
+    waitFor(() => {
+      const b = document.querySelector("[data-treino-nome] [data-treino-minimizar]");
+      expect(b).not.toBeNull();
+      return b as HTMLElement;
+    });
+
+  it("tocar no nome esconde a lista (nada nela recebe toque) e tocar de novo mostra; reabrir a aba lembra", async () => {
+    comTreino();
+    const { unmount } = abrir();
+    const botao = await nome();
+    expect(botao).toHaveAttribute("aria-expanded", "true");
+    expect(lista()).toHaveAttribute("data-exercicios-minimizados", "0");
+    expect(lista()).not.toHaveAttribute("inert");
+    fireEvent.click(botao);
+    expect(botao).toHaveAttribute("aria-expanded", "false");
+    expect(lista()).toHaveAttribute("data-exercicios-minimizados", "1");
+    expect(lista()).toHaveAttribute("inert");
+    expect(lista().querySelector('[data-exercicio-id="e1"]')).not.toBeNull(); // escondida, não apagada
+    unmount();
+    abrir();
+    expect(await nome()).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(await nome());
+    expect(lista()).toHaveAttribute("data-exercicios-minimizados", "0");
+    expect(lista()).not.toHaveAttribute("inert");
+  });
+
+  it("reabrir a aba com o treino minimizado: a lista já nasce fechada (não abre e fecha enquanto a ordem carrega)", async () => {
+    comTreino();
+    const { unmount } = abrir();
+    fireEvent.click(await nome());
+    unmount();
+    // cada troca do atributo, com o valor de antes: nascer "1" e não mudar = nenhum registro
+    const antes: (string | null)[] = [];
+    const obs = new MutationObserver((rs) => rs.forEach((r) => antes.push(r.oldValue)));
+    obs.observe(document.body, { subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ["data-exercicios-minimizados"] });
+    abrir();
+    expect(await nome()).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() => expect(lista().querySelector('[data-exercicio-id="e1"]')).not.toBeNull());
+    obs.takeRecords().forEach((r) => antes.push(r.oldValue));
+    obs.disconnect();
+    expect(lista()).toHaveAttribute("data-exercicios-minimizados", "1");
+    expect(antes).toEqual([]);
+  });
+
+  it("treino minimizado sem nenhum exercício (ainda carregando, ou todos removidos): o nome continua tocável e mostra a lista", async () => {
+    comTreino();
+    h.estado.dados.gruposEx = [];
+    localStorage.setItem("physiq_treino_minimizado", JSON.stringify({ "2026-10-01|0": true }));
+    abrir();
+    const botao = await nome();
+    expect(botao).toHaveAttribute("aria-expanded", "false");
+    expect(lista()).toHaveAttribute("data-exercicios-minimizados", "1");
+    fireEvent.click(botao);
+    expect(lista()).toHaveAttribute("data-exercicios-minimizados", "0");
+    expect(lista()).toHaveTextContent("Nenhum exercício neste treino.");
+    // aberta e sem exercício, o nome volta a ser só o nome (nada a minimizar)
+    expect(document.querySelector("[data-treino-minimizar]")).toBeNull();
+  });
+
+  it("\"Começar treino\" mostra a lista minimizada", async () => {
+    comTreino();
+    abrir();
+    fireEvent.click(await nome());
+    expect(lista()).toHaveAttribute("data-exercicios-minimizados", "1");
+    fireEvent.click(document.querySelector("[data-comecar-treino]")!);
+    await waitFor(() => expect(lista()).toHaveAttribute("data-exercicios-minimizados", "0"));
+  });
+
+  it("\"Reordenar exercícios\" mostra a lista minimizada", async () => {
+    comTreino();
+    abrir();
+    fireEvent.click(await nome());
+    fireEvent.click(screen.getByRole("button", { name: "Opções do treino" }));
+    fireEvent.click(await screen.findByText("Reordenar exercícios"));
+    await waitFor(() => expect(lista()).toHaveAttribute("data-exercicios-minimizados", "0"));
   });
 });

@@ -5,15 +5,59 @@ import type { SerieComMemoria } from "./tipos";
 // Tirar uma série (22/10/2026): as salvas seguintes só MUDAM DE NÚMERO no SQLite do aparelho (UPDATE, uma a uma em ordem crescente).
 // Antes elas eram regravadas pelo número novo (INSERT OR REPLACE com só peso e reps): a corrida perdia o tempo, a distância e o pace,
 // e a última linha antiga sobrava no banco.
-const h = vi.hoisted(() => ({ sql: [] as { sql: string; args: unknown[] }[] }));
-vi.mock("@powersync/react", () => ({
-  usePowerSync: () => ({
-    execute: async (sql: string, args: unknown[] = []) => {
-      h.sql.push({ sql: sql.replace(/\s+/g, " ").trim(), args });
+
+// O SQLite de mentira anota cada comando e guarda as linhas gravadas de tb_treino_series e tb_academia_pesos (o bastante para o
+// SELECT do id achar a linha que outro salvamento gravou). Como no PowerSync, toda escrita passa pela trava de escrita (uma de cada
+// vez): o execute solto é uma transação de um comando só e a writeTransaction segura a trava até o fim; a leitura solta não espera.
+const h = vi.hoisted(() => {
+  const sql: { sql: string; args: unknown[] }[] = [];
+  const series = new Map<string, unknown[]>();
+  const pesos = new Map<string, unknown[]>();
+  let ids = 0;
+  let fila: Promise<unknown> = Promise.resolve();
+  // o comando é anotado quando é chamado e muda as linhas quando roda (dentro da trava)
+  const anotar = (texto: string, args: unknown[]) => {
+    const s = texto.replace(/\s+/g, " ").trim();
+    sql.push({ sql: s, args });
+    return s;
+  };
+  const aplicar = (s: string, args: unknown[]) => {
+    if (s.startsWith("INSERT INTO tb_treino_series")) series.set(`id-${++ids}`, args);
+    else if (s.startsWith("INSERT OR REPLACE INTO tb_treino_series")) series.set(args[0] as string, args.slice(1));
+    else if (s.startsWith("INSERT INTO tb_academia_pesos")) pesos.set(`id-${++ids}`, args);
+  };
+  const getAll = async (texto: string, args: unknown[] = []) => {
+    // série: [user, exercicio_id, exercicio_usuario_id, data, slot, numero, …] · peso da academia: [user, academia, exercicio_id, exercicio_usuario_id, numero, …]
+    if (texto.includes("FROM tb_treino_series")) {
+      const [user, ex, data, slot, num] = args;
+      return [...series].filter(([, v]) => v[0] === user && (v[1] === ex || v[2] === ex) && v[3] === data && v[4] === slot && v[5] === num).map(([id]) => ({ id }));
+    }
+    if (texto.includes("FROM tb_academia_pesos")) {
+      const [user, academia, ex, exUsuario, num] = args;
+      return [...pesos].filter(([, v]) => v[0] === user && v[1] === academia && (v[2] ?? "") === ex && (v[3] ?? "") === exUsuario && v[4] === num).map(([id]) => ({ id }));
+    }
+    return [];
+  };
+  const writeTransaction = (fn: (tx: unknown) => Promise<unknown>) => {
+    const tx = { execute: async (texto: string, args: unknown[] = []) => aplicar(anotar(texto, args), args), getAll };
+    const vez = fila.then(() => fn(tx));
+    fila = vez.catch(() => undefined);
+    return vez;
+  };
+  const execute = (texto: string, args: unknown[] = []) => {
+    const s = anotar(texto, args);
+    return writeTransaction(async () => aplicar(s, args));
+  };
+  return {
+    sql, series, db: { execute, getAll, writeTransaction },
+    zerar: () => {
+      sql.length = 0;
+      series.clear();
+      pesos.clear();
     },
-    getAll: async () => [],
-  }),
-}));
+  };
+});
+vi.mock("@powersync/react", () => ({ usePowerSync: () => h.db }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 import { useAcoesSeries } from "./useAcoesSeries";
@@ -42,7 +86,42 @@ const corrida = (n: number, tempo: number, km: number): SerieComMemoria => ({
 });
 
 beforeEach(() => {
-  h.sql.length = 0;
+  h.zerar();
+});
+
+// 2 salvamentos da MESMA série nova quase juntos (o Tempo ao sair do campo e o OK logo depois, 22/10/2026): os 2 procuravam a linha
+// antes de o 1º gravar e nasciam 2 linhas da mesma série — na volta da internet o servidor recusava a 2ª (chave única, 23505) e o
+// que só ela tinha (a distância) sumia.
+describe("gravar (salvar a série no aparelho)", () => {
+  const novaCorrida: SerieComMemoria = { exercicio_id: CORRIDA, slot_idx: 0, numero_serie: 1, peso: 0, reps: 0, salva: false };
+  const gravacoes = () => h.sql.filter((x) => x.sql.includes("INTO tb_treino_series"));
+
+  it("corrida: o Tempo e o km da série nova salvos ao mesmo tempo ficam numa linha só (o 2º acha a do 1º)", async () => {
+    const { acoes } = abrir([novaCorrida]);
+    await Promise.all([acoes.salvarSerie(CORRIDA, 1, 0, 0, 600), acoes.salvarSerie(CORRIDA, 1, 0, 0, 600, 3)]);
+    expect(gravacoes().map((x) => x.sql.split(" (")[0])).toEqual(["INSERT INTO tb_treino_series", "INSERT OR REPLACE INTO tb_treino_series"]);
+    const id = gravacoes()[1].args[0] as string;
+    expect([...h.series.keys()]).toEqual([id]);
+    // [user, exercicio_id, exercicio_usuario_id, data, slot, numero, peso, reps, tempo, distância, …]
+    expect(h.series.get(id)?.slice(8, 10)).toEqual([600, 3]);
+  });
+
+  it("o Tempo saindo do campo e o OK juntos: uma linha só, já concluída", async () => {
+    const { acoes } = abrir([novaCorrida]);
+    await Promise.all([acoes.salvarSerie(CORRIDA, 1, 0, 0, 600), acoes.concluirSerie(CORRIDA, "Corrida", 1, 0, 0, 600, 3)]);
+    expect(h.series.size).toBe(1);
+    // […, distância, pace, concluída, …]
+    expect([...h.series.values()][0].slice(9, 12)).toEqual([3, 200, true]);
+  });
+
+  it("musculação com academia: a memória de peso da série nova também fica numa linha só", async () => {
+    const nova: SerieComMemoria = { exercicio_id: SUPINO, slot_idx: 0, numero_serie: 1, peso: 0, reps: 10, salva: false };
+    const { acoes } = abrir([nova], true);
+    await Promise.all([acoes.salvarSerie(SUPINO, 1, 40, 10), acoes.salvarSerie(SUPINO, 1, 40, 12)]);
+    expect(gravacoes().map((x) => x.sql.split(" (")[0])).toEqual(["INSERT INTO tb_treino_series", "INSERT OR REPLACE INTO tb_treino_series"]);
+    const academia = h.sql.filter((x) => /^(INSERT INTO|UPDATE) tb_academia_pesos/.test(x.sql));
+    expect(academia.map((x) => x.sql.split(" ")[0])).toEqual(["INSERT", "UPDATE"]);
+  });
 });
 
 describe("removerSerie (tirar uma série)", () => {

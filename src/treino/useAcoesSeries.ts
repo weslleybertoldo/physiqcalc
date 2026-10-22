@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePowerSync } from "@powersync/react";
+import type { Transaction } from "@powersync/web";
 import { toast } from "sonner";
 import { calcularPace } from "@/lib/corrida";
 import { clampSeries } from "@/lib/seriesPadrao";
@@ -58,9 +59,9 @@ export function useAcoesSeries(o: OpcoesAcoes) {
     return u ? { ...base, exercicio_id: null, exercicio_usuario_id: u } : { ...base, exercicio_id: exId };
   };
 
-  const idExistente = async (exId: string, exUsuarioId: string | null | undefined, num: number): Promise<string | null> => {
+  const idExistente = async (tx: Transaction, exId: string, exUsuarioId: string | null | undefined, num: number): Promise<string | null> => {
     const campo = exUsuarioId ? "exercicio_usuario_id" : "exercicio_id";
-    const rows = await db.getAll<{ id: string }>(
+    const rows = await tx.getAll<{ id: string }>(
       `SELECT id FROM tb_treino_series WHERE user_id = ? AND ${campo} = ? AND data_treino = ? AND slot_idx = ? AND numero_serie = ?`,
       [userId, exUsuarioId || exId, dateKey, slotIdx, num],
     );
@@ -70,41 +71,48 @@ export function useAcoesSeries(o: OpcoesAcoes) {
   const gravar = async (exId: string, d: Record<string, unknown>) => {
     const exUsuarioId = (d.exercicio_usuario_id as string) || null;
     const exIdVal = (d.exercicio_id as string) || null;
-    const id = await idExistente(exId, exUsuarioId, d.numero_serie as number);
     const quando = (d.updated_at as string) ?? new Date().toISOString();
     const valores = [
       userId, exIdVal, exUsuarioId, dateKey, slotIdx, d.numero_serie, d.peso ?? null, d.reps ?? null, d.tempo_segundos ?? null, d.distancia_km ?? null,
       d.pace_segundos_km ?? null, d.concluida ?? null, academia?.nome ?? null, quando,
     ];
-    if (id) {
-      await db.execute(
-        `INSERT OR REPLACE INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, academia_nome, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, ...valores],
-      );
-    } else {
-      await db.execute(
-        `INSERT INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, academia_nome, updated_at)
-         VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        valores,
-      );
-    }
+    // procurar e gravar numa transação só (22/10/2026): 2 salvamentos da mesma série nova (o Tempo saindo do campo e o OK) entram
+    // em fila e o 2º acha a linha do 1º — antes os 2 procuravam antes de o 1º gravar e nasciam 2 linhas da mesma série
+    await db.writeTransaction(async (tx) => {
+      const id = await idExistente(tx, exId, exUsuarioId, d.numero_serie as number);
+      if (id) {
+        await tx.execute(
+          `INSERT OR REPLACE INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, academia_nome, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id, ...valores],
+        );
+      } else {
+        await tx.execute(
+          `INSERT INTO tb_treino_series (id, user_id, exercicio_id, exercicio_usuario_id, data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, distancia_km, pace_segundos_km, concluida, academia_nome, updated_at)
+           VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          valores,
+        );
+      }
+    });
     // com academia, o peso da série vai AO VIVO para a academia (corrida e série por tempo não têm peso)
     if (d.tempo_segundos == null && !ehPorTempo(exId)) await pesoNaAcademia(exIdVal, exUsuarioId, d.numero_serie as number, d.peso ?? 0, quando);
   };
 
+  // numa transação própria, como a série (e não na dela: o envio descarta o resto da transação quando uma linha é recusada)
   const pesoNaAcademia = async (exIdVal: string | null, exUsuarioId: string | null, numero: number, peso: unknown, quando: string) => {
     if (!academia) return;
-    const ref = await db.getAll<{ id: string }>(
-      `SELECT id FROM tb_academia_pesos WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ? AND numero_serie = ?`,
-      [userId, academia.id, exIdVal || "", exUsuarioId || "", numero],
-    );
-    if (ref.length > 0) await db.execute("UPDATE tb_academia_pesos SET peso = ?, updated_at = ? WHERE id = ?", [peso, quando, ref[0].id]);
-    else
-      await db.execute(
-        `INSERT INTO tb_academia_pesos (id, user_id, academia_id, exercicio_id, exercicio_usuario_id, numero_serie, peso, updated_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, academia.id, exIdVal, exUsuarioId, numero, peso, quando],
+    await db.writeTransaction(async (tx) => {
+      const ref = await tx.getAll<{ id: string }>(
+        `SELECT id FROM tb_academia_pesos WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ? AND numero_serie = ?`,
+        [userId, academia.id, exIdVal || "", exUsuarioId || "", numero],
       );
+      if (ref.length > 0) await tx.execute("UPDATE tb_academia_pesos SET peso = ?, updated_at = ? WHERE id = ?", [peso, quando, ref[0].id]);
+      else
+        await tx.execute(
+          `INSERT INTO tb_academia_pesos (id, user_id, academia_id, exercicio_id, exercicio_usuario_id, numero_serie, peso, updated_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?)`,
+          [userId, academia.id, exIdVal, exUsuarioId, numero, peso, quando],
+        );
+    });
   };
 
   const salvarSerie = async (exId: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => {

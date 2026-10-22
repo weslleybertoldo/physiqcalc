@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from "react";
-import { CheckCircle2, ListChecks, MapPin, MoreHorizontal, Play, Repeat } from "lucide-react";
+import { CheckCircle2, ChevronDown, ListChecks, MapPin, MoreHorizontal, Play, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Chip } from "@/ui/premium/Chip";
 
 /**
  * Card do treino (tela 2, `.wk` com a borda de luz): nome, "TREINO A", exercícios · séries · academia, "2 de 5 exercícios
  * feitos", a % e a barra. Foto de fundo pelo grupo muscular (P29), bem suave para não brigar com o texto. Embaixo, só quando
- * cabe: "Começar treino" (antes de começar) ou o selo de concluído com "Compartilhar".
+ * cabe: "Começar treino" (antes de começar) ou o selo de concluído com "Compartilhar". Tocar no nome minimiza/mostra os
+ * exercícios (a setinha ao lado do nome; pedido do Weslley, 22/10/2026).
  */
 export function CartaoTreino({
   nome,
@@ -23,6 +24,8 @@ export function CartaoTreino({
   aoOpcoes,
   rodape,
   observacao,
+  minimizado = false,
+  aoMinimizar,
 }: {
   nome: string;
   chip: string;
@@ -38,6 +41,9 @@ export function CartaoTreino({
   aoOpcoes: () => void;
   rodape?: ReactNode;
   observacao?: string | null;
+  /** a lista dos exercícios escondida (tocar no nome do treino alterna) */
+  minimizado?: boolean;
+  aoMinimizar?: () => void;
 }) {
   const pct = exercicios > 0 ? Math.round((feitos / exercicios) * 100) : 0;
   const [semFoto, setSemFoto] = useState(false);
@@ -49,7 +55,19 @@ export function CartaoTreino({
       <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(24,24,30,.35), rgba(14,14,18,.1) 70%)" }} />
       <div className="relative">
         <div className="flex items-start justify-between gap-2">
-          <h2 className="min-w-0 font-body text-[19px] font-bold normal-case leading-tight tracking-[-0.02em] text-texto" data-treino-nome>{nome}</h2>
+          <h2 className="min-w-0 font-body text-[19px] font-bold normal-case leading-tight tracking-[-0.02em] text-texto" data-treino-nome>
+            {aoMinimizar ? (
+              <button type="button" onClick={aoMinimizar} aria-expanded={!minimizado} data-treino-minimizar
+                aria-label={minimizado ? `Mostrar os exercícios de ${nome}` : `Minimizar os exercícios de ${nome}`}
+                className="inline-flex items-center gap-1.5 text-left transition-opacity active:opacity-70">
+                <span className="min-w-0">{nome}</span>
+                <ChevronDown aria-hidden strokeWidth={2.2}
+                  className={cn("h-[18px] w-[18px] flex-none text-texto-2 transition-transform duration-300 ease-out", minimizado && "-rotate-90")} />
+              </button>
+            ) : (
+              nome
+            )}
+          </h2>
           <div className="flex flex-none items-center gap-1">
             <Chip tom="t" data-treino-chip>{chip}</Chip>
             <button type="button" onClick={aoOpcoes} aria-label="Opções do treino" data-treino-opcoes

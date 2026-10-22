@@ -5,7 +5,8 @@ repetições): a corrida perdia o tempo e a distância, e a última linha antiga
 
 Conta de TESTE teste@teste.com ("aluno-calc"), o treino próprio "Teste 3D" (domingo) e a Bicicleta Ergométrica (tipo corrida).
 Só no LOCAL (o `vite dev`, schema staging — o P20 da W8: o app LÊ o public e GRAVA o staging): SEM internet depois do 1º sync,
-preenche a S1, a S2 e a S3 com tempos e distâncias diferentes (gravadas no aparelho, sem OK), tira a S1 → a tela mostra a antiga S2
+preenche a S1, a S2 e a S3 com tempos e distâncias diferentes (gravadas no aparelho, sem OK; o km digitado no mesmo instante em que
+o Tempo sai do campo — o ritmo dos 2 defeitos antigos do preenchimento, consertados em 22/10/2026), tira a S1 → a tela mostra a antiga S2
 como S1 e a antiga S3 como S2; volta a internet → o staging com 2 linhas (1 e 2) com os tempos e distâncias certos e NENHUMA linha 3;
 o public sem nada; no fim apaga do staging o que gravou (e2e/w08/_base.py: limpar_staging).
 
@@ -82,19 +83,19 @@ def caso_local(nav, base: str) -> None:
         p.check(c.pg.locator(f'[data-exercicio-id="{BICICLETA}"] input[aria-label^="Distância"]').count() >= 3,
                 "a Bicicleta aberta com 3 séries de tempo e distância")
 
-        # S1, S2 e S3 gravadas no aparelho (sem OK): cada campo grava ao sair. No ritmo de uma pessoa: toca no Km (o Tempo grava
-        # ao sair), o campo abre e só então digita a distância. O km digitado no MESMO instante do toque (o `fill` direto) cai em 2
-        # defeitos antigos do preenchimento, fora deste conserto (medidos em 22/10/2026): os 2 salvamentos da série nova procuram a
-        # linha antes de o 1º gravar e criam 2 linhas (o servidor recusa a 2ª, a da distância, pela chave única) ou a linha se refaz
-        # com o que o 1º gravou e apaga o km digitado
+        # S1, S2 e S3 gravadas no aparelho (sem OK): cada campo grava ao sair. O km é digitado no MESMO instante em que o Tempo
+        # sai (o `fill` direto): até 22/10/2026 isso caía em 2 defeitos antigos do preenchimento — os 2 salvamentos da série nova
+        # procuravam a linha antes de o 1º gravar e criavam 2 linhas (o servidor recusava a 2ª, a da distância, pela chave única)
+        # e a linha se refazia com o que o 1º gravou, apagando o km digitado. Desde o conserto, os 2 entram em fila numa transação
+        # e o campo em foco não é refeito
         for n, (tempo, km) in SERIES.items():
             s = serie(c, n)
             s.locator("input[aria-label^='Tempo']").fill(tempo)
-            s.locator("input[aria-label^='Distância']").click()
-            c.pg.wait_for_timeout(800)
             s.locator("input[aria-label^='Distância']").fill(km)
             s.locator("input[aria-label^='Distância']").blur()
             c.pg.wait_for_timeout(500)
+        tela = [campos(c, n) for n in SERIES]
+        p.check(tela == [(t, k) for t, k in SERIES.values()], f"as 3 séries na tela com o tempo e o km digitados na hora ({tela})")
         serie(c, 1).scroll_into_view_if_needed()
         print("   print:", c.print("1_tres_series"))
 

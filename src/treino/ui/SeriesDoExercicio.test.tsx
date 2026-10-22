@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { nivelDasSeries } from "../../../supabase/functions/_shared/treino-acessos-regras";
 import type { SerieComMemoria } from "../tipos";
@@ -38,5 +38,61 @@ describe("W-A P4 — as séries travadas pela aba Acessos, no app do aluno", () 
     expect(acoes.aoAdicionar).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getAllByRole("button", { name: "Tirar série" })[1]);
     expect(acoes.aoRemover).toHaveBeenCalledWith(2, true);
+  });
+});
+
+// O campo em foco não é refeito com o que foi gravado (22/10/2026): o km digitado enquanto o Tempo ainda gravava sumia quando a
+// série voltava salva, e o 2º salvamento saía sem a distância.
+describe("o campo em foco fica com o que a pessoa digita", () => {
+  function tela(corrida: boolean, nova: SerieComMemoria) {
+    const aoSalvar = vi.fn();
+    const props = {
+      exercicioId: nova.exercicio_id, nome: corrida ? "Corrida" : "Supino", corrida, podeEditar: true, aoSalvar,
+      aoConcluir: vi.fn(), aoDesfazer: vi.fn(), aoRemover: vi.fn(), aoAdicionar: vi.fn(),
+    };
+    const { rerender } = render(<SeriesDoExercicio {...props} series={[nova]} />);
+    return { aoSalvar, voltaGravada: (s: SerieComMemoria) => rerender(<SeriesDoExercicio {...props} series={[s]} />) };
+  }
+
+  it("corrida: digita o tempo, vai pro km e digita 3; o Tempo volta gravado sem km → o km continua 3 e sai salvo com 3", () => {
+    const nova: SerieComMemoria = { exercicio_id: "c1", numero_serie: 1, peso: 0, reps: 0, salva: false };
+    const { aoSalvar, voltaGravada } = tela(true, nova);
+    const tempo = screen.getByLabelText("Tempo da série 1 de Corrida (MM:SS)");
+    const km = screen.getByLabelText("Distância da série 1 de Corrida (km)");
+    act(() => tempo.focus());
+    fireEvent.change(tempo, { target: { value: "10:00" } });
+    act(() => tempo.blur());
+    expect(aoSalvar).toHaveBeenLastCalledWith(1, 0, 0, 600, undefined);
+    act(() => km.focus());
+    fireEvent.change(km, { target: { value: "3" } });
+    voltaGravada({ ...nova, tempo_segundos: 600, salva: true });
+    expect(km).toHaveValue(3);
+    act(() => km.blur());
+    expect(aoSalvar).toHaveBeenLastCalledWith(1, 0, 0, 600, 3);
+  });
+
+  it("musculação: digita o peso, vai pras repetições e digita 12; o peso volta gravado → as repetições continuam 12", () => {
+    const nova: SerieComMemoria = { exercicio_id: "e1", numero_serie: 1, peso: 30, reps: 10, salva: false };
+    const { aoSalvar, voltaGravada } = tela(false, nova);
+    const peso = screen.getByLabelText("Peso da série 1 de Supino (kg)");
+    const reps = screen.getByLabelText("Repetições da série 1 de Supino");
+    act(() => peso.focus());
+    fireEvent.change(peso, { target: { value: "40" } });
+    act(() => peso.blur());
+    expect(aoSalvar).toHaveBeenLastCalledWith(1, 40, 10, undefined, undefined);
+    act(() => reps.focus());
+    fireEvent.change(reps, { target: { value: "12" } });
+    voltaGravada({ ...nova, peso: 40, reps: 10, salva: true });
+    expect(reps).toHaveValue(12);
+    act(() => reps.blur());
+    expect(aoSalvar).toHaveBeenLastCalledWith(1, 40, 12, undefined, undefined);
+  });
+
+  it("fora de foco o campo continua refeito com o que foi gravado (como hoje)", () => {
+    const nova: SerieComMemoria = { exercicio_id: "c1", numero_serie: 1, peso: 0, reps: 0, salva: false };
+    const { voltaGravada } = tela(true, nova);
+    voltaGravada({ ...nova, tempo_segundos: 600, distancia_km: 2.5, salva: true });
+    expect(screen.getByLabelText("Tempo da série 1 de Corrida (MM:SS)")).toHaveValue("10:00");
+    expect(screen.getByLabelText("Distância da série 1 de Corrida (km)")).toHaveValue(2.5);
   });
 });
