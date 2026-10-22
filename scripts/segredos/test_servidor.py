@@ -346,7 +346,7 @@ class Fluxos(Base):
                           (), "principal", "principal", ".physiq-segredo-mp-renovar", "mp_contas_renovar_disparar"))
         self.assertEqual(f.item, "Physiq — renovação do MP do personal (W2)")
         self.assertEqual(S.FINALIDADES["automaticas_fila"].item, "Physiq — fila das automáticas (W-P)")  # o S9 não mudou
-        self.assertEqual(len({x.vault for x in S.FINALIDADES.values() if x.vault}), 3)  # S8, S9 e S10: um Vault para cada
+        self.assertEqual(len({x.vault for x in S.FINALIDADES.values() if x.vault}), 4)  # S8, S9, S10 e S11 (play-W6): um Vault para cada
         s10 = S.sql_vault_criar(S.valor_novo(), "physiq_mp_renovar_segredo")  # a descrição dele, não a do S8 nem a do S9
         self.assertIn("mp-contas-renovar", s10)
         self.assertNotIn("automaticas-fila", s10)
@@ -379,6 +379,48 @@ class Fluxos(Base):
         self.assertIn("o banco, {public,staging}.mp_contas_renovar_disparar() pelo pg_net", buf.getvalue())
         self.assertIn('"Physiq — renovação do MP do personal (W2)"', buf.getvalue())
         self.assertIn("S10 mp_renovar", S.__doc__ or "")  # a tabela do cabeçalho
+
+    def test_s11_conferencia_da_play_no_molde_do_s10(self):
+        """play-W6 (22/10/2026): a conferência de hora em hora da Google Play — o banco manda (play_conferir_disparar, Vault
+        physiq_play_conferir_segredo) e a play-conferir confere pela lista; o S8, o S9 e o S10 não mudam."""
+        f = S.FINALIDADES["play_conferir"]
+        self.assertEqual((f.numero, f.segredo, f.lista, f.vault, f.confere, f.manda, f.emissor, f.receptor, f.arquivo, f.disparo),
+                         ("S11", "SEGREDO_PLAY_CONFERIR", "SEGREDO_PLAY_CONFERIR_ACEITOS", "physiq_play_conferir_segredo", ("play-conferir",),
+                          (), "principal", "principal", ".physiq-segredo-play-conferir", "play_conferir_disparar"))
+        self.assertEqual(f.item, "Physiq — conferência da Google Play (play-W6)")
+        self.assertEqual(S.FINALIDADES["mp_renovar"].item, "Physiq — renovação do MP do personal (W2)")  # o S10 não mudou
+        self.assertEqual(len({x.vault for x in S.FINALIDADES.values() if x.vault}), 4)  # S8, S9, S10 e S11: um Vault para cada
+        s11 = S.sql_vault_criar(S.valor_novo(), "physiq_play_conferir_segredo")  # a descrição dele, não a de outra finalidade
+        self.assertIn("play-conferir", s11)
+        self.assertNotIn("mp-contas-renovar", s11)
+        self.assertNotIn("automaticas-fila", s11)
+        self.assertEqual(self.rodar("play_conferir", "gerar")[0], 0)
+        atual = self.valor(f)
+        self.assertIn("play-W6 (a assinatura pela Google Play) S11 play_conferir", self.r.itens[f.item]["notas"])
+        arq = Path(self.casa.name) / ".physiq-segredo-play-conferir"
+        self.assertEqual(arq.read_text(encoding="utf-8"), atual)
+        self.assertEqual(arq.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.rodar("play_conferir", "trocar")[0], 1)  # sem a lista
+        self.assertNotIn(f.vault, self.r.vault)
+        self.assertEqual(self.rodar("play_conferir", "aceitar")[0], 0)
+        self.assertEqual(self.r.funcoes["principal"][f.lista], S.sha256_hex(atual))
+        rc, saida = self.rodar("play_conferir", "trocar")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("pg_cron de hora em hora, no minuto 25", saida)
+        self.assertIn("log da play-conferir com via=lista", saida)
+        self.assertEqual(self.r.vault[f.vault], atual)
+        rc, saida = self.rodar("play_conferir", "conferir")
+        self.assertEqual(rc, 0, saida)
+        self.assertIn("igual ao cofre", saida)
+        self.assertEqual(self.rodar("play_conferir", "tirar-lista")[0], 1)  # o Vault ainda manda: o canal pararia
+        self.assertIn(f.lista, self.r.funcoes["principal"])
+        self.assertEqual(self.r.vault, {f.vault: atual})  # só o Vault da conferência (os do S8, S9 e S10 nem foram tocados)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(S.main(["play_conferir", "gerar", "--dry-run"]), 0)
+        self.assertIn("o banco, {public,staging}.play_conferir_disparar() pelo pg_net", buf.getvalue())
+        self.assertIn('"Physiq — conferência da Google Play (play-W6)"', buf.getvalue())
+        self.assertIn("S11 play_conferir", S.__doc__ or "")  # a tabela do cabeçalho
 
     def test_erro_da_api_que_ecoa_o_valor_sai_limpo(self):
         self.rodar("aviso_erro", "gerar")

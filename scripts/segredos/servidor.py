@@ -3,10 +3,11 @@
 
 Uso:  python3 scripts/segredos/servidor.py <finalidade> <subcomando> [--dry-run] [--so-atual] [--forcar]
 
-Cada finalidade tem o seu segredo. Quem MANDA guarda o valor (SEGREDO_X nas funções; no S8, no S9 e no S10, o Vault do banco
+Cada finalidade tem o seu segredo. Quem MANDA guarda o valor (SEGREDO_X nas funções; no S8, no S9, no S10 e no S11, o Vault do banco
 principal); quem RECEBE guarda só o sha256 dele, na lista SEGREDO_X_ACEITOS ("h1" ou "h1,h2": o atual e, durante a troca, o anterior). O
 cabeçalho é sempre o x-espelho-segredo. O valor mora no cofre B Code Segredos › PhysiqCalc › "Physiq — SEGREDO_X (hml-16c)" (o S9:
-"Physiq — fila das automáticas (W-P)"; o S10: "Physiq — renovação do MP do personal (W2)") (tipo token: campo valor; o de antes no
+"Physiq — fila das automáticas (W-P)"; o S10: "Physiq — renovação do MP do personal (W2)"; o S11: "Physiq — conferência da Google Play
+(play-W6)") (tipo token: campo valor; o de antes no
 extra "anterior", oculto). Na tela só aparecem ✅/❌, sha8 (8 hex do sha256) e tamanho.
 
 Finalidade             emissor (manda o valor)                          receptor (confere pela lista)
@@ -25,6 +26,9 @@ Finalidade             emissor (manda o valor)                          receptor
   S10 mp_renovar       banco principal: {public,staging}.mp_contas_renovar_disparar() (pg_net, de hora em hora no minuto 41) lê o
                        Vault physiq_mp_renovar_segredo; cópia local dos E2E ~/.physiq-segredo-mp-renovar (600)
                        →  principal: mp-contas-renovar (W2: renova o acesso do Mercado Pago do personal + a conferência diária)
+  S11 play_conferir    banco principal: {public,staging}.play_conferir_disparar() (pg_net, de hora em hora no minuto 25) lê o
+                       Vault physiq_play_conferir_segredo; cópia local dos E2E ~/.physiq-segredo-play-conferir (600)
+                       →  principal: play-conferir (play-W6: a conferência de hora em hora das assinaturas da Google Play)
 
 A troca de um segredo, em ordem — sem reserva, o canal fica de pé em todos os passos porque a lista do receptor aceita o que
 o emissor manda (o anterior até o fim, o atual desde o começo):
@@ -32,15 +36,15 @@ o emissor manda (o anterior até o fim, o atual desde o começo):
   conferir → aceitar --so-atual (o anterior deixa de valer) → publicar o receptor.
 
 Subcomandos:
-  gerar        valor novo (64 caracteres) → cofre (o atual vira o extra "anterior") → lido de volta igual; no S8, no S9 e no S10
+  gerar        valor novo (64 caracteres) → cofre (o atual vira o extra "anterior") → lido de volta igual; no S8, no S9, no S10 e no S11
                também a cópia local. Trava: o emissor já manda um SEGREDO_X que não é o atual do cofre (gerar de novo perderia o valor
                em uso).
   aceitar      receptor: SEGREDO_X_ACEITOS = sha256(atual)[,sha256(anterior)] → confere o digest. --so-atual: só o atual (o fim
                da troca). Trava: a lista nova deixaria de fora o que o emissor manda hoje.
-  trocar       emissor: SEGREDO_X = atual (S8, S9 e S10: o Vault do banco) → confere. Antes: a lista do receptor tem de
+  trocar       emissor: SEGREDO_X = atual (S8 a S11: o Vault do banco) → confere. Antes: a lista do receptor tem de
                aceitar o atual; senão para sem gravar (esta trava não tem --forcar).
   tirar-lista  receptor: apaga a SEGREDO_X_ACEITOS → o receptor recusa tudo (o canal para). Trava: o emissor ainda manda o
-               SEGREDO_X (S8, S9 e S10: o Vault existe).
+               SEGREDO_X (S8 a S11: o Vault existe).
   conferir     o emissor manda o atual? a lista do receptor aceita o atual? Sai 1 se algo não bate.
 Depois de mudar um segredo das funções, publicar de novo quem o lê (o segredo é lido no boot do isolate):
 scripts/deploy_function.sh <ref> <pasta> <slug> <verify_jwt>.
@@ -81,6 +85,8 @@ DESCRICAO_VAULT_S9 = ("Physiq W-P (S9): segredo da fila das cobranças automáti
                       "(scripts/segredos/servidor.py)")
 DESCRICAO_VAULT_S10 = ("Physiq W2 (S10): segredo da renovação do Mercado Pago do personal; o pg_net manda na mp-contas-renovar "
                        "(scripts/segredos/servidor.py)")
+DESCRICAO_VAULT_S11 = ("Physiq play-W6 (S11): segredo da conferência de hora em hora da Google Play; o pg_net manda na play-conferir "
+                       "(scripts/segredos/servidor.py)")
 TREZE_DO_TREINO = (
     "admin-avaliacoes", "admin-delete-user", "admin-list-users", "admin-semana-treinos", "admin-update-user", "delete-my-account",
     "espelho-nucleo", "master-professores", "mp-payments", "mp-webhook", "professor-convites", "trocar-token", "vincular-professor",
@@ -91,16 +97,16 @@ TREZE_DO_TREINO = (
 class Finalidade:
     chave: str
     numero: str
-    segredo: str  # o nome do segredo do EMISSOR (no S8, S9 e S10, o nome lógico: o emissor é o Vault); a lista é <segredo>_ACEITOS
+    segredo: str  # o nome do segredo do EMISSOR (no S8 a S11, o nome lógico: o emissor é o Vault); a lista é <segredo>_ACEITOS
     emissor: str  # "principal" | "treino"
     receptor: str
     manda: tuple[str, ...]  # funções que mandam (publicar de novo depois do trocar)
     confere: tuple[str, ...]  # funções que conferem (publicar de novo depois do aceitar/tirar-lista)
-    vault: str | None = None  # S8, S9 e S10: o emissor é o banco, pelo Vault do principal
-    arquivo: str | None = None  # S8, S9 e S10: a cópia local dos E2E (em ~)
-    disparo: str | None = None  # S8, S9 e S10: a função do banco que manda pelo pg_net ({public,staging}.<disparo>())
-    ciclo: str | None = None  # S8, S9 e S10: quando o pg_cron chama a função do banco
-    descricao_vault: str | None = None  # S8, S9 e S10: a descrição do segredo no Vault
+    vault: str | None = None  # S8 a S11: o emissor é o banco, pelo Vault do principal
+    arquivo: str | None = None  # S8 a S11: a cópia local dos E2E (em ~)
+    disparo: str | None = None  # S8 a S11: a função do banco que manda pelo pg_net ({public,staging}.<disparo>())
+    ciclo: str | None = None  # S8 a S11: quando o pg_cron chama a função do banco
+    descricao_vault: str | None = None  # S8 a S11: a descrição do segredo no Vault
     rotulo: str | None = None  # o nome do item no cofre, se não for o de sempre
     origem: str = "hml-16c (H-51)"  # de onde a finalidade veio (vai na nota do item)
 
@@ -134,6 +140,10 @@ FINALIDADES = {f.chave: f for f in (
                vault="physiq_mp_renovar_segredo", arquivo=".physiq-segredo-mp-renovar", disparo="mp_contas_renovar_disparar",
                ciclo="pg_cron de hora em hora, no minuto 41", descricao_vault=DESCRICAO_VAULT_S10,
                rotulo="Physiq — renovação do MP do personal (W2)", origem="W2 (Mercado Pago do personal)"),
+    Finalidade("play_conferir", "S11", "SEGREDO_PLAY_CONFERIR", "principal", "principal", (), ("play-conferir",),
+               vault="physiq_play_conferir_segredo", arquivo=".physiq-segredo-play-conferir", disparo="play_conferir_disparar",
+               ciclo="pg_cron de hora em hora, no minuto 25", descricao_vault=DESCRICAO_VAULT_S11,
+               rotulo="Physiq — conferência da Google Play (play-W6)", origem="play-W6 (a assinatura pela Google Play)"),
 )}
 
 
@@ -230,7 +240,7 @@ def sql_vault_id(nome: str) -> str:
 
 
 def descricao_do_vault(nome: str) -> str:
-    """A descrição do segredo no Vault: a da finalidade dona dele (S8, S9 ou S10); Vault sem finalidade → ValueError."""
+    """A descrição do segredo no Vault: a da finalidade dona dele (S8 a S11); Vault sem finalidade → ValueError."""
     for f in FINALIDADES.values():
         if f.vault and f.vault == nome:
             return f.descricao_vault or DESCRICAO_VAULT
@@ -403,7 +413,7 @@ class Remoto:
         self.api("DELETE", f"/v1/projects/{REFS[lado]}/secrets", nomes)
 
     def sql(self, query: str) -> list:
-        """SQL no banco principal (o Vault do S8, do S9 e do S10 é de lá)."""
+        """SQL no banco principal (o Vault do S8 ao S11 é de lá)."""
         r = self.api("POST", f"/v1/projects/{REFS['principal']}/database/query", {"query": query})
         if r is None:
             return []
@@ -411,7 +421,7 @@ class Remoto:
             raise Falha("database/query: resposta fora do formato")
         return r
 
-    # ── Vault do principal (S8, S9 e S10) ──
+    # ── Vault do principal (S8 a S11) ──
     def vault_estado(self, nome: str, hashes: list[str]) -> tuple[bool, list[bool], int | None]:
         """(existe?, o sha256 do valor bate com cada hash?, tamanho) — o valor não sai do banco."""
         linhas = self.sql(sql_vault_estado(nome, hashes))
@@ -510,7 +520,7 @@ def do_cofre(f: Finalidade, r: Remoto) -> tuple[str, str | None]:
 
 
 def emissor_manda(f: Finalidade, r: Remoto, hashes: list[str]) -> tuple[bool, str | None]:
-    """O que o emissor manda HOJE: (tem o SEGREDO_X — no S8, S9 e S10, o Vault?, qual dos hashes ele manda — None se nenhum)."""
+    """O que o emissor manda HOJE: (tem o SEGREDO_X — no S8 a S11, o Vault?, qual dos hashes ele manda — None se nenhum)."""
     if f.vault:
         existe, bate, _ = r.vault_estado(f.vault, hashes)
         return existe, next((h for h, b in zip(hashes, bate) if b), None)
@@ -679,7 +689,7 @@ ACOES = {"gerar": gerar, "aceitar": aceitar, "trocar": trocar, "tirar-lista": ti
 
 
 def plano(f: Finalidade, a: argparse.Namespace) -> list[str]:
-    """O que o subcomando faria, passo a passo. NADA remoto (nem leitura) e nada gravado; só nomes, projetos e, no S8, S9 e S10, o
+    """O que o subcomando faria, passo a passo. NADA remoto (nem leitura) e nada gravado; só nomes, projetos e, no S8 a S11, o
     estado da cópia local."""
     s = a.subcomando
     re_, ee = REFS[f.receptor], REFS[f.emissor]
@@ -764,7 +774,7 @@ def plano(f: Finalidade, a: argparse.Namespace) -> list[str]:
 
 def argumentos(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(prog="servidor.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("finalidade", choices=list(FINALIDADES), help="a finalidade (S1–S10, tabela acima)")
+    ap.add_argument("finalidade", choices=list(FINALIDADES), help="a finalidade (S1–S11, tabela acima)")
     ap.add_argument("subcomando", choices=SUBCOMANDOS, help="o passo (lista acima)")
     ap.add_argument("--dry-run", action="store_true", help="só o plano: nada remoto (nem leitura) e nada gravado")
     ap.add_argument("--so-atual", action="store_true", help="aceitar: a lista só com o atual (o fim de uma troca)")
