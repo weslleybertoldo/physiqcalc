@@ -101,7 +101,7 @@ o aluno → profissional (Pix com comprovante e o Mercado Pago da conta do perso
   lista de classes do `dexdump` sem o plugin e sem `com.android.billingclient`).
 - **A trava `play_billing`** (`app_config`, só o servidor lê; o molde do `mercadopago_conta`): `{"liberada": false}` no
   `public` e `true` no `staging`. Desligada, a oferta só aparece para conta de TESTE; ligada, para todos. A compra feita
-  nunca olha a trava (o `registrar` e o aviso do Google seguem). Ligar = SQL, com o OK dele, depois da compra de teste.
+  nunca olha a trava (o `registrar` e a conferência de hora em hora seguem). Ligar = SQL, com o OK dele, depois da compra de teste.
 
 ### O APK "loja + staging" (a compra real no staging)
 
@@ -130,19 +130,36 @@ Gradle) e confere: assinado, mas nem com a chave do site nem com a de upload (`a
   trava `play_billing`) e `registrar {token, produto}` → confere no Google (pacote, produto, dono = a matrícula de quem
   chama, estado), grava (`play_aplicar`), reconhece e, na 1ª compra com a matrícula ainda coberta (o teste ou um mês pago
   pelo MP), adia (`defer`) pelo que falta.
-- **`play-rtdn`** (verify_jwt **false**): o aviso do Google pelo Pub/Sub (push com OIDC) → confere o token OIDC (assinatura
-  do Google, emissor, `aud`, `email` e `email_verified`) → lê a assinatura no Google (a fonte da verdade) → a mesma
-  `play_aplicar`.
+- **`play-conferir`** (verify_jwt **false**; desde 22/10/2026, no lugar da `play-rtdn`): a **conferência de hora em hora**,
+  chamada pelo banco — o job `play-conferir-<schema>` do `pg_cron` (minuto 25) → `{schema}.play_conferir_disparar()` → o
+  `pg_net`, com o segredo S11 no `x-espelho-segredo` (sem ele ou errado: o mesmo 401). O disparo só chama quando o schema tem
+  assinatura da Play. Por schema, a rodada:
+  1. lê as devolvidas da **Voided Purchases API** (`type=1`) desde o marcador `app_config.play_conferir` (menos 10 min de folga;
+     sem ele, as últimas 24 h): a cobrança do pedido vira devolvida (`cancelada` + `reembolsado_em`) e a assinatura que perdeu o
+     acesso vira `revogada`. O marcador só anda com a janela inteira lida;
+  2. confere **TODAS** as assinaturas vivas (não só as perto de vencer), as há mais tempo sem conferir primeiro, até 100 por hora:
+     o GET + a mesma `play_aplicar` do `registrar` (reconhece se faltar; a matrícula encerrada pelo vínculo que renovou é
+     cancelada). O que sobra vai na frente da hora seguinte (log `play_conferir_sobrou`).
+
+  Renovação, cancelamento, carência, suspensão, pausa, expiração, devolução e estorno chegam ao banco em **até 1 hora** — e na
+  hora quando o aluno abre o app (o `estado` relê a vencida; o `registrar` grava a compra nova). O que o aviso do Google fazia e
+  a conferência **não** faz: ver uma compra que o `registrar` nunca gravou (o app fechou no meio, sem rede). Ela volta quando o
+  app abre de novo (a recuperação manda ao servidor as compras do aparelho); sem isso em 3 dias, o Google devolve sozinho.
 - **Segredos do principal (Supabase › Edge Functions › Secrets):**
   - `PLAY_SERVICE_ACCOUNT` — a chave JSON da conta de serviço `play-api@physiq-br.iam.gserviceaccount.com` (escopo
     `androidpublisher`; no Play Console › Usuários e permissões, com "Ver dados financeiros…" e "Gerenciar pedidos e
     assinaturas"). Cópia no cofre (PhysiqCalc). **Sem ele, nada quebra:** a oferta não aparece (`disponivel: false`), o
-    `registrar` e o aviso respondem 503 e o log diz `play_sem_credencial`.
-  - `PLAY_RTDN_AUDIENCIA` (opcional) — o `aud` do token do push; sem ele, `https://api-principal.physiqcalc.com.br/functions/v1/play-rtdn`.
-  - `PLAY_RTDN_CONTA` (opcional) — a conta de serviço do push; sem ele, `play-rtdn-push@physiq-br.iam.gserviceaccount.com`.
-- **Só no teste local (o simulador `e2e/playw6/simulador_play.py`):** `PLAY_API_BASE`, `PLAY_OAUTH_URL` e `PLAY_OIDC_JWKS`
-  trocam o Google pelo simulador — e só valem com `http://127.0.0.1:<porta>` (a produção não tem nenhuma delas; qualquer
-  outro valor é ignorado).
+    `registrar` responde 503, a `play-conferir` pula, e o log diz `play_sem_credencial`.
+  - `SEGREDO_PLAY_CONFERIR_ACEITOS` — o sha256 do segredo S11. O valor mora no Vault `physiq_play_conferir_segredo` (o banco
+    manda) e no cofre ("Physiq — conferência da Google Play (play-W6)"). Gerar e trocar:
+    `python3 scripts/segredos/servidor.py play_conferir <gerar|aceitar|trocar|conferir>`. Sem o Vault, o disparo não chama
+    nada (a rotina fica inerte).
+- **Só no teste local (o simulador `e2e/playw6/simulador_play.py`):** `PLAY_API_BASE` e `PLAY_OAUTH_URL` trocam o Google pelo
+  simulador — e só valem com `http://127.0.0.1:<porta>` (a produção não tem nenhuma delas; qualquer outro valor é ignorado).
+- **Histórico (22/10/2026):** até esta data a W6 tinha a `play-rtdn` — o aviso do Google (RTDN) pelo Pub/Sub, num push com
+  OIDC. Saiu porque o `physiq-br` ficou sem faturamento no Google Cloud (o Google pede um pré-pagamento de R$ 150 para
+  ativar; o dono decidiu não pagar) e o Pub/Sub exige faturamento. Vale a alternativa do §7.14 do contrato: o `registrar` ao
+  abrir o app + a conferência de hora em hora.
 
 - **A cobrança da troca na hora é uma estimativa:** a linha `google_play` do pedido da troca para o completo (CHARGE_PRORATED_PRICE)
   grava o preço cheio do produto novo (o `recurringPrice` do GET); o Google cobra só o rateio do período que falta — o valor exato
@@ -152,7 +169,7 @@ Gradle) e confere: assinado, mas nem com a chave do site nem com a de upload (`a
 
 A trava desligada (`play_billing` = `{"liberada": false}`) tira a oferta na hora, sem AAB novo — e é a volta inteira enquanto houver
 assinatura viva: **com assinatura viva, a volta é SÓ a trava.** As funções novas e o banco ficam: elas seguem gravando as
-renovações, os avisos do Google, o cancelamento no vínculo e na exclusão. Por quê: sem a `play_aplicar` (a reversa) e com as
+renovações e as devolvidas (a conferência de hora em hora), o cancelamento no vínculo e na exclusão. Por quê: sem a `play_aplicar` (a reversa) e com as
 funções da `7c266196`, nenhuma renovação entra no banco — a cobertura vence e o assinante trava com o Google cobrando; e a
 `pagamentos-aluno` velha volta a aceitar o Mercado Pago de quem tem a Play (cobrar 2 vezes).
 
@@ -165,10 +182,12 @@ cancelar (ou devolver) as vivas pela API — o `cancel` com `DEVELOPER_REQUESTED
 ### O Google Cloud e o Console (etapas 2 e 3 — da sessão principal, com o OK dele)
 
 1. `physiq-br`: ligar a `androidpublisher`; criar a conta `play-api@physiq-br` + a chave JSON → o cofre + o segredo
-   `PLAY_SERVICE_ACCOUNT`; criar a conta `play-rtdn-push@physiq-br`.
-2. O tópico `play-rtdn`, com `roles/pubsub.publisher` NO TÓPICO para `google-play-developer-notifications@system.gserviceaccount.com`;
-   o agente do Pub/Sub (`service-<n>@gcp-sa-pubsub`) com `roles/iam.serviceAccountTokenCreator`; a assinatura PUSH com OIDC
-   (a conta `play-rtdn-push`, a audiência acima) para `https://api-principal.physiqcalc.com.br/functions/v1/play-rtdn`.
-3. Play Console: o perfil de pagamentos (do dono da conta do Console, antes de tudo); convidar a `play-api` com as 2 permissões; criar os 2 produtos; o tópico em
-   "Configuração da monetização" + "Enviar notificação de teste" (o log `play_rtdn_teste`); o testador de licença; a IARC
-   ("Compras digitais: Sim") e a nota da Segurança dos dados.
+   `PLAY_SERVICE_ACCOUNT`. **Sem Pub/Sub** (o `physiq-br` sem faturamento — o histórico acima): nada de tópico, de assinatura
+   push nem da conta do push.
+2. O segredo S11 da rotina de hora em hora: `servidor.py play_conferir gerar` → `aceitar` (a lista na função) → publicar a
+   `play-conferir` → `trocar` (o Vault que o `play_conferir_disparar()` lê) → `conferir`. A migration põe o job; sem o Vault,
+   ele não chama nada.
+3. Play Console: o perfil de pagamentos (do dono da conta do Console, antes de tudo); convidar a `play-api` com as 2 permissões;
+   criar os 2 produtos; **o tópico das notificações em tempo real (Monetização › Configuração da monetização) fica VAZIO** — sem
+   Pub/Sub, a conferência de hora em hora está no lugar; o testador de licença; a IARC ("Compras digitais: Sim") e a nota da
+   Segurança dos dados.
