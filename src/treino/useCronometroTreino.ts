@@ -20,6 +20,8 @@ export interface SerieDoCronometro {
   numero_serie?: number;
   peso?: number;
   reps?: number;
+  /** série por tempo (Prancha) e corrida */
+  tempo_segundos?: number;
   academia_nome?: string | null;
 }
 
@@ -140,13 +142,17 @@ export function useCronometroTreino(alvo: AlvoCronometro | null, aoConcluir?: ()
       series_concluidas: number;
       concluido_em: string;
       academia_nome: string | null;
-      series: { numero_serie: number; peso: number; reps: number }[];
+      series: { numero_serie: number; peso: number; reps: number; tempo_segundos?: number }[];
     }> = {};
     for (const x of alvo.series.filter((y) => y.concluida)) {
       const nome = alvo.exerciciosMap[x.exercicio_id]?.nome || `Exercício ${x.exercicio_id.slice(0, 6)}`;
       const item = (porExercicio[x.exercicio_id] ??= { nome, series_concluidas: 0, concluido_em: agora.toISOString(), academia_nome: academia, series: [] });
       item.series_concluidas++;
-      item.series.push({ numero_serie: x.numero_serie ?? item.series.length + 1, peso: x.peso ?? 0, reps: x.reps ?? 0 });
+      const numero = x.numero_serie ?? item.series.length + 1;
+      // série por tempo (Prancha) e corrida: só o tempo (o peso e as repetições não entram no volume)
+      item.series.push(x.tempo_segundos && x.tempo_segundos > 0
+        ? { numero_serie: numero, peso: 0, reps: 0, tempo_segundos: x.tempo_segundos }
+        : { numero_serie: numero, peso: x.peso ?? 0, reps: x.reps ?? 0 });
     }
     const exercicios = Object.entries(porExercicio).map(([exercicio_id, d]) => ({ exercicio_id, ...d }));
     await db.execute(

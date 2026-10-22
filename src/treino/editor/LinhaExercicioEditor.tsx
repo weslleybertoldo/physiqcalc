@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ehPorTempo, metaSegundos } from "@/treino/porTempo";
 import { MiniaturaGif } from "@/treino/ui/MiniaturaGif";
 import { prescricaoComCampo, textoCargaCampo, textoDescansoCampo, type CampoPrescricaoNome } from "./regras";
 import type { ExercicioEditor, PrescricaoEditavel } from "./tipos";
@@ -10,8 +11,15 @@ type Campo = CampoPrescricaoNome;
 
 const ROTULO: Record<Campo, string> = { series: "SÉRIES", reps: "REPS", descanso: "DESCANSO", carga: "CARGA" };
 
+/** Prancha e Prancha Lateral: no lugar das repetições, a meta em segundos ("TEMPO", "30 s"). */
+const rotuloDe = (campo: Campo, ex: ExercicioEditor) => (campo === "reps" && ehPorTempo(ex.exercicio_id) ? "TEMPO" : ROTULO[campo]);
+
 function textoDe(campo: Campo, ex: ExercicioEditor): string {
   if (campo === "series") return String(ex.series);
+  if (campo === "reps" && ehPorTempo(ex.exercicio_id)) {
+    const meta = metaSegundos(ex.reps);
+    return meta ? `${meta} s` : ex.reps ?? "";
+  }
   if (campo === "reps") return ex.reps ?? "";
   if (campo === "descanso") return textoDescansoCampo(ex.descanso);
   return textoCargaCampo(ex.carga);
@@ -67,7 +75,7 @@ function CampoPrescricao({
   const largura = "w-[50px]";
   return (
     <label className="flex flex-none flex-col items-center gap-[3px]" data-campo={campo}>
-      <span className="text-[10px] font-semibold tracking-[0.04em] text-texto-3">{ROTULO[campo]}</span>
+      <span className="text-[10px] font-semibold tracking-[0.04em] text-texto-3">{rotuloDe(campo, ex)}</span>
       {somenteLeitura ? (
         <span
           className={cn(largura, "flex h-8 items-center justify-center rounded-[9px] border border-linha-2 bg-[rgba(255,255,255,.05)] text-[13px] font-semibold tabular-nums", externo ? "text-texto" : "text-texto-4")}
@@ -80,7 +88,7 @@ function CampoPrescricao({
           value={texto}
           placeholder={vazio}
           inputMode={campo === "series" ? "numeric" : campo === "reps" ? "text" : "decimal"}
-          aria-label={`${ROTULO[campo].toLowerCase()} de ${ex.nome}`}
+          aria-label={`${rotuloDe(campo, ex).toLowerCase()} de ${ex.nome}`}
           data-campo-input={campo}
           onFocus={(e) => {
             focado.current = true;
@@ -147,7 +155,7 @@ export function LinhaExercicioEditor({
         <CampoPrescricao campo="series" ex={ex} somenteLeitura={somenteLeitura} vazio="3" aoSalvar={aoPrescrever} />
         <CampoPrescricao campo="reps" ex={ex} somenteLeitura={somenteLeitura || ex.corrida} vazio="—" aoSalvar={aoPrescrever} />
         <CampoPrescricao campo="descanso" ex={ex} somenteLeitura={somenteLeitura} vazio={textoDescansoCampo(descansoPadrao)} aoSalvar={aoPrescrever} />
-        <CampoPrescricao campo="carga" ex={ex} somenteLeitura={somenteLeitura || ex.corrida} vazio="—" aoSalvar={aoPrescrever} />
+        <CampoPrescricao campo="carga" ex={ex} somenteLeitura={somenteLeitura || ex.corrida || ehPorTempo(ex.exercicio_id)} vazio="—" aoSalvar={aoPrescrever} />
       </div>
       <div className="ml-0.5 flex w-[38px] flex-none items-center justify-end gap-1 text-texto-3">
         {!somenteLeitura && (

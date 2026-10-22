@@ -294,7 +294,7 @@ async function sintetizarDeSeries(
   // e um aluno real já tem 975 séries em 210 dias (o limite de 5000 valia 1000, calado); o erro vai para o catch (antes os
   // treinos sem cronômetro sumiam do histórico, sem aviso)
   const series = await todasAsPaginas<any>((de, ate) => admin.from("tb_treino_series")
-    .select("data_treino, slot_idx, numero_serie, peso, reps, exercicio_id, exercicio_usuario_id, academia_nome")
+    .select("data_treino, slot_idx, numero_serie, peso, reps, tempo_segundos, exercicio_id, exercicio_usuario_id, academia_nome")
     .eq("user_id", userId)
     .eq("concluida", true)
     .gte("data_treino", inicio)
@@ -342,11 +342,11 @@ async function sintetizarDeSeries(
         series: [],
       });
     }
-    treino.exercicios.get(exId).series.push({
-      numero_serie: s.numero_serie,
-      peso: Number(s.peso ?? 0),
-      reps: Number(s.reps ?? 0),
-    });
+    // série por tempo (Prancha, 22/10/2026) e corrida: o tempo vai junto (o painel mostra "45 s", não "0 kg × 0")
+    const tempo = Number(s.tempo_segundos ?? 0);
+    treino.exercicios.get(exId).series.push(tempo > 0
+      ? { numero_serie: s.numero_serie, peso: 0, reps: 0, tempo_segundos: tempo }
+      : { numero_serie: s.numero_serie, peso: Number(s.peso ?? 0), reps: Number(s.reps ?? 0) });
   });
 
   const datasSintetizadas = [...porTreino.values()].map((t) => t.data);
@@ -410,7 +410,7 @@ Deno.serve(async (req) => {
           .order("data_treino"),
         todasAsPaginas<any>((de, ate) => admin.from("tb_treino_series")
           .select(`
-            data_treino, numero_serie, peso, reps, concluida, slot_idx,
+            data_treino, numero_serie, peso, reps, tempo_segundos, concluida, slot_idx,
             exercicio_id, exercicio_usuario_id,
             tb_exercicios ( nome, grupo_muscular, emoji ),
             tb_exercicios_usuario ( nome, grupo_muscular, emoji )

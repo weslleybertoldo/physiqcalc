@@ -3,6 +3,7 @@
 //  - "Só dados": card com as cores do app (altura dinâmica).
 //  - "Com foto": foto do usuário como FUNDO (story 1080x1920, estilo Strava) e
 //    só as infos mais importantes sobrepostas de forma sutil.
+import { formatarSegundos } from "@/treino/porTempo";
 import { formatDuracao, type TreinoResumo } from "./treinoResumo";
 
 const COR = {
@@ -129,7 +130,7 @@ function desenharDados(ctx: CanvasRenderingContext2D, resumo: TreinoResumo, top:
     ctx.font = "400 26px Arial, sans-serif";
     if (ex.series.length > 0) {
       ex.series.forEach((s) => {
-        ctx.fillText(`Série ${s.numero_serie}:  ${s.peso} kg × ${s.reps} reps`, PAD + 12, y);
+        ctx.fillText(`Série ${s.numero_serie}:  ${s.tempo_segundos ? formatarSegundos(s.tempo_segundos) : `${s.peso} kg × ${s.reps} reps`}`, PAD + 12, y);
         y += 34;
       });
     } else {

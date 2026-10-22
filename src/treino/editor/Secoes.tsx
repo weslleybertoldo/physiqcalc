@@ -7,6 +7,7 @@ import { SERIES_PADRAO_MAX, SERIES_PADRAO_MIN, clampSeries } from "@/lib/seriesP
 import { calcularVolumePraticado } from "@/lib/volumeSemanal";
 import { chaveData, datasDaSemana } from "@/treino/datas";
 import { formatDuracao } from "@/lib/treinoResumo";
+import { textoDaSerie } from "@/treino/porTempo";
 import { Botao } from "@/ui/premium/Botao";
 import { CabecalhoCartao, Cartao } from "@/ui/premium/Cartao";
 import { Chip } from "@/ui/premium/Chip";
@@ -277,7 +278,7 @@ export function HistoricoDoAluno({ treinoUserId }: { treinoUserId: string }) {
                 <b className="block text-[13px] font-semibold text-texto">{e.nome}</b>
                 <span className="text-[12px] text-texto-2">
                   {(e.series ?? []).length
-                    ? (e.series ?? []).map((s) => `${String(s.peso).replace(".", ",")} kg × ${s.reps}`).join(" · ")
+                    ? (e.series ?? []).map(textoDaSerie).join(" · ")
                     : `${e.series_concluidas ?? 0} séries`}
                 </span>
               </li>

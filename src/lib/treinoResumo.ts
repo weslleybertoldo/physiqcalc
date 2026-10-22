@@ -6,6 +6,8 @@ export interface SerieResumo {
   numero_serie: number;
   peso: number;
   reps: number;
+  /** série por tempo (Prancha) ou corrida: o tempo em segundos (aí peso e reps não contam) */
+  tempo_segundos?: number;
 }
 
 export interface ExercicioResumo {
@@ -37,7 +39,7 @@ interface ExercicioCru {
   series_concluidas?: number;
   academia_nome?: string | null;
   volume?: number;
-  series?: Array<{ numero_serie?: number; peso?: number; reps?: number }>;
+  series?: Array<{ numero_serie?: number; peso?: number; reps?: number; tempo_segundos?: number | null }>;
 }
 
 function num(v: unknown): number {
@@ -61,11 +63,12 @@ export function construirResumoExercicios(exerciciosCrus: ExercicioCru[]): {
     if (!academia_nome && ex.academia_nome) academia_nome = ex.academia_nome;
 
     const series: SerieResumo[] = Array.isArray(ex.series)
-      ? ex.series.map((s, i) => ({
-          numero_serie: num(s?.numero_serie) || i + 1,
-          peso: num(s?.peso),
-          reps: num(s?.reps),
-        }))
+      ? ex.series.map((s, i) => {
+          const tempo = num(s?.tempo_segundos);
+          return tempo > 0
+            ? { numero_serie: num(s?.numero_serie) || i + 1, peso: 0, reps: 0, tempo_segundos: tempo }
+            : { numero_serie: num(s?.numero_serie) || i + 1, peso: num(s?.peso), reps: num(s?.reps) };
+        })
       : [];
 
     let volEx = 0;

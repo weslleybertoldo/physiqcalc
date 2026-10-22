@@ -19,6 +19,7 @@ import {
 } from "@/utils/gerarRelatorio";
 
 import { MESES } from "@/lib/meses";
+import { formatarSegundos } from "@/treino/porTempo";
 import { obterNomeAluno, type ProfileData, type SemanaAgrupada } from "./relatorioDados";
 
 // hml-18b (H-54, F): os dados e os tipos moram no relatorioDados.ts (a tela não baixa o jsPDF) e o MESES no src/lib/meses.ts;
@@ -270,15 +271,17 @@ export function exportarPDF(
 
       const rows: any[] = [];
       for (const ex of dia.exercicios) {
-        const seriesStr = ex.series.map((s) => `S${s.numero}: ${Number(s.peso)}kg x ${Number(s.reps)}`).join("   ");
+        const seriesStr = ex.series.map((s) => `S${s.numero}: ${s.tempo ? formatarSegundos(s.tempo) : `${Number(s.peso)}kg x ${Number(s.reps)}`}`).join("   ");
         const maxPeso = Math.max(...ex.series.map((s) => Number(s.peso)));
         const vol = ex.series.reduce((a, s) => a + Number(s.peso) * Number(s.reps), 0);
+        // série por tempo (Prancha): sem carga nem volume
+        const soTempo = ex.series.length > 0 && ex.series.every((s) => s.tempo);
         rows.push([
           limparTexto(ex.nome),
           limparTexto(ex.grupo),
           seriesStr,
-          `${maxPeso} kg`,
-          `${vol} kg x rep`,
+          soTempo ? "-" : `${maxPeso} kg`,
+          soTempo ? "-" : `${vol} kg x rep`,
         ]);
       }
 
@@ -376,7 +379,7 @@ export async function exportarExcel(
 
   // Sheet 2: Detailed workouts
   const linhas: any[][] = [
-    ["Data", "Dia da semana", "Concluido", "Exercicio", "Grupo Muscular", "Serie", "Peso (kg)", "Reps", "Volume (kg x rep)"],
+    ["Data", "Dia da semana", "Concluido", "Exercicio", "Grupo Muscular", "Serie", "Peso (kg)", "Reps", "Volume (kg x rep)", "Tempo (s)"],
   ];
 
   for (const semana of semanas) {
@@ -390,9 +393,10 @@ export async function exportarExcel(
             ex.nome,
             ex.grupo,
             `S${s.numero}`,
-            s.peso,
-            s.reps,
-            s.peso * s.reps,
+            s.tempo ? "" : s.peso,
+            s.tempo ? "" : s.reps,
+            s.tempo ? "" : s.peso * s.reps,
+            s.tempo ?? "",
           ]);
         }
       }
@@ -402,7 +406,7 @@ export async function exportarExcel(
   const wsDetalhes = XLSX.utils.aoa_to_sheet(linhas);
   wsDetalhes["!cols"] = [
     { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 36 },
-    { wch: 22 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 16 },
+    { wch: 22 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 16 }, { wch: 10 },
   ];
   XLSX.utils.book_append_sheet(wb, wsDetalhes, "Treinos Detalhados");
 

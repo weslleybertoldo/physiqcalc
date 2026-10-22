@@ -3,6 +3,7 @@ import { usePowerSync } from "@powersync/react";
 import { toast } from "sonner";
 import { calcularPace } from "@/lib/corrida";
 import { clampSeries } from "@/lib/seriesPadrao";
+import { ehPorTempo } from "./porTempo";
 import type { Academia, GrupoExercicio, SerieComMemoria } from "./tipos";
 
 type Atualizar = (acao: SerieComMemoria[] | ((antes: SerieComMemoria[]) => SerieComMemoria[])) => void;
@@ -28,8 +29,15 @@ export interface OpcoesAcoes {
 
 const doExercicio = (s: SerieComMemoria, exId: string) => s.exercicio_id === exId || s.exercicio_usuario_id === exId;
 
+/** As colunas de uma série que não veio do OK (gravar antes, renumerar, série nova): Prancha e Prancha Lateral gravam só o tempo
+ * (peso e repetições nulos — decisão do Weslley 21/10/2026); as outras, peso e repetições como sempre. */
+function camposDaSerie(exId: string, s: Partial<Pick<SerieComMemoria, "peso" | "reps" | "tempo_segundos">>): Record<string, unknown> {
+  return ehPorTempo(exId) ? { peso: null, reps: null, tempo_segundos: s.tempo_segundos ?? null } : { peso: s.peso ?? 0, reps: s.reps ?? 10 };
+}
+
 /**
- * As séries do treino do dia (C64–C66, porte do TreinoDoDia): peso × repetições ou corrida (tempo, distância, pace), OK,
+ * As séries do treino do dia (C64–C66, porte do TreinoDoDia): peso × repetições, corrida (tempo, distância, pace) ou só o tempo
+ * (Prancha e Prancha Lateral, o cronômetro da série), OK,
  * Refazer, adicionar/tirar série (menos com o cadeado do profissional) e "Marcar como concluído". Tudo pelo PowerSync:
  * grava no aparelho na hora (sem internet também) e sobe para o Banco do Treino quando a conexão voltar.
  */
@@ -81,8 +89,8 @@ export function useAcoesSeries(o: OpcoesAcoes) {
         valores,
       );
     }
-    // com academia, o peso da série vai AO VIVO para a academia (corrida não tem peso)
-    if (academia && d.tempo_segundos == null) {
+    // com academia, o peso da série vai AO VIVO para a academia (corrida e série por tempo não têm peso)
+    if (academia && d.tempo_segundos == null && !ehPorTempo(exId)) {
       const ref = await db.getAll<{ id: string }>(
         `SELECT id FROM tb_academia_pesos WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ? AND numero_serie = ?`,
         [userId, academia.id, exIdVal || "", exUsuarioId || "", d.numero_serie],
@@ -98,31 +106,36 @@ export function useAcoesSeries(o: OpcoesAcoes) {
 
   const salvarSerie = async (exId: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => {
     const pace = tempo && dist ? calcularPace(tempo, dist) : undefined;
+    // série por tempo (Prancha): grava só o tempo — peso e repetições nulos no banco e zerados na tela
+    const soTempo = !!tempo || ehPorTempo(exId);
+    const [pesoTela, repsTela] = ehPorTempo(exId) ? [0, 0] : [peso, reps];
     await gravar(exId, montar(exId, {
-      numero_serie: num, peso: tempo ? null : peso, reps: tempo ? null : reps, tempo_segundos: tempo ?? null, distancia_km: dist ?? null,
+      numero_serie: num, peso: soTempo ? null : peso, reps: soTempo ? null : reps, tempo_segundos: tempo ?? null, distancia_km: dist ?? null,
       pace_segundos_km: pace ?? null, updated_at: new Date().toISOString(),
     }));
     o.atualizar((antes) => antes.map((s) => (noSlot(s, exId) && s.numero_serie === num
-      ? { ...s, peso, reps, tempo_segundos: tempo, distancia_km: dist, pace_segundos_km: pace, salva: true } : s)));
+      ? { ...s, peso: pesoTela, reps: repsTela, tempo_segundos: tempo, distancia_km: dist, pace_segundos_km: pace, salva: true } : s)));
   };
 
   const concluirSerie = async (exId: string, nome: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => {
     const pace = tempo && dist ? calcularPace(tempo, dist) : undefined;
     const agora = new Date().toISOString();
+    const soTempo = !!tempo || ehPorTempo(exId);
+    const [pesoTela, repsTela] = ehPorTempo(exId) ? [0, 0] : [peso, reps];
     // grava ANTES as séries ainda não salvas do mesmo exercício
     for (const s of o.series.filter((x) => doExercicio(x, exId) && !x.salva && x.numero_serie !== num)) {
       try {
-        await gravar(exId, montar(exId, { numero_serie: s.numero_serie, peso: s.peso ?? 0, reps: s.reps ?? 10, concluida: false, updated_at: agora }));
+        await gravar(exId, montar(exId, { numero_serie: s.numero_serie, ...camposDaSerie(exId, s), concluida: false, updated_at: agora }));
       } catch (e) {
         console.warn("[Treino] série ainda não salva:", s.numero_serie, e);
       }
     }
     await gravar(exId, montar(exId, {
-      numero_serie: num, peso: tempo ? null : peso, reps: tempo ? null : reps, tempo_segundos: tempo ?? null, distancia_km: dist ?? null,
+      numero_serie: num, peso: soTempo ? null : peso, reps: soTempo ? null : reps, tempo_segundos: tempo ?? null, distancia_km: dist ?? null,
       pace_segundos_km: pace ?? null, concluida: true, updated_at: agora,
     }));
     o.atualizar((antes) => antes.map((s) => {
-      if (noSlot(s, exId) && s.numero_serie === num) return { ...s, peso, reps, tempo_segundos: tempo, distancia_km: dist, pace_segundos_km: pace, concluida: true, salva: true };
+      if (noSlot(s, exId) && s.numero_serie === num) return { ...s, peso: pesoTela, reps: repsTela, tempo_segundos: tempo, distancia_km: dist, pace_segundos_km: pace, concluida: true, salva: true };
       if (noSlot(s, exId) && !s.salva) return { ...s, salva: true };
       return s;
     }));
@@ -135,7 +148,8 @@ export function useAcoesSeries(o: OpcoesAcoes) {
   };
 
   const desfazerSerie = async (exId: string, num: number) => {
-    for (const s of o.series.filter((x) => doExercicio(x, exId) && !x.salva)) {
+    // série por tempo: o que a pessoa digita já foi gravado (o campo grava ao sair); as não salvas são só a memória
+    for (const s of ehPorTempo(exId) ? [] : o.series.filter((x) => doExercicio(x, exId) && !x.salva)) {
       if ((s.peso === undefined || s.peso === 0) && (s.reps === undefined || s.reps === 10)) continue; // nunca editada
       await gravar(exId, montar(exId, { numero_serie: s.numero_serie, peso: s.peso ?? 0, reps: s.reps ?? 10, concluida: false, updated_at: new Date().toISOString() }));
     }
@@ -187,11 +201,13 @@ export function useAcoesSeries(o: OpcoesAcoes) {
     const existentes = seriesDe(exId);
     const ultima = existentes[existentes.length - 1];
     const num = existentes.length > 0 ? Math.max(...existentes.map((s) => s.numero_serie)) + 1 : 1;
-    const peso = ultima?.peso ?? 0;
-    const reps = ultima?.reps ?? 10;
+    const porTempo = ehPorTempo(exId);
+    const peso = porTempo ? 0 : ultima?.peso ?? 0;
+    const reps = porTempo ? 0 : ultima?.reps ?? 10;
+    const tempo = porTempo ? ultima?.tempo_segundos : undefined;
     const u = o.series.find((s) => doExercicio(s, exId))?.exercicio_usuario_id;
-    await gravar(exId, montar(exId, { numero_serie: num, peso, reps, updated_at: new Date().toISOString() }));
-    o.atualizar((antes) => [...antes, { exercicio_id: exId, exercicio_usuario_id: u, slot_idx: slotIdx, numero_serie: num, peso, reps, concluida: false, salva: true }]);
+    await gravar(exId, montar(exId, { numero_serie: num, ...camposDaSerie(exId, { peso, reps, tempo_segundos: tempo }), updated_at: new Date().toISOString() }));
+    o.atualizar((antes) => [...antes, { exercicio_id: exId, exercicio_usuario_id: u, slot_idx: slotIdx, numero_serie: num, peso, reps, tempo_segundos: tempo, concluida: false, salva: true }]);
     void espelharSeriesPadrao(exId, u, existentes.length + 1);
   };
 
@@ -213,7 +229,7 @@ export function useAcoesSeries(o: OpcoesAcoes) {
       const renumeradas = prox.filter((s) => noSlot(s, exId) && s.salva && s.numero_serie >= num);
       Promise.all(
         renumeradas.map((s) =>
-          gravar(exId, montar(exId, { numero_serie: s.numero_serie, peso: s.peso ?? 0, reps: s.reps ?? 10, concluida: s.concluida ?? false, updated_at: new Date().toISOString() })),
+          gravar(exId, montar(exId, { numero_serie: s.numero_serie, ...camposDaSerie(exId, s), concluida: s.concluida ?? false, updated_at: new Date().toISOString() })),
         ),
       ).catch((e) => console.error("[Treino] renumerar séries:", e));
       return prox;

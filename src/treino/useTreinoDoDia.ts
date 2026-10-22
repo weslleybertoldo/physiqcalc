@@ -16,6 +16,7 @@ import { chavesExerciciosAtivos, serieDeExercicioAtivo } from "@/lib/seriesAtiva
 import { resolverTreinosDoDia, type DiaAlternadoConfig } from "@/lib/semanaSlots";
 import { aplicarSubstituicoes, exerciciosRemovidos, type ExercicioAlvo, type Substituicao } from "@/lib/substituicaoExercicio";
 import { DIAS_SEMANA, chaveData, datasDaSemana, inicioDoMes } from "./datas";
+import { ehPorTempo } from "./porTempo";
 import { mapaPrescricao, prescricaoDoExercicio, repsIniciais, type LinhaPrescricao } from "./prescricao";
 import type { Academia, DiaSlot, GrupoExercicio, GrupoTreino, OverrideInfo, SemanaConfig, SerieComMemoria } from "./tipos";
 
@@ -401,8 +402,8 @@ export function useTreinoDoDia(userId: string) {
         const campo = pessoal ? "exercicio_usuario_id" : "exercicio_id";
         const limite = new Date();
         limite.setDate(limite.getDate() - 90);
-        const rows = await db.getAll<{ numero_serie: number; peso: number; reps: number; data_treino: string }>(
-          `SELECT numero_serie, peso, reps, data_treino FROM tb_treino_series
+        const rows = await db.getAll<{ numero_serie: number; peso: number; reps: number; tempo_segundos: number | null; data_treino: string }>(
+          `SELECT numero_serie, peso, reps, tempo_segundos, data_treino FROM tb_treino_series
            WHERE user_id = ? AND ${campo} = ? AND concluida = 1 AND data_treino < ? AND data_treino >= ?
            ORDER BY data_treino DESC, numero_serie ASC LIMIT 20`,
           [userId, exId, dataAtual, limite.toISOString().slice(0, 10)],
@@ -446,6 +447,8 @@ export function useTreinoDoDia(userId: string) {
         const exUsuarioId = ge.exercicio_usuario_id;
         const slot = ge._slot_idx;
         const presc = prescricaoDoExercicio(mapaPresc, ge._grupo_key, exUsuarioId ? null : exId, exUsuarioId ?? null);
+        // Prancha e Prancha Lateral: série só de tempo (peso e repetições zerados; o campo mostra a meta ou o último tempo)
+        const porTempo = !exUsuarioId && ehPorTempo(exId);
         const salvasEx = porExSlot[`${exId}|${slot}`] || (exUsuarioId ? porExSlot[`${exUsuarioId}|${slot}`] : undefined);
         if (salvasEx && salvasEx.length > 0) {
           for (const s of salvasEx) {
@@ -456,7 +459,7 @@ export function useTreinoDoDia(userId: string) {
               slot_idx: (s.slot_idx as number) ?? 0,
               numero_serie: s.numero_serie as number,
               peso: (s.peso as number) ?? 0,
-              reps: (s.reps as number) ?? 10,
+              reps: (s.reps as number) ?? (porTempo ? 0 : 10),
               concluida: s.concluida === 1 || s.concluida === true,
               salva: true,
               academia_nome: (s.academia_nome as string) ?? null,
@@ -468,7 +471,7 @@ export function useTreinoDoDia(userId: string) {
           // o profissional subiu o nº hoje: completa até o alvo (série salva nunca some por redução)
           const alvo = numSeriesPadrao(mapaSeries, ge._grupo_key, exUsuarioId ? null : exId, exUsuarioId ?? null, seriesPadraoAluno);
           for (const n of numerosParaCompletar(salvasEx.map((s) => Number(s.numero_serie)), alvo)) {
-            todas.push({ exercicio_id: exId, exercicio_usuario_id: exUsuarioId, slot_idx: slot, numero_serie: n, peso: presc.carga ?? 0, reps: repsIniciais(presc.reps), concluida: false, salva: false });
+            todas.push({ exercicio_id: exId, exercicio_usuario_id: exUsuarioId, slot_idx: slot, numero_serie: n, peso: porTempo ? 0 : presc.carga ?? 0, reps: porTempo ? 0 : repsIniciais(presc.reps), concluida: false, salva: false });
           }
         } else {
           if (id !== montagemRef.current) return;
@@ -492,6 +495,14 @@ export function useTreinoDoDia(userId: string) {
           const temHistorico = !!ultimo && ultimo.length > 0;
           for (const s of estruturaSeriesPadrao(alvo, ultimo || [])) {
             const doHistorico = temHistorico && ultimo!.some((u) => u.numero_serie === s.numero_serie);
+            if (porTempo) {
+              const tempoUltimo = ultimo?.find((u) => u.numero_serie === s.numero_serie)?.tempo_segundos ?? null;
+              todas.push({
+                exercicio_id: exId, exercicio_usuario_id: exUsuarioId, slot_idx: slot, numero_serie: s.numero_serie, peso: 0, reps: 0,
+                tempo_segundos: tempoUltimo && tempoUltimo > 0 ? tempoUltimo : undefined, concluida: false, salva: false,
+              });
+              continue;
+            }
             todas.push({
               exercicio_id: exId,
               exercicio_usuario_id: exUsuarioId,
@@ -559,7 +570,8 @@ export function useTreinoDoDia(userId: string) {
     });
   }, []);
 
-  const seriesComPeso = useCallback(() => series.filter((s) => s.tempo_segundos == null), [series]);
+  // corrida (com tempo) e série por tempo (Prancha) não têm peso de academia
+  const seriesComPeso = useCallback(() => series.filter((s) => s.tempo_segundos == null && !(!s.exercicio_usuario_id && ehPorTempo(s.exercicio_id))), [series]);
 
   /** "Salvar treino" da academia e a conclusão: guarda o peso de cada série do dia na academia. */
   const salvarPesosNaAcademia = useCallback(
@@ -654,7 +666,7 @@ export function useTreinoDoDia(userId: string) {
       edicoesRef.current.clear();
       setSeriesBruto((antes) =>
         antes.map((s) => {
-          if (s.tempo_segundos != null) return s;
+          if (s.tempo_segundos != null || (!s.exercicio_usuario_id && ehPorTempo(s.exercicio_id))) return s;
           const exId = s.exercicio_usuario_id ? null : s.exercicio_id;
           const exUsuId = s.exercicio_usuario_id || null;
           return { ...s, peso: mapa.get(`${exId || ""}|${exUsuId || ""}|${s.numero_serie}`) ?? 0, salva: true };

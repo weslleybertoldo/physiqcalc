@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Bookmark, Check, FolderClosed, Plus, Search, Timer, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clampSeries } from "@/lib/seriesPadrao";
+import { ehPorTempo } from "@/treino/porTempo";
 import { MiniaturaGif } from "@/treino/ui/MiniaturaGif";
 import { formatarDescanso } from "@/treino/prescricao";
 import { Botao } from "@/ui/premium/Botao";
@@ -21,6 +22,7 @@ import {
   GRUPOS_VOLUME,
   lerCarga,
   lerDescanso,
+  lerMetaSegundos,
   lerReps,
   linhaDoAluno,
   subtituloDoExercicio,
@@ -362,11 +364,13 @@ export function FolhaEditarExercicio({
     setErro(null);
   }, [ex, aberto]);
   if (!ex) return null;
-  const r = lerReps(reps);
+  // Prancha e Prancha Lateral: série por tempo — a meta em segundos no lugar das repetições, sem carga
+  const porTempo = ehPorTempo(ex.exercicio_id);
+  const r = porTempo ? lerMetaSegundos(reps) : lerReps(reps);
   const d = lerDescanso(descanso);
-  const c = lerCarga(carga);
+  const c = porTempo ? { ok: true, valor: null } : lerCarga(carga);
   const valido = r.ok && d.ok && c.ok;
-  const previa = valido ? linhaDoAluno({ series, reps: r.valor, descanso: d.valor, carga: c.valor, corrida: ex.corrida }, descansoPadrao) : null;
+  const previa = valido ? linhaDoAluno({ series, reps: r.valor, descanso: d.valor, carga: c.valor, corrida: ex.corrida, porTempo }, descansoPadrao) : null;
   const salvar = async (p: PrescricaoEditavel) => {
     if (salvando) return;
     setSalvando(true);
@@ -466,7 +470,17 @@ export function FolhaEditarExercicio({
             />
           </div>
         </div>
-        {!ex.corrida && campo("Repetições", "Um número (10) ou uma faixa (8-12). Vazio: as do último treino.", reps, setReps, "reps", "10", r.ok ? undefined : r.erro)}
+        {porTempo
+          ? campo(
+              "Tempo de cada série (segundos)",
+              "A meta que o aluno segura: o cronômetro conta pra baixo e apita no fim. Vazio: conta pra cima.",
+              reps,
+              setReps,
+              "reps",
+              "30",
+              r.ok ? undefined : r.erro,
+            )
+          : !ex.corrida && campo("Repetições", "Um número (10) ou uma faixa (8-12). Vazio: as do último treino.", reps, setReps, "reps", "10", r.ok ? undefined : r.erro)}
         {campo(
           "Descanso",
           `Segundos (60) ou minutos (1:30). Vazio: o padrão do aluno (${formatarDescanso(descansoPadrao) ?? "—"}).`,
@@ -476,7 +490,7 @@ export function FolhaEditarExercicio({
           String(descansoPadrao),
           d.ok ? undefined : d.erro,
         )}
-        {!ex.corrida && campo("Carga sugerida (kg)", "Vazio: o app segue a carga do último treino.", carga, setCarga, "carga", "60", c.ok ? undefined : c.erro)}
+        {!ex.corrida && !porTempo && campo("Carga sugerida (kg)", "Vazio: o app segue a carga do último treino.", carga, setCarga, "carga", "60", c.ok ? undefined : c.erro)}
         {erro && <p className="text-[12px] text-rosa-3">{erro}</p>}
       </div>
     </PainelDeslizante>

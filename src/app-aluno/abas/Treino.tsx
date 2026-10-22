@@ -209,7 +209,9 @@ function TreinoAberto({ userId }: { userId: string }) {
       duracao_segundos: 0,
       exercicios_concluidos: [...porEx.entries()].map(([exercicio_id, v]) => ({
         exercicio_id, nome: v.nome, series_concluidas: v.series.length, academia_nome: v.series[0]?.academia_nome ?? null,
-        series: v.series.map((s) => ({ numero_serie: s.numero_serie, peso: s.peso, reps: s.reps })),
+        series: v.series.map((s) => (s.tempo_segundos && s.tempo_segundos > 0
+          ? { numero_serie: s.numero_serie, peso: 0, reps: 0, tempo_segundos: s.tempo_segundos }
+          : { numero_serie: s.numero_serie, peso: s.peso, reps: s.reps })),
       })),
     }));
   };
