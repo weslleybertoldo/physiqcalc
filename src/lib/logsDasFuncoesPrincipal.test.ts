@@ -33,6 +33,7 @@ const FUNCOES = [
   "aluno-dia", // W-A P2: as rotinas e a dieta livre (o app do aluno e o painel), pela porta-pessoa
   "play-compras", // play-W6: a assinatura da Google Play do lado do app (estado e registrar), pela porta-pessoa
   "play-rtdn", // play-W6: o aviso da Google Play pelo Pub/Sub (push com OIDC; verify_jwt false)
+  "play-conferir", // play-W6 (22/10): a conferência de hora em hora da Google Play (pg_cron → pg_net, S11; verify_jwt false)
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
 /** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro; hml-21a: + a conta;
@@ -163,11 +164,13 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     for (const m of ["comum", "rotinas", "dieta", "profissional"]) expect(todos).toContain(`aluno-dia/${m}.ts`);
     // play-W6: as 4 peças da Play (as regras, o OAuth, a API e o banco/ordem) passam pelas mesmas guardas
     for (const s of ["play-regras", "google-oauth", "play-api", "play-assinaturas"]) expect(todos).toContain(`_shared/${s}.ts`);
+    expect(todos).toContain("play-conferir/rodada.ts"); // play-W6 (22/10): a rodada da conferência de hora em hora
     expect(todos).not.toContain(LOG);
   });
 
   it("play-W6: nenhuma chamada de log das peças da Play leva o token, o pedido, o etag ou o e-mail (só códigos; ref = a matrícula ou o aviso)", () => {
-    const arquivos = ["play-compras/index.ts", "play-rtdn/index.ts", "_shared/play-assinaturas.ts", "_shared/play-api.ts", "_shared/google-oauth.ts",
+    const arquivos = ["play-compras/index.ts", "play-rtdn/index.ts", "play-conferir/index.ts", "play-conferir/rodada.ts", "_shared/play-assinaturas.ts",
+      "_shared/play-api.ts", "_shared/google-oauth.ts",
       "_shared/app-sem-profissional.ts", "_shared/exclusao-profissional.ts", "excluir-minha-conta/index.ts"];
     const proibidos = /\b(token|aviso\.token|tokenAnterior|tokenExpirado|pedido|pedidoPago|devolvidoPedido|etag|email|emailDeTeste|purchaseToken|orderId|corpo|conta\.client_email)\b/;
     const achados: string[] = [];

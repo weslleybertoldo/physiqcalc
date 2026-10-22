@@ -307,6 +307,67 @@ export function modoDaTroca(de: string | null | undefined, para: string | null |
   return para === "app_treino_alimentacao" ? "na_hora" : "na_renovacao";
 }
 
+// ─────────────────────────────── a conferência de hora em hora (a play-conferir) ───────────────────────────────
+// 22/10/2026: no lugar do aviso do Google pelo Pub/Sub (o RTDN, que saiu: sem faturamento no Google Cloud não há Pub/Sub), a play-conferir
+// confere de hora em hora TODAS as vivas pelo GET e lê as devolvidas pela Voided Purchases API (purchases.voidedpurchases.list; os
+// parâmetros e o formato conferidos no discovery da API v3 em 22/10/2026: startTime/endTime em ms, type, token; a resposta voidedPurchases[]
+// + tokenPagination.nextPageToken).
+
+/** O marcador da conferência no app_config (publica = false; só a play-conferir grava): { voided_ate: <ISO> } — o fim da última janela
+ *  da Voided Purchases API lida inteira. */
+export const CHAVE_CONFERIR = "play_conferir";
+/** Sem marcador (a 1ª rodada, ou ele estragado): as devolvidas das últimas 24 h. */
+export const JANELA_PADRAO_DEVOLVIDAS_MS = 24 * 3_600_000;
+/** A folga antes do marcador: o Google filtra pela hora em que o sistema dele VIU a devolução — a que entrou na lista com atraso não se
+ *  perde (ler 2 vezes a mesma é idempotente). */
+export const FOLGA_DEVOLVIDAS_MS = 10 * 60_000;
+/** O teto da API (o startTime "cannot be older than 30 days"), com 1 h de margem. */
+export const MAX_JANELA_DEVOLVIDAS_MS = 30 * DIA_MS - 3_600_000;
+
+/** Uma compra devolvida, cancelada ou estornada (o VoidedPurchase). Nada disto vai ao log. */
+export interface DevolvidaGoogle {
+  token: string;
+  /** o pedido devolvido: a compra ou uma renovação ("GPA.…..N") — o orderId (o type=1 exige ler por ele: as renovações dividem o token) */
+  pedido: string | null;
+  /** quando o Google anulou (voidedTimeMillis) */
+  quandoMs: number | null;
+  /** quem anulou (voidedSource): 0 o usuário, 1 o desenvolvedor, 2 o Google */
+  origem: number | null;
+  /** por quê (voidedReason): 0 outro, 1 arrependimento, 2 não recebido, 3 defeito, 4 sem querer, 5 fraude, 6 fraude amiga, 7 estorno no
+   *  cartão, 8 não reconhecida */
+  motivo: number | null;
+}
+
+const inteiroOuNull = (v: unknown): number | null => {
+  const n = typeof v === "string" && /^\d{1,16}$/.test(v) ? Number(v) : v;
+  return typeof n === "number" && Number.isSafeInteger(n) && n >= 0 ? n : null;
+};
+
+/** Uma página da Voided Purchases API: as devolvidas (sem o token = fora) e o token da próxima página (null = a última). */
+export function lerDevolvidas(corpo: unknown): { itens: DevolvidaGoogle[]; proxima: string | null } {
+  const c = obj(corpo);
+  const brutas = Array.isArray(c.voidedPurchases) ? (c.voidedPurchases as unknown[]) : [];
+  const itens: DevolvidaGoogle[] = [];
+  for (const b of brutas) {
+    const v = obj(b);
+    const token = txt(v.purchaseToken);
+    if (!token) continue;
+    itens.push({ token, pedido: txt(v.orderId, 200), quandoMs: inteiroOuNull(v.voidedTimeMillis), origem: inteiroOuNull(v.voidedSource),
+                 motivo: inteiroOuNull(v.voidedReason) });
+  }
+  return { itens, proxima: txt(obj(c.tokenPagination).nextPageToken, 2048) };
+}
+
+/**
+ * A janela da Voided Purchases API (ms): do marcador menos a folga até agora; sem marcador válido (ausente, estragado ou no futuro), as
+ * últimas 24 h; nunca antes do teto da API.
+ */
+export function janelaDasDevolvidas(marca: unknown, agoraMs: number): { inicioMs: number; fimMs: number } {
+  const t = typeof marca === "string" ? Date.parse(marca) : NaN;
+  const inicio = Number.isFinite(t) && t <= agoraMs ? t - FOLGA_DEVOLVIDAS_MS : agoraMs - JANELA_PADRAO_DEVOLVIDAS_MS;
+  return { inicioMs: Math.max(inicio, agoraMs - MAX_JANELA_DEVOLVIDAS_MS), fimMs: agoraMs };
+}
+
 // ─────────────────────────────── o aviso do Pub/Sub (RTDN) ───────────────────────────────
 
 /** Os tipos do subscriptionNotification ([PBL] rtdn-reference). */
@@ -431,3 +492,4 @@ export function codigoDoErroGoogle(corpo: unknown): string | null {
 export const compraNaoExiste = (status: number): boolean => status === 404 || status === 410 || status === 400;
 /** A resposta do Google não deixa decidir (rede, prazo, limite, fora do ar ou o acesso da conta de serviço): tentar de novo depois. */
 export const googleTransitorio = (status: number): boolean => status === 0 || status === 599 || status === 401 || status === 403 || status === 429 || status >= 500;
+
