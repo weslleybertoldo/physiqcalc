@@ -149,6 +149,30 @@
    },
    "ida_s": 1.5
   },
+  "0e8c848c-96b3-5ad1-b266-7fe01ff398df": {
+   "v": "1792633458",
+   "movimento": "/exercicios3d/0e8c848c-96b3-5ad1-b266-7fe01ff398df-1792633458.glb",
+   "foto": "/exercicios3d/0e8c848c-96b3-5ad1-b266-7fe01ff398df-1792633458.webp",
+   "bytes": 114390,
+   "alvos": [
+    19
+   ],
+   "auxiliares": [
+    6,
+    12
+   ],
+   "camera": {
+    "az": 50,
+    "el": 10,
+    "dist": 3.7,
+    "alvo": [
+     0.0,
+     0.02,
+     0.72
+    ]
+   },
+   "ida_s": 1.5
+  },
   "0eed6ebd-c8bf-4e47-b1af-d59d52f8eaf9": {
    "v": "1791300439",
    "movimento": "/exercicios3d/0eed6ebd-c8bf-4e47-b1af-d59d52f8eaf9-1791300439.glb",
