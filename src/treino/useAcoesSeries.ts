@@ -90,18 +90,21 @@ export function useAcoesSeries(o: OpcoesAcoes) {
       );
     }
     // com academia, o peso da série vai AO VIVO para a academia (corrida e série por tempo não têm peso)
-    if (academia && d.tempo_segundos == null && !ehPorTempo(exId)) {
-      const ref = await db.getAll<{ id: string }>(
-        `SELECT id FROM tb_academia_pesos WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ? AND numero_serie = ?`,
-        [userId, academia.id, exIdVal || "", exUsuarioId || "", d.numero_serie],
+    if (d.tempo_segundos == null && !ehPorTempo(exId)) await pesoNaAcademia(exIdVal, exUsuarioId, d.numero_serie as number, d.peso ?? 0, quando);
+  };
+
+  const pesoNaAcademia = async (exIdVal: string | null, exUsuarioId: string | null, numero: number, peso: unknown, quando: string) => {
+    if (!academia) return;
+    const ref = await db.getAll<{ id: string }>(
+      `SELECT id FROM tb_academia_pesos WHERE user_id = ? AND academia_id = ? AND ifnull(exercicio_id,'') = ? AND ifnull(exercicio_usuario_id,'') = ? AND numero_serie = ?`,
+      [userId, academia.id, exIdVal || "", exUsuarioId || "", numero],
+    );
+    if (ref.length > 0) await db.execute("UPDATE tb_academia_pesos SET peso = ?, updated_at = ? WHERE id = ?", [peso, quando, ref[0].id]);
+    else
+      await db.execute(
+        `INSERT INTO tb_academia_pesos (id, user_id, academia_id, exercicio_id, exercicio_usuario_id, numero_serie, peso, updated_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, academia.id, exIdVal, exUsuarioId, numero, peso, quando],
       );
-      if (ref.length > 0) await db.execute("UPDATE tb_academia_pesos SET peso = ?, updated_at = ? WHERE id = ?", [d.peso ?? 0, quando, ref[0].id]);
-      else
-        await db.execute(
-          `INSERT INTO tb_academia_pesos (id, user_id, academia_id, exercicio_id, exercicio_usuario_id, numero_serie, peso, updated_at) VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, academia.id, exIdVal, exUsuarioId, d.numero_serie, d.peso ?? 0, quando],
-        );
-    }
   };
 
   const salvarSerie = async (exId: string, num: number, peso: number, reps: number, tempo?: number, dist?: number) => {
@@ -215,25 +218,29 @@ export function useAcoesSeries(o: OpcoesAcoes) {
     if (o.seriesTravadas) return;
     const antesTotal = seriesDe(exId).length;
     const u = o.series.find((s) => doExercicio(s, exId))?.exercicio_usuario_id;
+    const onde = `user_id = ? AND ${u ? "exercicio_usuario_id" : "exercicio_id"} = ? AND data_treino = ? AND slot_idx = ? AND numero_serie = ?`;
     if (salva) {
-      await db.execute(
-        `DELETE FROM tb_treino_series WHERE user_id = ? AND ${u ? "exercicio_usuario_id" : "exercicio_id"} = ? AND data_treino = ? AND slot_idx = ? AND numero_serie = ?`,
-        [userId, u || exId, dateKey, slotIdx, num],
-      );
+      await db.execute(`DELETE FROM tb_treino_series WHERE ${onde}`, [userId, u || exId, dateKey, slotIdx, num]);
     }
-    o.atualizar((antes) => {
-      const prox = antes
+    // as salvas que andam (num+1 → num, …) só MUDAM DE NÚMERO, uma a uma em ordem crescente (22/10/2026): regravar pelo número novo
+    // apagava o tempo, a distância e o pace da corrida e deixava a última linha antiga sobrando no banco
+    const andam = o.series.filter((s) => noSlot(s, exId) && s.salva && s.numero_serie > num).sort((a, b) => a.numero_serie - b.numero_serie);
+    try {
+      const agora = new Date().toISOString();
+      for (const s of andam) {
+        await db.execute(`UPDATE tb_treino_series SET numero_serie = ?, updated_at = ? WHERE ${onde}`,
+          [s.numero_serie - 1, agora, userId, u || exId, dateKey, slotIdx, s.numero_serie]);
+        // a memória de peso da academia acompanha a série, como antes (corrida e série por tempo não têm peso)
+        if (s.tempo_segundos == null && !ehPorTempo(exId)) await pesoNaAcademia(u ? null : exId, u ?? null, s.numero_serie - 1, s.peso ?? 0, agora);
+      }
+    } catch (e) {
+      console.error("[Treino] renumerar séries:", e);
+    }
+    o.atualizar((antes) =>
+      antes
         .filter((s) => !(noSlot(s, exId) && s.numero_serie === num))
-        .map((s) => (noSlot(s, exId) && s.numero_serie > num ? { ...s, numero_serie: s.numero_serie - 1 } : s));
-      // renumera no banco as que andaram
-      const renumeradas = prox.filter((s) => noSlot(s, exId) && s.salva && s.numero_serie >= num);
-      Promise.all(
-        renumeradas.map((s) =>
-          gravar(exId, montar(exId, { numero_serie: s.numero_serie, ...camposDaSerie(exId, s), concluida: s.concluida ?? false, updated_at: new Date().toISOString() })),
-        ),
-      ).catch((e) => console.error("[Treino] renumerar séries:", e));
-      return prox;
-    });
+        .map((s) => (noSlot(s, exId) && s.numero_serie > num ? { ...s, numero_serie: s.numero_serie - 1 } : s)),
+    );
     void espelharSeriesPadrao(exId, u, antesTotal - 1);
   };
 
