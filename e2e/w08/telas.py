@@ -51,16 +51,21 @@ def caso(f):
     return f
 
 
+TIPOS = {".webp": "image/webp", ".glb": "model/gltf-binary"}
+
+
 def arquivos_locais(c) -> None:
-    """GIFs (public/exercicios) e fotos (public/fotos) servidos do disco, com ou sem internet — como no APK."""
+    """GIFs (public/exercicios), o 3D (public/exercicios3d: a foto .webp e o modelo .glb) e fotos (public/fotos) servidos do
+    disco, com ou sem internet — como no APK (22/10/2026: sem a pasta do 3D, a miniatura e a ficha ficavam vazias sem internet)."""
     def servir(route):
         rel = route.request.url.split("://", 1)[1].split("/", 1)[1].split("?")[0]
         arq = PUBLICO / rel
         if arq.exists():
-            route.fulfill(path=str(arq), content_type="image/webp" if arq.suffix == ".webp" else None)
+            route.fulfill(path=str(arq), content_type=TIPOS.get(arq.suffix))
         else:
             route.continue_()
     c.ctx.route("**/exercicios/**", servir)
+    c.ctx.route("**/exercicios3d/**", servir)
     c.ctx.route("**/fotos/**", servir)
 
 
@@ -310,7 +315,7 @@ def caso_treino_dia(nav, a) -> None:
         B.sem_internet(c)
         p.check(B.escolher_treino_do_dia(c), f"o treino do profissional ({B.GRUPO_NOME}) virou o treino de hoje")
         c.esperar(lambda: c.pg.locator('[data-miniatura="quadro"]').count() >= 3, 12)
-        p.check(c.pg.locator('[data-miniatura="quadro"]').count() >= 3, "miniaturas: o 1º quadro do NOSSO GIF, com o play")
+        p.check(c.pg.locator('[data-miniatura="quadro"]').count() >= 3, "miniaturas: o 1º quadro da foto do 3D (ou do GIF), com o play")
         p.check(c.tem("[data-comecar-treino]"), "antes de começar: 'Começar treino' no card")
         c.print("treino_dia_inicio")
         exs = B.exercicios(c)
@@ -449,10 +454,14 @@ def caso_funcoes(nav, a) -> None:
         B.escolher_treino_do_dia(c)
         exs = B.exercicios(c)
         e1 = exs[0]
-        # ficha com o GIF
+        # ficha com o boneco 3D (o exercício com 3D — hoje os 157 globais) ou o GIF; sem WebGL (o navegador sem tela do teste) o
+        # boneco cai na foto do 3D com "3D indisponível neste aparelho" — o mesmo critério do e2e/hml15/csp.py
         B.abrir_exercicio(c, e1)
         B.linha(c, e1).locator('[data-acao-exercicio="ficha"]').click()
-        p.check(c.esperar(lambda: c.tem("[data-ficha-gif] img"), 8), "ficha do exercício com o GIF")
+        p.check(c.esperar(lambda: c.tem("[data-ficha-3d][data-3d='pronto']") or c.tem("[data-ficha-3d][data-3d='indisponivel'] img")
+                          or c.tem("[data-ficha-gif] img"), 45),
+                f"ficha do exercício com o boneco 3D (ou a foto dele sem WebGL, ou o GIF) — "
+                f"{c.pg.locator('[data-ficha-3d]').first.get_attribute('data-3d') if c.tem('[data-ficha-3d]') else 'GIF'}")
         c.print("ficha")
         c.pg.keyboard.press("Escape")
         c.pg.wait_for_timeout(300)
@@ -542,8 +551,26 @@ def caso_funcoes(nav, a) -> None:
     B.limpar_staging(desde, "funcoes")
 
 
+def garantir_gratis_do_app(conta: str) -> None:
+    """O aluno do app sem profissional (a Carla, w7b-treino) nasceu com 7 dias grátis (09/10 → 16/10/2026): vencido, o app abre
+    na trava "Seus dias grátis acabaram" e o caso não acha o "Montar o meu" (22/10/2026). Renova o grátis por 30 dias SÓ NO
+    STAGING (nunca no public) quando faltam menos de 3 dias — com o `mensalidade_recalcular`, como o W7b depois de mexer no teste."""
+    s = B.schema()
+    if s != "staging":
+        return
+    r = B.sql_principal(f"""select p.id::text as id from {s}.pacientes p join auth.users u on u.id = p.user_id
+                              where u.email = '{B.CONTAS[conta][0]}' and p.conta_id = {s}.conta_do_app() and p.deleted_at is null
+                                and coalesce(p.app_teste_ate, now()) < now() + interval '3 days'
+                              order by p.created_at desc limit 1""")
+    if r:
+        B.sql_principal(f"""update {s}.pacientes set app_teste_ate = now() + interval '30 days' where id = '{r[0]["id"]}';
+                            select {s}.mensalidade_recalcular('{r[0]["id"]}')""")
+        print(f"   o grátis do app da {conta} renovado no staging por 30 dias")
+
+
 @caso
 def caso_sem_profissional(nav, a) -> None:
+    garantir_gratis_do_app("w7b-treino")
     c = B.abrir_treino(nav, a.base, a.prefixo, "sem_profissional", conta="w7b-treino")
     arquivos_locais(c)
     try:
