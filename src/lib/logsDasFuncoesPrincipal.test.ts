@@ -32,7 +32,6 @@ const FUNCOES = [
   "acessos", // W-A P2: a aba Acessos do Painel › Aluno, pela porta-pessoa
   "aluno-dia", // W-A P2: as rotinas e a dieta livre (o app do aluno e o painel), pela porta-pessoa
   "play-compras", // play-W6: a assinatura da Google Play do lado do app (estado e registrar), pela porta-pessoa
-  "play-rtdn", // play-W6: o aviso da Google Play pelo Pub/Sub (push com OIDC; verify_jwt false)
   "play-conferir", // play-W6 (22/10): a conferência de hora em hora da Google Play (pg_cron → pg_net, S11; verify_jwt false)
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
@@ -168,8 +167,8 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     expect(todos).not.toContain(LOG);
   });
 
-  it("play-W6: nenhuma chamada de log das peças da Play leva o token, o pedido, o etag ou o e-mail (só códigos; ref = a matrícula ou o aviso)", () => {
-    const arquivos = ["play-compras/index.ts", "play-rtdn/index.ts", "play-conferir/index.ts", "play-conferir/rodada.ts", "_shared/play-assinaturas.ts",
+  it("play-W6: nenhuma chamada de log das peças da Play leva o token, o pedido, o etag ou o e-mail (só códigos; ref = a matrícula)", () => {
+    const arquivos = ["play-compras/index.ts", "play-conferir/index.ts", "play-conferir/rodada.ts", "_shared/play-assinaturas.ts",
       "_shared/play-api.ts", "_shared/google-oauth.ts",
       "_shared/app-sem-profissional.ts", "_shared/exclusao-profissional.ts", "excluir-minha-conta/index.ts"];
     const proibidos = /\b(token|aviso\.token|tokenAnterior|tokenExpirado|pedido|pedidoPago|devolvidoPedido|etag|email|emailDeTeste|purchaseToken|orderId|corpo|conta\.client_email)\b/;

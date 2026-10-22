@@ -72,8 +72,8 @@ export const SERVICOS_TERCEIROS: readonly ServicoTerceiro[] = [
     texto: "o login com o Google, que envia ao Physiq o seu nome, e-mail e foto quando você autoriza, e as notificações do app no Android (Firebase Cloud Messaging), que recebem o código do aparelho e um texto curto, fixo para cada tipo de aviso (por exemplo, \"Tem novidade na sua agenda.\"), sem nome nem valor; o aviso completo fica só dentro do app.",
   },
   // play-W6: android/app/src/playRelease/java/…/PlayBillingPlugin.java (a Play Billing Library: setObfuscatedAccountId = a matrícula, um uuid
-  // sem dado pessoal) · supabase-principal/functions/play-compras e play-rtdn (_shared/play-api.ts: androidpublisher.googleapis.com; o aviso
-  // pelo Pub/Sub) · migration 20261016010000_playw6_play_billing.sql (play_assinaturas: o token e o pedido só no servidor)
+  // sem dado pessoal) · supabase-principal/functions/play-compras e play-conferir (_shared/play-api.ts: androidpublisher.googleapis.com; a
+  // conferência de hora em hora: o GET da assinatura e a Voided Purchases API) · migration 20261016010000_playw6_play_billing.sql (play_assinaturas: o token e o pedido só no servidor)
   {
     id: "google-play",
     nome: "Google Play",

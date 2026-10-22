@@ -53,7 +53,8 @@ export interface EstadoPlayServidor {
 
 export async function buscarEstadoPlay(): Promise<EstadoPlayServidor> {
   const r = await chamar<Record<string, unknown>>({ acao: "estado" });
-  // a revisão, 🟡3: o servidor ressincronizou a viva vencida (a renovação ou o EXPIRED que o RTDN não trouxe) — o resumo guardado no
+  // a revisão, 🟡3: o servidor ressincronizou a viva vencida (a renovação ou o EXPIRED que a conferência de hora em hora ainda não trouxe) —
+  // o resumo guardado no
   // aparelho (10 min) fica velho: a trava e a faixa leem de novo
   if (r.ressincronizada === true) invalidarResumo();
   const m = r.matricula && typeof r.matricula === "object" ? (r.matricula as Record<string, unknown>) : null;
@@ -122,7 +123,8 @@ export async function assinarPelaPlay(p: {
     if (r.resultado === "indisponivel") return { tipo: "erro", codigo: "indisponivel" };
     if (r.resultado === "erro") return { tipo: "erro", codigo: "erro_play" };
     if (r.resultado === "ja_tem") {
-      // já comprada (o registrar não chegou, ou o RTDN já reconheceu): volta ao servidor — também a reconhecida DESTA matrícula (a revisão, ⚪15)
+      // já comprada (o registrar não chegou, ou a conferência de hora em hora já reconheceu a que estava no banco): volta ao servidor — também
+      // a reconhecida DESTA matrícula (a revisão, ⚪15)
       const n = await recuperarComprasDaPlay(p.matriculaId, undefined, { comAsReconhecidas: true });
       return n > 0 ? { tipo: "assinada", registro: null } : { tipo: "erro", codigo: "ja_tem" };
     }
@@ -155,7 +157,8 @@ export async function recuperarComprasDaPlay(matriculaId: string, compras?: Comp
     const lista = compras ?? (await comprasDaPlay());
     for (const c of lista) {
       if (c.estado !== "comprada" || (c.conta && c.conta !== matriculaId)) continue;
-      // a reconhecida só entra quando pedida (o "já tem": o RTDN pode ter reconhecido antes do registrar) e só a DESTA matrícula
+      // a reconhecida só entra quando pedida (o "já tem": a conferência de hora em hora pode ter reconhecido antes do registrar) e só a DESTA
+      // matrícula
       if (c.reconhecida && !(opcoes.comAsReconhecidas && c.conta === matriculaId)) continue;
       const produto = c.produtos.find(ehCodigoPlay);
       if (!produto) continue;

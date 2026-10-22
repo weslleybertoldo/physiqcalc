@@ -3,9 +3,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
-  AUDIENCIA_PADRAO, CANCELAMENTO_NO_VINCULO_E_NA_EXCLUSAO, CONTA_PUSH_PADRAO, ESTADOS_QUE_COBREM, ESTADOS_VIVOS, PACOTE, PRODUTOS,
-  baseDaApi, cobre, codigoDoErroGoogle, conferirClaimsDoPush, conferirCompra, diasParaAdiar, duracaoDoAdiamento, entradaDoGoogle,
-  estadoDoGoogle, googleTransitorio, idDoAviso, lerAssinaturaV2, lerAvisoRtdn, modoDaTroca, tokenValido, urlLocal, valorDoPreco,
+  CANCELAMENTO_NO_VINCULO_E_NA_EXCLUSAO, ESTADOS_QUE_COBREM, ESTADOS_VIVOS, PACOTE, PRODUTOS, baseDaApi, cobre, codigoDoErroGoogle,
+  conferirCompra, diasParaAdiar, duracaoDoAdiamento, entradaDoGoogle, estadoDoGoogle, googleTransitorio, lerAssinaturaV2, modoDaTroca,
+  tokenValido, urlLocal, valorDoPreco,
 } from "../../supabase-principal/functions/_shared/play-regras";
 import { GoogleSemToken, claimsDoToken, esquecerToken, tokenDoGoogle } from "../../supabase-principal/functions/_shared/google-oauth";
 import { PlayIndisponivel, adiar, cancelar, obter, reconhecer, revogar } from "../../supabase-principal/functions/_shared/play-api";
@@ -197,63 +197,15 @@ describe("o defer (≥ 1 dia e ≤ 1 ano) e o modo da troca", () => {
   });
 });
 
-describe("o aviso do Pub/Sub (RTDN)", () => {
-  const envelope = (n: unknown, id = "123456789") => ({
-    message: { data: Buffer.from(JSON.stringify(n)).toString("base64"), messageId: id, publishTime: "2026-10-16T10:00:00Z" },
-    subscription: "projects/physiq-br/subscriptions/play-rtdn-push",
-  });
-  it("o de assinatura: o tipo, o nome e o token", () => {
-    const a = lerAvisoRtdn(envelope({ version: "1.0", packageName: PACOTE, eventTimeMillis: "1", subscriptionNotification: { version: "1.0", notificationType: 2, purchaseToken: TOKEN } }));
-    expect(a).toEqual({ tipo: "assinatura", pacote: PACOTE, notificacao: 2, nome: "renewed", token: TOKEN });
-    expect(lerAvisoRtdn(envelope({ packageName: PACOTE, subscriptionNotification: { notificationType: 12, purchaseToken: TOKEN } }))).toMatchObject({ nome: "revoked" });
-  });
-  it("o de teste do Console e o de devolução (o pedido e o tipo)", () => {
-    expect(lerAvisoRtdn(envelope({ packageName: PACOTE, testNotification: { version: "1.0" } }))).toEqual({ tipo: "teste", pacote: PACOTE });
-    expect(lerAvisoRtdn(envelope({ packageName: PACOTE, voidedPurchaseNotification: { purchaseToken: TOKEN, orderId: "GPA.1", productType: 1, refundType: 1 } })))
-      .toEqual({ tipo: "devolucao", pacote: PACOTE, token: TOKEN, pedido: "GPA.1", reembolso: 1, produtoTipo: 1 });
-  });
-  it("o envelope, o base64 e o JSON quebrados → invalido (com o motivo); o pacote vem para quem chama conferir", () => {
-    expect(lerAvisoRtdn({})).toEqual({ tipo: "invalido", motivo: "envelope" });
-    expect(lerAvisoRtdn({ message: { data: "%%%" } })).toEqual({ tipo: "invalido", motivo: "base64" });
-    expect(lerAvisoRtdn({ message: { data: Buffer.from("não é json").toString("base64") } })).toEqual({ tipo: "invalido", motivo: "json" });
-    expect(lerAvisoRtdn(envelope({ subscriptionNotification: { notificationType: 2, purchaseToken: TOKEN } }))).toEqual({ tipo: "invalido", motivo: "pacote" });
-    expect(lerAvisoRtdn(envelope({ packageName: PACOTE, subscriptionNotification: { notificationType: 2 } }))).toEqual({ tipo: "invalido", motivo: "token" });
-    expect(lerAvisoRtdn(envelope({ packageName: "outro.app", oneTimeProductNotification: {} }))).toEqual({ tipo: "outro", pacote: "outro.app" });
-  });
-  it("o id do aviso (o ref do log) só no formato", () => {
-    expect(idDoAviso(envelope({}, "98765"))).toBe("98765");
-    expect(idDoAviso({ message: { messageId: "a b" } })).toBeNull();
-  });
-});
-
-describe("o token OIDC do push: emissor, aud, email, email_verified, exp", () => {
-  const agoraSeg = 1_800_000_000;
-  const base = { iss: "https://accounts.google.com", aud: AUDIENCIA_PADRAO, email: CONTA_PUSH_PADRAO, email_verified: true, exp: agoraSeg + 600 };
-  const conferir = (p: Record<string, unknown>) => conferirClaimsDoPush(p, { audiencia: AUDIENCIA_PADRAO, conta: CONTA_PUSH_PADRAO, agoraSeg });
-  it("o do Google, para a nossa audiência, da conta do push, verificado e no prazo, vale", () => {
-    expect(conferir(base)).toEqual({ ok: true });
-    expect(conferir({ ...base, iss: "accounts.google.com", aud: [AUDIENCIA_PADRAO, "x"], email: CONTA_PUSH_PADRAO.toUpperCase() })).toEqual({ ok: true });
-  });
-  it.each([
-    [{ iss: "https://evil.example" }, "emissor"],
-    [{ aud: "https://outra.url/fn" }, "aud"],
-    [{ email: "outra@physiq-br.iam.gserviceaccount.com" }, "email"],
-    [{ email_verified: false }, "email_verified"],
-    [{ exp: agoraSeg - 1 }, "exp"],
-  ] as [Record<string, unknown>, string][])("%o → %s", (troca, motivo) => {
-    expect(conferir({ ...base, ...troca })).toEqual({ ok: false, motivo });
-  });
-});
-
 describe("as bases do teste local: só http://127.0.0.1:<porta>", () => {
   it("a API e as URLs do simulador; o resto vale a do Google", () => {
     expect(baseDaApi("http://127.0.0.1:54321")).toBe("http://127.0.0.1:54321");
     for (const v of ["https://androidpublisher.evil.com", "http://localhost:54321", "http://127.0.0.1:54321/x", "", undefined, null]) {
       expect(baseDaApi(v as string)).toBe("https://androidpublisher.googleapis.com");
     }
-    expect(urlLocal("http://127.0.0.1:54321/jwks")).toBe("http://127.0.0.1:54321/jwks");
-    expect(urlLocal("https://127.0.0.1:54321/jwks")).toBeNull();
-    expect(urlLocal("http://10.0.0.1:54321/jwks")).toBeNull();
+    expect(urlLocal("http://127.0.0.1:54321/token")).toBe("http://127.0.0.1:54321/token");
+    expect(urlLocal("https://127.0.0.1:54321/token")).toBeNull();
+    expect(urlLocal("http://10.0.0.1:54321/token")).toBeNull();
   });
   it("o código curto do erro do Google (o status ou o reason; o do OAuth)", () => {
     expect(codigoDoErroGoogle({ error: { code: 404, status: "NOT_FOUND", errors: [{ reason: "purchaseTokenNotFound" }] } })).toBe("purchaseTokenNotFound");

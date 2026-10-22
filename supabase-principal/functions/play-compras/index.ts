@@ -6,9 +6,9 @@
 //
 //   { acao: "estado" } → 200 { ok, disponivel, matricula: { id, ativo } | null, assinatura: { estado, renova, expira_em, produto } | null,
 //                              automatica_mp, ressincronizada? }
-//       Antes de responder (a revisão, 🟡3): a viva desta matrícula cujo fim já passou (a renovação ou o EXPIRED que o RTDN não trouxe)
-//       volta ao Google — o GET + a play_aplicar, sem reconhecer nem adiar (_shared/play-assinaturas.ts › ressincronizarVencidas). A
-//       cancelada vencida não conta como viva.
+//       Antes de responder (a revisão, 🟡3): a viva desta matrícula cujo fim já passou (a renovação ou o EXPIRED que a conferência de hora
+//       em hora — a play-conferir — ainda não trouxe) volta ao Google — o GET + a play_aplicar, sem reconhecer nem adiar
+//       (_shared/play-assinaturas.ts › ressincronizarVencidas). A cancelada vencida não conta como viva.
 //       disponivel = a trava play_billing ligada (app_config, só esta função lê) OU a conta de TESTE (a prova de produção com a trava
 //       desligada) + o segredo PLAY_SERVICE_ACCOUNT (sem ele: false e o log play_sem_credencial). A tela mostra a oferta só com ele.
 //   { acao: "registrar", token, produto } → o GET no Google (a fonte da verdade) → a conferência (o produto do app; o dono = a matrícula
@@ -74,7 +74,8 @@ servirComoPessoa("play-compras", { freio: 20 }, async (c) => {
     const liberada = deTeste || (await travaLigada(db));
     const credencial = contaDaPlay() !== null;
     if (liberada && !credencial) c.log.aviso({ codigo: "play_sem_credencial", schema: c.schema, acao: "estado" });
-    // a viva cujo fim já passou (a renovação ou o EXPIRED que o RTDN não trouxe) volta ao Google antes de responder (sem reconhecer nem adiar)
+    // a viva cujo fim já passou (a renovação ou o EXPIRED que a conferência ainda não trouxe) volta ao Google antes de responder (sem
+    // reconhecer nem adiar)
     const ressincronizadas = matricula && credencial ? await ressincronizarVencidas({ db, schema: c.schema, log: c.log, prazo: c.prazo }, matricula.id) : 0;
     const viva = matricula ? await assinaturaVivaDa(db, matricula.id) : null;
     return json({
