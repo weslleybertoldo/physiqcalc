@@ -99,6 +99,9 @@ export const ACOES_DE_LEITURA: Readonly<Record<string, { campo: "acao" | "action
   acessos: { campo: "acao", acoes: ["ler"] },
   "aluno-dia": { campo: "acao", acoes: ["ler"] },
   "treino-acessos": { campo: "acao", acoes: ["ler"] },
+  // play-W6: o `estado` da play-compras SÓ lê (a matrícula do app, a assinatura viva, a trava e a automática do MP); o `registrar` grava
+  // (reconhece no Google) → 1 vez
+  "play-compras": { campo: "acao", acoes: ["estado"] },
 };
 
 /** O corpo (o texto JSON que o supabase-js manda) é de uma ação de LEITURA da função? Corpo ilegível, sem a ação ou outra → não. */

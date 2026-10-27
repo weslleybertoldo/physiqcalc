@@ -6,7 +6,7 @@ no fim). Nenhum dado de cliente é tocado. Em série, com o /health do Banco do 
 
   aluno   descartável SEM nada → Boas-vindas (tela 1) → "Treinar sem profissional" (Emagrecer + Treino + Alimentação) → 7 dias
           grátis → Treinos prontos (tela 2) → faixa → Perfil (tela 5) → Alimentação (tela 3) → Pagamentos → Pix DE VERDADE
-          (Mercado Pago de produção, R$ 49,90) → cancelado no MP → "Já paguei" confere → nenhuma cobrança aberta
+          (Mercado Pago de produção, R$ 35,00) → cancelado no MP → "Já paguei" confere → nenhuma cobrança aberta
   master  admin.teste: Master › Alunos › "Alunos do app" (a lista de produção, com plano e situação)
 Prints prod_* (app 390 × 844 × 3,4; master 1280 × 883 × 2) em ~/projetos/physiqcalc-scratch/prints/w07b/.
 A prova viva do cartão (o Weslley paga) fica em prova_real.py (mesma pasta).
@@ -70,11 +70,11 @@ def caso_aluno(nav, a) -> None:
         ok = c.esperar(lambda: c.caminho().startswith("/boas-vindas") and c.pg.locator("[data-onboarding]").count() == 3, 90)
         ordem = c.pg.locator("[data-onboarding]").evaluate_all("(els) => els.map((e) => e.getAttribute('data-onboarding'))") if ok else []
         p.check(ok and ordem == ["TenhoCodigo", "TreinarSemProfissional", "CriarConta"] and "7 DIAS GRÁTIS" in c.texto()
-                and "a partir de R$ 29,90" in c.texto(), f"prod: Boas-vindas com a opção nova e o menor preço da tabela ({ordem})")
+                and "a partir de R$ 20,00" in c.texto(), f"prod: Boas-vindas com a opção nova e o menor preço da tabela ({ordem})")
         c.pg.wait_for_timeout(800)
         c.print("entrada")
         c.pg.locator("[data-sozinho-abrir]").click()
-        c.esperar(lambda: c.tem("[data-plano-app='app_treino_alimentacao']") and "R$ 49,90/mês" in c.texto(), 20)
+        c.esperar(lambda: c.tem("[data-plano-app='app_treino_alimentacao']") and "R$ 35,00/mês" in c.texto(), 20)
         c.pg.locator("[data-objetivo='emagrecer']").click()
         c.pg.locator("[data-plano-app='app_treino_alimentacao']").click()
         c.pg.locator("[data-form-sozinho]").scroll_into_view_if_needed()
@@ -86,13 +86,13 @@ def caso_aluno(nav, a) -> None:
         c.pg.wait_for_timeout(2000)
         c.print("treinos_prontos")
     m = B.app_da(DESC)
-    p.check(bool(m) and m["plano"] == "app_treino_alimentacao" and m["objetivo_app"] == "emagrecer" and m["teste_ate"] and m["valor"] == "49.90",
+    p.check(bool(m) and m["plano"] == "app_treino_alimentacao" and m["objetivo_app"] == "emagrecer" and m["teste_ate"] and m["valor"] == "35.00",
             f"prod: matrícula da conta do app (plano, objetivo, teste) ({m})")
 
     c.ir("/treino")
     ok = c.esperar(lambda: c.tem("[data-faixa-mensalidade='teste']"), 90)
     t = c.pg.locator("[data-faixa-mensalidade]").inner_text() if ok else ""
-    p.check(ok and "Seus dias grátis vão até" in t and "R$ 49,90/mês" in t, f"prod: faixa dos dias grátis ({t!r})")
+    p.check(ok and "Seus dias grátis vão até" in t and "R$ 35,00/mês" in t, f"prod: faixa dos dias grátis ({t!r})")
     c.esperar(lambda: "Sincronizado" in c.texto(), 20)
     c.print("faixa_teste")
 
@@ -120,15 +120,15 @@ def caso_aluno(nav, a) -> None:
     cob_id = c.pg.locator("[data-mp-pix-aberto]").get_attribute("data-mp-pix-aberto") if ok else None
     cob = B.sql_principal(f"""select id::text, status, valor::text, mp_payment_id, metodo from {S}.cobrancas where id = '{cob_id}'""") if cob_id else []
     cob = cob[0] if cob else {}
-    p.check(ok and cob.get("status") == "aguardando_confirmacao" and cob.get("valor") == "49.90" and cob.get("mp_payment_id") and cob.get("metodo") == "pix",
+    p.check(ok and cob.get("status") == "aguardando_confirmacao" and cob.get("valor") == "35.00" and cob.get("mp_payment_id") and cob.get("metodo") == "pix",
             f"prod: Pix DE VERDADE gerado no Mercado Pago ({ {k: cob.get(k) for k in ('status', 'valor', 'metodo')} })")
     c.pg.wait_for_timeout(800)
     c.print("pix")
     if cob.get("mp_payment_id"):
         st, pay = mp("GET", f"/v1/payments/{cob['mp_payment_id']}")
-        p.check(st == 200 and pay.get("status") == "pending" and pay.get("payment_method_id") == "pix" and float(pay.get("transaction_amount") or 0) == 49.9
+        p.check(st == 200 and pay.get("status") == "pending" and pay.get("payment_method_id") == "pix" and float(pay.get("transaction_amount") or 0) == 35.0
                 and str(pay.get("external_reference") or "").startswith(f"physiq:public:aluno:{m['id']}:"),
-                f"prod: o MP tem o Pix pendente de R$ 49,90 com a referência da matrícula ({st} {pay.get('status')})")
+                f"prod: o MP tem o Pix pendente de R$ 35,00 com a referência da matrícula ({st} {pay.get('status')})")
         st, r = mp("PUT", f"/v1/payments/{cob['mp_payment_id']}", {"status": "cancelled"})
         p.check(st == 200 and r.get("status") == "cancelled", f"prod: Pix CANCELADO no Mercado Pago ({st} {r.get('status')})")
         c.pg.locator("[data-mp-ja-paguei]").click()

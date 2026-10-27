@@ -11,6 +11,8 @@ pedidos de mentira passam pela decisão de cada uma.
                       "minha_evolucao" } na admin-avaliacoes passam; o corpo "disfarçado" (o campo que a função NÃO lê com a
                       leitura), ilegível ou sem a ação segue barrado.
                       W2 (LINUX 3): a mp-conectar-retorno e a mp-contas-renovar (Mercado Pago do personal) gravam sempre.
+                      play-W6 (22/10/2026): a play-compras (o estado relê o Google e grava; o registrar grava) e a play-conferir (só o
+                      pg_cron) gravam sempre.
                       hml-21a (decisão F): a conta grava em TODA ação, menos o { acao: "ler" }; o prof_planos da pagamentos-aluno
                       é leitura (H-113).
                       W-A P2 (LINUX 3): as 3 da W-A (acessos e aluno-dia no principal; treino-acessos no Treino) gravam em TODA ação,
@@ -100,6 +102,12 @@ def casos_hml17(b) -> list[tuple]:
         ("mp-contas-renovar (só o pg_cron; grava)", fn("mp-contas-renovar"), True),
         ("mp-conectar-retorno (a volta do OAuth; grava)", fn("mp-conectar-retorno"), True),
         ("W2 × hml-20a: mp-contas-renovar › {acao: ler, schema: public} (não é leitura dela; grava)", g.escrita(Pedido("POST", f"{P}/functions/v1/mp-contas-renovar", {"acao": "ler", "schema": "public"})), True),
+        # play-W6 (22/10/2026): as 2 funções da Google Play gravam sempre — o estado da play-compras relê no Google a viva vencida e grava
+        # (a ressincronia); o registrar grava; a play-conferir é só do pg_cron
+        ("play-W6: play-compras › estado (a ressincronia grava)", fn("play-compras", "estado"), True),
+        ("play-W6: play-compras › registrar (grava)", fn("play-compras", "registrar"), True),
+        ("play-W6: play-compras › {acao: ler} (ela não tem leitura pelo corpo; grava)", g.escrita(Pedido("POST", f"{P}/functions/v1/play-compras", {"acao": "ler"})), True),
+        ("play-W6: play-conferir (só o pg_cron; grava)", fn("play-conferir"), True),
         ("função desconhecida no Treino", fn("funcao-nova", "listar", host=T), True),
         # as de antes: a regra de antes
         ("pagamentos-aluno › prof_resumo (leitura)", fn("pagamentos-aluno", "prof_resumo"), False),
@@ -294,6 +302,9 @@ def casos_hml17(b) -> list[tuple]:
     saida.append(("W2: as 2 fora das 'conhecidas' e nas que gravam sempre", all(
         f not in b.FUNCOES_CONHECIDAS and f in b.FUNCOES_QUE_SEMPRE_GRAVAM for f in ("mp-conectar-retorno", "mp-contas-renovar")),
         True, ("sim", "não")))
+    saida.append(("play-W6: as 2 da Google Play fora das 'conhecidas', nas que gravam sempre e SEM `ler` pelo corpo", all(
+        f not in b.FUNCOES_CONHECIDAS and f in b.FUNCOES_QUE_SEMPRE_GRAVAM and f not in b.LEITURAS_PELO_CORPO for f in ("play-compras", "play-conferir")),
+        True, ("sim", "não")))
     saida.append(("hml-21a: a conta fora das 'conhecidas', nas que gravam sempre e com o `ler` pelo corpo", "conta" not in b.FUNCOES_CONHECIDAS
                   and "conta" in b.FUNCOES_QUE_SEMPRE_GRAVAM and b.LEITURAS_PELO_CORPO.get("conta") == ("acao", frozenset({"ler"})), True, ("sim", "não")))
     saida.append(("W-A P2: as 3 fora das 'conhecidas', nas que gravam sempre e com o `ler` pelo corpo", all(
@@ -321,6 +332,11 @@ def casos_w26(w) -> list[tuple]:
         # W2 (LINUX 3): a mp-contas-renovar também
         ("w26 · POST mp-contas-renovar", e("POST", f"{P}/functions/v1/mp-contas-renovar"), True),
         ("w26 · POST mp-contas-renovar-x (outra função)", e("POST", f"{P}/functions/v1/mp-contas-renovar-x"), False),
+        # play-W6 (22/10/2026): as 2 da Google Play também (o estado da play-compras pode gravar; a play-conferir é só do pg_cron)
+        ("w26 · play-W6: POST play-compras {acao: estado}", e("POST", f"{P}/functions/v1/play-compras", json.dumps({"acao": "estado"})), True),
+        ("w26 · play-W6: POST play-compras {acao: ler} (ela não tem leitura)", e("POST", f"{P}/functions/v1/play-compras", json.dumps({"acao": "ler"})), True),
+        ("w26 · play-W6: POST play-conferir", e("POST", f"{P}/functions/v1/play-conferir"), True),
+        ("w26 · play-W6: POST play-conferir-x (outra função)", e("POST", f"{P}/functions/v1/play-conferir-x"), False),
         # W2 × hml-20a (o rebase): a leitura pelo corpo { acao: "ler" } é só da nutricao/financeiro — a mp-contas-renovar não lê o `acao`
         # (o corpo dela é { schema, forcar_conta? }: com o schema certo, a rodada roda e grava) → segue escrita
         ("w26 · W2: POST mp-contas-renovar {acao: ler, schema: public} (ela não tem leitura)", e("POST", f"{P}/functions/v1/mp-contas-renovar", json.dumps({"acao": "ler", "schema": "public"})), True),

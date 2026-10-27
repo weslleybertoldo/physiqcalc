@@ -13,7 +13,9 @@ Desde a W4 da loja (06/10/2026) a versão da Google Play sai como **AAB** (Andro
 - **Notebook (teste):** `npm run build:aab` → `android/app/build/outputs/bundle/playRelease/Physiq-v<versão>-loja.aab`.
   Lê a chave de `~/keystores/physiq-play-upload.env` só no Gradle e precisa do JDK 21 e do Android SDK (`~/jdk21` e
   `~/android-sdk` quando `JAVA_HOME`/`ANDROID_HOME` não dizem outros). O site vai com o `.env.local` da pasta — numa
-  worktree, o do staging: para a loja, use o AAB do CI.
+  worktree, o do staging: aí o AAB sai **`Physiq-v<versão>-loja-staging.aab`** (o `conferir` lê o `health.json` de dentro dele;
+  nunca o nome do de produção — play-W6, a revisão 🟡7). **À Google Play sobe SÓ o AAB do CI** (o build de produção): o do
+  notebook fala com o banco de STAGING e gastaria o versionCode.
 - Os dois usam o `scripts/ci/aab-loja.sh` (passos `versao`, `firebase`, `web`, `gradle` e `conferir`; `local` = todos).
 
 ## Onde baixar
@@ -75,3 +77,127 @@ O app instalado pela loja é assinado pelo Google com a chave de assinatura **de
 
 A mesma fórmula do APK: `MAJOR*100000 + MINOR*100 + PATCH` (v3.56 = 305600). A Play recusa um versionCode que já recebeu:
 cada envio à loja pede uma versão nova (o merge na `main` já faz o bump).
+
+## A cobrança da Play (play-W6)
+
+O aluno **sem profissional** assina o plano do app **dentro do app**, pelo Play Billing (decisão de 06/10/2026). Só na versão
+da loja; o site e o APK do site não mudam (para quem não tem assinatura da Play). O profissional continua pagando pelo site e
+o aluno → profissional (Pix com comprovante e o Mercado Pago da conta do personal) fica fora do Play Billing.
+
+- **Produtos (Play Console):** 2 assinaturas mensais com os MESMOS códigos dos planos do banco — `app_treino` (R$ 20,00) e
+  `app_treino_alimentacao` (R$ 35,00) —, plano básico `mensal`, renovação automática, Brasil; carência e suspensão no padrão
+  do Google. A loja mostra SÓ o preço que a Play devolve (o do banco fica no site). Os 7 dias grátis são do app (não há oferta
+  de teste na Play).
+- **Os preços (26/10/2026, pedido do Weslley: "20 reais individual", "E 35 os dois"):** Treino **R$ 20,00** · Treino + Alimentação
+  **R$ 35,00** (eram R$ 29,90 / R$ 49,90) — o MESMO preço no site e na Play (a regra de 22/10). No banco, a migration
+  `supabase-principal/migrations/20261027020000_precos_app_20_35.sql` (os 2 planos da conta do app + as matrículas ATIVAS no preço
+  velho; o staging no T2, o public no merge); no app, o `PLANOS_APP_PADRAO` (`src/app-aluno/sozinho/regras.ts`: os Termos de
+  assinatura); na Play, as 2 assinaturas no Console (plano `mensal`, BRL 20,00 / 35,00 — à parte, no Console).
+- **A troca agendada (T2, 26/10/2026):** a troca para o Treino vale na renovação (DEFERRED) — o Google marca o produto que entra
+  (`lineItems[].deferredItemReplacement.productId`), a `play_aplicar` grava em `play_assinaturas.troca_para` (a migration
+  `20261027010000_playw6_troca_para.sql`; sem a troca, null) e o app mostra "vira Treino em DD/MM" (o fim do plano de hoje) no lugar
+  de "não renova". A trava da loja relê a assinatura ao montar e ao voltar ao primeiro plano (`src/app-aluno/sozinho/
+  releituraDaTrava.ts`: o `estado` de novo + o resumo; 1 por vez, no mínimo 10 s entre 2).
+- **O plugin (`PlayBillingPlugin`, Play Billing Library 9.1.0):** só no build type `playRelease` — a biblioteca pelo
+  `playReleaseImplementation` do `android/app/build.gradle`, o código em `android/app/src/playRelease/java/…/` e o registro
+  pela `PlataformaLoja` de cada build type (a do `release` e a do `debug` ficam vazias). Faz: `disponivel`, `produtos`,
+  `comprar` (com a matrícula opaca no `obfuscatedAccountId`; na troca, o token antigo + `na_hora` = `CHARGE_PRORATED_PRICE`
+  ou `na_renovacao` = `DEFERRED`), `compras` e `gerenciar` (a Central de assinaturas). **Nunca reconhece** a compra: o
+  servidor reconhece depois de conferir no Google (sem isso, o Google devolve sozinho em 3 dias). A ponte do JS é o
+  `src/lib/playBilling.ts` (fora da loja nativa = indisponível, nunca uma compra falsa).
+- **A conferência das 2 saídas:** o AAB passa pela (g) — a permissão `com.android.vending.BILLING` no manifesto e, no dex, o
+  `PlayBillingPlugin` e a biblioteca (`scripts/ci/cobranca-play.sh tem`, chamado pelo `aab-loja.sh conferir`); o APK do site
+  passa pela conferência ao contrário nos 2 workflows (`cobranca-play.sh sem`: o `aapt2 dump permissions` sem a permissão e a
+  lista de classes do `dexdump` sem o plugin e sem `com.android.billingclient`).
+- **A trava `play_billing`** (`app_config`, só o servidor lê; o molde do `mercadopago_conta`): `{"liberada": false}` no
+  `public` e `true` no `staging`. Desligada, a oferta só aparece para conta de TESTE; ligada, para todos. A compra feita
+  nunca olha a trava (o `registrar` e a conferência de hora em hora seguem). Ligar = SQL, com o OK dele, depois da compra de teste.
+
+### O APK "loja + staging" (a compra real no staging)
+
+O testador de licença compra num build **instalado por fora** — a Play aceita "even debug builds", com o pacote igual. O
+comando (no notebook, com o `.env.local` do staging na pasta — as `VITE_*` do staging):
+
+```bash
+JAVA_HOME=~/jdk21 ANDROID_HOME=~/android-sdk bash scripts/ci/aab-loja.sh apk-staging
+```
+
+Ele gera o site do `build:loja` com `VITE_DB_SCHEMA=staging` (o `health.json` diz `"schema":"staging"`), roda o
+`assemblePlayRelease` com `PLAY_APK_CHAVE_DEBUG=1` (a chave de **debug** desta máquina; nenhuma chave real no ambiente do
+Gradle) e confere: assinado, mas nem com a chave do site nem com a de upload (`apk-assinatura.sh teste`); o pacote
+`com.bertoldo.physiqcalc` sem `REQUEST_INSTALL_PACKAGES`; o site da loja no staging; a cobrança da Play (g). Sai em
+`android/app/build/outputs/apk/playRelease/Physiq-v<versão>-loja-staging.apk` e devolve o `build.gradle` como estava.
+
+- **Só no aparelho do testador de licença** (o Gmail dele em Play Console › Configuração › Teste de licença). Quem tem o APK
+  do site (ou o app da loja) desinstala antes: a assinatura é outra e o Android não instala por cima.
+- Entra com uma conta de TESTE do staging (`*teste*@physiqcalc.app`); a compra usa o "Test card, always approves" (o mensal
+  renova a cada 5 min, até 6 vezes).
+- Nunca vai para a loja: é APK (não AAB) e não leva a chave de upload.
+
+### O servidor: as funções e os segredos
+
+- **`play-compras`** (verify_jwt **true**; a pessoa logada): `estado` → `{disponivel, matricula, assinatura}` (só ela lê a
+  trava `play_billing`) e `registrar {token, produto}` → confere no Google (pacote, produto, dono = a matrícula de quem
+  chama, estado), grava (`play_aplicar`), reconhece e, na 1ª compra com a matrícula ainda coberta (o teste ou um mês pago
+  pelo MP), adia (`defer`) pelo que falta.
+- **`play-conferir`** (verify_jwt **false**; desde 22/10/2026, no lugar da `play-rtdn`): a **conferência de hora em hora**,
+  chamada pelo banco — o job `play-conferir-<schema>` do `pg_cron` (minuto 25) → `{schema}.play_conferir_disparar()` → o
+  `pg_net`, com o segredo S11 no `x-espelho-segredo` (sem ele ou errado: o mesmo 401). O disparo só chama quando o schema tem
+  assinatura da Play. Por schema, a rodada:
+  1. lê as devolvidas da **Voided Purchases API** (`type=1`) desde o marcador `app_config.play_conferir` (menos 10 min de folga;
+     sem ele, as últimas 24 h): a cobrança do pedido vira devolvida (`cancelada` + `reembolsado_em`) e a assinatura que perdeu o
+     acesso vira `revogada`. O marcador só anda com a janela inteira lida;
+  2. confere **TODAS** as assinaturas vivas (não só as perto de vencer), as há mais tempo sem conferir primeiro, até 100 por hora:
+     o GET + a mesma `play_aplicar` do `registrar` (reconhece se faltar; a matrícula encerrada pelo vínculo que renovou é
+     cancelada). O que sobra vai na frente da hora seguinte (log `play_conferir_sobrou`).
+
+  Renovação, cancelamento, carência, suspensão, pausa, expiração, devolução e estorno chegam ao banco em **até 1 hora** — e na
+  hora quando o aluno abre o app (o `estado` relê a vencida; o `registrar` grava a compra nova). O que o aviso do Google fazia e
+  a conferência **não** faz: ver uma compra que o `registrar` nunca gravou (o app fechou no meio, sem rede). Ela volta quando o
+  app abre de novo (a recuperação manda ao servidor as compras do aparelho); sem isso em 3 dias, o Google devolve sozinho.
+- **Segredos do principal (Supabase › Edge Functions › Secrets):**
+  - `PLAY_SERVICE_ACCOUNT` — a chave JSON da conta de serviço `play-api@physiq-br.iam.gserviceaccount.com` (escopo
+    `androidpublisher`; no Play Console › Usuários e permissões, com "Ver dados financeiros…" e "Gerenciar pedidos e
+    assinaturas"). Cópia no cofre (PhysiqCalc). **Sem ele, nada quebra:** a oferta não aparece (`disponivel: false`), o
+    `registrar` responde 503, a `play-conferir` pula, e o log diz `play_sem_credencial`.
+  - `SEGREDO_PLAY_CONFERIR_ACEITOS` — o sha256 do segredo S11. O valor mora no Vault `physiq_play_conferir_segredo` (o banco
+    manda) e no cofre ("Physiq — conferência da Google Play (play-W6)"). Gerar e trocar:
+    `python3 scripts/segredos/servidor.py play_conferir <gerar|aceitar|trocar|conferir>`. Sem o Vault, o disparo não chama
+    nada (a rotina fica inerte).
+- **Só no teste local (o simulador `e2e/playw6/simulador_play.py`):** `PLAY_API_BASE` e `PLAY_OAUTH_URL` trocam o Google pelo
+  simulador — e só valem com `http://127.0.0.1:<porta>` (a produção não tem nenhuma delas; qualquer outro valor é ignorado).
+- **Histórico (22/10/2026):** até esta data a W6 tinha a `play-rtdn` — o aviso do Google (RTDN) pelo Pub/Sub, num push com
+  OIDC. Saiu porque o `physiq-br` ficou sem faturamento no Google Cloud (o Google pede um pré-pagamento de R$ 150 para
+  ativar; o dono decidiu não pagar) e o Pub/Sub exige faturamento. Vale a alternativa do §7.14 do contrato: o `registrar` ao
+  abrir o app + a conferência de hora em hora.
+
+- **A cobrança da troca na hora é uma estimativa:** a linha `google_play` do pedido da troca para o completo (CHARGE_PRORATED_PRICE)
+  grava o preço cheio do produto novo (o `recurringPrice` do GET); o Google cobra só o rateio do período que falta — o valor exato
+  só pela Orders API (a revisão, ⚪9). O Financeiro do master superestima o mês da troca.
+
+### A volta com assinante vivo (a revisão, 🟡8)
+
+A trava desligada (`play_billing` = `{"liberada": false}`) tira a oferta na hora, sem AAB novo — e é a volta inteira enquanto houver
+assinatura viva: **com assinatura viva, a volta é SÓ a trava.** As funções novas e o banco ficam: elas seguem gravando as
+renovações e as devolvidas (a conferência de hora em hora), o cancelamento no vínculo e na exclusão. Por quê: sem a `play_aplicar` (a reversa) e com as
+funções da `7c266196`, nenhuma renovação entra no banco — a cobertura vence e o assinante trava com o Google cobrando; e a
+`pagamentos-aluno` velha volta a aceitar o Mercado Pago de quem tem a Play (cobrar 2 vezes).
+
+A reversa e as funções velhas só com **0 assinatura viva**: (1) contar (SQL só leitura) as linhas da `play_assinaturas` em
+`pendente`, `ativa`, `carencia`, `suspensa`, `pausada` ou `cancelada` ainda no prazo; (2) com alguma,
+cancelar (ou devolver) as vivas pela API — o `cancel` com `DEVELOPER_REQUESTED_STOP_PAYMENTS` (vale até o fim) ou o `revoke`
+(devolve e corta) — e esperar o fim do período pago; (3) com 0, a reversa (`--so staging` e depois `--so public`) e as funções da
+`7c266196`. O §5 do contrato da play-W6 segue este roteiro.
+
+### O Google Cloud e o Console (etapas 2 e 3 — da sessão principal, com o OK dele)
+
+1. `physiq-br`: ligar a `androidpublisher`; criar a conta `play-api@physiq-br` + a chave JSON → o cofre + o segredo
+   `PLAY_SERVICE_ACCOUNT`. **Sem Pub/Sub** (o `physiq-br` sem faturamento — o histórico acima): nada de tópico, de assinatura
+   push nem da conta do push.
+2. O segredo S11 da rotina de hora em hora: `servidor.py play_conferir gerar` → `aceitar` (a lista na função) → publicar a
+   `play-conferir` → `trocar` (o Vault que o `play_conferir_disparar()` lê) → `conferir`. A migration põe o job; sem o Vault,
+   ele não chama nada.
+3. Play Console: o perfil de pagamentos (do dono da conta do Console, antes de tudo); convidar a `play-api` com as 2 permissões;
+   criar os 2 produtos; **o tópico das notificações em tempo real (Monetização › Configuração da monetização) fica VAZIO** — sem
+   Pub/Sub, a conferência de hora em hora está no lugar; o testador de licença; a IARC ("Compras digitais: Sim") e a nota da
+   Segurança dos dados.

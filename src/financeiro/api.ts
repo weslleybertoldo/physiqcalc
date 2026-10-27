@@ -139,10 +139,20 @@ export function guardarResumo(uid: string, lista: ResumoMatricula[], agora = Dat
   ouvintes.forEach((f) => f());
 }
 
-/** Depois de pagar/enviar comprovante: o resumo guardado deixa de valer e quem mostra busca de novo. */
-export function invalidarResumo(): void {
+/**
+ * Depois de pagar/enviar comprovante: o resumo guardado deixa de valer e quem mostra busca de novo.
+ * play-W6 · T2 (b), 26/10/2026: `manterUltimo` = deixa de valer SEM apagar — quem mostra segue com o último até o novo chegar (a trava da
+ * loja relê sem piscar o app no meio). O padrão (sem opção) apaga, como sempre.
+ */
+export function invalidarResumo(opcoes: { manterUltimo?: boolean } = {}): void {
   try {
-    localStorage.removeItem(CHAVE);
+    if (opcoes.manterUltimo) {
+      const g = JSON.parse(localStorage.getItem(CHAVE) || "null") as Guardado | null;
+      // em = 0: vencido para quem pede o válido; o último ainda vale para quem aceita o vencido (o useResumoFinanceiro mostra e busca)
+      if (g && Array.isArray(g.lista)) localStorage.setItem(CHAVE, JSON.stringify({ ...g, em: 0 } satisfies Guardado));
+    } else {
+      localStorage.removeItem(CHAVE);
+    }
   } catch {
     /* noop */
   }

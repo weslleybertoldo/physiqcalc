@@ -13,12 +13,16 @@
 // W2 (Mercado Pago do personal): o cancelamento das matrículas aceita a credencial DA CONTA (CredencialMp) e um filtro opcional pelo
 // collector — só o _shared/mp-conta.ts o passa (cancelarAssinaturasPorCredencial), depois de conferir que o schema tem a coluna (a regra da
 // coluna nova, revisão C2). Sem o filtro, a leitura é a de sempre. O schema do log sai da credencial (schemaDaCredencialMp).
+// play-W6 (16/10/2026): o vínculo cancela TAMBÉM a assinatura da Google Play das matrículas encerradas (cancelarPlayDasMatriculas,
+// _shared/play-assinaturas.ts — DEVELOPER_REQUESTED_STOP_PAYMENTS: vale até o fim, sem devolver, igual ao MP). Sem linha da Play, nada
+// vai ao Google (o caminho de hoje + 1 leitura). O MP e a Play são independentes: um que falha não impede o outro; o 1º erro sobe depois.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { assinaturaSoNoBanco, encerradaPeloVinculo } from "./app-sem-profissional-regras.ts";
 import { codigosDoMp, mpTransitorio, type AssinaturaMp } from "./cobranca-regras.ts";
 import { MpIndisponivel, mpFetch, schemaDaCredencialMp, type Credencial, type CredencialMp, type OpcoesMp } from "./cobranca-mp.ts";
 import type { Log } from "./log.ts";
 import { emLotes, todasAsPaginas } from "./paginas.ts";
+import { cancelarPlayDasMatriculas } from "./play-assinaturas.ts";
 
 export { assinaturaSoNoBanco, assinaturaViva, encerradaPeloVinculo } from "./app-sem-profissional-regras.ts";
 
@@ -86,7 +90,22 @@ export async function cancelarAssinaturasDoAppEncerrado(
   const ids = ((mats ?? []) as Array<{ id: string; ativo: boolean | null; app_encerrada_em: string | null }>)
     .filter(encerradaPeloVinculo).map((m) => m.id);
   if (!ids.length) return { canceladas: 0, falhas: 0 };
-  return await cancelarAssinaturasDasMatriculas(db, credencial, ids, motivo, log, opcoes);
+  let erro: unknown = null;
+  let mp = { canceladas: 0, falhas: 0 };
+  try {
+    mp = await cancelarAssinaturasDasMatriculas(db, credencial, ids, motivo, log, opcoes);
+  } catch (e) {
+    erro = e;
+  }
+  // play-W6: a da Google Play destas matrículas (sem linha da Play = nada)
+  let play = { canceladas: 0, falhas: 0 };
+  try {
+    play = await cancelarPlayDasMatriculas({ db, schema: schemaDaCredencialMp(credencial), log, prazo: opcoes.prazo }, ids, "vinculo");
+  } catch (e) {
+    erro ??= e;
+  }
+  if (erro) throw erro;
+  return { canceladas: mp.canceladas + play.canceladas, falhas: mp.falhas + play.falhas };
 }
 
 /** A matrícula (do app) foi encerrada pelo vínculo? Lê o marcador no banco (o webhook só cancela nesse caso — W19). Erro lança. */

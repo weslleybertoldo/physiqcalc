@@ -44,12 +44,15 @@ export function SeletorPlano({
   aoMudar,
   carregando,
   rotulo = "Seu plano",
+  precos,
 }: {
   planos: PlanoApp[];
   valor: string | null;
   aoMudar: (codigo: string) => void;
   carregando?: boolean;
   rotulo?: string;
+  /** play-W6: na loja com a Play, o preço que a PLAY devolve por plano ("R$ 20,00/mês") — o do banco não aparece */
+  precos?: Partial<Record<string, string>>;
 }) {
   return (
     <fieldset className="flex flex-col gap-1.5">
@@ -76,7 +79,7 @@ export function SeletorPlano({
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-baseline justify-between gap-x-2">
                     <span className="text-[14px] font-semibold text-texto">{p.nome}</span>
-                    <b className="whitespace-nowrap text-[14px] font-bold tabular-nums text-texto" data-preco-plano>{precoMensal(p.valor)}</b>
+                    <b className="whitespace-nowrap text-[14px] font-bold tabular-nums text-texto" data-preco-plano>{precos ? precos[p.codigo] ?? "—" : precoMensal(p.valor)}</b>
                   </span>
                   {p.descricao && <span className="mt-0.5 block text-[12px] leading-relaxed text-texto-3">{p.descricao}</span>}
                 </span>

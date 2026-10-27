@@ -254,8 +254,8 @@ interface Canal {
   aceite: Record<string, number>;
   /** Onde o x-espelho-segredo é lido e o log segredo_aceito sai → quantos logs (sem isto: o mesmo arquivo do aceite). */
   log?: Record<string, number>;
-  /** Quem manda (segredoParaEnviar com o nome). O S8, o S9 e o S10 saem do banco (espelho_disparar, automaticas_disparar e
-   *  mp_contas_renovar_disparar, pg_net): nenhum arquivo daqui. */
+  /** Quem manda (segredoParaEnviar com o nome). O S8, o S9, o S10 e o S11 saem do banco (espelho_disparar, automaticas_disparar,
+   *  mp_contas_renovar_disparar e play_conferir_disparar, pg_net): nenhum arquivo daqui. */
   emissores: string[];
 }
 
@@ -283,6 +283,8 @@ const CANAIS: Canal[] = [
   { nome: "SEGREDO_AUTOMATICAS_FILA", finalidade: "automaticas_fila", aceite: { [`${P}/automaticas-fila/index.ts`]: 1 }, emissores: [] },
   // W2 Task 11: a renovação do MP do personal — o banco manda (mp_contas_renovar_disparar, Vault physiq_mp_renovar_segredo)
   { nome: "SEGREDO_MP_RENOVAR", finalidade: "mp_renovar", aceite: { [`${P}/mp-contas-renovar/index.ts`]: 1 }, emissores: [] },
+  // play-W6 (22/10/2026): a conferência de hora em hora da Google Play — o banco manda (play_conferir_disparar, Vault physiq_play_conferir_segredo)
+  { nome: "SEGREDO_PLAY_CONFERIR", finalidade: "play_conferir", aceite: { [`${P}/play-conferir/index.ts`]: 1 }, emissores: [] },
 ];
 
 /** O código sem comentário: sem as linhas de bloco (as que começam com /* ou *) e sem o // de fim de linha (fora de URL). */
@@ -318,10 +320,10 @@ const logDoCanal = (c: Canal) => c.log ?? c.aceite;
 const formaDoLog = (finalidade: string) =>
   new RegExp(String.raw`\blog\.info\(\{ codigo: "segredo_aceito"(?:, schema(?:: currentSchema\(\))?)?, acao: "${finalidade}", resultado: [a-z]+ \}\);`);
 
-describe("a guarda nas fontes: os 10 segredos do contrato (hml-16c §1 + o S9 da W-P + o S10 da W2) nos receptores e nos emissores", () => {
-  it("10 nomes e 10 finalidades, sem repetir; a finalidade é o nome sem o SEGREDO_, em minúsculas", () => {
-    expect(new Set(CANAIS.map((c) => c.nome)).size).toBe(10);
-    expect(new Set(CANAIS.map((c) => c.finalidade)).size).toBe(10);
+describe("a guarda nas fontes: os 11 segredos do contrato (hml-16c §1 + o S9 da W-P + o S10 da W2 + o S11 da play-W6) nos receptores e nos emissores", () => {
+  it("11 nomes e 11 finalidades, sem repetir; a finalidade é o nome sem o SEGREDO_, em minúsculas", () => {
+    expect(new Set(CANAIS.map((c) => c.nome)).size).toBe(11);
+    expect(new Set(CANAIS.map((c) => c.finalidade)).size).toBe(11);
     for (const c of CANAIS) expect(c.finalidade).toBe(c.nome.replace(/^SEGREDO_/, "").toLowerCase());
     expect(FONTES.length).toBeGreaterThan(40); // o leitor achou as funções dos 2 projetos
   });
@@ -342,11 +344,11 @@ describe("a guarda nas fontes: os 10 segredos do contrato (hml-16c §1 + o S9 da
     expect(arquivosCom(`segredoParaEnviar("${c.nome}")`)).toEqual([...c.emissores].sort());
   });
 
-  it("todo log segredo_aceito tem a forma certa (nunca o valor nem o hash) e são 11 (o S5 tem 2 entradas)", () => {
+  it("todo log segredo_aceito tem a forma certa (nunca o valor nem o hash) e são 12 (o S5 tem 2 entradas)", () => {
     const todos = FONTES.reduce((n, f) => n + linhasCom(f.codigo, '"segredo_aceito"'), 0);
     const certos = CANAIS.reduce((n, c) => n + FONTES.reduce((m, f) => m + linhasCom(f.codigo, formaDoLog(c.finalidade)), 0), 0);
-    expect(todos).toBe(11);
-    expect(certos).toBe(11);
+    expect(todos).toBe(12);
+    expect(certos).toBe(12);
   });
 
   it("quem lê o x-espelho-segredo é um receptor da tabela; quem o manda, um emissor da tabela", () => {
@@ -360,7 +362,7 @@ describe("a guarda nas fontes: os 10 segredos do contrato (hml-16c §1 + o S9 da
     const chamadas = FONTES.filter((f) => !PECA_COMUM.includes(f.arquivo)).flatMap((f) =>
       f.codigo.split("\n").filter((l) => l.includes("segredoAceito(")).map((l) => `${f.arquivo}: ${l.trim()}`),
     );
-    expect(chamadas).toHaveLength(11);
+    expect(chamadas).toHaveLength(12);
     // a erro-avisar passa a função adiante (DepsPedido.segredo) e o atenderPedido é quem espera
     const semAwait = chamadas.filter((c) => !c.includes("await segredoAceito(") && !c.includes("=> segredoAceito(recebido, "));
     expect(semAwait).toEqual([]);
@@ -370,7 +372,7 @@ describe("a guarda nas fontes: os 10 segredos do contrato (hml-16c §1 + o S9 da
 
   it("quem usa a peça comum importa dela o que usa (o tsc do app não lê as index.ts das funções)", () => {
     const usam = FONTES.filter((f) => !PECA_COMUM.includes(f.arquivo) && /\bsegredo(?:Aceito|ParaEnviar)\(/.test(f.codigo));
-    expect(usam.length).toBe(16);
+    expect(usam.length).toBe(17);
     for (const f of usam) {
       const importados = /import \{([^}]*)\} from "(?:\.\.\/_shared|\.)\/segredo-servidor\.ts";/.exec(f.codigo)?.[1] ?? "";
       for (const nome of ["segredoAceito", "segredoParaEnviar"]) {
@@ -480,6 +482,24 @@ describe("o banco (S8): a versão que vale do {schema}.espelho_disparar() lê s�
     const script = ler("scripts/segredos/servidor.py");
     expect(script).toContain('Finalidade("mp_renovar", "S10", "SEGREDO_MP_RENOVAR", "principal", "principal", (), ("mp-contas-renovar",),');
     expect(script).toContain('vault="physiq_mp_renovar_segredo", arquivo=".physiq-segredo-mp-renovar", disparo="mp_contas_renovar_disparar",');
+  });
+
+  it("S11 (play-W6, 22/10/2026): o {schema}.play_conferir_disparar() lê só o Vault da conferência, manda o x-espelho-segredo e roda de hora em hora", () => {
+    const { arquivo, corpo } = ultimaDefinicao("play_conferir_disparar");
+    expect(arquivo >= "20261016010000").toBe(true);
+    const vaults = [...corpo.matchAll(/vault\.decrypted_secrets\b[^;]*?\bname\s*=\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(vaults).toEqual(["physiq_play_conferir_segredo"]);
+    expect(corpo.match(/vault\./g)).toHaveLength(1);
+    expect(corpo).toMatch(/security definer set search_path = '' as \$\$/);
+    expect(corpo).toContain("'x-espelho-segredo', v_segredo");
+    expect(corpo).toContain("/functions/v1/play-conferir'");
+    // o job de hora em hora no minuto 25 (livre: os outros jobs do principal usam 0/10/20/30/40/50, 0/15/30/45, 7 e 41)
+    expect(ler(`supabase-principal/migrations/${arquivo}`)).toContain(
+      "select cron.schedule('play-conferir-{schema}', '25 * * * *', $$select {schema}.play_conferir_disparar()$$);");
+    // o mesmo nome no script dos segredos (scripts/segredos/servidor.py, a finalidade S11 play_conferir) e na função que confere
+    const script = ler("scripts/segredos/servidor.py");
+    expect(script).toContain('Finalidade("play_conferir", "S11", "SEGREDO_PLAY_CONFERIR", "principal", "principal", (), ("play-conferir",),');
+    expect(script).toContain('vault="physiq_play_conferir_segredo", arquivo=".physiq-segredo-play-conferir", disparo="play_conferir_disparar",');
   });
 
   it("controle negativo: o corpo de antes (a 20261010010000, com a reserva) não passaria", () => {

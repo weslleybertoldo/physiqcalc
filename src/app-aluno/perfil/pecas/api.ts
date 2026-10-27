@@ -131,13 +131,19 @@ export const MENSAGEM_ERRO_CONTA: Record<string, string> = {
   profissional: "Como você também usa o painel de profissional, a exclusão é feita no painel, em Configurações › Excluir minha conta: lá você confere o que acontece com os seus alunos e a equipe e baixa os prontuários antes.",
   assinatura_ativa: "Você tem uma cobrança automática ligada no cartão. Cancele em Perfil › Pagamentos antes de excluir a conta.",
   treino_indisponivel: "Não foi possível falar com o banco do treino agora. Nada foi apagado — tente de novo em alguns minutos.",
+  // play-W6: a assinatura da Google Play é cancelada ANTES de apagar; o Google não respondeu → nada foi apagado
+  play_nao_cancelada: "Não deu para cancelar a sua assinatura da Google Play agora. Nada foi apagado — tente de novo em alguns minutos.",
   rate_limited: "Muitas tentativas. Tente de novo em alguns minutos.",
   conta_real_no_staging: "Este é o ambiente de teste: só contas de teste podem fazer isso aqui.",
   invalid_token: "Sua sessão expirou. Saia e entre de novo.",
   erro_interno: "Não deu certo agora. Tente de novo.",
 };
 
+/** play-W6 (a revisão, ⚪14): a assinatura da Google Play é cancelada ANTES de apagar — se a exclusão parou depois, a frase conta. */
+export const AVISO_PLAY_JA_CANCELADA = "A sua assinatura da Google Play já foi cancelada: ela não renova mais e vale até o fim do período pago.";
+
 export function mensagemErroConta(e: unknown): string {
   const codigo = e instanceof ErroPerfil ? e.codigo : "erro_interno";
-  return MENSAGEM_ERRO_CONTA[codigo] ?? MENSAGEM_ERRO_CONTA.erro_interno;
+  const frase = MENSAGEM_ERRO_CONTA[codigo] ?? MENSAGEM_ERRO_CONTA.erro_interno;
+  return e instanceof ErroPerfil && e.extra?.play_cancelada === true ? `${frase} ${AVISO_PLAY_JA_CANCELADA}` : frase;
 }

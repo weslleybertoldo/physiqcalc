@@ -105,8 +105,8 @@ function TabelaDoApp({ lista, pagina, total, irPara, carregando, aoSenha }: {
 }
 
 /**
- * Painel master › App do aluno (herdados da W7b e da W8b): os alunos sem profissional (conta do app "Physiq": Treino R$ 29,90 e
- * Treino + Alimentação R$ 49,90 no Mercado Pago do Weslley; a senha nova de quem ficou bloqueado de vez), os treinos prontos e os
+ * Painel master › App do aluno (herdados da W7b e da W8b): os alunos sem profissional (conta do app "Physiq": Treino R$ 20,00 e
+ * Treino + Alimentação R$ 35,00 desde 26/10/2026 — no Mercado Pago do Weslley; a senha nova de quem ficou bloqueado de vez), os treinos prontos e os
  * pratos prontos — gravados no mesmo lugar da carga dos arquivos de scripts/conteudo.
  */
 export default function AppAluno() {

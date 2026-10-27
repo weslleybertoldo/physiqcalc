@@ -189,7 +189,7 @@ def s3_s5_textos_novos(o, nav, base: str, prefixo: str, telas: tuple[bool, ...] 
             abrir_pelo_link(caso, "assinatura")
             assinatura = conferir_documento(o, caso, "assinatura", f"S5{sufixo} /assinatura")
             if not desktop:
-                for trecho in ("39,90", "59,90", "29,90", "49,90", "14 dias", "72 h", "7 dias", "Maceió"):
+                for trecho in ("39,90", "59,90", "20,00", "35,00", "14 dias", "72 h", "7 dias", "Maceió"):
                     o.ok(trecho in assinatura, f"S5 os Termos de assinatura citam '{trecho}'")
             o.linha(f"   print: {caso.print('S5_assinatura' + sufixo)}")
             if not desktop:

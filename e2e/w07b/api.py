@@ -92,7 +92,7 @@ def caso_entrar() -> None:
     n = B.sql_principal(f"select count(*)::int n from {S}.pacientes where user_id = '{B.uid(c)}' and deleted_at is null")[0]["n"]
     p.check(r2.get("ok") is True and r2.get("ja_era") is True and n == 1, f"2ª vez não duplica (ja_era, {n} matrícula)")
     m = B.app_da(c)
-    p.check(m and m["plano"] == "app_treino_alimentacao" and m["valor"] == "49.90" and m["objetivo_app"] == "emagrecer" and ts(m["pago_ate"]) == fim,
+    p.check(m and m["plano"] == "app_treino_alimentacao" and m["valor"] == "35.00" and m["objetivo_app"] == "emagrecer" and ts(m["pago_ate"]) == fim,
             f"matrícula do app: plano, valor da tabela, objetivo e a cobertura = o teste ({m})")
     st, s = B.rpc(B.token(c), "minha_situacao", {})
     mats = [x for x in (s or {}).get("matriculas", []) if x.get("app")]
@@ -101,7 +101,7 @@ def caso_entrar() -> None:
             f"minha_situacao: aluno do app com Treino + Nutrição, precisa do Treino ({s.get('modulos_aluno')}, {mats[:1]})")
     st, mp = B.rpc(B.token(c), "meu_plano_app", {})
     precos = sorted((x["codigo"], float(x["valor"])) for x in (mp or {}).get("planos", []))
-    p.check(st == 200 and precos == [("app_treino", 29.9), ("app_treino_alimentacao", 49.9)] and mp.get("teste_dias") == 7
+    p.check(st == 200 and precos == [("app_treino", 20.0), ("app_treino_alimentacao", 35.0)] and mp.get("teste_dias") == 7
             and (mp.get("matricula") or {}).get("ativo") is True and mp.get("com_profissional") is False,
             f"meu_plano_app: os 2 planos com os preços do banco e os 7 dias ({precos})")
     st, f = B.rpc(B.token(c), "financeiro_do_aluno", {})
@@ -167,7 +167,7 @@ def caso_plano() -> None:
     pid = B.app_da(c)["id"]
     st, r = pag(c, "aluno_app_plano", {"paciente_id": pid, "plano": "app_treino_alimentacao"})
     m = B.app_da(c)
-    p.check(st == 200 and r.get("ok") and r.get("mudou") is True and float(r.get("valor")) == 49.9 and m["plano"] == "app_treino_alimentacao" and m["valor"] == "49.90",
+    p.check(st == 200 and r.get("ok") and r.get("mudou") is True and float(r.get("valor")) == 35.0 and m["plano"] == "app_treino_alimentacao" and m["valor"] == "35.00",
             f"Treino → Treino + Alimentação ({st} {r})")
     st, x = B.rpc(B.token(c), "pratos_prontos_do_app", {})
     p.check(st == 200 and x.get("ok") is True, "com Alimentação: os pratos liberam")
@@ -212,7 +212,7 @@ def caso_cobranca() -> None:
             and mm[0]["conta"]["profissional"] == "Physiq", f"Pagamentos: vencido, trava ligada, quem recebe = Physiq ({mm[:1] and mm[0]['mensalidade']})")
     st, r = pag(c, "aluno_mp_pix", {"paciente_id": pid})
     cob = (r or {}).get("cobranca") or {}
-    p.check(st == 200 and cob.get("status") == "aguardando_confirmacao" and float(cob.get("valor")) == 29.9, f"Pix de R$ 29,90 gerado ({st})")
+    p.check(st == 200 and cob.get("status") == "aguardando_confirmacao" and float(cob.get("valor")) == 20.0, f"Pix de R$ 20,00 gerado ({st})")
     st, r = pag(c, "simular_aprovacao", {"cobranca_id": cob.get("id")})
     m = B.app_da(c)
     agora = dt.datetime.now(dt.timezone.utc)
@@ -231,7 +231,7 @@ def caso_vincular() -> None:
     p.check(st == 200 and r.get("ok") and ass and pre and ass[0]["status"] in ("pending", "authorized"), f"cobrança automática do app criada (sandbox) ({st} {ass})")
     st, prev = B.funcao(B.token(c), "vincular-aluno", {"codigo": B.CODIGO_LUCAS, "previa": True})
     app = (prev or {}).get("app") or {}
-    p.check(st == 200 and prev.get("ok") is True and float(app.get("valor") or 0) == 49.9 and app.get("assinatura_ativa") is True,
+    p.check(st == 200 and prev.get("ok") is True and float(app.get("valor") or 0) == 35.0 and app.get("assinatura_ativa") is True,
             f"prévia: avisa que a mensalidade do app para ({prev})")
     p.check(B.app_da(c)["ativo"] is True, "a prévia não mexe em nada")
     st, v = B.funcao(B.token(c), "vincular-aluno", {"codigo": B.CODIGO_LUCAS})

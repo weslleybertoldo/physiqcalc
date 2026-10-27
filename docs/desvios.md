@@ -37,8 +37,10 @@ Conferido de novo em 14/10/2026 (hml-21e) pelos 2 lados: pelo código (o coment�
 `scripts/deploy_function.sh` recebe o valor como argumento e não guarda lista) e pela lista publicada dos 2 projetos (Management API, só
 leitura, 14/10/2026 05:24): são estas 22 (16 no principal, 6 no Treino), as mesmas nos 2 lados, e nenhuma outra. (Em 08/10/2026 eram 17; as 5
 de depois: `automaticas-fila`, `infinitepay-webhook-aluno`, `mp-conectar-retorno`, `mp-contas-renovar` e, no Treino, `treino-acessos`.)
+22/10/2026 (play-W6): + a `play-conferir`, ainda **a publicar** (sobe com a W6, na F4) — está na tabela abaixo com a marca; a `play-rtdn`
+(o aviso do Google pelo Pub/Sub, que também era `false`) saiu do PR antes de ser publicada.
 "Segredo entre servidores" é o cabeçalho `x-espelho-segredo`, com um segredo por finalidade (hml-16c, H-51): quem manda
-guarda o valor e quem recebe confere pelo sha256 numa lista própria (`<SEGREDO>_ACEITOS`). Os 10 e como trocar:
+guarda o valor e quem recebe confere pelo sha256 numa lista própria (`<SEGREDO>_ACEITOS`). Os 11 e como trocar:
 [incidente.md](incidente.md) › "Segredo exposto". Até o fim da troca da hml-16c, o `ESPELHO_SEGREDO` de antes ainda vale.
 
 | Banco | Função | Quem chama | O que confere quem chama | Desde |
@@ -55,6 +57,7 @@ guarda o valor e quem recebe confere pelo sha256 numa lista própria (`<SEGREDO>
 | principal | `mp-webhook` | o Mercado Pago (assinaturas e Pix do antigo Nutri) | não confia no aviso: busca o recurso de novo no Mercado Pago | 29/09/2026 |
 | principal | `mp-webhook-aluno` | o Mercado Pago e o repasse do Treino | busca de novo no Mercado Pago; idempotente | 29/09/2026 |
 | principal | `mp-webhook-conta` | o Mercado Pago e os repasses | busca de novo no Mercado Pago; idempotente | 29/09/2026 |
+| principal | `play-conferir` | o banco (`pg_net`/`pg_cron`, de hora em hora, no minuto 25) | o segredo entre servidores (o S11) | **a publicar** (play-W6, F4) |
 | principal | `pos-login` | o app, logo depois do login | o login, no Auth, dentro dela | 29/09/2026 |
 | principal | `push-enviar` | o banco (o gatilho dos avisos, `pg_net`) | o segredo do push (`x-push-segredo`) | 01/10/2026 |
 | principal | `vincular-aluno` | o app e o Treino | app: o login, no Auth, dentro dela; Treino: o segredo entre servidores | 29/09/2026 |

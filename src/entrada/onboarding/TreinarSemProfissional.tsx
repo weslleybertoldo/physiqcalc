@@ -6,6 +6,8 @@ import { dataBR } from "@/financeiro/regras";
 import { ehLoja } from "@/lib/distribuicao";
 import { useSessao } from "@/nucleo/sessao";
 import { buscarMeuPlano, entrarSemProfissional, ErroApp } from "@/app-aluno/sozinho/api";
+import { porMes } from "@/app-aluno/sozinho/playRegras";
+import { usePlayDaLoja } from "@/app-aluno/sozinho/usePlayDaLoja";
 import { SeletorObjetivo, SeletorPlano } from "@/app-aluno/sozinho/pecas/Seletores";
 import { mensagemApp, PLANO_TREINO, precoMensal, TESTE_DIAS_APP, ultimoDiaGratis, type Objetivo } from "@/app-aluno/sozinho/regras";
 import { lembrarArea } from "@/ui/casca/area";
@@ -28,6 +30,9 @@ const CampoNascimento = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() =
  * (emagrecer · manter a forma · ganhar massa — as listas de treinos e pratos prontos vêm dele) e o plano do app (Treino ou
  * Treino + Alimentação, com os preços da tabela do banco); os dias grátis começam na hora. Depois do teste, paga em Perfil ›
  * Pagamentos (Pix ou cartão, pelo Mercado Pago do Physiq); sem pagar, o app fecha e só Pagamentos abre.
+ * play-W6: na versão da Google Play (com a Play valendo — só então as Boas-vindas mostram este cartão), os preços são os da PLAY e o
+ * texto diz que, depois dos dias grátis, a assinatura é pela Google Play — nada é cobrado sem a pessoa assinar. Começar o teste é o
+ * mesmo entrar_sem_profissional (nada vai ao Google agora).
  */
 export default function TreinarSemProfissional() {
   const navigate = useNavigate();
@@ -45,9 +50,21 @@ export default function TreinarSemProfissional() {
   const [consentimento, setConsentimento] = useState<{ versao: string; origem: string } | null>(null);
   const pedeConsentimento = !!(ConsentimentoSaude && CampoNascimento);
   const consulta = useQuery({ queryKey: ["plano-app"], queryFn: buscarMeuPlano, staleTime: 60_000, retry: 1, networkMode: "online" });
-  const planos = useMemo(() => consulta.data?.planos ?? [], [consulta.data]);
+  // play-W6: na loja com a Play, só os planos que a Play vende, com o preço DELA
+  const play = usePlayDaLoja();
+  const comPlay = ehLoja && play.ativa;
+  const ofertasPlay = play.ofertas;
+  const planos = useMemo(
+    () => (consulta.data?.planos ?? []).filter((p) => !comPlay || !!ofertasPlay[p.codigo as keyof typeof ofertasPlay]),
+    [consulta.data, comPlay, ofertasPlay],
+  );
+  const precosPlay = useMemo(
+    () => (comPlay ? Object.fromEntries(Object.values(ofertasPlay).flatMap((o) => (o ? [[o.produto, porMes(o.preco)]] : []))) : undefined),
+    [comPlay, ofertasPlay],
+  );
   const dias = consulta.data?.teste_dias ?? TESTE_DIAS_APP;
   const menor = planos.length ? Math.min(...planos.map((p) => p.valor)) : null;
+  const aPartirDe = comPlay ? (play.menorPreco ? porMes(play.menorPreco) : null) : menor !== null ? precoMensal(menor) : null;
 
   useEffect(() => {
     if (!plano && planos.some((p) => p.codigo === PLANO_TREINO)) setPlano(PLANO_TREINO);
@@ -90,7 +107,7 @@ export default function TreinarSemProfissional() {
             <Chip tom="n" data-chip-dias-gratis>{dias} DIAS GRÁTIS</Chip>
           </span>
           <span className="mt-0.5 block text-[13px] leading-relaxed text-texto-2">
-            Monte o seu treino ou use um treino pronto pelo seu objetivo.{menor !== null ? ` Depois, a partir de ${precoMensal(menor)}.` : ""}
+            Monte o seu treino ou use um treino pronto pelo seu objetivo.{aPartirDe ? ` Depois, a partir de ${aPartirDe}.` : ""}
           </span>
         </span>
       </div>
@@ -113,12 +130,19 @@ export default function TreinarSemProfissional() {
               <button type="button" className="pq-botao pq-botao-g w-full" onClick={() => void consulta.refetch()}>Tentar de novo</button>
             </div>
           ) : (
-            <SeletorPlano planos={planos} valor={plano} aoMudar={(c) => { setPlano(c); setErro(""); }} carregando={consulta.isLoading} />
+            <SeletorPlano planos={planos} valor={plano} aoMudar={(c) => { setPlano(c); setErro(""); }} carregando={consulta.isLoading} precos={precosPlay} />
           )}
-          <p className="text-[12.5px] leading-relaxed text-texto-2" data-sozinho-teste>
-            {dias} dias grátis, até <b className="font-semibold text-texto">{dataBR(ultimoDiaGratis(dias))}</b>. Sem cartão agora: depois do teste, pague por
-            Pix ou cartão em Perfil › Pagamentos. Sem o pagamento, o app fica fechado até pagar.
-          </p>
+          {comPlay ? (
+            <p className="text-[12.5px] leading-relaxed text-texto-2" data-sozinho-teste="play">
+              {dias} dias grátis no app, até <b className="font-semibold text-texto">{dataBR(ultimoDiaGratis(dias))}</b>. Para continuar depois, a assinatura
+              pela Google Play{aPartirDe ? ` a partir de ${aPartirDe}` : ""} — nada é cobrado sem você assinar.
+            </p>
+          ) : (
+            <p className="text-[12.5px] leading-relaxed text-texto-2" data-sozinho-teste>
+              {dias} dias grátis, até <b className="font-semibold text-texto">{dataBR(ultimoDiaGratis(dias))}</b>. Sem cartão agora: depois do teste, pague por
+              Pix ou cartão em Perfil › Pagamentos. Sem o pagamento, o app fica fechado até pagar.
+            </p>
+          )}
           {CampoNascimento && ConsentimentoSaude && (
             <Suspense fallback={null}>
               <CampoNascimento
