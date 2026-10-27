@@ -50,7 +50,7 @@ AQUI = Path(__file__).resolve().parent
 REPO = AQUI.parents[1]  # a worktree onde este arquivo está
 sys.path.insert(0, str(AQUI.parent / "w02"))
 sys.path.insert(0, str(AQUI))
-from _comum import PRINCIPAL_REF, PRINCIPAL_URL, http, segredo_do_ambiente  # noqa: E402  (e2e/w02/_comum.py)
+from _comum import PRINCIPAL_REF, PRINCIPAL_URL, http, segredo_do_ambiente, sql_principal  # noqa: E402  (e2e/w02/_comum.py)
 from _logs_supabase import LogsFora, Saida, agora, consulta  # noqa: E402
 
 URL = f"{PRINCIPAL_URL}/functions/v1/erro-avisar"
@@ -323,11 +323,25 @@ def main() -> int:
             do_robo = [l for l in linhas if l.get("codigo") == "aviso_de_robo"]
             o.ok(len(do_robo) == 1 and do_robo[0].get("resultado") == codigo and do_robo[0].get("schema") == S,
                  f"robo {codigo}: 1 log aviso_de_robo ({S}) · 🔑 {sig} → {resumo_log(do_robo)}")
-            # o caminho do aviso roda em segundo plano DEPOIS do 204: dá um tempo e confere de novo que nada saiu
+            # o caminho do aviso rodaria em segundo plano DEPOIS do 204: dá um tempo e confere que nada saiu — nos logs (a consulta TEM de
+            # responder: o 429 do endpoint não vale como "nada") e na {schema}.avisos_erro (a linha que o registrar_aviso_erro gravaria)
             time.sleep(5)
-            linhas = esperar_log(sig, desde, set(), 0)
-            saiu = [l for l in linhas if l.get("codigo") in DO_AVISO]
-            o.ok(not saiu, f"robo {codigo}: NADA do caminho do aviso (avisos_erro, Telegram) com esta assinatura → {resumo_log(saiu) if saiu else 'nada'}")
+            linhas = None
+            for tentativa in range(4):
+                try:
+                    linhas = [_campos(x.get("m")) for x in consulta(
+                        PRINCIPAL_REF, "SELECT event_message AS m FROM logs WHERE source = 'function_logs' AND log_attributes['event_type'] = 'Log' "
+                        f"AND position(event_message, '\"ref\":\"{sig}\"') > 0", desde, agora() + _UM_MINUTO)]
+                    break
+                except LogsFora as e:
+                    print(f"   (logs: {e}; de novo em 20 s)", flush=True)
+                    time.sleep(20)
+            saiu = [l for l in (linhas or []) if l.get("codigo") in DO_AVISO]
+            o.ok(linhas is not None and not saiu,
+                 f"robo {codigo}: NADA do caminho do aviso nos logs com esta assinatura → "
+                 + ("os logs não responderam" if linhas is None else (resumo_log(saiu) if saiu else "nada")))
+            n = sql_principal(f"select count(*)::int as n from {S}.avisos_erro where assinatura = '{sig}'")[0]["n"]
+            o.ok(n == 0, f"robo {codigo}: 0 linha na {S}.avisos_erro com esta assinatura ({n})")
 
     # ── segredo errado ──
     if "segredo" in so:
