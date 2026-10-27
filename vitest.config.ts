@@ -20,8 +20,15 @@ export default defineConfig({
       VITE_PRINCIPAL_SCHEMA: "staging",
     },
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // T4: o teste da cadeia de verdade do registro do service worker (src/lib/registroDoServiceWorker.test.ts) carrega o registro do
+    // vite-plugin-pwa e o workbox-window pelo Vite (o ESM do navegador); fora daqui o Node pegaria o UMD do workbox-window
+    server: { deps: { inline: ["vite-plugin-pwa", "workbox-window"] } },
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      // T4: o módulo virtual do vite-plugin-pwa (o registro do service worker, src/lib/registroDoServiceWorker.ts) só existe no vite.config.ts
+      "virtual:pwa-register": path.resolve(__dirname, "./src/test/pwaRegistroFalso.ts"),
+    },
   },
 });

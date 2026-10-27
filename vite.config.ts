@@ -158,6 +158,10 @@ export default defineConfig(({ mode }) => {
     arquivoDeSaude(env),
     VitePWA({
       registerType: "autoUpdate",
+      // T4 (27/10/2026): o registro do service worker é do app (src/lib/registroDoServiceWorker.ts, chamado no main.tsx: com catch e SÓ no
+      // site; no APK e no AAB nem entra no bundle). null = o plugin não põe o registerSW.js no index.html (que registrava sem catch) e o
+      // sw.js continua com o skipWaiting/clientsClaim do autoUpdate (com `false` eles sairiam).
+      injectRegister: null,
       workbox: {
         // 6 MB: o wasm do SQLite (PowerSync) tem até 2,3 MB
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
