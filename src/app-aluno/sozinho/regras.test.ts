@@ -32,7 +32,7 @@ const FIM_TESTE = "2026-10-07T02:59:59Z";
 
 function matricula(p: Partial<MatriculaApp> = {}): MatriculaApp {
   return {
-    paciente_id: "p1", ativo: true, plano: "app_treino", plano_nome: "Treino", valor: 29.9, modulos: ["treino"], objetivo: "emagrecer",
+    paciente_id: "p1", ativo: true, plano: "app_treino", plano_nome: "Treino", valor: 20, modulos: ["treino"], objetivo: "emagrecer",
     teste_de: "2026-09-29T15:00:00Z", teste_ate: FIM_TESTE, pago_ate: FIM_TESTE, pausada: false, encerrada_em: null, encerrada_motivo: null,
     aguardando: false, assinatura: null, ...p,
   };
@@ -41,7 +41,7 @@ function matricula(p: Partial<MatriculaApp> = {}): MatriculaApp {
 function resumo(p: Partial<ResumoMatricula> = {}): ResumoMatricula {
   return {
     paciente_id: "p1", conta_id: "app", conta_nome: "Physiq", recebimento_modo: "mercadopago", bloquear_inadimplente: true, tem_chave: false,
-    profissional: "Physiq", mensalidade_valor: 29.9, plano_nome: "Treino", pausada: false, pago_ate: FIM_TESTE, desde: FIM_TESTE, aguardando: false,
+    profissional: "Physiq", mensalidade_valor: 20, plano_nome: "Treino", pausada: false, pago_ate: FIM_TESTE, desde: FIM_TESTE, aguardando: false,
     assinatura_ativa: false, abertas: [], aguardando_avulsas: 0, app: true, teste_ate: FIM_TESTE, plano_codigo: "app_treino", ...p,
   };
 }
@@ -53,13 +53,13 @@ describe("objetivos e planos do app", () => {
   it("normaliza o meu_plano_app (planos com preço, matrícula e com_profissional)", () => {
     const r = normalizarMeuPlano({
       teste_dias: 7,
-      planos: [{ codigo: "app_treino", nome: "Treino", valor: "29.90", modulos: ["treino"] }, { codigo: "x" }],
-      matricula: { paciente_id: "p1", ativo: true, plano: "app_treino", valor: 29.9, modulos: ["treino", "lixo"], objetivo: "emagrecer", assinatura: { status: "authorized", valor: "29.9" } },
+      planos: [{ codigo: "app_treino", nome: "Treino", valor: "20.00", modulos: ["treino"] }, { codigo: "x" }],
+      matricula: { paciente_id: "p1", ativo: true, plano: "app_treino", valor: 20, modulos: ["treino", "lixo"], objetivo: "emagrecer", assinatura: { status: "authorized", valor: "20" } },
       com_profissional: false,
     });
-    expect(r.planos).toEqual([{ codigo: "app_treino", nome: "Treino", valor: 29.9, modulos: ["treino"], descricao: null }]);
+    expect(r.planos).toEqual([{ codigo: "app_treino", nome: "Treino", valor: 20, modulos: ["treino"], descricao: null }]);
     expect(r.matricula?.modulos).toEqual(["treino"]);
-    expect(r.matricula?.assinatura).toEqual({ status: "authorized", valor: 29.9, proximo_vencimento: null });
+    expect(r.matricula?.assinatura).toEqual({ status: "authorized", valor: 20, proximo_vencimento: null });
     expect(normalizarMeuPlano(null)).toEqual({ teste_dias: 7, planos: [], matricula: null, com_profissional: false });
   });
   it("último dia grátis de quem entra hoje = hoje + N (São Paulo)", () => {
@@ -90,11 +90,11 @@ describe("situação do plano do app", () => {
 
 describe("mensalidade do app na cobrança da W6 (faixa, trava e chip)", () => {
   it("nos dias grátis é 'teste' (não é inadimplente) e a faixa é a violeta com Assinar", () => {
-    const e = estadoDaMensalidade({ valor: 29.9, pausada: false, pago_ate: FIM_TESTE, desde: FIM_TESTE, teste_ate: FIM_TESTE }, AGORA);
+    const e = estadoDaMensalidade({ valor: 20, pausada: false, pago_ate: FIM_TESTE, desde: FIM_TESTE, teste_ate: FIM_TESTE }, AGORA);
     expect(e.situacao).toBe("teste");
     expect(inadimplente(resumo(), AGORA)).toBe(false);
     const f = faixaDoAluno([resumo()], AGORA);
-    expect(f).toMatchObject({ tom: "t", titulo: "Seus dias grátis vão até 06/10", subtitulo: "Depois, R$ 29,90/mês · Pix ou cartão", acao: "Assinar", podePagar: true });
+    expect(f).toMatchObject({ tom: "t", titulo: "Seus dias grátis vão até 06/10", subtitulo: "Depois, R$ 20,00/mês · Pix ou cartão", acao: "Assinar", podePagar: true });
     expect(faixaDoAluno([resumo()], new Date("2026-10-06T15:00:00Z"))?.titulo).toBe("Seu teste grátis termina hoje");
   });
   it("acabou o teste sem pagar: vencida → a conta do app bloqueia (R15) e a faixa fica vermelha", () => {
@@ -107,7 +107,7 @@ describe("mensalidade do app na cobrança da W6 (faixa, trava e chip)", () => {
   });
   it("pagou: em dia, sem trava", () => {
     const r = resumo({ pago_ate: "2026-11-07T02:59:59Z" });
-    expect(estadoDaMensalidade({ valor: 29.9, pausada: false, pago_ate: r.pago_ate, desde: r.desde, teste_ate: r.teste_ate }, AGORA).situacao).toBe("em_dia");
+    expect(estadoDaMensalidade({ valor: 20, pausada: false, pago_ate: r.pago_ate, desde: r.desde, teste_ate: r.teste_ate }, AGORA).situacao).toBe("em_dia");
     expect(travaDoInadimplente(r, new Date("2026-10-20T12:00:00Z"))).toBe(false);
   });
   it("matrícula de profissional (sem teste) segue a régua da W6", () => {

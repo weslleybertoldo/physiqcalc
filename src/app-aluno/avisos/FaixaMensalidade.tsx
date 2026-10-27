@@ -11,12 +11,12 @@ import { ehProfissional } from "@/nucleo/situacao";
  * Faixa do topo da aba de abertura (tela 1; spec 4.3 e A13 — o popup diário "Parcela pendente" do Calc virou esta faixa):
  * "Sua mensalidade vence em 3 dias · R$ 249,00 · Pix ou cartão · Pagar", de 7 dias antes até pagar; vencida fica vermelha.
  * Vale também para a cobrança avulsa do Nutri. Aguardando a confirmação do profissional, some. Profissional não vê.
- * W7b: o aluno sem profissional vê a faixa violeta nos dias grátis ("Seus dias grátis vão até 06/10 · Depois, R$ 29,90/mês ·
+ * W7b: o aluno sem profissional vê a faixa violeta nos dias grátis ("Seus dias grátis vão até 06/10 · Depois, R$ 20,00/mês ·
  * Assinar"); acabou o teste sem pagar, a vermelha (e a trava do inadimplente — a conta do app bloqueia).
  * W1 da loja: na versão da Google Play a conta do app não entra na faixa (sem preço nem "Assinar" até o Play Billing da W6); a
  * mensalidade e as cobranças do PROFISSIONAL continuam iguais.
  * play-W6: a conta do app com a assinatura da Google Play viva não tem faixa (renova sozinha; travada, a trava fala) — no site e na loja.
- * Na loja com a Play valendo (usePlayDaLoja), a conta do app volta à faixa com o preço da PLAY ("Depois, R$ 29,90/mês · Google Play ·
+ * Na loja com a Play valendo (usePlayDaLoja), a conta do app volta à faixa com o preço da PLAY ("Depois, R$ 20,00/mês · Google Play ·
  * Assinar") e o botão abre Meu plano com a folha da oferta.
  */
 export default function FaixaMensalidade() {

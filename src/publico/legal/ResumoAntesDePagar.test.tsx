@@ -27,7 +27,7 @@ describe("ResumoAntesDePagar", () => {
     expect(negritos(resumo)).toContain("Profissional:");
     expect(negritos(resumo)).not.toContain("Aluno sem profissional:");
     expect(texto(resumo)).toContain("14 dias grátis no Treino + Nutrição");
-    expect(texto(resumo)).not.toContain("R$ 29,90");
+    expect(texto(resumo)).not.toContain("R$ 20,00");
   });
 
   it.each(["sem-profissional", "meu-plano"] as const)("%s: o bloco do plano do app (preços e 7 dias), sem o do profissional", (tela) => {
@@ -35,7 +35,7 @@ describe("ResumoAntesDePagar", () => {
     expect(resumo).not.toBeNull();
     expect(negritos(resumo)).toContain("Aluno sem profissional:");
     expect(negritos(resumo)).not.toContain("Profissional:");
-    expect(texto(resumo)).toContain("Treino, R$ 29,90 por mês, ou Treino + Alimentação, R$ 49,90 por mês");
+    expect(texto(resumo)).toContain("Treino, R$ 20,00 por mês, ou Treino + Alimentação, R$ 35,00 por mês");
     expect(texto(resumo)).toContain("7 dias grátis, sem cartão");
   });
 

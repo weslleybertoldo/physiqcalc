@@ -84,7 +84,7 @@ function tabelaDoApp(): string {
 
 const EMAIL = `[${VENDEDOR.email}](mailto:${VENDEDOR.email})`;
 const NOMES_DOS_PLANOS = juntar(PLANOS.map((p) => NOME_PLANO[p]), "ou");
-/** "Treino, **R$ 29,90 por mês**, ou Treino + Alimentação, **R$ 49,90 por mês**" */
+/** "Treino, **R$ 20,00 por mês**, ou Treino + Alimentação, **R$ 35,00 por mês**" */
 const PLANOS_DO_APP = PLANOS_APP_PADRAO.map((p) => `${p.nome}, **${reais(p.valor)} por mês**`).join(", ou ");
 
 export const TERMOS_DE_ASSINATURA = `

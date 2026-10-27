@@ -68,7 +68,7 @@ export default function Configuracoes() {
     ["Preço de entrada", `Só Treino ou Só Nutrição ${moeda(preco("treino", "f10")?.valor_mensal)} · Treino + Nutrição ${moeda(preco("treino_nutricao", "f10")?.valor_mensal)} (1–10 alunos)`],
     ["Legado PhysiqCalc", `Preço de hoje e ${d.tolerancia_legado_calc} dias de tolerância até trocar de plano`],
     ["Legado PhysiqNutri", "Preço de hoje (R$ 80) e Pix de +30 dias até trocar de plano"],
-    ["Aluno sem profissional", `${d.config.aluno_do_app?.teste_dias ?? 7} dias grátis · Treino R$ 29,90 · Treino + Alimentação R$ 49,90 · sem pagar o app fecha`],
+    ["Aluno sem profissional", `${d.config.aluno_do_app?.teste_dias ?? 7} dias grátis · Treino R$ 20,00 · Treino + Alimentação R$ 35,00 · sem pagar o app fecha`],
     ["Entrar com senha", `${limite.erros_ate_bloquear ?? 4} erros → espera de ${(limite.escada_min ?? [1, 5, 15, 30, 60]).join(", ")} min → bloqueia de vez · captcha ${limite.captcha === false ? "desligado" : "ligado"}`],
     ["Adesão", "Não existe mais (para ninguém)"],
   ] : [];

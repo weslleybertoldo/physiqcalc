@@ -51,7 +51,7 @@ export function SeletorPlano({
   aoMudar: (codigo: string) => void;
   carregando?: boolean;
   rotulo?: string;
-  /** play-W6: na loja com a Play, o preço que a PLAY devolve por plano ("R$ 29,90/mês") — o do banco não aparece */
+  /** play-W6: na loja com a Play, o preço que a PLAY devolve por plano ("R$ 20,00/mês") — o do banco não aparece */
   precos?: Partial<Record<string, string>>;
 }) {
   return (

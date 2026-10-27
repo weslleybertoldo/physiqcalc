@@ -1,5 +1,5 @@
-// Physiq W7b — regras PURAS do aluno SEM profissional (a "conta do app"): objetivos, planos do app (Treino R$ 29,90 · Treino +
-// Alimentação R$ 49,90 — os preços vêm do banco), teste grátis, treinos prontos (o que vira treino próprio do aluno) e pratos
+// Physiq W7b — regras PURAS do aluno SEM profissional (a "conta do app"): objetivos, planos do app (Treino R$ 20,00 · Treino +
+// Alimentação R$ 35,00 desde o T2 do play-W6, 26/10/2026 — os preços vêm do banco), teste grátis, treinos prontos (o que vira treino próprio do aluno) e pratos
 // prontos (TACO: kcal e macros calculados pelo banco). Sem rede e sem banco: testadas em regras.test.ts.
 import { normalizarVistaPlay, type VistaPlay } from "./playRegras";
 import { dataBR, diaSP, diasEntre, hojeSP, reais } from "@/financeiro/regras";
@@ -50,22 +50,24 @@ export interface PlanoApp {
 export const TESTE_DIAS_APP = 7;
 
 /**
- * hml-11 (H-28): os 2 planos do app como a seed os carrega (planos_aluno da conta do app em
- * supabase-principal/migrations/20260929190000_w07b_sem_profissional.sql). O preço que vale é o do banco (o master muda sem deploy,
- * W27); os Termos de assinatura (src/publico/legal/assinatura.ts) escrevem os preços daqui, e o teste deles confere com a seed.
+ * hml-11 (H-28): os 2 planos do app como o banco os carrega (planos_aluno da conta do app: a seed em
+ * supabase-principal/migrations/20260929190000_w07b_sem_profissional.sql + os preços do T2 do play-W6 em
+ * 20261027020000_precos_app_20_35.sql — pedido dele, 26/10/2026: Treino R$ 20,00 · Treino + Alimentação R$ 35,00). O preço que vale é
+ * o do banco (o master muda sem deploy, W27); os Termos de assinatura (src/publico/legal/assinatura.ts) escrevem os preços daqui, e o
+ * teste deles confere com a seed + a migration dos preços.
  */
 export const PLANOS_APP_PADRAO: readonly PlanoApp[] = [
   {
     codigo: PLANO_TREINO,
     nome: "Treino",
-    valor: 29.9,
+    valor: 20,
     modulos: ["treino"],
     descricao: "Monte o seu treino ou use um treino pronto pelo seu objetivo. Funciona sem internet.",
   },
   {
     codigo: PLANO_COMPLETO,
     nome: "Treino + Alimentação",
-    valor: 49.9,
+    valor: 35,
     modulos: ["treino", "nutricao"],
     descricao: "Tudo do Treino e mais os pratos prontos pelo seu objetivo, com calorias e macros.",
   },
@@ -196,7 +198,7 @@ export function situacaoDoPlano(m: MatriculaApp | null, agora: Date = new Date()
   return { tipo: "vencida", texto: `Venceu em ${dataBR(dia)}`, tom: "r", dias };
 }
 
-/** "R$ 29,90/mês" */
+/** "R$ 20,00/mês" */
 export function precoMensal(v: number | null | undefined): string {
   return v === null || v === undefined ? "—" : `${reais(v)}/mês`;
 }

@@ -188,10 +188,14 @@ describe("Termos de assinatura × o que o app cobra", () => {
     expect(tudo).toContain(`${TESTE_DIAS} dias grátis no Treino + Nutrição, com até ${TESTE_MAX_ALUNOS} alunos`);
   });
 
-  it("os 2 planos do app e os dias grátis: PLANOS_APP_PADRAO e TESTE_DIAS_APP, iguais à seed da W7b", () => {
+  it("os 2 planos do app e os dias grátis: PLANOS_APP_PADRAO e TESTE_DIAS_APP, iguais à seed da W7b + os preços do T2 (26/10/2026)", () => {
     const seed = readFileSync(resolve(RAIZ, "supabase-principal/migrations/20260929190000_w07b_sem_profissional.sql"), "utf8");
+    // o T2 do play-W6 (pedido dele, 26/10/2026): Treino R$ 20,00 · Treino + Alimentação R$ 35,00 — a migration que muda o preço da seed
+    const precos = readFileSync(resolve(RAIZ, "supabase-principal/migrations/20261027020000_precos_app_20_35.sql"), "utf8");
+    expect(PLANOS_APP_PADRAO.map((p) => [p.codigo, p.valor])).toEqual([["app_treino", 20], ["app_treino_alimentacao", 35]]);
     for (const p of PLANOS_APP_PADRAO) {
-      expect(seed).toContain(`('${p.codigo}', '${p.nome}', ${p.valor.toFixed(2)}::numeric`);
+      expect(seed).toContain(`('${p.codigo}', '${p.nome}', `);
+      expect(precos).toContain(`   set valor = ${p.valor.toFixed(2)}\n where pa.conta_id = {schema}.conta_do_app() and pa.codigo = '${p.codigo}' and pa.valor = `);
       expect(tudo).toContain(`${p.nome} | ${reais(p.valor)} |`);
       expect(tudo).toContain(`${p.nome}, ${reais(p.valor)} por mês`);
     }

@@ -53,7 +53,7 @@ const dia = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString();
 const ESTADO = { disponivel: true, matricula: { id: "pa", ativo: true }, assinatura: null, automatica_mp: false };
 const resumoApp = (): ResumoMatricula => ({
   paciente_id: "pa", conta_id: "app", conta_nome: "Physiq", recebimento_modo: "mercadopago", bloquear_inadimplente: true, tem_chave: false,
-  profissional: "Physiq", mensalidade_valor: 29.9, plano_nome: "Treino", pausada: false, pago_ate: dia(-2), teste_ate: dia(-2), desde: dia(-9),
+  profissional: "Physiq", mensalidade_valor: 20, plano_nome: "Treino", pausada: false, pago_ate: dia(-2), teste_ate: dia(-2), desde: dia(-9),
   aguardando: false, assinatura_ativa: false, abertas: [], aguardando_avulsas: 0, app: true, plano_codigo: "app_treino",
 } as ResumoMatricula);
 

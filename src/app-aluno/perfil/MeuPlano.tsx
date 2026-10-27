@@ -28,7 +28,7 @@ import { useOnline } from "@/ui/premium/useOnline";
 const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
 
 /**
- * Perfil › Meu plano (W7b — aluno sem profissional): o plano do app (Treino R$ 29,90 · Treino + Alimentação R$ 49,90 — os
+ * Perfil › Meu plano (W7b — aluno sem profissional): o plano do app (Treino R$ 20,00 · Treino + Alimentação R$ 35,00 desde 26/10/2026 — os
  * preços da tabela do banco), a situação (grátis até, em dia, vencido), Pagar/Assinar (Perfil › Pagamentos, a cobrança da W6
  * pelo Mercado Pago do Physiq), trocar de plano (vale a partir do próximo pagamento; a cobrança automática acompanha) e o
  * objetivo (as listas de treinos e pratos prontos). Vincular a um profissional pelo código no Perfil encerra o plano do app.

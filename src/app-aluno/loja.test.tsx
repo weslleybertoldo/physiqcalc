@@ -85,7 +85,7 @@ function resumo(p: Partial<ResumoMatricula> = {}): ResumoMatricula {
 }
 const resumoApp = (p: Partial<ResumoMatricula> = {}) =>
   resumo({ paciente_id: "pa", conta_id: "app", conta_nome: "Physiq", recebimento_modo: "mercadopago", bloquear_inadimplente: true, tem_chave: false,
-    profissional: "Physiq", mensalidade_valor: 29.9, plano_nome: "Treino", app: true, ...p });
+    profissional: "Physiq", mensalidade_valor: 20, plano_nome: "Treino", app: true, ...p });
 
 /** matrícula de Perfil › Pagamentos */
 function matriculaPag(p: Partial<MatriculaPagamentos> = {}): MatriculaPagamentos {
@@ -102,7 +102,7 @@ const matriculaApp = (p: Partial<MatriculaPagamentos> = {}) =>
     paciente_id: "pa", nome: "Rafael Moura",
     conta: { id: "app", nome: "Physiq", modo: "mercadopago", bloquear: true, profissional: "Physiq", app: true },
     chave: null,
-    mensalidade: { valor: 29.9, plano_id: null, plano: "Treino", pausada: false, pago_ate: dia(5), desde: dia(-2), coberta: true, teste_ate: dia(5), plano_codigo: "app_treino" },
+    mensalidade: { valor: 20, plano_id: null, plano: "Treino", pausada: false, pago_ate: dia(5), desde: dia(-2), coberta: true, teste_ate: dia(5), plano_codigo: "app_treino" },
     ...p,
   });
 const status = (matriculas: MatriculaPagamentos[]): StatusAluno => ({
@@ -110,12 +110,12 @@ const status = (matriculas: MatriculaPagamentos[]): StatusAluno => ({
 });
 
 const PLANOS_APP = [
-  { codigo: "app_treino", nome: "Treino", valor: 29.9, modulos: ["treino"], descricao: null },
-  { codigo: "app_treino_alimentacao", nome: "Treino + Alimentação", valor: 49.9, modulos: ["treino", "nutricao"], descricao: null },
+  { codigo: "app_treino", nome: "Treino", valor: 20, modulos: ["treino"], descricao: null },
+  { codigo: "app_treino_alimentacao", nome: "Treino + Alimentação", valor: 35, modulos: ["treino", "nutricao"], descricao: null },
 ];
 const meuPlano = (m: Record<string, unknown> = {}) => ({
   teste_dias: 7, planos: PLANOS_APP, com_profissional: false,
-  matricula: { paciente_id: "pa", ativo: true, plano: "app_treino", plano_nome: "Treino", valor: 29.9, modulos: ["treino"], objetivo: "ganhar_massa",
+  matricula: { paciente_id: "pa", ativo: true, plano: "app_treino", plano_nome: "Treino", valor: 20, modulos: ["treino"], objetivo: "ganhar_massa",
     teste_de: dia(-2), teste_ate: dia(5), pago_ate: dia(5), pausada: false, encerrada_em: null, encerrada_motivo: null, aguardando: false, assinatura: null, ...m },
 });
 
@@ -221,7 +221,7 @@ describe("trava do pagamento (GatePagamentoPendente) — W1 da loja", () => {
     h.resumo = [vencidaApp()];
     montar(<GatePagamentoPendente><div>o app</div></GatePagamentoPendente>);
     expect(screen.getByRole("button", { name: /Pagar/ })).toBeInTheDocument();
-    expect(screen.getByText(/Assine o plano Treino por R\$\s?29,90\/mês/)).toBeInTheDocument();
+    expect(screen.getByText(/Assine o plano Treino por R\$\s?20,00\/mês/)).toBeInTheDocument();
   });
 
   it("na loja, a trava do PROFISSIONAL continua com 'Pagar' — e é ela que aparece quando as duas travam", () => {
@@ -285,12 +285,12 @@ describe("Perfil › Meu plano (conta do app) — W1 da loja", () => {
     expect(document.querySelector("[data-pagina-meu-plano]")!.textContent).not.toMatch(NA_LOJA_NAO);
   });
 
-  it("no site: o valor, 'Assinar por R$ 29,90/mês' e o 'Trocar de plano' (igual a hoje)", async () => {
+  it("no site: o valor, 'Assinar por R$ 20,00/mês' e o 'Trocar de plano' (igual a hoje)", async () => {
     h.plano.mockResolvedValue(meuPlano());
     montar(<MeuPlano />, "/perfil/meu-plano");
-    expect(await screen.findByRole("button", { name: /Assinar por R\$\s?29,90\/mês/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Assinar por R\$\s?20,00\/mês/ })).toBeInTheDocument();
     expect(document.querySelector("[data-meu-plano-trocar]")).not.toBeNull();
-    expect(document.querySelector("[data-meu-plano-valor]")!.textContent).toMatch(/R\$\s?29,90\/mês/);
+    expect(document.querySelector("[data-meu-plano-valor]")!.textContent).toMatch(/R\$\s?20,00\/mês/);
   });
 });
 
@@ -325,7 +325,7 @@ describe("Perfil › Pagamentos — W1 da loja", () => {
   it("na loja, a cobrança automática que já existe na conta do app continua cancelável (sem o valor)", async () => {
     h.loja = true;
     h.status.mockResolvedValue(status([matriculaApp({
-      assinatura: { id: "a1", status: "authorized", valor: 29.9, proximo_vencimento: dia(5), sandbox: true, simulada: true, init_point: null },
+      assinatura: { id: "a1", status: "authorized", valor: 20, proximo_vencimento: dia(5), sandbox: true, simulada: true, init_point: null },
     })]));
     montar(<Pagamentos />, "/perfil/pagamentos");
     const card = await waitFor(() => {
@@ -337,10 +337,10 @@ describe("Perfil › Pagamentos — W1 da loja", () => {
     expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
   });
 
-  it("no site, a conta do app tem 'Assinar · R$ 29,90/mês' e o ?pagar=mensalidade abre o Mercado Pago (igual a hoje)", async () => {
+  it("no site, a conta do app tem 'Assinar · R$ 20,00/mês' e o ?pagar=mensalidade abre o Mercado Pago (igual a hoje)", async () => {
     h.status.mockResolvedValue(status([matriculaApp()]));
     montar(<Pagamentos />, "/perfil/pagamentos?pagar=mensalidade");
-    expect(await screen.findByRole("button", { name: /Assinar · R\$\s?29,90\/mês/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Assinar · R\$\s?20,00\/mês/ })).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector("[data-pagar-mp]")).not.toBeNull());
   });
 });

@@ -255,7 +255,7 @@ export interface Faixa {
  */
 /** play-W6: o que a faixa da conta do app usa na loja com a Play valendo. */
 export interface OpcoesFaixa {
-  /** o preço da PLAY do plano do app ("R$ 29,90"): o subtítulo fala da Google Play e o botão é "Assinar" */
+  /** o preço da PLAY do plano do app ("R$ 20,00"): o subtítulo fala da Google Play e o botão é "Assinar" */
   precoDaPlay?: (r: ResumoMatricula) => string | null;
 }
 
@@ -273,7 +273,7 @@ export function faixaDoAluno(lista: ResumoMatricula[] | null | undefined, agora:
       : r.profissional && !pagar ? `combine com ${r.profissional.split(" ")[0]}` : formasDePagar(r.recebimento_modo, r.tem_chave);
     const e = estadoDaMensalidade({ valor: r.mensalidade_valor, pausada: r.pausada, pago_ate: r.pago_ate, desde: r.desde, aguardando: r.aguardando, teste_ate: r.teste_ate }, agora);
     if (e.situacao === "teste") {
-      // W7b: aluno sem profissional nos dias grátis — "Seus dias grátis vão até 06/10 · Depois, R$ 29,90/mês · Pix ou cartão · Assinar"
+      // W7b: aluno sem profissional nos dias grátis — "Seus dias grátis vão até 06/10 · Depois, R$ 20,00/mês · Pix ou cartão · Assinar"
       candidatas.push({
         tom: "t",
         titulo: e.dias !== null && e.dias <= 0 ? "Seu teste grátis termina hoje" : e.dias === 1 ? "Seu teste grátis termina amanhã" : `Seus dias grátis vão até ${dataBR(e.vence)}`,

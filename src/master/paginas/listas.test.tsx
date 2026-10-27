@@ -156,7 +156,7 @@ describe("hml-14d — Master › Integrações", () => {
 
 describe("hml-14d — Master › App do aluno", () => {
   const aluno = (i: number): AlunoDoApp => ({
-    paciente_id: `p${i}`, user_id: null, nome: `Aluno App ${i}`, email: `a${i}@x.com`, ativo: true, plano: "treino", plano_nome: "Treino", valor: 29.9,
+    paciente_id: `p${i}`, user_id: null, nome: `Aluno App ${i}`, email: `a${i}@x.com`, ativo: true, plano: "treino", plano_nome: "Treino", valor: 20,
     objetivo: null, teste_ate: null, pago_ate: null, pausada: null, assinatura: null, encerrada_em: null, encerrada_motivo: null, criado_em: "2026-10-01T10:00:00Z",
   });
 

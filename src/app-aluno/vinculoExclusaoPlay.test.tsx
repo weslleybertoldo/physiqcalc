@@ -17,7 +17,7 @@ vi.mock("@/nucleo/vinculo", async (orig) => ({
   previaDoCodigo: async () => ({
     ok: true, erro: null, jaEra: false, contaNome: "Consultoria Ferreira", modulos: ["treino"],
     profissional: { nome: "Lucas Ferreira", foto_url: null, tipo_perfil: "personal", papeis: ["personal"] },
-    app: { valor: 29.9, plano: "Treino", assinatura_ativa: false },
+    app: { valor: 20, plano: "Treino", assinatura_ativa: false },
   }),
 }));
 vi.mock("@/painel/configuracoes/excluirConta/api", async (orig) => {

@@ -42,7 +42,7 @@ beforeEach(() => {
   h.nativo = true;
   h.situacao = { sem_nada: true, nome: "Ana Souza" };
   h.plano.mockReset();
-  h.plano.mockResolvedValue({ teste_dias: 7, planos: [{ codigo: "app_treino", nome: "Treino", valor: 29.9, modulos: ["treino"], descricao: null }], matricula: null, com_profissional: false });
+  h.plano.mockResolvedValue({ teste_dias: 7, planos: [{ codigo: "app_treino", nome: "Treino", valor: 20, modulos: ["treino"], descricao: null }], matricula: null, com_profissional: false });
 });
 
 describe("Entrar — W1 da loja", () => {

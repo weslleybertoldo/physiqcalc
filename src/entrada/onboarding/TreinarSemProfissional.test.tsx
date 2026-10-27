@@ -48,8 +48,8 @@ import BoasVindas from "../BoasVindas";
 const PLANOS = {
   teste_dias: 7,
   planos: [
-    { codigo: "app_treino", nome: "Treino", valor: 29.9, modulos: ["treino"], descricao: "Monte o seu treino ou use um treino pronto." },
-    { codigo: "app_treino_alimentacao", nome: "Treino + Alimentação", valor: 49.9, modulos: ["treino", "nutricao"], descricao: "Mais os pratos prontos." },
+    { codigo: "app_treino", nome: "Treino", valor: 20, modulos: ["treino"], descricao: "Monte o seu treino ou use um treino pronto." },
+    { codigo: "app_treino_alimentacao", nome: "Treino + Alimentação", valor: 35, modulos: ["treino", "nutricao"], descricao: "Mais os pratos prontos." },
   ],
   matricula: null,
   com_profissional: false,
@@ -81,7 +81,7 @@ describe("Boas-vindas › Treinar sem profissional (W7b)", () => {
     // do "Tenho um código" — espera os 3 antes de conferir a ordem (hml-14d, integração)
     const cartoes = () => [...document.querySelectorAll("[data-onboarding]")].map((e) => e.getAttribute("data-onboarding"));
     await waitFor(() => expect(cartoes()).toEqual(["TenhoCodigo", "TreinarSemProfissional", "CriarConta"]), { timeout: 3000 });
-    expect(await screen.findByText(/a partir de R\$ 29,90\/mês/)).toBeInTheDocument();
+    expect(await screen.findByText(/a partir de R\$ 20,00\/mês/)).toBeInTheDocument();
     expect(screen.getByText("7 DIAS GRÁTIS")).toBeInTheDocument();
   });
 
@@ -89,7 +89,7 @@ describe("Boas-vindas › Treinar sem profissional (W7b)", () => {
     h.entrar.mockResolvedValue({ paciente_id: "p1", teste_ate: "2026-10-07T02:59:59Z", ja_era: false });
     abrir(<TreinarSemProfissional />);
     fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
-    expect(await screen.findByText("R$ 49,90/mês")).toBeInTheDocument();
+    expect(await screen.findByText("R$ 35,00/mês")).toBeInTheDocument();
     // sem objetivo: pede
     fireEvent.click(screen.getByRole("button", { name: /Começar os 7 dias grátis/ }));
     expect(await screen.findByText("Escolha o seu objetivo.")).toBeInTheDocument();
@@ -148,7 +148,7 @@ describe("Treinar sem profissional — hml-11: o resumo antes de começar só no
     expect(h.importouResumo).toBe(1);
     const comecar = screen.getByRole("button", { name: /Começar os 7 dias grátis/ });
     expect(resumo.compareDocumentPosition(comecar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(resumo.textContent?.replace(/\u00a0/g, " ")).toContain("Treino, R$ 29,90 por mês, ou Treino + Alimentação, R$ 49,90 por mês");
+    expect(resumo.textContent?.replace(/\u00a0/g, " ")).toContain("Treino, R$ 20,00 por mês, ou Treino + Alimentação, R$ 35,00 por mês");
     expect(resumo.textContent).not.toContain("Profissional:");
     expect(resumo.querySelector('[data-link-legal="assinatura"]')?.getAttribute("target")).toBe("_blank");
   });
@@ -158,7 +158,7 @@ describe("Treinar sem profissional — hml-11: o resumo antes de começar só no
     const Tela = await telaDoBuild("staging");
     abrir(<Tela />);
     fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
-    expect(await screen.findByText("R$ 49,90/mês", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("R$ 35,00/mês", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
     expect(h.importouResumo).toBe(0);
   });
@@ -167,7 +167,7 @@ describe("Treinar sem profissional — hml-11: o resumo antes de começar só no
     const Tela = await telaDoBuild("public");
     abrir(<Tela />);
     fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
-    expect(await screen.findByText("R$ 49,90/mês", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("R$ 35,00/mês", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Começar os 7 dias grátis/ })).toBeInTheDocument();
     expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
     expect(h.importouResumo).toBe(0);

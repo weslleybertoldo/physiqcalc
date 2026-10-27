@@ -30,13 +30,13 @@ vi.mock("@/publico/legal/ResumoAntesDePagar", async (orig) => {
 
 const dia = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString();
 const PLANOS_APP = [
-  { codigo: "app_treino", nome: "Treino", valor: 29.9, modulos: ["treino"], descricao: null },
-  { codigo: "app_treino_alimentacao", nome: "Treino + Alimentação", valor: 49.9, modulos: ["treino", "nutricao"], descricao: null },
+  { codigo: "app_treino", nome: "Treino", valor: 20, modulos: ["treino"], descricao: null },
+  { codigo: "app_treino_alimentacao", nome: "Treino + Alimentação", valor: 35, modulos: ["treino", "nutricao"], descricao: null },
 ];
 /** o aluno do app nos dias grátis (o Assinar aparece) */
 const meuPlano = (m: Record<string, unknown> = {}) => ({
   teste_dias: 7, planos: PLANOS_APP, com_profissional: false,
-  matricula: { paciente_id: "pa", ativo: true, plano: "app_treino", plano_nome: "Treino", valor: 29.9, modulos: ["treino"], objetivo: "ganhar_massa",
+  matricula: { paciente_id: "pa", ativo: true, plano: "app_treino", plano_nome: "Treino", valor: 20, modulos: ["treino"], objetivo: "ganhar_massa",
     teste_de: dia(-2), teste_ate: dia(5), pago_ate: dia(5), pausada: false, encerrada_em: null, encerrada_motivo: null, aguardando: false, assinatura: null, ...m },
 });
 
@@ -69,9 +69,9 @@ afterAll(() => {
 });
 
 describe("Perfil › Meu plano — hml-11: o resumo antes de pagar só no staging", () => {
-  it("staging: o resumo do plano do app logo acima do 'Assinar por R$ 29,90/mês', com os links", async () => {
+  it("staging: o resumo do plano do app logo acima do 'Assinar por R$ 20,00/mês', com os links", async () => {
     montar(await meuPlanoDoBuild("staging"));
-    const assinar = await screen.findByRole("button", { name: /Assinar por R\$\s?29,90\/mês/ }, { timeout: 5000 });
+    const assinar = await screen.findByRole("button", { name: /Assinar por R\$\s?20,00\/mês/ }, { timeout: 5000 });
     const resumo = await waitFor(
       () => {
         const el = document.querySelector('[data-resumo-antes-de-pagar="meu-plano"]');
@@ -83,13 +83,15 @@ describe("Perfil › Meu plano — hml-11: o resumo antes de pagar só no stagin
     expect(h.importouResumo).toBe(1);
     expect(resumo.compareDocumentPosition(assinar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(resumo.textContent).toContain("Aluno sem profissional:");
+    // T2 (26/10/2026): os preços do plano do app nos Termos (o PLANOS_APP_PADRAO) = os do banco (a Migration B)
+    expect(resumo.textContent?.replace(/\u00a0/g, " ")).toContain("Treino, R$ 20,00 por mês, ou Treino + Alimentação, R$ 35,00 por mês");
     expect(resumo.textContent).not.toContain("Profissional:");
     expect(resumo.querySelector('[data-link-legal="assinatura"]')?.getAttribute("href")).toBe("/assinatura");
     expect(resumo.querySelector('[data-link-legal="politica"]')?.getAttribute("href")).toBe("/privacidade");
   });
 
   it("staging, com a cobrança automática já ligada (sem o Pagar): sem o resumo", async () => {
-    h.plano.mockResolvedValue(meuPlano({ teste_ate: dia(-20), pago_ate: dia(10), assinatura: { status: "authorized", valor: 29.9, proximo_vencimento: dia(10) } }));
+    h.plano.mockResolvedValue(meuPlano({ teste_ate: dia(-20), pago_ate: dia(10), assinatura: { status: "authorized", valor: 20, proximo_vencimento: dia(10) } }));
     montar(await meuPlanoDoBuild("staging"));
     expect(await screen.findByText(/Cobrança automática no cartão ligada/, {}, { timeout: 5000 })).toBeInTheDocument();
     expect(document.querySelector("[data-meu-plano-pagar]")).toBeNull();
@@ -107,7 +109,7 @@ describe("Perfil › Meu plano — hml-11: o resumo antes de pagar só no stagin
 
   it("produção: sem o resumo (o import nem acontece) e o Assinar igual a hoje", async () => {
     montar(await meuPlanoDoBuild("public"));
-    expect(await screen.findByRole("button", { name: /Assinar por R\$\s?29,90\/mês/ }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Assinar por R\$\s?20,00\/mês/ }, { timeout: 5000 })).toBeInTheDocument();
     expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
     expect(h.importouResumo).toBe(0);
   });
