@@ -15,6 +15,7 @@ import { criarLog } from "../../supabase-principal/functions/_shared/log";
 import { avisarErro as avisarDoTreino } from "../../supabase/functions/_shared/avisar-erro";
 import { criarLog as criarLogDoTreino } from "../../supabase/functions/_shared/log";
 import { hashHex, segredoAceito } from "../../supabase-principal/functions/_shared/segredo-servidor";
+import { ROBOS, roboDoAgente } from "../../supabase-principal/functions/_shared/robos";
 // Token falso montado aqui: o literal no formato de token do Telegram dispara o secret scanning do GitHub.
 const TOKEN_TELEGRAM_FALSO = ["1234567890", "AA" + "Hk3j4k5l6m7n8o9p0qRsTuVwXyZ12345"].join(":");
 
@@ -362,6 +363,162 @@ describe('erro-avisar: {"teste":"excecao"} — a prova do D6 (catch → log.exce
     expect(avisos).toHaveLength(0);
     expect(enviados).toHaveLength(0);
     expect(linhas("excecao")).toHaveLength(0);
+  });
+});
+
+// ───────────────────────── T4: o robô não avisa ─────────────────────────
+
+// T4 (27/10/2026): os avisos falsos do grupo Physiq eram dos robôs do Google (a loja abre o site para conferir a página de privacidade
+// e a de excluir a conta; o Googlebot indexa). Os UA de verdade da erro-avisar em 7 dias (os logs da borda) + os da lista.
+const UA_ROBO: Record<string, [ua: string, codigo: string]> = {
+  "a loja (só o nome)": ["PlayStore-Google", "playstore_google"],
+  "a loja (Chrome + o nome no fim)": [
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.52 Safari/537.36 PlayStore-Google",
+    "playstore_google",
+  ],
+  "o UA inteiro 'Google'": ["Google", "google"],
+  "Googlebot (computador)": [
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/153.0.8010.36 Safari/537.36",
+    "googlebot",
+  ],
+  "Googlebot (celular)": [
+    "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.36 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    "googlebot",
+  ],
+  "Google-InspectionTool": ["Mozilla/5.0 (compatible; Google-InspectionTool/1.0;)", "google_inspectiontool"],
+  "AdsBot-Google": ["AdsBot-Google (+http://www.google.com/adsbot.html)", "adsbot_google"],
+  "Mediapartners-Google": ["Mediapartners-Google", "mediapartners_google"],
+  "APIs-Google": ["APIs-Google (+https://developers.google.com/webmasters/APIs-Google.html)", "apis_google"],
+  "FeedFetcher-Google": ["FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)", "feedfetcher_google"],
+  "Google-Read-Aloud": [
+    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36 (compatible; Google-Read-Aloud; +https://support.google.com/webmasters/answer/1061943)",
+    "google_read_aloud",
+  ],
+  "Storebot-Google": [
+    "Mozilla/5.0 (X11; Linux x86_64; Storebot-Google/1.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "storebot_google",
+  ],
+  bingbot: [
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
+    "bingbot",
+  ],
+};
+// gente de verdade (e os nossos testes): nunca some — inclusive o celular de teste do Google na revisão, que não tem marca de robô
+const UA_GENTE: Record<string, string> = {
+  "o celular de teste do Google (Android 11, WebView do Chrome 90)":
+    "Mozilla/5.0 (Linux; Android 11; OnePlus8Pro Build/QKR1.191246.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/90.0.4430.210 Mobile Safari/537.36",
+  "Android 11 com o Chrome 90": "Mozilla/5.0 (Linux; Android 11; SM-A515F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36",
+  "iPhone (Safari)":
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+  "o app do Google (GSA)":
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.6778.135 Mobile Safari/537.36 GSA/15.49.38.29.arm64",
+  "'Google' no nome do aparelho": "Mozilla/5.0 (Linux; Android 12; Google Pixel 4a) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+  "'bot' no nome do aparelho": "Mozilla/5.0 (Linux; Android 9; CUBOT_X19) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36",
+  "Samsung Internet":
+    "Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/23.0 Chrome/115.0.0.0 Mobile Safari/537.36",
+  "Edge no Windows":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+  "o Playwright dos nossos E2E (HeadlessChrome)":
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.12 Safari/537.36",
+  "sem UA": "",
+};
+
+describe("T4: a lista de robôs (_shared/robos.ts) — num lugar só, sem diferenciar maiúsculas", () => {
+  it.each(Object.entries(UA_ROBO))("%s → o código do robô", (_nome, [ua, codigo]) => {
+    expect(roboDoAgente(ua)).toBe(codigo);
+    expect(roboDoAgente(ua.toUpperCase())).toBe(codigo);
+    expect(roboDoAgente(ua.toLowerCase())).toBe(codigo);
+  });
+
+  it.each(Object.entries(UA_GENTE))("%s → não é robô (o aviso sai)", (_nome, ua) => {
+    expect(roboDoAgente(ua)).toBeNull();
+  });
+
+  it("sem o cabeçalho → não é robô; o UA 'Google' com espaço em volta continua robô; 'Google' DENTRO de um UA de navegador não é", () => {
+    expect(roboDoAgente(null)).toBeNull();
+    expect(roboDoAgente(undefined)).toBeNull();
+    expect(roboDoAgente("  Google  ")).toBe("google");
+    expect(roboDoAgente("Google Chrome")).toBeNull();
+  });
+
+  it("a lista tem os robôs do pedido, cada um com um código no formato do log ([a-z0-9_]) e sem repetir", () => {
+    const nomes = ROBOS.map((r) => r.marca.toLowerCase());
+    for (const pedido of ["PlayStore-Google", "Googlebot", "Google-InspectionTool", "AdsBot-Google", "Mediapartners-Google", "APIs-Google",
+      "FeedFetcher-Google", "Google-Read-Aloud", "Storebot-Google", "bingbot"]) {
+      expect(nomes).toContain(pedido.toLowerCase());
+    }
+    for (const r of ROBOS) expect(r.codigo).toMatch(/^[a-z0-9_]{1,48}$/);
+    expect(new Set(nomes).size).toBe(nomes.length);
+    expect(new Set(ROBOS.map((r) => r.codigo)).size).toBe(ROBOS.length);
+  });
+});
+
+describe("T4: a erro-avisar com UA de robô responde como sucesso SEM avisar (nem avisos_erro, nem Telegram)", () => {
+  const comUa = (ua: string, o: Parameters<typeof pedido>[0] = {}) =>
+    pedido({ origin: STAGING, schema: "staging", corpo: ERRO_DA_TELA, ...o, cabecalhos: { "User-Agent": ua, ...(o.cabecalhos ?? {}) } });
+
+  it.each(Object.entries(UA_ROBO))("%s → 204, nada em segundo plano e 1 linha info aviso_de_robo (sem o UA)", async (_nome, [ua, codigo]) => {
+    const { deps, enviados, pendentes, avisos } = montarDeps();
+    const r = await atenderPedido(comUa(ua), deps);
+    expect(r.status).toBe(204);
+    expect(await r.text()).toBe("");
+    expect(r.headers.get("Access-Control-Allow-Origin")).toBe(STAGING);
+    expect(enviados).toHaveLength(0);
+    expect(pendentes).toHaveLength(0);
+    expect(avisos).toHaveLength(0);
+    const limpo = lerAviso(ERRO_DA_TELA, "navegador")!;
+    expect(linhas("aviso_de_robo")).toEqual([
+      { nivel: "info", funcao: "erro-avisar", codigo: "aviso_de_robo", schema: "staging", acao: "tela", ref: assinatura(limpo), resultado: codigo },
+    ]);
+    expect(saidas.map((s) => s.metodo)).toEqual(["log"]);
+    expect(tudoQueFoiProLog()).not.toContain(ua.trim());
+    expect(tudoQueFoiProLog()).not.toMatch(/Mozilla|maria|@/);
+  });
+
+  it.each(Object.entries(UA_GENTE))("%s → 204 e o aviso sai (aluno real nunca some)", async (_nome, ua) => {
+    const { deps, enviados, pendentes } = montarDeps();
+    const r = await atenderPedido(comUa(ua), deps);
+    expect(r.status).toBe(204);
+    expect(pendentes).toHaveLength(1);
+    expect(enviados).toHaveLength(1);
+    expect(enviados[0].schema).toBe("staging");
+    expect(linhas("aviso_de_robo")).toHaveLength(0);
+  });
+
+  it("vale nos 2 schemas e para as 4 origens do app (tela, promessa, funcao, sync)", async () => {
+    const { deps, enviados } = montarDeps();
+    const corpos = [
+      { origem: "promessa", mensagem: "Rejected", rota: "/privacidade", plataforma: "site" },
+      { origem: "funcao", funcao: "pos-login", status: 503, rota: "/", plataforma: "loja" },
+      { origem: "sync", mensagem: "tb_x put 23505", plataforma: "app" },
+    ];
+    for (const corpo of corpos) expect((await atenderPedido(comUa("PlayStore-Google", { schema: "public", corpo }), deps)).status).toBe(204);
+    expect((await atenderPedido(comUa("Googlebot/2.1"), deps)).status).toBe(204);
+    expect(enviados).toHaveLength(0);
+    expect(linhas("aviso_de_robo").map((l) => [l.schema, l.acao])).toEqual([
+      ["public", "promessa"],
+      ["public", "funcao"],
+      ["public", "sync"],
+      ["staging", "tela"],
+    ]);
+  });
+
+  it("o pedido do robô continua conferido antes: Origin fora da lista → 403, corpo inválido → 400, x-schema ruim → 400 (nada sai)", async () => {
+    const { deps, enviados } = montarDeps();
+    expect((await atenderPedido(comUa("PlayStore-Google", { origin: "https://evil.example" }), deps)).status).toBe(403);
+    expect((await atenderPedido(comUa("PlayStore-Google", { corpo: { origem: "hacker" } }), deps)).status).toBe(400);
+    expect((await atenderPedido(comUa("PlayStore-Google", { schema: "producao" }), deps)).status).toBe(400);
+    expect(enviados).toHaveLength(0);
+    expect(linhas("aviso_de_robo")).toHaveLength(0);
+  });
+
+  it("o Treino (servidor, com o segredo) nunca é robô: com qualquer UA o aviso sai", async () => {
+    const { deps, enviados } = montarDeps();
+    const corpo = { origem: "servidor", funcao: "trocar-token", codigo: "excecao" };
+    const r = await atenderPedido(pedido({ segredo: SEGREDO, schema: "staging", corpo, cabecalhos: { "User-Agent": "Googlebot/2.1" } }), deps);
+    expect(r.status).toBe(204);
+    expect(enviados).toHaveLength(1);
+    expect(linhas("aviso_de_robo")).toHaveLength(0);
   });
 });
 

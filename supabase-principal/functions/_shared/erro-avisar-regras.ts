@@ -10,6 +10,9 @@
 //                  lista SEGREDO_AVISO_ERRO_ACEITOS; aceitou → log segredo_aceito com acao aviso_erro e resultado lista);
 //                  x-schema public|staging; corpo ≤ 2 KB; 204 quando aceita. {"teste":"excecao"} só com o segredo E no
 //                  staging: lança dentro do try e o catch final chama log.excecao (a prova do D6: catch → aviso).
+//                  T4 (27/10/2026): o pedido do navegador com user-agent de ROBÔ (_shared/robos.ts: a Google Play conferindo o
+//                  site, o Googlebot…) também recebe 204 — o app não tenta de novo —, mas NÃO avisa: nada em avisos_erro nem no
+//                  Telegram, só 1 linha info aviso_de_robo (o código do robô, sem o UA). Gente de verdade (sem marca de robô) avisa.
 // Quem liga as peças de verdade: _shared/avisar-erro.ts (banco, Telegram e variáveis) e erro-avisar/index.ts.
 import {
   assinatura,
@@ -30,6 +33,7 @@ import {
 } from "./erros.ts";
 import type { CamposLog, Log } from "./log.ts";
 import { origemPermitida } from "./login-regras.ts";
+import { roboDoAgente } from "./robos.ts";
 // hml-14: o "tempo esgotou" do AbortSignal.timeout vem do ajudante comum (não conta como falha de rede).
 import { tempoEsgotado } from "./tempo.ts";
 
@@ -361,6 +365,12 @@ export async function atenderPedido(req: Request, deps: DepsPedido): Promise<Res
     }
     const erro = lerAviso(corpo, via);
     if (!erro) return recusar(400, "aviso_invalido", schema);
+    // T4: o robô não avisa (o pedido já foi conferido igual ao de todo mundo). Só no caminho do navegador: o Treino prova com o segredo.
+    const robo = via === "navegador" ? roboDoAgente(req.headers.get("user-agent")) : null;
+    if (robo) {
+      deps.log.info({ codigo: "aviso_de_robo", schema, acao: erro.origem, ref: assinatura(erro), resultado: robo });
+      return responder(204);
+    }
     deps.emSegundoPlano(deps.enviar(erro, schema));
     return responder(204);
   } catch (e) {

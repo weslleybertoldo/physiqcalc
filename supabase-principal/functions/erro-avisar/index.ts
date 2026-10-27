@@ -14,6 +14,8 @@
 //     "função erro-avisar · excecao · ação teste_hml10".
 // 204 aceito (o aviso sai em segundo plano) · 400 schema_invalido | json_invalido | aviso_invalido · 403 segredo_invalido |
 // origem_recusada | so_staging · 405 metodo · 413 corpo_grande · 500 erro_interno.
+// T4 (27/10/2026): user-agent de robô (_shared/robos.ts: PlayStore-Google, Googlebot…) no pedido do navegador → 204 SEM avisar
+// (nada em avisos_erro nem no Telegram; 1 linha info aviso_de_robo).
 //
 // verify_jwt = false (o erro pode acontecer antes do login). Publicar:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions erro-avisar false

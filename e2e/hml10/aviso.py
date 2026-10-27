@@ -7,9 +7,13 @@ Casos (--so, separados por vírgula; sem --so, todos os que o schema permite):
   options   OPTIONS → 200 com o CORS de sempre (Allow-Origin = a Origin do ambiente, POST, content-type/apikey/x-schema, Vary)
   origem    Origin estranha → 403 origem_recusada; sem Origin e sem segredo → 403 origem_recusada
   grande    corpo de 3 KB (Origin boa) → 413 corpo_grande
-  valido    [staging] o que o app manda (Origin do staging, x-schema staging) → 204 + log aviso_enviado com o message_id; o MESMO
+  valido    [staging] o que o app manda (Origin do staging, x-schema staging), com o UA de um CELULAR sem marca de robô (T4: o
+            Android 11 com o WebView do Chrome 90, o celular de teste do Google) → 204 + log aviso_enviado com o message_id; o MESMO
             de novo → 204 + log segurado (a trava: 1 igual a cada 10 min)
             [public] SÓ com --p6 (P6: 1 aviso de teste em produção; sem o "de novo")
+  robo      T4 (27/10/2026): o mesmo pedido do app com o UA de 4 robôs do Google (os dos logs: PlayStore-Google puro e no fim do
+            Chrome, o UA "Google" e o Googlebot) → 204 + log aviso_de_robo (o código do robô) e NENHUM aviso_enviado/segurado
+            daquela assinatura: nada vai ao grupo. Roda nos 2 schemas (não manda aviso)
   segredo   servidor com o segredo errado (sem Origin e com a Origin boa) → 403 segredo_invalido (não usa o segredo certo)
   treino    [staging] servidor com o segredo certo: o POST igual ao do supabase/functions/_shared/avisar-erro.ts (o caminho do
             Treino) → 204 + log aviso_enviado
@@ -52,7 +56,21 @@ from _logs_supabase import LogsFora, Saida, agora, consulta  # noqa: E402
 URL = f"{PRINCIPAL_URL}/functions/v1/erro-avisar"
 ORIGEM = {"staging": "https://physiqcalc-staging.vercel.app", "public": "https://physiqcalc.com.br"}
 ORIGEM_ESTRANHA = "https://site-estranho.example"
-CASOS = ("options", "origem", "grande", "valido", "segredo", "treino", "excecao")
+CASOS = ("options", "origem", "grande", "valido", "robo", "segredo", "treino", "excecao")
+# T4: o celular sem marca de robô (o de teste do Google na revisão: Android 11, WebView do Chrome 90) e os robôs dos logs da erro-avisar
+UA_CELULAR = ("Mozilla/5.0 (Linux; Android 11; OnePlus8Pro Build/QKR1.191246.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 "
+              "Chrome/90.0.4430.210 Mobile Safari/537.36")
+UAS_ROBO = (
+    ("PlayStore-Google", "playstore_google"),
+    ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.52 Safari/537.36 PlayStore-Google",
+     "playstore_google"),
+    ("Google", "google"),
+    ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.36 Mobile "
+     "Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "googlebot"),
+)
+# o que NÃO pode aparecer na assinatura de um robô: o caminho do aviso (avisos_erro → Telegram)
+DO_AVISO = {"aviso_enviado", "segurado", "telegram_recusou", "aviso_falhou", "aviso_desligado", "aviso_sem_configuracao",
+            "trava_do_banco_fora", "topico_invalido", "sem_topico"}
 ITEM_DO_COFRE = "Physiq — SEGREDO_AVISO_ERRO (hml-16c)"
 ROTA, LUGAR = "/erro-teste", "sonda do aviso"
 # o que o servidor manda ao aviso no {"teste":"excecao"} (log.excecao: "<name> · <msg>", erro-avisar-regras.ts)
@@ -106,8 +124,11 @@ def erro_de(r: object) -> str:
     return str(r.get("erro")) if isinstance(r, dict) else str(r)[:40]
 
 
-def post(corpo: object, *, schema: str | None, origem: str | None = None, segredo: str | None = None) -> tuple[int, object]:
+def post(corpo: object, *, schema: str | None, origem: str | None = None, segredo: str | None = None,
+         ua: str | None = None) -> tuple[int, object]:
     h: dict[str, str] = {}
+    if ua is not None:
+        h["User-Agent"] = ua  # T4: sem ele, vai o UA do e2e (_comum.UA)
     if schema:
         h["x-schema"] = schema
     if origem:
@@ -269,17 +290,44 @@ def main() -> int:
             sig = assinatura("tela", rota=ROTA, lugar=LUGAR, mensagem=valido["mensagem"])
             rotulo = "valido (P6)" if S == "public" else "valido"
             desde = agora() - _UM_MINUTO
-            st, r = post(valido, schema=S, origem=ORIGEM[S])
-            o.ok(st == 204, f"{rotulo}: o que o app manda (Origin {ORIGEM[S]}, x-schema {S}) → {st}")
+            st, r = post(valido, schema=S, origem=ORIGEM[S], ua=UA_CELULAR)
+            o.ok(st == 204, f"{rotulo}: o que o app manda (Origin {ORIGEM[S]}, x-schema {S}, UA de celular sem marca de robô) → {st}")
             if st == 204:
                 confere_aviso(rotulo, sig, desde, {"aviso_enviado"}, "aviso_enviado com o message_id")
             if S == "staging":
                 if a.sem_logs:
                     time.sleep(5)  # o 1º aviso registra na trava antes do 2º chegar
-                st, r = post(valido, schema=S, origem=ORIGEM[S])
+                st, r = post(valido, schema=S, origem=ORIGEM[S], ua=UA_CELULAR)
                 o.ok(st == 204, f"valido de novo (o mesmo corpo): aceito → {st}")
                 if st == 204:
                     confere_aviso("valido de novo", sig, desde, {"segurado"}, "segurado (trava: 1 igual a cada 10 min)")
+
+    # ── robo (T4: o robô do Google não avisa) ──
+    if "robo" in so:
+        letras = "ghjkmnpqrstuvwxyz"
+        enviados: list[tuple[str, str, str]] = []
+        desde = agora() - _UM_MINUTO
+        for i, (ua, codigo) in enumerate(UAS_ROBO):
+            corpo = dict(valido, mensagem=f"teste do robo {letras[i]} marca {marca}")
+            assert TEXTO_LIMPO.match(corpo["mensagem"]), "a mensagem da sonda tem de sair igual da limpeza"
+            sig = assinatura("tela", rota=ROTA, lugar=LUGAR, mensagem=corpo["mensagem"])
+            st, r = post(corpo, schema=S, origem=ORIGEM[S], ua=ua)
+            o.ok(st == 204, f"robo {codigo} ({ua[:40]}…): o pedido do app com o UA do robô → {st} (o app não tenta de novo)")
+            if st == 204:
+                enviados.append((sig, codigo, ua))
+        for sig, codigo, _ua in enviados:
+            if a.sem_logs:
+                o.atencao(f"robo {codigo}: log não conferido (--sem-logs) · 🔑 {sig}")
+                continue
+            linhas = esperar_log(sig, desde, {"aviso_de_robo"}, a.espera)
+            do_robo = [l for l in linhas if l.get("codigo") == "aviso_de_robo"]
+            o.ok(len(do_robo) == 1 and do_robo[0].get("resultado") == codigo and do_robo[0].get("schema") == S,
+                 f"robo {codigo}: 1 log aviso_de_robo ({S}) · 🔑 {sig} → {resumo_log(do_robo)}")
+            # o caminho do aviso roda em segundo plano DEPOIS do 204: dá um tempo e confere de novo que nada saiu
+            time.sleep(5)
+            linhas = esperar_log(sig, desde, set(), 0)
+            saiu = [l for l in linhas if l.get("codigo") in DO_AVISO]
+            o.ok(not saiu, f"robo {codigo}: NADA do caminho do aviso (avisos_erro, Telegram) com esta assinatura → {resumo_log(saiu) if saiu else 'nada'}")
 
     # ── segredo errado ──
     if "segredo" in so:
