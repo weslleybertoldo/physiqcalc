@@ -1,55 +1,52 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { estaMinimizado, guardarMinimizado, useListaMinimizada } from "./minimizado";
+import { beforeEach, describe, expect, it } from "vitest";
+import { useListaMinimizada } from "./minimizado";
 
-// Tocar no nome do treino minimiza os exercícios (pedido do Weslley, 22/10/2026): guardado no aparelho por dia e por treino do dia.
-const CHAVE = "physiq_treino_minimizado";
-const guardado = () => JSON.parse(localStorage.getItem(CHAVE) ?? "null");
-
+// A aba Treino abre SEMPRE com o treino minimizado e finalizar o treino minimiza (pedido do Weslley, 26/10/2026); tocar no nome
+// mostra/esconde (22/10/2026). Nada fica guardado no aparelho.
 beforeEach(() => {
   localStorage.clear();
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date(2026, 9, 22, 9, 0, 0)); // quinta 22/10/2026
-});
-afterEach(() => {
-  vi.useRealTimers();
 });
 
-describe("a lista dos exercícios minimizada (guardada no aparelho)", () => {
-  it("vale só para o dia e o treino do dia minimizados; mostrar de novo apaga a marca", () => {
-    guardarMinimizado("2026-10-22", 0, true);
-    expect(estaMinimizado("2026-10-22", 0)).toBe(true);
-    expect(estaMinimizado("2026-10-22", 1)).toBe(false);
-    expect(estaMinimizado("2026-10-23", 0)).toBe(false);
-    guardarMinimizado("2026-10-22", 0, false);
-    expect(estaMinimizado("2026-10-22", 0)).toBe(false);
-    expect(guardado()).toEqual({});
+describe("a lista dos exercícios do treino", () => {
+  it("nasce minimizada; tocar alterna; montar de novo (trocar de aba, reabrir o app) volta minimizada; nada vai pro aparelho", () => {
+    const um = renderHook(() => useListaMinimizada("2026-10-26", 0));
+    expect(um.result.current[0]).toBe(true);
+    act(() => um.result.current[1](false));
+    expect(um.result.current[0]).toBe(false);
+    act(() => um.result.current[1](true));
+    act(() => um.result.current[1](false));
+    um.unmount();
+    const dois = renderHook(() => useListaMinimizada("2026-10-26", 0));
+    expect(dois.result.current[0]).toBe(true);
+    expect(localStorage.length).toBe(0);
   });
 
-  it("guarda só os últimos 14 dias: a marca mais velha sai na próxima gravação", () => {
-    guardarMinimizado("2026-10-07", 0, true, new Date(2026, 9, 7, 9));
-    guardarMinimizado("2026-10-08", 0, true, new Date(2026, 9, 8, 9));
-    guardarMinimizado("2026-10-22", 1, true);
-    expect(Object.keys(guardado())).toEqual(["2026-10-08|0", "2026-10-22|1"]);
-  });
-
-  it("lixo na chave do aparelho: nada minimizado e a próxima gravação conserta", () => {
-    localStorage.setItem(CHAVE, "{quebrado");
-    expect(estaMinimizado("2026-10-22", 0)).toBe(false);
-    guardarMinimizado("2026-10-22", 0, true);
-    expect(guardado()).toEqual({ "2026-10-22|0": true });
-  });
-
-  it("useListaMinimizada: alterna e guarda; trocar de dia relê o que ficou guardado daquele dia", () => {
-    guardarMinimizado("2026-10-21", 0, true);
-    const { result, rerender } = renderHook(({ dia }) => useListaMinimizada(dia, 0), { initialProps: { dia: "2026-10-22" } });
+  it("o treino em andamento (o cronômetro rodando nele) nasce com a lista à mostra", () => {
+    const { result } = renderHook(() => useListaMinimizada("2026-10-26", 0, { emAndamento: true }));
     expect(result.current[0]).toBe(false);
-    act(() => result.current[1](true));
+  });
+
+  it("finalizar o treino minimiza (concluído vira sim); mostrar de novo o treino concluído vale", () => {
+    const { result, rerender } = renderHook(({ concluido }) => useListaMinimizada("2026-10-26", 0, { emAndamento: true, concluido }), {
+      initialProps: { concluido: false },
+    });
+    expect(result.current[0]).toBe(false);
+    rerender({ concluido: true });
     expect(result.current[0]).toBe(true);
-    expect(estaMinimizado("2026-10-22", 0)).toBe(true);
+    // só a virada para concluído minimiza: o mesmo "concluído" de novo não fecha o que o aluno abriu
     act(() => result.current[1](false));
-    expect(estaMinimizado("2026-10-22", 0)).toBe(false);
-    rerender({ dia: "2026-10-21" });
+    rerender({ concluido: true });
+    expect(result.current[0]).toBe(false);
+  });
+
+  it("trocar de dia ou de treino do dia volta ao padrão", () => {
+    const { result, rerender } = renderHook(({ dia, slot }) => useListaMinimizada(dia, slot), { initialProps: { dia: "2026-10-26", slot: 0 } });
+    act(() => result.current[1](false));
+    rerender({ dia: "2026-10-27", slot: 0 });
+    expect(result.current[0]).toBe(true);
+    act(() => result.current[1](false));
+    rerender({ dia: "2026-10-27", slot: 1 });
     expect(result.current[0]).toBe(true);
   });
 });

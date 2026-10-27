@@ -291,6 +291,7 @@ function TreinoAberto({ userId }: { userId: string }) {
             descansoPadrao={t.descansoPadrao}
             mapaPresc={t.mapaPresc}
             podeComecar={!cron.estado}
+            emAndamento={!!cron.estado && cron.estado.dateKey === t.selecionada && cron.estado.grupoNome === slot.grupo!.nome}
             aoComecar={() => {
               if (iniciarTreinoSeParado(t.selecionada, slot.grupo!.nome)) toast.success("Treino iniciado");
             }}

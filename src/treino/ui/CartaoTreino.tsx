@@ -7,7 +7,7 @@ import { Chip } from "@/ui/premium/Chip";
  * Card do treino (tela 2, `.wk` com a borda de luz): nome, "TREINO A", exercícios · séries · academia, "2 de 5 exercícios
  * feitos", a % e a barra. Foto de fundo pelo grupo muscular (P29), bem suave para não brigar com o texto. Embaixo, só quando
  * cabe: "Começar treino" (antes de começar) ou o selo de concluído com "Compartilhar". Tocar no nome minimiza/mostra os
- * exercícios (a setinha ao lado do nome; pedido do Weslley, 22/10/2026).
+ * exercícios (a setinha ao lado do nome; pedido do Weslley, 22/10/2026); a aba abre com eles minimizados (26/10/2026).
  */
 export function CartaoTreino({
   nome,

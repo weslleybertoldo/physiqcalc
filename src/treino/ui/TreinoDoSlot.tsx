@@ -44,6 +44,8 @@ export interface PropsSlot {
   mapaPresc: Map<string, Prescricao & PrescricaoTreino>;
   podeComecar: boolean;
   aoComecar: () => void;
+  /** o cronômetro rodando NESTE treino: a lista abre à mostra (sem ele, o treino abre minimizado) */
+  emAndamento?: boolean;
   /** OK numa série: nome, nº, exercício, se foi a última do treino, a próxima série e o descanso prescrito (NF1) */
   aoConcluirSerie: (a: { nome: string; numero: number; exercicioId: string; ultima: boolean; depois: string | null; descanso: number | null }) => void;
   aoMudarConcluido: (concluido: boolean) => void;
@@ -70,7 +72,7 @@ export function TreinoDoSlot(p: PropsSlot) {
   const [comAnotacao, setComAnotacao] = useState<Set<string>>(new Set());
   const [trocar, setTrocar] = useState<{ ex: Exercicio; origemId: string; pessoal: boolean; substituindo: InfoSubstituicao | null } | null>(null);
   const [remover, setRemover] = useState<{ ex: Exercicio; origemId: string } | null>(null);
-  const [minimizado, setMinimizado] = useListaMinimizada(p.dateKey, slot.slot_idx);
+  const [minimizado, setMinimizado] = useListaMinimizada(p.dateKey, slot.slot_idx, { emAndamento: p.emAndamento, concluido: p.concluido });
   // o minimizado vale mesmo sem exercício (ao reabrir a aba os exercícios chegam um instante depois: a lista nasce fechada, sem
   // abrir e fechar) e, minimizada, o nome continua tocável — sem exercício nada a minimizar, mas nunca preso escondido (os
   // Removidos ficam dentro da lista)
