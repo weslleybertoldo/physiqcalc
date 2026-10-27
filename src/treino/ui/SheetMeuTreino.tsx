@@ -3,6 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, X } fro
 import { usePowerSync } from "@powersync/react";
 import { toast } from "sonner";
 import { agruparPorBloco, combinaBusca, getBloco, nomeDoBloco, type BlocoMuscular } from "@/lib/gruposMusculares";
+import { novoId } from "@/lib/novoId";
 import { cn } from "@/lib/utils";
 import { Botao } from "@/ui/premium/Botao";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
@@ -148,7 +149,7 @@ export function SheetMeuTreino({
         await db.execute("UPDATE tb_grupos_treino_usuario SET nome = ? WHERE id = ? AND user_id = ?", [nome.trim(), editar.id, userId]);
         await db.execute("DELETE FROM tb_grupos_exercicios_usuario WHERE grupo_usuario_id = ? AND user_id = ?", [editar.id, userId]);
       } else {
-        id = crypto.randomUUID();
+        id = novoId();
         await db.execute("INSERT INTO tb_grupos_treino_usuario (id, user_id, nome, created_at) VALUES (?, ?, ?, ?)", [id, userId, nome.trim(), agora]);
       }
       for (let i = 0; i < escolhidos.length; i++) {

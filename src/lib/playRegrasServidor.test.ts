@@ -497,6 +497,64 @@ describe("o defer na sincronia: a resposta 5xx é INCERTA (a conferência das co
   });
 });
 
+describe("o reconhecer que o Google recusa (T4): 409 concurrentUpdate é aviso — a outra sincronia reconhece; o resto segue erro", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  // a compra nova, ativa e ainda NÃO reconhecida; sem adiar_ate (o defer fica de fora deste caso)
+  const db = {
+    rpc: vi.fn(async () => ({ data: { ok: true, nova: true, estado: "ativa", matricula_ativa: true, expira_em: "2026-11-16T10:00:00Z",
+      adiar_ate: null, adiada_em: null, reconhecida_em: null }, error: null })),
+  };
+  function googleFalso(status: number, corpo: unknown) {
+    return vi.fn(async (url: unknown) => {
+      const u = String(url);
+      if (u.endsWith("/token")) return resposta(200, { access_token: "acesso", expires_in: 3600 });
+      if (u.endsWith(":acknowledge")) return resposta(status, corpo);
+      return resposta(200, getV2());
+    }) as unknown as typeof fetch;
+  }
+  const log = () => ({ info: vi.fn(), aviso: vi.fn(), erro: vi.fn(), excecao: vi.fn() });
+  const codigos = (f: ReturnType<typeof vi.fn>) => f.mock.calls.map((c) => (c[0] as { codigo: string }).codigo);
+  const erroDoGoogle = (code: number, status: string, reason: string) => ({ error: { code, status, message: "x", errors: [{ reason, message: "x" }] } });
+
+  async function sincronizarCom(status: number, corpo: unknown) {
+    vi.stubGlobal("Deno", { env: { get: (n: string) => (n === "PLAY_SERVICE_ACCOUNT" ? JSON.stringify(conta()) : undefined) } });
+    const l = log();
+    const r = await sincronizar({ db: db as never, schema: "staging", log: l as never, buscar: googleFalso(status, corpo) }, TOKEN,
+      { pacienteId: MATRICULA, assinatura: lerAssinaturaV2(getV2()), reconhecer: true });
+    return { r, l };
+  }
+
+  it("409 concurrentUpdate (2 sincronias da mesma compra no mesmo segundo) → log.aviso play_reconhecer_falhou, nenhum log.erro", async () => {
+    const { r, l } = await sincronizarCom(409, erroDoGoogle(409, "ABORTED", "concurrentUpdate"));
+    expect(r.ok).toBe(true);
+    expect(r.ok && r.reconheceu).toBe(false);
+    expect(l.erro).not.toHaveBeenCalled();
+    expect(l.aviso).toHaveBeenCalledWith({ codigo: "play_reconhecer_falhou", schema: "staging", ref: MATRICULA, status: 409,
+      resultado: "concorrente", externo: { google_erro: "concurrentUpdate" } });
+  });
+
+  it.each([
+    ["409 com outro motivo", 409, erroDoGoogle(409, "ABORTED", "conflict")],
+    ["409 sem corpo", 409, null],
+    ["400", 400, erroDoGoogle(400, "INVALID_ARGUMENT", "invalid")],
+    ["404", 404, erroDoGoogle(404, "NOT_FOUND", "purchaseTokenNotFound")],
+    ["500", 500, erroDoGoogle(500, "INTERNAL", "backendError")],
+  ])("%s → segue log.erro play_reconhecer_falhou (avisa)", async (_nome, status, corpo) => {
+    const { r, l } = await sincronizarCom(status, corpo);
+    expect(r.ok).toBe(true);
+    expect(codigos(l.erro)).toEqual(["play_reconhecer_falhou"]);
+    expect(codigos(l.aviso)).not.toContain("play_reconhecer_falhou");
+  });
+
+  it("204 → reconhecida (o caminho de sempre: play_reconhecida, sem aviso nem erro)", async () => {
+    const { r, l } = await sincronizarCom(204, null);
+    expect(r.ok && r.reconheceu).toBe(true);
+    expect(codigos(l.info)).toContain("play_reconhecida");
+    expect(l.erro).not.toHaveBeenCalled();
+    expect(l.aviso).not.toHaveBeenCalled();
+  });
+});
+
 describe("a ressincronia do estado conta só a viva que MUDOU (a conferência das correções, DECISÃO 07:08)", () => {
   afterEach(() => vi.unstubAllGlobals());
   const PASSADO = "2026-10-10T10:00:00.000Z";

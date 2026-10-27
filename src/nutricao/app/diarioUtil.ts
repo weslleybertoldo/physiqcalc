@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import type { TomChip } from "@/ui/premium/Chip";
+import { novoId } from "@/lib/novoId";
 import { semAcento } from "./numeros";
 
 // Physiq W11 — diário alimentar do lado do aluno, portado do PhysiqNutri (src/lib/diarioUtil.ts, W30 do Nutri): as refeições do
@@ -94,7 +95,7 @@ export function mimeDaFotoDiario(f: ArquivoInfo): string {
 }
 export const extensaoDoMime = (mime: string): string => MIMES_DIARIO[mime] ?? "jpg";
 /** Objeto no bucket `diario`: <nutricionista_id>/<paciente_id>/<uuid>.<ext> — o mesmo padrão que a política do Storage e a função exigem. */
-export function nomeObjeto(nutriId: string, pacienteId: string, mime: string, uuid: string = crypto.randomUUID()): string {
+export function nomeObjeto(nutriId: string, pacienteId: string, mime: string, uuid: string = novoId()): string {
   return `${nutriId}/${pacienteId}/${uuid}.${extensaoDoMime(mime)}`;
 }
 

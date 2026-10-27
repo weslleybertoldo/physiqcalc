@@ -2,6 +2,7 @@
 // funciona sem internet e sobe para o Banco do Treino quando a conexão voltar). As regras do que é gravado estão em
 // regras.ts (planoDeEscrita — testadas no Vitest).
 import type { AbstractPowerSyncDatabase } from "@powersync/web";
+import { novoId } from "@/lib/novoId";
 import { planoDeEscrita, type TreinoPronto } from "./regras";
 
 const MARCA = "physiq_treino_pronto_escolhido:";
@@ -33,7 +34,7 @@ export async function semanaDoAluno(db: AbstractPowerSyncDatabase, userId: strin
 export async function aplicarTreinoPronto(db: AbstractPowerSyncDatabase, t: TreinoPronto, userId: string): Promise<Array<{ id: string; nome: string; dias: string[] }>> {
   const agora = new Date().toISOString();
   const semana = await db.getAll<{ id: string }>("SELECT id FROM tb_semana_treinos WHERE user_id = ?", [userId]);
-  const { operacoes, grupos } = planoDeEscrita(t, userId, semana, { novoId: () => crypto.randomUUID(), agora });
+  const { operacoes, grupos } = planoDeEscrita(t, userId, semana, { novoId, agora });
   await db.writeTransaction(async (tx) => {
     for (const op of operacoes) await tx.execute(op.sql, op.params);
   });

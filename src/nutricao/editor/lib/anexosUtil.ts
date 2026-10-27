@@ -1,5 +1,6 @@
 // Physiq W16 — porta do PhysiqNutri (main ca9f66f, src/lib/anexosUtil.ts) para o banco principal. Só os imports mudaram; o resto é o do site antigo.
 import { format } from "date-fns";
+import { novoId } from "@/lib/novoId";
 import { semAcento } from "@/nutricao/editor/lib/alimentosUtil";
 
 // Regras PURAS dos anexos (W14): tipos/tamanho aceitos (mesma lista do bucket `anexos`), tamanho legível, nome seguro e
@@ -117,7 +118,7 @@ export function nomeSeguro(nome: string): string {
 }
 
 /** Path do objeto no bucket: `<nutricionista>/<paciente>/<uuid>-<nome-seguro>` — a 1ª pasta é a dona (policies do Storage). */
-export function montarPath(nutricionistaId: string, pacienteId: string, nome: string, uuid: string = crypto.randomUUID()): string {
+export function montarPath(nutricionistaId: string, pacienteId: string, nome: string, uuid: string = novoId()): string {
   return `${nutricionistaId}/${pacienteId}/${uuid}-${nomeSeguro(nome)}`;
 }
 

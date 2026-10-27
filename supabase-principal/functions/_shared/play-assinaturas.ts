@@ -208,6 +208,12 @@ export async function sincronizar(c: ContextoPlay, token: string, p: PedidoSincr
         reconheceu = true;
         resposta = await aplicar(c.db, { ...entrada, reconhecida: true });
         c.log.info({ codigo: "play_reconhecida", schema: c.schema, ref: p.pacienteId });
+      } else if (r.status === 409 && r.erro === "concurrentUpdate") {
+        // T4: 2 sincronias da MESMA compra no mesmo segundo (visto em 26/10 na compra de teste do staging): o Google aceita uma e recusa
+        // a outra com 409 concurrentUpdate. A que passou reconhece, e a conferência de hora em hora reconhece de novo se faltar — não é
+        // erro (não avisa). Outro motivo ou outro status segue erro.
+        c.log.aviso({ codigo: "play_reconhecer_falhou", schema: c.schema, ref: p.pacienteId, status: r.status, resultado: "concorrente",
+          externo: { google_erro: r.erro } });
       } else {
         c.log.erro({ codigo: "play_reconhecer_falhou", schema: c.schema, ref: p.pacienteId, status: r.status, externo: { google_erro: r.erro } });
       }
