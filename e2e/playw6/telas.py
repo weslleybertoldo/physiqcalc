@@ -8,7 +8,7 @@ publicadas do staging, como sempre. Conta de TESTE: w7b-treino (a matrícula do 
   --loja   o `build:loja` (o health.json diz "play") com a ponte Android de mentira da H2 (e2e/h2/ponte_android.js) + o plugin da Play de
            mentira (e2e/playw6/ponte_play.js: o preço da "Play" = R$ 31,90 / R$ 51,90, de propósito diferente do banco; a compra vai ao
            simulador pelo window.__playSim):
-             L1 a trava da conta do app → "Assinar pela Google Play · R$ 31,90/mês" (o preço da Play; nada do R$ 29,90 do banco)
+             L1 a trava da conta do app → "Assinar pela Google Play · R$ 31,90/mês" (o preço da Play; nada do R$ 20,00 do banco)
              L2 a folha da oferta: o preço por mês, "Renova todo mês até você cancelar.", "Cancele quando quiser na Google Play.", os Termos e
                 a Privacidade antes do botão
              L3 Assinar → o plugin compra → o servidor confere no "Google", grava, reconhece → a trava sai (o banco: ativa + 1 cobrança de
@@ -23,6 +23,13 @@ publicadas do staging, como sempre. Conta de TESTE: w7b-treino (a matrícula do 
              S2 Pagamentos: o cartão da Play, sem Pagar (o Pix do site o servidor recusa: o 409 do api.py)
              S3 a Play suspensa (a conferência de hora em hora traz o ON_HOLD — a play-conferir; o aviso do Google pelo Pub/Sub saiu em
                 22/10/2026) → a trava "Assinatura suspensa" com "Atualizar na Google Play"
+  --t2     o T2 do play-W6 (26/10/2026), os 2 builds na mesma rodada (prints em ~/projetos/physiqcalc-scratch/prints/playw6-t2/):
+             T2d o SITE, Meu plano da w7b-removido (nos dias grátis): "Assinar por R$ 20,00/mês" e a troca com R$ 20,00 / R$ 35,00
+             T2e o SITE: o resumo dos Termos antes de pagar (staging) com "Treino, R$ 20,00 por mês, ou Treino + Alimentação, R$ 35,00"
+             T2b a LOJA: a trava de "Assinar pela Google Play" na tela; o servidor muda por fora (a compra → a suspensão que a conferência
+                 traz); o app vai para o fundo e volta (o visibilitychange) → a trava RELÊ: "Assinatura suspensa" + "Atualizar na Google
+                 Play", SEM recarregar a página (o achado (b) do GATE 2)
+             T2a a LOJA: Meu plano com a troca para o Treino AGENDADA (o DEFERRED) → "até DD/MM · vira Treino em DD/MM" (o achado (a))
   --seco   sem rede: a ponte da Play (node --check), cada data-* que a rodada usa existe no src/ e o canal dos 2 builds (health.json)
   --limpar só desfaz uma rodada que caiu no meio (o arquivo de estado do api.py)
 Builds (antes, pelo um.sh): VITE_DISTRIBUICAO=play VITE_APP_NATIVO=1 npx vite build --outDir <tmp>/dist-loja --emptyOutDir · npx vite build
@@ -53,6 +60,7 @@ sys.path.insert(0, str(AQUI))
 import api as API  # noqa: E402
 
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "playw6"
+PRINTS_T2 = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "playw6-t2"
 TMP = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "playw6" / "tmp"
 DIST = {"loja": TMP / "dist-loja", "site": TMP / "dist-site"}
 PORTA = 5173
@@ -69,6 +77,9 @@ UA_ANDROID = ("Mozilla/5.0 (Linux; Android 14; 21121210G) AppleWebKit/537.36 (KH
 ARGS_NAVEGADOR = ["--no-sandbox", "--disable-dev-shm-usage"]
 # o que leva dado pessoal na tela: o resumo dos Termos antes de pagar (o nome e o CPF de quem vende, no build de staging) e as fotos
 BORRAR = "[data-resumo-antes-de-pagar] li:first-child, [role=dialog] img, [role=alertdialog] img"
+# T2: só o 1º item de cima do resumo (quem vende: o nome e o CPF) — o "li:first-child" de cima borrava também o 1º da lista de dentro (a
+# linha dos PREÇOS do plano do app, que o print do T2 precisa mostrar)
+BORRAR_T2 = "[data-resumo-antes-de-pagar] > div > ul > li:first-child, [role=dialog] img, [role=alertdialog] img"
 ENCAMINHADAS = {"play-compras": "compras", "pagamentos-aluno": "pag", "excluir-minha-conta": "excluir"}
 SELETORES = ("data-trava-app", "data-play-assinar", "data-folha-oferta-play", "data-play-preco", "data-play-linhas", "data-play-termos",
              "data-play-assinar-confirmar", "data-assinatura-play", "data-assinatura-play-titulo", "data-assinatura-play-detalhe",
@@ -222,7 +233,7 @@ def foto(c, nome: str) -> str:
     PRINTS.mkdir(parents=True, exist_ok=True)
     caminho = PRINTS / f"{ESTADO['prefixo']}_{nome}.png"
     try:
-        c.pg.add_style_tag(content=f"{BORRAR} {{ filter: blur(8px) !important; }}")
+        c.pg.add_style_tag(content=f"{ESTADO.get('borrar', BORRAR)} {{ filter: blur(8px) !important; }}")
     except Exception:  # noqa: BLE001 — navegando: o print sai assim mesmo (e é conferido)
         pass
     c.pg.wait_for_timeout(900)
@@ -265,7 +276,7 @@ def caso_loja(nav, mid: str) -> None:
     botao = texto_de(c, f'{trava} [data-play-assinar="app_treino"]')
     p.check(ok and "Assinar pela Google Play" in botao and "R$ 31,90/mês" in botao,
             f"[loja] L1 a trava da conta do app oferece a Google Play com o preço DELA ({botao!r})")
-    p.check("29,90" not in c.texto().replace("\xa0", " "), "[loja] L1 nada do preço do banco (R$ 29,90) na tela da loja")
+    p.check("20,00" not in c.texto().replace("\xa0", " "), "[loja] L1 nada do preço do banco (R$ 20,00) na tela da loja")
     medida = c.pg.evaluate("""(sel) => {
         const b = document.querySelector(sel);
         if (!b) return null;
@@ -287,7 +298,7 @@ def caso_loja(nav, mid: str) -> None:
     resumo = f'{folha} [data-resumo-antes-de-pagar="loja"]'
     tem_resumo = c.esperar(lambda: c.tem(resumo) and "Quem vende" in texto_de(c, resumo), 20)
     texto_folha = texto_de(c, folha)
-    p.check(tem_resumo and not re.search(r"Mercado Pago|\bPix\b|cart[ãa]o|29,90|49,90|bloquead", texto_folha, re.I),
+    p.check(tem_resumo and not re.search(r"Mercado Pago|\bPix\b|cart[ãa]o|20,00|35,00|bloquead", texto_folha, re.I),
             "[loja] L2 a folha da Play com o resumo dos Termos DA LOJA: sem o Mercado Pago, o Pix, o cartão, o preço do banco e o bloqueio")
     termos = c.pg.locator(f"{folha} [data-play-termos] a")
     hrefs = {termos.nth(i).get_attribute("href") for i in range(termos.count())}
@@ -411,6 +422,153 @@ def caso_site(nav, mid: str) -> None:
     c.fim()
 
 
+# ───────────────────────── o T2 (26/10/2026) ─────────────────────────
+
+def voltar_ao_app(c) -> None:
+    """O app vai para o fundo e volta (o visibilitychange hidden → visible, como a Play por cima e o voltar)."""
+    c.pg.evaluate("""() => {
+        const dar = (v) => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => v });
+                             document.dispatchEvent(new Event('visibilitychange')); };
+        dar('hidden'); dar('visible'); }""")
+
+
+def caso_t2_site(nav) -> None:
+    conta = "w7b-removido"   # nos dias grátis (o preparar): o Meu plano do site com o Assinar e a troca
+    c = abrir(nav, "site_t2", app=False)
+    sess = c.entrar(conta, "/perfil/meu-plano")
+    ESTADO["sessoes"].append(sess["access_token"])
+    c.fechar_avisos()
+    ok = c.esperar(lambda: c.tem("[data-meu-plano-pagar]") and c.tem("[data-meu-plano-trocar] [data-preco-plano]"), 60)
+    pagar = texto_de(c, "[data-meu-plano-pagar]")
+    precos = sorted(x.replace("\xa0", " ") for x in c.pg.locator("[data-meu-plano-trocar] [data-preco-plano]").all_inner_texts())
+    p.check(ok and re.search(r"R\$ (20|35),00/mês", pagar) is not None and precos == ["R$ 20,00/mês", "R$ 35,00/mês"]
+            and not re.search(r"29,90|49,90", c.texto().replace("\xa0", " ")),
+            f"[t2] T2d o site: Meu plano com o preço novo ({pagar!r}) e a troca com R$ 20,00 / R$ 35,00 ({precos}); nada de 29,90/49,90")
+    foto(c, "T2d_site_meu_plano_precos")
+    try:
+        c.pg.locator("[data-meu-plano-trocar]").first.scroll_into_view_if_needed()
+    except Exception:  # noqa: BLE001
+        pass
+    foto(c, "T2d_2_site_troca_de_plano_precos")
+    resumo = '[data-resumo-antes-de-pagar="meu-plano"]'
+    ok = c.esperar(lambda: c.tem(resumo) and "Aluno sem profissional" in texto_de(c, resumo), 30)
+    texto = texto_de(c, resumo)
+    p.check(ok and "Treino, R$ 20,00 por mês, ou Treino + Alimentação, R$ 35,00 por mês" in texto,
+            "[t2] T2e o site (staging): o resumo dos Termos antes de pagar com R$ 20,00 / R$ 35,00 (o PLANOS_APP_PADRAO)")
+    try:
+        c.pg.locator(resumo).first.scroll_into_view_if_needed()
+    except Exception:  # noqa: BLE001
+        pass
+    foto(c, "T2e_site_resumo_antes_de_pagar")
+    c.fim()
+
+
+def caso_t2_loja(nav, mid: str) -> None:
+    c = abrir(nav, "loja_t2", app=True)
+    entrar(c, "/")
+    assinar = '[data-trava-app="plano-app-play"]'
+    ok = c.esperar(lambda: c.tem(assinar), 90)
+    p.check(ok, "[t2] T2b a loja: a conta do app vencida e sem a Play → a trava de \"Assinar pela Google Play\"")
+    c.pg.evaluate("() => { window.__t2MesmaPagina = 1; }")
+    # o servidor muda POR FORA da tela (a compra registrada e a suspensão que a conferência de hora em hora traz)
+    c0 = API.comprar("app_treino", mid, preco=PRECOS["app_treino"][1])
+    st, _r = API.registrar(CONTA, c0["token"], "app_treino")
+    API.mudar(c0["token"], "suspender")
+    st2, _r2 = API.conferir()
+    p.check(st == 200 and st2 == 200 and API.assinatura(c0["token"]).get("estado") == "suspensa",
+            f"[t2] T2b o banco: a assinatura da Play SUSPENSA (a conferência trouxe o ON_HOLD) — {st}/{st2}")
+    c.pg.wait_for_timeout(2000)
+    p.check(c.tem(assinar) and "Assinatura suspensa" not in c.texto(),
+            "[t2] T2b a tela ainda mostra a trava de Assinar (o resumo guardado é o de antes) — o achado (b) do GATE 2")
+    foto(c, "T2b_1_trava_antes_assinar")
+    c.pg.wait_for_timeout(11_000)   # o intervalo mínimo entre 2 releituras (10 s) desde a releitura ao montar a trava
+    voltar_ao_app(c)
+    travada = '[data-trava-app="play-travada"]'
+    ok = c.esperar(lambda: c.tem(travada), 30)
+    mesma = bool(c.pg.evaluate("() => window.__t2MesmaPagina === 1"))
+    botao = texto_de(c, f"{travada} [data-play-gerenciar]")
+    p.check(ok and mesma and "Assinatura suspensa" in c.texto() and "Atualizar na Google Play" in botao,
+            "[t2] T2b voltou ao primeiro plano → a trava RELÊ: \"Assinatura suspensa\" + \"Atualizar na Google Play\", SEM recarregar a página")
+    foto(c, "T2b_2_trava_suspensa_sem_reabrir")
+    c.fim()
+    # (a) a troca agendada: o completo → o Treino na renovação (o DEFERRED); o Meu plano numa abertura nova do app
+    API.mudar(c0["token"], "recuperar")
+    st, _r = API.conferir()
+    c1 = API.comprar("app_treino_alimentacao", mid, ligada=c0["token"], modo="na_hora", preco=PRECOS["app_treino_alimentacao"][1])
+    st1, _r1 = API.registrar(CONTA, c1["token"], "app_treino_alimentacao")
+    c2 = API.comprar("app_treino", mid, ligada=c1["token"], modo="na_renovacao", preco=PRECOS["app_treino"][1])
+    st2, _r2 = API.registrar(CONTA, c2["token"], "app_treino")
+    a2 = API.assinatura(c2["token"])
+    p.check(st == 200 and st1 == 200 and st2 == 200 and a2.get("produto") == "app_treino_alimentacao" and a2.get("troca_para") == "app_treino",
+            f"[t2] T2a o banco: o completo vigente com a troca para o Treino agendada (troca_para) — {st}/{st1}/{st2}")
+    c = abrir(nav, "loja_t2_meu_plano", app=True)
+    entrar(c, "/perfil/meu-plano")
+    ok = c.esperar(lambda: c.tem('[data-assinatura-play="ativa"]'), 60)
+    titulo, detalhe = texto_de(c, "[data-assinatura-play-titulo]"), texto_de(c, "[data-assinatura-play-detalhe]")
+    p.check(ok and "Treino + Alimentação" in titulo and re.fullmatch(r"até (\d{2}/\d{2}) · vira Treino em \1", detalhe) is not None
+            and "não renova" not in c.texto(),
+            f"[t2] T2a Meu plano: \"até DD/MM · vira Treino em DD/MM\" no lugar de \"não renova\" ({detalhe!r})")
+    foto(c, "T2a_meu_plano_vira_treino")
+    c.fim()
+
+
+def rodar_t2(canal: str) -> int:
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    global PRINTS
+    carregar()
+    PRINTS = PRINTS_T2
+    B.B5.PRINTS = PRINTS
+    ESTADO["prefixo"] = "local"
+    ESTADO["borrar"] = BORRAR_T2
+    for modo, esperado in (("site", "site"), ("loja", "play")):
+        s = saude_do_build(modo)
+        if s.get("distribuicao") != esperado or s.get("schema") != "staging":
+            raise SystemExit(f"o build em {DIST[modo]} não é o {esperado} do staging — construa antes")
+    p.check(True, "os 2 builds do staging (site e loja) prontos")
+    if API.ESTADO_ARQ.exists():
+        raise SystemExit(f"há uma rodada anterior sem desfazer ({API.ESTADO_ARQ}): rode --limpar antes")
+    est = API.foto()
+    mid = est["matriculas"][CONTA]["id"]
+    try:
+        API.preparar(est)
+        API.subir("e2e/playw6/telas.py --t2")
+        API.sim("/_zerar")
+        with sync_playwright() as pw:
+            nav = pw.chromium.launch(channel=canal, headless=True, args=ARGS_NAVEGADOR) if canal else pw.chromium.launch(headless=True, args=ARGS_NAVEGADOR)
+            try:
+                for modo, caso in (("site", lambda: caso_t2_site(nav)), ("loja", lambda: caso_t2_loja(nav, mid))):
+                    servir(modo)
+                    try:
+                        caso()
+                    except Exception as e:  # noqa: BLE001 — a rodada cai, mas o desfazer roda; só o tipo do erro sai
+                        p.check(False, f"a rodada ({modo}) parou: {type(e).__name__}")
+                    finally:
+                        parar_servidor()
+            finally:
+                nav.close()
+        enc = ESTADO.get("encaminhadas", {})
+        resumo = {f: {str(st): sts.count(st) for st in sorted(set(sts))} for f, sts in enc.items()}
+        print(f"   encaminhadas ao Deno local (status: quantas): {resumo or 'nenhuma'}", flush=True)
+        p.check(bool(enc.get("play-compras")) and all(st and st < 500 for sts in enc.values() for st in sts),
+                "a tela falou com as funções novas no Deno local, sem falha de rede nem 5xx")
+    finally:
+        parar_servidor()
+        API.descer()
+        try:
+            API.desfazer(est)
+        except Exception as e:  # noqa: BLE001
+            p.check(False, f"o desfazer falhou ({type(e).__name__}) — rode --limpar")
+    texto = API.log_desde(API.CTX.get("log_inicio", 0))
+    valores = [*API.CTX["tokens"], *API.CTX["pedidos"], B.EMAIL[CONTA], B.EMAIL["w7b-removido"]]
+    achados = sum(texto.count(v) for v in valores if v)
+    p.check(achados == 0, f"o log do Deno da rodada sem tokens, pedidos e os e-mails de teste: {achados} ocorrência(s)")
+    logins = list(API.CTX["logins"])
+    saidas = sair_local()
+    print(f"\n   logins da rodada: {len(logins)} ({', '.join(sorted(logins)) or 'nenhum'}) · logout local: {saidas}", flush=True)
+    return p.fim()
+
+
 # ───────────────────────── a rodada ─────────────────────────
 
 def rodar(modo: str, canal: str) -> int:
@@ -491,6 +649,7 @@ def main() -> int:
     g.add_argument("--loja", action="store_true")
     g.add_argument("--site", action="store_true")
     g.add_argument("--seco", action="store_true")
+    g.add_argument("--t2", action="store_true")
     g.add_argument("--limpar", action="store_true")
     ap.add_argument("--canal", default="msedge")
     a = ap.parse_args()
@@ -504,6 +663,8 @@ def main() -> int:
         ok = API.desfazer(json.loads(API.ESTADO_ARQ.read_text(encoding="utf-8")))
         API.p.fim()
         return 0 if ok else 1
+    if a.t2:
+        return rodar_t2(a.canal)
     return rodar("loja" if a.loja else "site", a.canal)
 
 

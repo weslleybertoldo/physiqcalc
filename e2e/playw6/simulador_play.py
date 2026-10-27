@@ -57,7 +57,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 HOST = "127.0.0.1"
 PACOTE = "com.bertoldo.physiqcalc"
 PRODUTOS = ("app_treino", "app_treino_alimentacao")
-PRECOS = {"app_treino": ("29", 900_000_000), "app_treino_alimentacao": ("49", 900_000_000)}
+PRECOS = {"app_treino": ("20", 0), "app_treino_alimentacao": ("35", 0)}   # o Play Console (R$ 20,00 / R$ 35,00 desde o T2, 26/10/2026)
 ESCOPO = "https://www.googleapis.com/auth/androidpublisher"
 CONTA_SERVICO_EMAIL = "play-api@physiq-br-sim.iam.gserviceaccount.com"
 DIA_S = 86_400

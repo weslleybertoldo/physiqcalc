@@ -460,7 +460,7 @@ def matricula(conta: str) -> dict:
 
 def assinatura(token: str) -> dict:
     return um(f"""select estado, renova, expira_em::text as expira_em, produto, (reconhecida_em is not null) as reconhecida, teste,
-                         cancelada_por, adiar_ate::text as adiar_ate, (adiada_em is not null) as adiada
+                         cancelada_por, adiar_ate::text as adiar_ate, (adiada_em is not null) as adiada, troca_para
                     from {S}.play_assinaturas where token = {lit(token)}""") or {}
 
 
@@ -666,9 +666,9 @@ def caso_registrar(m: dict) -> str:
             "registrar · a play_assinaturas ativa e reconhecida; o acknowledge chegou ao Google (simulador)")
     p.check(perto(cobertura(m["id"]), ts(i["expira"])), "registrar · a cobertura = o fim da Play (expiryTime)")
     cob = cobrancas_play(m["id"])
-    p.check(len(cob) == 1 and cob[0]["status"] == "paga" and float(cob[0]["valor"]) == 29.9 and cob[0]["sem_cobre"] is True
+    p.check(len(cob) == 1 and cob[0]["status"] == "paga" and float(cob[0]["valor"]) == 20.0 and cob[0]["sem_cobre"] is True
             and int(cob[0]["meses_cobertos"]) == 1 and cob[0]["tipo"] == "mensalidade",
-            f"registrar · 1 cobrança google_play paga (R$ 29,90 = o preço da Play, 1 mês, sem cobre_*) — {len(cob)}")
+            f"registrar · 1 cobrança google_play paga (R$ 20,00 = o preço da Play, 1 mês, sem cobre_*) — {len(cob)}")
     st2, _r2 = registrar("w7b-treino", c["token"], "app_treino")
     p.check(st2 == 200 and len(cobrancas_play(m["id"])) == 1 and linhas_do_token(c["token"]) == 1,
             f"registrar · 2× = 1 linha (1 assinatura, 1 cobrança) — {st2}")
@@ -701,8 +701,10 @@ def caso_estado(m: dict, token: str) -> None:
     p.check(st == 200 and r.get("disponivel") is True and (r.get("matricula") or {}).get("id") == m["id"]
             and (r.get("assinatura") or {}).get("estado") == "ativa" and r.get("automatica_mp") is False,
             f"estado · disponivel, a matrícula do app, a assinatura ativa, sem automática do MP — {st}")
-    p.check(token not in texto and "GPA." not in texto and sorted((r.get("assinatura") or {}).keys()) == ["estado", "expira_em", "produto", "renova"],
-            "estado · sem token nem pedido (só estado, renova, expira_em e produto)")
+    p.check(token not in texto and "GPA." not in texto
+            and sorted((r.get("assinatura") or {}).keys()) == ["estado", "expira_em", "produto", "renova", "troca_para"]
+            and (r.get("assinatura") or {}).get("troca_para") is None,
+            "estado · sem token nem pedido (só estado, renova, expira_em, produto e — T2 — troca_para: sem troca = null)")
 
 
 def caso_teste_defer(m: dict) -> str:
@@ -739,7 +741,7 @@ def caso_mp_vivo(m: dict) -> str:
     fim = ts(m["pago_ate"])
     vence = lit(fim.isoformat()) + "::timestamptz" if coberta_por(fim, 2) else "now() + interval '20 days'"
     sql(f"""insert into {S}.aluno_assinaturas (paciente_id, conta_id, mp_preapproval_id, status, valor, proximo_vencimento, payload)
-            values ({lit(m['id'])}::uuid, {S}.conta_do_app(), '{MARCA_AUTOMATICA}{secrets.token_hex(6)}', 'authorized', 29.90,
+            values ({lit(m['id'])}::uuid, {S}.conta_do_app(), '{MARCA_AUTOMATICA}{secrets.token_hex(6)}', 'authorized', 20.00,
                     {vence}, jsonb_build_object('simulada', true, 'playw6', true))""")
     antes = cobertura(m["id"])
     p.check(coberta_por(antes, 1), "mp_vivo · (o ensaio) com a automática viva, a matrícula coberta por mais de 1 dia")
@@ -839,8 +841,8 @@ def caso_troca(m: dict) -> str:
     mm = matricula("w7b-treino")
     cob = cobrancas_play(pid)
     p.check(st0 == 200 and st == 200 and assinatura(t1).get("estado") == "substituida" and mm["plano"] == "app_treino_alimentacao"
-            and float(mm["valor"]) == 49.9 and bool(cob) and float(cob[-1]["valor"]) == 49.9,
-            f"troca · para o completo NA HORA: a anterior substituída, o plano já é o completo (R$ 49,90) e a cobrança do pedido novo — {st}")
+            and float(mm["valor"]) == 35.0 and bool(cob) and float(cob[-1]["valor"]) == 35.0,
+            f"troca · para o completo NA HORA: a anterior substituída, o plano já é o completo (R$ 35,00) e a cobrança do pedido novo — {st}")
     t3 = comprar("app_treino", pid, ligada=t2, modo="na_renovacao")["token"]
     n_cob = len(cobrancas_play(pid))
     sim("/_cenario", {"deferred_nova_primeiro": True})   # 🟡2: o GET do token novo com a linha do Treino (sem data) ANTES da atual
@@ -851,11 +853,25 @@ def caso_troca(m: dict) -> str:
     p.check(st == 200 and assinatura(t2).get("estado") == "substituida" and matricula("w7b-treino")["plano"] == "app_treino_alimentacao"
             and len(cobrancas_play(pid)) == n_cob,
             f"troca · para o Treino NA RENOVAÇÃO: o plano segue o completo até renovar, sem cobrança nova — {st}")
+    # T2 (a), 26/10/2026: a troca AGENDADA chega ao app — o banco guarda o produto que entra (o deferredItemReplacement), o estado da
+    # play-compras e o meu_plano_app (o Meu plano: "vira Treino em DD/MM") mostram; sem o token nem o pedido
+    a3 = assinatura(t3)
+    st_e, r_e = compras("w7b-treino", {"acao": "estado"})
+    vista = (r_e.get("assinatura") or {}) if isinstance(r_e, dict) else {}
+    _st_m, mp = B.rpc(B.token("w7b-treino"), "meu_plano_app", {})
+    plano_play = (((mp if isinstance(mp, dict) else {}).get("matricula") or {}).get("play") or {})
+    p.check(a3.get("produto") == "app_treino_alimentacao" and a3.get("troca_para") == "app_treino"
+            and st_e == 200 and vista.get("produto") == "app_treino_alimentacao" and vista.get("troca_para") == "app_treino"
+            and plano_play.get("troca_para") == "app_treino" and plano_play.get("produto") == "app_treino_alimentacao"
+            and t3 not in json.dumps(r_e) and t3 not in json.dumps(plano_play),
+            f"troca · T2 (a) a troca agendada: o banco (troca_para), o estado e o meu_plano_app dizem que vira o Treino — {st_e}")
     mudar(t3, "renovar")
     st, _r = conferir()
     mm = matricula("w7b-treino")
-    p.check(st == 200 and mm["plano"] == "app_treino" and float(mm["valor"]) == 29.9 and len(cobrancas_play(pid)) == n_cob + 1,
-            f"troca · a renovação (a conferência a traz) vira o plano para o Treino (R$ 29,90) e cobra — {st}")
+    p.check(st == 200 and mm["plano"] == "app_treino" and float(mm["valor"]) == 20.0 and len(cobrancas_play(pid)) == n_cob + 1,
+            f"troca · a renovação (a conferência a traz) vira o plano para o Treino (R$ 20,00) e cobra — {st}")
+    p.check(assinatura(t3).get("troca_para") is None and assinatura(t3).get("produto") == "app_treino",
+            "troca · T2 (a) depois de virar, a troca sai (troca_para = null: o Google não marca mais)")
     return t3
 
 
@@ -934,7 +950,7 @@ def caso_sobra() -> None:
 def caso_mp_409(m: dict) -> None:
     """⚪12 da revisão: o registrar que falha (outra assinatura da Play viva → 409) NÃO cancela a automática do MP."""
     sql(f"""insert into {S}.aluno_assinaturas (paciente_id, conta_id, mp_preapproval_id, status, valor, proximo_vencimento, payload)
-            values ({lit(m['id'])}::uuid, {S}.conta_do_app(), '{MARCA_AUTOMATICA}{secrets.token_hex(6)}', 'authorized', 29.90,
+            values ({lit(m['id'])}::uuid, {S}.conta_do_app(), '{MARCA_AUTOMATICA}{secrets.token_hex(6)}', 'authorized', 20.00,
                     now() + interval '20 days', jsonb_build_object('simulada', true, 'playw6', true))""")
     c = comprar("app_treino", m["id"])
     st, r = registrar("w7b-vence", c["token"], "app_treino")
@@ -1101,7 +1117,7 @@ def rodar_seco() -> int:
     ultima = (r.stderr.strip().splitlines() or ["?"])[-1]
     p.check(r.returncode == 0, f"seco · os testes do simulador ({ultima})")
     est = {"inicio": "2026-10-16T00:00:00+00:00", "uid_treino": "00000000-0000-4000-8000-000000000009", "marca": None,
-           "matriculas": {c: {"id": f"00000000-0000-4000-8000-00000000000{n}", "ativo": True, "plano_id": None, "valor": "29.90", "pago_ate": None,
+           "matriculas": {c: {"id": f"00000000-0000-4000-8000-00000000000{n}", "ativo": True, "plano_id": None, "valor": "20.00", "pago_ate": None,
                               "teste_ate": None, "encerrada_em": None, "encerrada_motivo": None} for n, c in enumerate(CONTAS, 1)}}
     cmds = comandos_do_desfazer(est)
     p.check(all(f" {S}." in c for c in cmds) and not any(" public." in c for c in cmds), f"seco · o desfazer só toca o staging ({len(cmds)} comandos)")

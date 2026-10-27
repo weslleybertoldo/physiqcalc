@@ -84,10 +84,20 @@ O aluno **sem profissional** assina o plano do app **dentro do app**, pelo Play 
 da loja; o site e o APK do site não mudam (para quem não tem assinatura da Play). O profissional continua pagando pelo site e
 o aluno → profissional (Pix com comprovante e o Mercado Pago da conta do personal) fica fora do Play Billing.
 
-- **Produtos (Play Console):** 2 assinaturas mensais com os MESMOS códigos dos planos do banco — `app_treino` (R$ 29,90) e
-  `app_treino_alimentacao` (R$ 49,90) —, plano básico `mensal`, renovação automática, Brasil; carência e suspensão no padrão
+- **Produtos (Play Console):** 2 assinaturas mensais com os MESMOS códigos dos planos do banco — `app_treino` (R$ 20,00) e
+  `app_treino_alimentacao` (R$ 35,00) —, plano básico `mensal`, renovação automática, Brasil; carência e suspensão no padrão
   do Google. A loja mostra SÓ o preço que a Play devolve (o do banco fica no site). Os 7 dias grátis são do app (não há oferta
   de teste na Play).
+- **Os preços (26/10/2026, pedido do Weslley: "20 reais individual", "E 35 os dois"):** Treino **R$ 20,00** · Treino + Alimentação
+  **R$ 35,00** (eram R$ 29,90 / R$ 49,90) — o MESMO preço no site e na Play (a regra de 22/10). No banco, a migration
+  `supabase-principal/migrations/20261027020000_precos_app_20_35.sql` (os 2 planos da conta do app + as matrículas ATIVAS no preço
+  velho; o staging no T2, o public no merge); no app, o `PLANOS_APP_PADRAO` (`src/app-aluno/sozinho/regras.ts`: os Termos de
+  assinatura); na Play, as 2 assinaturas no Console (plano `mensal`, BRL 20,00 / 35,00 — à parte, no Console).
+- **A troca agendada (T2, 26/10/2026):** a troca para o Treino vale na renovação (DEFERRED) — o Google marca o produto que entra
+  (`lineItems[].deferredItemReplacement.productId`), a `play_aplicar` grava em `play_assinaturas.troca_para` (a migration
+  `20261027010000_playw6_troca_para.sql`; sem a troca, null) e o app mostra "vira Treino em DD/MM" (o fim do plano de hoje) no lugar
+  de "não renova". A trava da loja relê a assinatura ao montar e ao voltar ao primeiro plano (`src/app-aluno/sozinho/
+  releituraDaTrava.ts`: o `estado` de novo + o resumo; 1 por vez, no mínimo 10 s entre 2).
 - **O plugin (`PlayBillingPlugin`, Play Billing Library 9.1.0):** só no build type `playRelease` — a biblioteca pelo
   `playReleaseImplementation` do `android/app/build.gradle`, o código em `android/app/src/playRelease/java/…/` e o registro
   pela `PlataformaLoja` de cada build type (a do `release` e a do `debug` ficam vazias). Faz: `disponivel`, `produtos`,

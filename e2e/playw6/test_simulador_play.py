@@ -116,7 +116,7 @@ class TesteSimulador(unittest.TestCase):
         self.assertEqual(v["acknowledgementState"], "ACKNOWLEDGEMENT_STATE_PENDING")
         linha = v["lineItems"][0]
         self.assertEqual((linha["productId"], linha["offerDetails"]["basePlanId"], linha["latestSuccessfulOrderId"]), ("app_treino", "mensal", c["pedido"]))
-        self.assertEqual(linha["autoRenewingPlan"]["recurringPrice"], {"currencyCode": "BRL", "units": "29", "nanos": 900000000})
+        self.assertEqual(linha["autoRenewingPlan"]["recurringPrice"], {"currencyCode": "BRL", "units": "20", "nanos": 0})
         self.assertTrue(v["etag"])
         # o pedido nunca leva o token
         pedidos = http("GET", f"{self.base}/_pedidos")[1]["pedidos"]

@@ -37,7 +37,8 @@ Modos:
   11 encerrada      a matrícula encerrada registra (sem trocar o plano)
   12 RLS/grants     anon e authenticated: sem SELECT/INSERT na play_assinaturas e sem EXECUTE na play_aplicar; service_role executa
   13 guarda         o app cria cobrança 'google_play' → nasce comum (sem forma nem pedido); numa linha da Play o UPDATE do app não muda nada
-  14 leituras       financeiro_do_aluno e meu_plano_app com a Play viva: 'play' {estado, renova, expira_em, produto}, sem token nem pedido
+  14 leituras       financeiro_do_aluno e meu_plano_app com a Play viva: 'play' {estado, renova, expira_em, produto, troca_para — T2},
+                    sem token nem pedido
   15 gatilho        apagar a assinatura recalcula a cobertura
   16 vencida        a cancelada que já venceu fora das leituras do aluno (a revisão, 🟡3); a cancelada no prazo continua
   17 rotina         a conferência de hora em hora (22/10/2026, no lugar do RTDN): o play_conferir_disparar() sem assinatura da Play não
@@ -295,23 +296,23 @@ declare
   n_cob integer; n_ass integer; certo integer;
 begin
   o1 := {ap("'paciente_id', a5", "'token', 'playw6-e2e-c2'", "'produto', 'app_treino'", "'plano_base', 'mensal'", "'estado', 'ativa'",
-            "'expira_em', e1", "'renova', true", "'reconhecida', true", "'pedido', 'GPA.PLAYW6-E2E-2'", "'valor', 29.9",
+            "'expira_em', e1", "'renova', true", "'reconhecida', true", "'pedido', 'GPA.PLAYW6-E2E-2'", "'valor', 20.0",
             "'pago_em', now() - interval '1 minute'")};
   o2 := {ap("'paciente_id', a5", "'token', 'playw6-e2e-c2'", "'produto', 'app_treino'", "'plano_base', 'mensal'", "'estado', 'ativa'",
-            "'expira_em', e1", "'renova', true", "'reconhecida', true", "'pedido', 'GPA.PLAYW6-E2E-2'", "'valor', 29.9")};
+            "'expira_em', e1", "'renova', true", "'reconhecida', true", "'pedido', 'GPA.PLAYW6-E2E-2'", "'valor', 20.0")};
   select count(*) into n_cob from @S@.cobrancas where paciente_id = a5 and forma = 'google_play';
   select count(*) into n_ass from @S@.play_assinaturas where paciente_id = a5;
   select count(*) into certo from @S@.cobrancas c join @S@.contas ct on ct.id = c.conta_id
-   where c.paciente_id = a5 and c.forma = 'google_play' and c.status = 'paga' and c.valor = 29.90 and c.tipo = 'mensalidade'
+   where c.paciente_id = a5 and c.forma = 'google_play' and c.status = 'paga' and c.valor = 20.00 and c.tipo = 'mensalidade'
      and c.meses_cobertos = 1 and c.cobre_de is null and c.nutricionista_id = ct.dono_id and ct.origem = 'app' and c.play_pedido is not null;
   o3 := {ap("'paciente_id', a5", "'token', 'playw6-e2e-c2'", "'produto', 'app_treino'", "'estado', 'ativa'",
-            "'expira_em', e1 + interval '30 days'", "'renova', true", "'reconhecida', true", "'pedido', 'GPA.PLAYW6-E2E-2..0'", "'valor', 29.9")};
+            "'expira_em', e1 + interval '30 days'", "'renova', true", "'reconhecida', true", "'pedido', 'GPA.PLAYW6-E2E-2..0'", "'valor', 20.0")};
   select mensalidade_pago_ate into pago from @S@.pacientes where id = a5;
   raise exception 'RESULTADO<<%>>', jsonb_build_object('c1', o1 ->> 'cobranca', 'c2', o2 ->> 'cobranca', 'n_cob_1', n_cob, 'n_ass', n_ass,
     'certo', certo, 'c3', o3 ->> 'cobranca', 'n_cob_2', (select count(*) from @S@.cobrancas where paciente_id = a5 and forma = 'google_play'),
     'anda', pago = e1 + interval '30 days', 'reconhecida', (o1 ->> 'reconhecida_em') is not null)::text;""", s)
         P.check(r["c1"] == "nova" and r["certo"] == 1 and r["reconhecida"] is True,
-                f"[{s}] 2 a compra: 1 cobrança google_play paga (29,90, 1 mês, sem cobre_*, do recebedor da conta do app) e reconhecida_em")
+                f"[{s}] 2 a compra: 1 cobrança google_play paga (20,00 — o preço da Play desde o T2 —, 1 mês, sem cobre_*, do recebedor da conta do app) e reconhecida_em")
         P.check(r["c2"] == "ja_tinha" and r["n_cob_1"] == 1 and r["n_ass"] == 1, f"[{s}] 2 o mesmo aviso 2× = nada novo (1 cobrança, 1 assinatura)")
         P.check(r["c3"] == "nova" and r["n_cob_2"] == 2 and r["anda"] is True, f"[{s}] 2 a renovação: +1 cobrança e a cobertura anda")
 
@@ -358,7 +359,7 @@ declare
   a7 uuid := '@A7@';
   e1 timestamptz := now() + interval '30 days';
   o2 jsonb; o3 jsonb; o4 jsonb;
-  t1 text; t2 text; p_up text; v_up numeric; p_down text; p_ren text; mod_up text[]; adiar2 timestamptz;
+  t1 text; t2 text; p_up text; v_up numeric; v_plano_up numeric; p_down text; p_ren text; mod_up text[]; adiar2 timestamptz;
 begin
   perform {ap("'paciente_id', a7", "'token', 'playw6-e2e-c5-t1'", "'produto', 'app_treino'", "'estado', 'ativa'", "'expira_em', e1", "'renova', true")};
   o2 := {ap("'paciente_id', a7", "'token', 'playw6-e2e-c5-t2'", "'token_anterior', 'playw6-e2e-c5-t1'", "'produto', 'app_treino_alimentacao'",
@@ -366,6 +367,7 @@ begin
   select estado into t1 from @S@.play_assinaturas where token = 'playw6-e2e-c5-t1';
   select pa.codigo, p.mensalidade_valor, pa.modulos into p_up, v_up, mod_up from @S@.pacientes p join @S@.planos_aluno pa on pa.id = p.plano_aluno_id where p.id = a7;
   select adiar_ate into adiar2 from @S@.play_assinaturas where token = 'playw6-e2e-c5-t2';
+  select pa.valor into v_plano_up from @S@.planos_aluno pa where pa.conta_id = @S@.conta_do_app() and pa.codigo = 'app_treino_alimentacao';
   -- downgrade na renovação: o token novo chega com o produto VIGENTE (o completo) até renovar
   o3 := {ap("'paciente_id', a7", "'token', 'playw6-e2e-c5-t3'", "'token_anterior', 'playw6-e2e-c5-t2'", "'produto', 'app_treino_alimentacao'",
             "'estado', 'ativa'", "'expira_em', e1", "'renova', true")};
@@ -376,13 +378,14 @@ begin
   select pa.codigo into p_ren from @S@.pacientes p join @S@.planos_aluno pa on pa.id = p.plano_aluno_id where p.id = a7;
   -- o aviso velho da substituída (EXPIRED) não a ressuscita
   perform {ap("'paciente_id', a7", "'token', 'playw6-e2e-c5-t1'", "'produto', 'app_treino'", "'estado', 'ativa'", "'expira_em', e1", "'renova', true")};
-  raise exception 'RESULTADO<<%>>', jsonb_build_object('ok2', o2 -> 'ok', 't1', t1, 'up', p_up, 'valor_up', v_up,
+  raise exception 'RESULTADO<<%>>', jsonb_build_object('ok2', o2 -> 'ok', 't1', t1, 'up', p_up, 'valor_up', v_up, 'valor_plano', v_plano_up,
     'mod_up', to_jsonb(mod_up), 'adiar2', adiar2 is null, 'ok3', o3 -> 'ok', 't2', t2, 'down', p_down, 'ok4', o4 -> 'ok', 'ren', p_ren,
     't1_fim', (select estado from @S@.play_assinaturas where token = 'playw6-e2e-c5-t1'),
     'vivas', (select count(*) from @S@.play_assinaturas where paciente_id = a7 and estado in ('pendente','ativa','cancelada','carencia','suspensa','pausada')))::text;""", s)
-        P.check(r["ok2"] is True and r["t1"] == "substituida" and r["up"] == "app_treino_alimentacao" and float(r["valor_up"]) == 49.9
-                and sorted(r["mod_up"]) == ["nutricao", "treino"],
-                f"[{s}] 5 upgrade: a anterior 'substituida' e o plano vira o completo na hora (49,90; treino + nutrição)")
+        P.check(r["ok2"] is True and r["t1"] == "substituida" and r["up"] == "app_treino_alimentacao"
+                and float(r["valor_up"]) == float(r["valor_plano"]) and sorted(r["mod_up"]) == ["nutricao", "treino"],
+                f"[{s}] 5 upgrade: a anterior 'substituida' e o plano vira o completo na hora ({r['valor_up']} = o preço do completo no banco;"
+                " treino + nutrição)")
         P.check(r["adiar2"] is True, f"[{s}] 5 a troca (com ligação) não guarda adiar_ate")
         P.check(r["ok3"] is True and r["t2"] == "substituida" and r["down"] == "app_treino_alimentacao",
                 f"[{s}] 5 downgrade: o plano fica o completo até a renovação")
@@ -399,7 +402,7 @@ declare
 begin
   select mensalidade_pago_ate into base from @S@.pacientes where id = a2;
   perform {ap("'paciente_id', a2", "'token', 'playw6-e2e-c6'", "'produto', 'app_treino'", "'estado', 'ativa'", "'expira_em', now() + interval '60 days'",
-              "'renova', true", "'pedido', 'GPA.PLAYW6-E2E-6'", "'valor', 29.9")};
+              "'renova', true", "'pedido', 'GPA.PLAYW6-E2E-6'", "'valor', 20.0")};
   o := {ap("'paciente_id', a2", "'token', 'playw6-e2e-c6'", "'produto', 'app_treino'", "'estado', 'revogada'", "'expira_em', now()",
            "'renova', false", "'devolvido_pedido', 'GPA.PLAYW6-E2E-6'")};
   select mensalidade_pago_ate into p2 from @S@.pacientes where id = a2;
@@ -447,7 +450,7 @@ declare
   pago timestamptz;
 begin
   o := {ap("'paciente_id', a5", "'token', 'playw6-e2e-c8'", "'produto', 'app_treino'", "'estado', 'ativa'", "'expira_em', now() + interval '5 minutes'",
-           "'renova', true", "'teste', true", "'pedido', 'GPA.PLAYW6-E2E-8'", "'valor', 29.9")};
+           "'renova', true", "'teste', true", "'pedido', 'GPA.PLAYW6-E2E-8'", "'valor', 20.0")};
   select mensalidade_pago_ate into pago from @S@.pacientes where id = a5;
   raise exception 'RESULTADO<<%>>', jsonb_build_object('cobranca', o -> 'cobranca', 'teste', (select teste from @S@.play_assinaturas where token = 'playw6-e2e-c8'),
     'n', (select count(*) from @S@.cobrancas where paciente_id = a5 and forma = 'google_play'), 'cobre', pago = now() + interval '5 minutes')::text;""", s)
@@ -586,7 +589,7 @@ declare
   f jsonb; m jsonb; fs jsonb;
 begin
   perform {ap("'paciente_id', '@A5@'::uuid", "'token', 'playw6-e2e-c14-segredo'", "'produto', 'app_treino'", "'estado', 'ativa'",
-              "'expira_em', now() + interval '30 days'", "'renova', true", "'pedido', 'GPA.PLAYW6-E2E-14'", "'valor', 29.9")};
+              "'expira_em', now() + interval '30 days'", "'renova', true", "'pedido', 'GPA.PLAYW6-E2E-14'", "'valor', 20.0")};
   perform set_config('request.jwt.claims', jsonb_build_object('sub', 'b0000000-0000-4000-8000-000000000015', 'role', 'authenticated')::text, true);
   f := @S@.financeiro_do_aluno();
   m := @S@.meu_plano_app();
@@ -599,9 +602,10 @@ begin
     'prof_play', (select count(*) from jsonb_array_elements(fs) e where e -> 'play' <> 'null'::jsonb))::text;""", s)
         for nome in ("fin_play", "plano_play"):
             x = r.get(nome) or {}
-            P.check(isinstance(x, dict) and sorted(x) == ["estado", "expira_em", "produto", "renova"] and x.get("estado") == "ativa"
-                    and x.get("produto") == "app_treino" and x.get("renova") is True,
-                    f"[{s}] 14 {'financeiro_do_aluno' if nome == 'fin_play' else 'meu_plano_app'}: play = {{estado, renova, expira_em, produto}}")
+            P.check(isinstance(x, dict) and sorted(x) == ["estado", "expira_em", "produto", "renova", "troca_para"] and x.get("estado") == "ativa"
+                    and x.get("produto") == "app_treino" and x.get("renova") is True and x.get("troca_para") is None,
+                    f"[{s}] 14 {'financeiro_do_aluno' if nome == 'fin_play' else 'meu_plano_app'}: play = {{estado, renova, expira_em, produto, "
+                    "troca_para} (sem troca = null — a Migration A do T2)")
         P.check(r["vaza"] is False, f"[{s}] 14 o token e o pedido NÃO saem nas leituras do aluno")
         P.check(r["prof_play"] == 0, f"[{s}] 14 a matrícula de profissional sem 'play'")
 

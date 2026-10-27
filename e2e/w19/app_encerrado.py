@@ -84,7 +84,7 @@ def main() -> int:
                         returning id::text""")
             ids[chave] = r[0]["id"]
             sql(f"""insert into {S}.aluno_assinaturas (paciente_id, conta_id, mp_preapproval_id, status, valor, payload)
-                    values ('{ids[chave]}', '{app}', 'sim-w19-{chave}-{sufixo}', 'authorized', 29.90, jsonb_build_object('simulada', true, 'w19', true))""")
+                    values ('{ids[chave]}', '{app}', 'sim-w19-{chave}-{sufixo}', 'authorized', 20.00, jsonb_build_object('simulada', true, 'w19', true))""")
         mat = sql(f"select nome, ativo, app_encerrada_em is not null as marcador from {S}.pacientes where id in ('{ids['vinculo']}', '{ids['manual']}') order by nome")
         p.check([(m["nome"], m["ativo"], m["marcador"]) for m in mat] == [(f"{MARCA} Manual", False, False), (f"{MARCA} Vínculo", False, True)],
                 f"[{S}] massa: 'Vínculo' inativa com app_encerrada_em · 'Manual' inativa sem o marcador")
