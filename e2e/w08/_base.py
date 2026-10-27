@@ -71,6 +71,24 @@ def pausa(s: float) -> None:
 
 # ───────────────────────── navegador ─────────────────────────
 
+# A aba Treino abre SEMPRE com o treino minimizado (pedido do Weslley, 26/10/2026): os roteiros que tocam nos exercícios mostram
+# a lista antes (tocar no nome do treino). O roteiro do próprio minimizado (e2e/treino_visual) desliga: MOSTRAR_LISTAS = False.
+MOSTRAR_LISTAS = True
+
+
+def mostrar_listas(c: "Caso") -> int:
+    """Toca no nome de cada treino minimizado da tela (a lista aparece); devolve quantos abriu."""
+    abertas = 0
+    for _ in range(6):
+        fechado = c.pg.locator('[data-treino-minimizar][aria-expanded="false"]')
+        if fechado.count() == 0:
+            break
+        fechado.first.click()
+        c.pg.wait_for_timeout(450)  # a animação da altura (300 ms)
+        abertas += 1
+    return abertas
+
+
 def abrir_treino(nav, base: str, prefixo: str, nome: str, conta: str = ALUNO, rota: str = "/treino") -> "Caso":
     """Contexto limpo (390 × 844 × 3,4), sessão injetada, espera a aba Treino e o 1º sync do PowerSync."""
     if conta == ALUNO:
@@ -84,6 +102,8 @@ def abrir_treino(nav, base: str, prefixo: str, nome: str, conta: str = ALUNO, ro
     # o 1º sync: o indicador "Baixando o seu treino" some
     c.esperar(lambda: not c.tem('[data-sync="primeira"]'), 90)
     c.pg.wait_for_timeout(1200)
+    if MOSTRAR_LISTAS:
+        mostrar_listas(c)
     return c
 
 
@@ -108,6 +128,8 @@ def ir_para_dia(c: "Caso", data: dt.date) -> None:
         c.pg.wait_for_timeout(200)
     c.pg.locator(f'[data-dia="{chave}"]').click()
     c.pg.wait_for_timeout(700)
+    if MOSTRAR_LISTAS:
+        mostrar_listas(c)
 
 
 def escolher_treino_do_dia(c: "Caso", grupo_nome: str = GRUPO_NOME) -> bool:
@@ -124,6 +146,8 @@ def escolher_treino_do_dia(c: "Caso", grupo_nome: str = GRUPO_NOME) -> bool:
     c.pg.locator("[data-alterar-treino] [data-escolher-treino]", has_text=grupo_nome).first.click()
     ok = c.esperar(lambda: c.pg.locator(f'[data-slot-grupo="{grupo_nome}"] [data-exercicio-id]').count() > 0, 20)
     c.pg.wait_for_timeout(600)
+    if MOSTRAR_LISTAS:
+        mostrar_listas(c)
     return ok
 
 
@@ -137,6 +161,8 @@ def linha(c: "Caso", ex_id: str):
 
 def abrir_exercicio(c: "Caso", ex_id: str) -> None:
     l = linha(c, ex_id)
+    if c.pg.locator(f'[data-exercicios-minimizados="1"] [data-exercicio-id="{ex_id}"]').count():
+        mostrar_listas(c)
     if l.get_attribute("data-aberto") != "1":
         l.locator("[data-exercicio-abrir]").click()
         c.esperar(lambda: linha(c, ex_id).get_attribute("data-aberto") == "1", 5)
