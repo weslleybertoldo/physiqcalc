@@ -246,6 +246,13 @@ def prova(manter: bool) -> None:
             sem_serie = re.sub(r"^Série \d+ de \d+ · ", "", texto_sup)
             p.check(sem_serie == "4 × 10 · 60 s" and carga_sup == "60 kg", f"P13 o aluno vê a prescrição do modelo: '4 × 10 · 60 s' + '60 kg' ({texto_sup!r} + {carga_sup!r})")
             l = a.pg.locator(f'[data-exercicio-id="{rosca}"]')
+            # a aba abre com o treino minimizado (26/10/2026): tocar no nome do treino mostra os exercícios
+            for _ in range(6):
+                fechado = a.pg.locator('[data-treino-minimizar][aria-expanded="false"]')
+                if not fechado.count():
+                    break
+                fechado.first.click()
+                a.pg.wait_for_timeout(450)
             if l.get_attribute("data-aberto") != "1":
                 l.locator("[data-exercicio-abrir]").click()
                 a.esperar(lambda: a.pg.locator(f'[data-exercicio-id="{rosca}"]').get_attribute("data-aberto") == "1", 8)

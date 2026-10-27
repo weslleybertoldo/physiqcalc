@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""Physiq — aba Treino: tocar no nome do treino minimiza os exercícios e o exercício com todas as séries feitas fica cinza e
-riscado (pedido do Weslley, 22/10/2026, aprovado pelas fotos do protótipo).
+"""Physiq — aba Treino: o treino abre SEMPRE minimizado (só o cartão-resumo) e finalizar o treino minimiza (pedido do Weslley,
+26/10/2026); tocar no nome do treino mostra/esconde os exercícios e o exercício com todas as séries feitas fica cinza e riscado
+(22/10/2026, aprovado pelas fotos do protótipo).
 
 Conta de TESTE teste@teste.com ("aluno-calc"), o treino próprio "Teste 3D" de domingo:
-1. com internet (nada é gravado): tocar no nome esconde a lista (altura 0, `inert`, a setinha deitada) e tocar de novo mostra; a
-   página sem rolagem lateral e o nome numa linha; ir ao Início e voltar lembra o minimizado; "Começar treino" mostra a lista;
+1. com internet (nada é gravado): abre minimizado (altura 0, `inert`, a setinha deitada; o cartão com "N de N feitos" e "Começar
+   treino"), a página sem rolagem lateral e o nome numa linha; tocar no nome mostra e tocar de novo esconde; ir ao Início e voltar
+   volta minimizado; "Começar treino" mostra a lista e, com o cronômetro rodando, ir ao Início e voltar NÃO esconde o treino;
 2. SEM internet até o fim (o P20 da W8: a tela é o SQLite do aparelho; a fila morre com o contexto, nada sobe pro staging): OK em
-   todas as séries de 2 exercícios → os 2 cinza e riscados (nome e linha de baixo, miniatura sem cor); o atual não.
+   todas as séries de 2 exercícios → os 2 cinza e riscados (nome e linha de baixo, miniatura sem cor); o atual não;
+3. ainda sem internet: finalizar o treino (a pílula do cronômetro → "Concluir treino" → "Treino finalizado!" → Fechar) minimiza
+   o treino, com o cartão em TREINO CONCLUÍDO.
 
 --rotulo prod (https://physiqcalc.com.br, SÓ LEITURA): a Guarda da hml-17 barra toda escrita e o app fica sem internet logo depois do
-1º sync — o minimizar (fica no aparelho), o "Começar treino" e os OKs vivem no SQLite do aparelho, que some com o contexto; antes e depois,
-o public sem nenhuma série nova da conta de teste no domingo. Sem o Início e voltar (sem internet a outra aba pode não carregar).
+1º sync — o "Começar treino", os OKs e o finalizar vivem no SQLite do aparelho, que some com o contexto; antes e depois, o public sem
+nenhuma série nova da conta de teste no domingo (a fila TENTA subir e a Guarda barra: só imprime o que barrou). Sem o Início e voltar
+(sem internet a outra aba pode não carregar).
 
 Uso: PYTHONDONTWRITEBYTECODE=1 python3 e2e/treino_visual/telas.py --base http://localhost:8080 [--rotulo local] [--canal msedge]
      PYTHONDONTWRITEBYTECODE=1 python3 e2e/treino_visual/telas.py --rotulo prod --base https://physiqcalc.com.br [--canal msedge]
@@ -43,6 +48,7 @@ B17 = _carregar("_base_hml17_treino_visual", RAIZ / "hml17" / "_base.py")
 from playwright.sync_api import sync_playwright  # noqa: E402
 
 p = B8.p
+B8.MOSTRAR_LISTAS = False  # este roteiro confere o minimizado: nada de abrir a lista sozinho
 GRUPO = "Teste 3D"
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "treino_visual"
 B8.B5.PRINTS = PRINTS
@@ -137,6 +143,29 @@ def ok_em_todas(c, ex: str, peso: str) -> int:
     return feitas
 
 
+def finalizar(c, rotulo: str) -> dict:
+    """Finaliza o treino pela pílula do cronômetro ("Concluir treino" → "Treino finalizado!" → Fechar) e mede a lista."""
+    c.pg.locator("[data-pilula-tempo]").first.click()
+    p.check(c.esperar(lambda: c.tem("[data-cronometro-concluir]"), 8), f"[{rotulo}] a pílula do cronômetro abre a folha com \"Concluir treino\"")
+    c.pg.locator("[data-cronometro-concluir]").click()
+    p.check(c.esperar(lambda: c.tem("[data-treino-finalizado]"), 15), f"[{rotulo}] \"Treino finalizado!\" com duração, exercícios, séries e volume")
+    c.pg.locator("[data-concluido-fechar]").click()
+    c.pg.wait_for_timeout(900)
+    return medidas(c)
+
+
+def voltar_do_inicio(c, dia: dt.date) -> dict:
+    """Vai à aba Início e volta à aba Treino (a aba monta de novo) no mesmo dia."""
+    c.pg.locator('[data-tabbar] [data-aba="inicio"]').click()
+    c.esperar(lambda: c.tem("[data-aba-inicio]"), 20)
+    c.pg.locator('[data-tabbar] [data-aba="treino"]').click()
+    c.esperar(lambda: c.tem("[data-aba-treino]"), 20)
+    B8.ir_para_dia(c, dia)
+    c.esperar(lambda: c.pg.locator(f"{SLOT} [data-treino-minimizar]").count() > 0, 20)
+    c.pg.wait_for_timeout(500)
+    return medidas(c)
+
+
 def caso_local(nav, base: str) -> None:
     desde = B8.agora_iso()
     dia = domingo()
@@ -150,35 +179,33 @@ def caso_local(nav, base: str) -> None:
         # as séries (a memória do último treino) chegam depois dos exercícios: o card sai com "0 séries" até lá
         c.esperar(lambda: not B8.texto(c, f"{SLOT} [data-treino-series]").startswith("0 "), 40)
 
-        # 1. minimizar e mostrar pelo nome (com internet: nada é gravado)
+        # 1. abre minimizado; mostrar e esconder pelo nome (com internet: nada é gravado)
         m = medidas(c)
-        p.check(m["minimizado"] == "0" and not m["inert"] and m["expandido"] == "true" and m["altura"] > 100,
-                f"abre com a lista à mostra ({m})")
-        p.check(m["recorta"] == "visible", f"aberta, a lista não recorta (o brilho do exercício atual fica inteiro): {m['recorta']}")
-        m = tocar_no_nome(c)
-        p.check(m["minimizado"] == "1" and m["inert"] and m["expandido"] == "false", f"tocar no nome minimiza a lista ({m})")
-        p.check(m["altura"] == 0, f"minimizada, a lista some (altura {m['altura']})")
+        p.check(m["minimizado"] == "1" and m["inert"] and m["expandido"] == "false" and m["altura"] == 0,
+                f"a aba abre com o treino minimizado ({m})")
         p.check(m["largura"] <= m["janela"] and m["linhasNome"] == 1,
                 f"sem rolagem lateral e o nome numa linha ({m['largura']}/{m['janela']}, {m['linhasNome']} linha)")
+        resumo = B8.texto(c, f"{SLOT} [data-treino-feitos]")
+        p.check(" de " in resumo and c.pg.locator(f"{SLOT} [data-comecar-treino]").count() == 1,
+                f"minimizado, o cartão-resumo mostra \"N de N feitos\" e \"Começar treino\" ({resumo!r})")
         topo_do_cartao(c)
-        print("   print:", c.print("1_minimizado"))
-        c.pg.locator('[data-tabbar] [data-aba="inicio"]').click()
-        c.esperar(lambda: c.tem("[data-aba-inicio]"), 20)
-        c.pg.locator('[data-tabbar] [data-aba="treino"]').click()
-        c.esperar(lambda: c.tem("[data-aba-treino]"), 20)
-        B8.ir_para_dia(c, dia)
-        c.esperar(lambda: c.pg.locator(f"{SLOT} [data-treino-minimizar]").count() > 0, 20)
-        m = medidas(c)
-        p.check(m["minimizado"] == "1" and m["altura"] == 0, f"ir ao Início e voltar: o treino continua minimizado ({m['minimizado']}, {m['altura']})")
+        print("   print:", c.print("1_abre_minimizado"))
         m = tocar_no_nome(c)
         p.check(m["minimizado"] == "0" and not m["inert"] and m["expandido"] == "true" and m["altura"] > 100,
-                f"tocar de novo mostra a lista ({m})")
-        p.check(m["recorta"] == "visible", f"reaberta, a lista para de recortar ({m['recorta']})")
+                f"tocar no nome mostra a lista ({m})")
+        p.check(m["recorta"] == "visible", f"aberta, a lista não recorta (o brilho do exercício atual fica inteiro): {m['recorta']}")
+        m = tocar_no_nome(c)
+        p.check(m["minimizado"] == "1" and m["inert"] and m["altura"] == 0, f"tocar de novo esconde a lista ({m})")
         tocar_no_nome(c)
+        m = voltar_do_inicio(c, dia)
+        p.check(m["minimizado"] == "1" and m["altura"] == 0, f"ir ao Início e voltar: o treino volta minimizado ({m['minimizado']}, {m['altura']})")
         c.pg.locator(f"{SLOT} [data-comecar-treino]").click()
         c.pg.wait_for_timeout(700)
         m = medidas(c)
-        p.check(m["minimizado"] == "0" and m["altura"] > 100, f"\"Começar treino\" mostra a lista minimizada ({m['minimizado']}, {m['altura']})")
+        p.check(m["minimizado"] == "0" and m["altura"] > 100, f"\"Começar treino\" mostra a lista ({m['minimizado']}, {m['altura']})")
+        m = voltar_do_inicio(c, dia)
+        p.check(m["minimizado"] == "0" and m["altura"] > 100,
+                f"com o cronômetro rodando, ir ao Início e voltar NÃO esconde o treino ({m['minimizado']}, {m['altura']})")
 
         # 2. SEM internet até o fim: OK em todas as séries de 2 exercícios com peso → cinza e riscados
         B8.sem_internet(c)
@@ -218,6 +245,13 @@ def caso_local(nav, base: str) -> None:
         print("   print:", c.print("3_minimizado_com_feitos"))
         m = tocar_no_nome(c)
         p.check(m["largura"] <= m["janela"], f"reaberta, a página continua sem rolagem lateral ({m['largura']}/{m['janela']})")
+
+        # 3. finalizar o treino minimiza (ainda sem internet)
+        m = finalizar(c, "local")
+        p.check(m["minimizado"] == "1" and m["inert"] and m["altura"] == 0 and c.pg.locator(f"{SLOT} [data-treino-feito]").count() == 1,
+                f"finalizar o treino minimiza, com o cartão em TREINO CONCLUÍDO ({m})")
+        topo_do_cartao(c)
+        print("   print:", c.print("4_finalizado_minimizado"))
         erros = [e for e in c.console if e.startswith("error") and not any(x in e for x in ("ERR_INTERNET", "Failed to fetch", "Upload", "net::"))]
         p.check(not erros, f"sem erro no console ({erros[:3]})")
     finally:
@@ -251,13 +285,15 @@ def caso_prod(nav, base: str) -> None:
         if not ok:
             return
         c.esperar(lambda: not B8.texto(c, f"{SLOT} [data-treino-series]").startswith("0 "), 40)
-        m = tocar_no_nome(c)
-        p.check(m["minimizado"] == "1" and m["inert"] and m["expandido"] == "false" and m["altura"] == 0, f"[{rotulo}] tocar no nome minimiza a lista ({m})")
+        m = medidas(c)
+        p.check(m["minimizado"] == "1" and m["inert"] and m["expandido"] == "false" and m["altura"] == 0, f"[{rotulo}] a aba abre com o treino minimizado ({m})")
         p.check(m["largura"] <= m["janela"] and m["linhasNome"] == 1, f"[{rotulo}] sem rolagem lateral e o nome numa linha ({m['largura']}/{m['janela']})")
         topo_do_cartao(c)
-        print("   print:", c.print("1_minimizado"))
+        print("   print:", c.print("1_abre_minimizado"))
         m = tocar_no_nome(c)
-        p.check(m["minimizado"] == "0" and not m["inert"] and m["altura"] > 100 and m["recorta"] == "visible", f"[{rotulo}] tocar de novo mostra a lista ({m})")
+        p.check(m["minimizado"] == "0" and not m["inert"] and m["altura"] > 100 and m["recorta"] == "visible", f"[{rotulo}] tocar no nome mostra a lista ({m})")
+        c.pg.locator(f"{SLOT} [data-comecar-treino]").click()  # o cronômetro (só no aparelho) — o finalizar sai por ele
+        c.pg.wait_for_timeout(700)
         ids = c.pg.locator(f"{SLOT} [data-exercicio-id]").evaluate_all("els => els.map(e => e.getAttribute('data-exercicio-id'))")
         feitos: list[str] = []
         for ex in ids:
@@ -280,12 +316,18 @@ def caso_prod(nav, base: str) -> None:
             B8.linha(c, feitos[0]).evaluate("el => el.scrollIntoView({ block: 'center' })")
             c.pg.wait_for_timeout(500)
             print("   print:", c.print("2_feitos_cinza_riscados"))
+        m = finalizar(c, rotulo)
+        p.check(m["minimizado"] == "1" and m["inert"] and m["altura"] == 0 and c.pg.locator(f"{SLOT} [data-treino-feito]").count() == 1,
+                f"[{rotulo}] finalizar o treino minimiza, com o cartão em TREINO CONCLUÍDO ({m})")
+        topo_do_cartao(c)
+        print("   print:", c.print("3_finalizado_minimizado"))
     finally:
         c.fim()  # SEM voltar a internet
     depois = series_do_domingo(dia)
     p.check(antes == depois, f"[{rotulo}] produção intacta: séries da conta de teste no domingo {antes} → {depois}")
-    treino = [x for x in guarda.bloqueadas if "tb_treino_series" in x or "tb_academia_pesos" in x]
-    p.check(not treino, f"[{rotulo}] a Guarda não precisou barrar série nem peso da academia ({treino[:4]})")
+    # sem internet a fila do aparelho TENTA subir os OKs e a Guarda barra (22/10/2026: 3 POST): a prova é a "produção intacta"
+    treino = [x for x in guarda.bloqueadas if "tb_treino_series" in x or "tb_academia_pesos" in x or "treino_historico" in x or "tb_treino_concluido" in x]
+    print(f"   a Guarda barrou {len(treino)} escrita(s) do treino: {treino[:4]}", flush=True)
 
 
 def main() -> int:

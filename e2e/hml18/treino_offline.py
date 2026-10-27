@@ -142,6 +142,13 @@ def f2b(R: B.Rodada, cel: B.Celular, dia: str | None) -> None:
     # H-83: abre a linha de um exercício, toca em Trocar, a folha abre; Esc; aos ~100 ms ela ainda mostra o exercício
     if dia:
         escolher_dia_com_treino(cel, dia)
+    # a aba abre com o treino minimizado (26/10/2026): tocar no nome do treino mostra os exercícios
+    for _ in range(6):
+        fechado = cel.pg.locator('[data-treino-minimizar][aria-expanded="false"]')
+        if not fechado.count():
+            break
+        fechado.first.click()
+        cel.pg.wait_for_timeout(450)
     linha = cel.pg.locator("[data-exercicio-abrir]")
     if not linha.count():
         R.ok(False, "H-83: nenhuma linha de exercício para abrir")
