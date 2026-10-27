@@ -35,6 +35,8 @@ describe("a play-compras", () => {
     h.invoke.mockResolvedValue(ok({ disponivel: true, matricula: { id: "m1", ativo: true }, assinatura: null, automatica_mp: false, ressincronizada: true }));
     await buscarEstadoPlay();
     expect(h.invalidar).toHaveBeenCalledTimes(1);
+    // T2 (b): sem apagar o último (a trava da loja não pisca enquanto relê)
+    expect(h.invalidar).toHaveBeenCalledWith({ manterUltimo: true });
     h.invoke.mockResolvedValue(ok({ disponivel: true, matricula: { id: "m1", ativo: true }, assinatura: null, automatica_mp: false }));
     await buscarEstadoPlay();
     expect(h.invalidar).toHaveBeenCalledTimes(1);

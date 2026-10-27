@@ -9,7 +9,7 @@ import {
 } from "../../supabase-principal/functions/_shared/play-regras";
 import { GoogleSemToken, claimsDoToken, esquecerToken, tokenDoGoogle } from "../../supabase-principal/functions/_shared/google-oauth";
 import { PlayIndisponivel, adiar, cancelar, obter, reconhecer, revogar } from "../../supabase-principal/functions/_shared/play-api";
-import { ressincronizarVencidas, sincronizar } from "../../supabase-principal/functions/_shared/play-assinaturas";
+import { assinaturaVivaDa, ressincronizarVencidas, sincronizar, vistaDaPlay } from "../../supabase-principal/functions/_shared/play-assinaturas";
 import { excluirContaProfissional, type DepsExclusao } from "../../supabase-principal/functions/_shared/exclusao-profissional-regras";
 import { STATUS_DA_RECUSA } from "../../supabase-principal/functions/_shared/conta-aluno-regras";
 
@@ -121,6 +121,46 @@ describe("a leitura do GET (purchases.subscriptionsv2)", () => {
       expect(a.pedidoPago).toBe("GPA.1111-2222-3333-44444");
       expect(a.produtos.sort()).toEqual(["app_treino", "app_treino_alimentacao"]);
     }
+  });
+  it("T2 (a): o trocaPara da assinatura = o deferredItemReplacement (a troca na renovação) — nas 2 ordens do DEFERRED; sem troca ou fora do app = null", () => {
+    const antiga = {
+      productId: "app_treino_alimentacao", expiryTime: "2026-11-16T10:00:00Z", offerDetails: { basePlanId: "mensal" },
+      autoRenewingPlan: { autoRenewEnabled: false, recurringPrice: { currencyCode: "BRL", units: "49", nanos: 900000000 } },
+      latestSuccessfulOrderId: "GPA.1111-2222-3333-44444", deferredItemReplacement: { productId: "app_treino" },
+    };
+    const nova = { productId: "app_treino", autoRenewingPlan: { autoRenewEnabled: true }, offerDetails: { basePlanId: "mensal" } };
+    for (const linhas of [[antiga, nova], [nova, antiga]]) {
+      const a = lerAssinaturaV2(getV2({ lineItems: linhas }))!;
+      expect(a.produto).toBe("app_treino_alimentacao");
+      expect(a.trocaPara).toBe("app_treino");
+    }
+    // a linha única com a troca marcada (o vigente segue o atual)
+    expect(lerAssinaturaV2(getV2({}, { productId: "app_treino_alimentacao", deferredItemReplacement: { productId: "app_treino" } }))!.trocaPara).toBe("app_treino");
+    expect(lerAssinaturaV2(getV2())!.trocaPara).toBeNull();
+    expect(lerAssinaturaV2(getV2({}, { deferredItemReplacement: { productId: "outro_produto" } }))!.trocaPara).toBeNull();
+    expect(lerAssinaturaV2(getV2({}, { deferredItemReplacement: {} }))!.trocaPara).toBeNull();
+  });
+  it("T2 (a): a entrada da play_aplicar leva o troca_para (null = sem troca: a play_aplicar limpa)", () => {
+    const comTroca = getV2({}, { productId: "app_treino_alimentacao", deferredItemReplacement: { productId: "app_treino" } });
+    expect(entradaDoGoogle(MATRICULA, TOKEN, lerAssinaturaV2(comTroca)!)!.troca_para).toBe("app_treino");
+    const sem = entradaDoGoogle(MATRICULA, TOKEN, lerAssinaturaV2(getV2())!)!;
+    expect(sem).toHaveProperty("troca_para", null);
+  });
+  it("T2 (a): a vista do app e a leitura do banco levam o troca_para (sem ele, null)", async () => {
+    expect(vistaDaPlay({ estado: "ativa", renova: false, expira_em: "x", produto: "app_treino_alimentacao", troca_para: "app_treino" })).toEqual({
+      estado: "ativa", renova: false, expira_em: "x", produto: "app_treino_alimentacao", troca_para: "app_treino",
+    });
+    expect(vistaDaPlay({ estado: "ativa", renova: true, expira_em: "x", produto: "app_treino" })).toEqual({
+      estado: "ativa", renova: true, expira_em: "x", produto: "app_treino", troca_para: null,
+    });
+    expect(vistaDaPlay(null)).toBeNull();
+    let colunas = "";
+    const cadeia: Record<string, unknown> = {};
+    for (const m of ["eq", "in", "or", "order"]) cadeia[m] = () => cadeia;
+    cadeia.select = (c: string) => { colunas = c; return cadeia; };
+    cadeia.limit = async () => ({ data: [], error: null });
+    await assinaturaVivaDa({ from: () => cadeia } as never, MATRICULA);
+    expect(colunas.split(",").map((c) => c.trim())).toContain("troca_para");
   });
   it("na carência sem pedido novo pago, o pedido do topo NÃO vale (pode ser o recusado)", () => {
     const a = lerAssinaturaV2(getV2({ subscriptionState: "SUBSCRIPTION_STATE_IN_GRACE_PERIOD", latestOrderId: "GPA.1111-2222-3333-44444..1" },

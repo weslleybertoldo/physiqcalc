@@ -119,6 +119,9 @@ export interface AssinaturaGoogle {
   pedidoPago: string | null;
   /** o etag (o defer exige o mais novo) */
   etag: string | null;
+  /** T2 (26/10/2026): a troca na renovação (DEFERRED) que o Google marcou — o produto do app que entra quando renovar (o
+   *  deferredItemReplacement da linha; a vigente primeiro); null = sem troca (ou produto fora do app) */
+  trocaPara: string | null;
 }
 
 const txt = (v: unknown, max = 4096): string | null => (typeof v === "string" && v.length > 0 && v.length <= max ? v : null);
@@ -192,6 +195,8 @@ export function lerAssinaturaV2(corpo: unknown): AssinaturaGoogle | null {
     // o pedido PAGO: o da linha vigente; sem ele, o latestOrderId só quando ativa ou cancelada (na carência ele pode ser o recusado)
     pedidoPago: vigente.pedidoPago ?? (ativaOuCancelada ? txt(c.latestOrderId, 200) : null),
     etag: txt(c.etag, 512),
+    // T2: a troca agendada — a da linha vigente (o DEFERRED marca a linha do produto de hoje); sem ela, a de outra linha; só produto do app
+    trocaPara: [vigente, ...linhas].map((l) => l.trocaPara).find((p): p is ProdutoPlay => ehProdutoPlay(p)) ?? null,
   };
 }
 
@@ -229,6 +234,8 @@ export interface EntradaAplicar {
   cancelada_por?: "vinculo" | "exclusao" | "google" | null;
   adiada?: boolean;
   devolvido_pedido?: string | null;
+  /** T2 (26/10/2026): o produto que entra na renovação (o DEFERRED); null = sem troca — a play_aplicar grava o que vier (null LIMPA) */
+  troca_para: string | null;
 }
 
 export function entradaDoGoogle(
@@ -259,6 +266,7 @@ export function entradaDoGoogle(
     cancelada_por: extra.canceladaPor ?? null,
     adiada: extra.adiada === true,
     devolvido_pedido: extra.devolvidoPedido ?? null,
+    troca_para: a.trocaPara ?? null,
   };
 }
 

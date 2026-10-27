@@ -81,6 +81,29 @@ describe("a vista da assinatura", () => {
     expect(normalizarVistaPlay(null)).toBeNull();
     expect(normalizarVistaPlay({ estado: "ativa" })).toBeNull();
   });
+  it("T2 (a): a troca agendada (DEFERRED) chega ao app — o troca_para do servidor, só com código do app; sem ela, a vista de hoje", () => {
+    expect(normalizarVistaPlay({ estado: "ativa", renova: false, expira_em: "x", produto: "app_treino_alimentacao", troca_para: "app_treino" })).toEqual({
+      estado: "ativa", renova: false, expira_em: "x", produto: "app_treino_alimentacao", troca_para: "app_treino",
+    });
+    for (const troca_para of [null, undefined, "", "outro_produto", 7]) {
+      expect(normalizarVistaPlay({ estado: "ativa", renova: true, expira_em: "x", produto: "app_treino", troca_para })).toEqual({
+        estado: "ativa", renova: true, expira_em: "x", produto: "app_treino",
+      });
+    }
+  });
+  it("T2 (a): com a troca agendada, o detalhe diz \"vira <Nome> em DD/MM\" (o fim do plano de hoje) no lugar de renova/não renova", () => {
+    const deferred = vista({ produto: "app_treino_alimentacao", renova: false, troca_para: "app_treino" });
+    expect(textoDaAssinatura(deferred)).toEqual({ titulo: "Assinatura pela Google Play", detalhe: "até 16/11 · vira Treino em 16/11", tom: "n" });
+    expect(textoDaAssinatura({ ...deferred, renova: true }).detalhe).toBe("até 16/11 · vira Treino em 16/11");
+    expect(textoDaAssinatura(vista({ produto: "app_treino", troca_para: "app_treino_alimentacao" })).detalhe).toBe("até 16/11 · vira Treino + Alimentação em 16/11");
+    // sem a data: na renovação
+    expect(textoDaAssinatura({ ...deferred, expira_em: null }).detalhe).toBe("vira Treino na renovação");
+    // a troca para o MESMO produto, ou sem troca: igual a hoje
+    expect(textoDaAssinatura(vista({ troca_para: "app_treino" })).detalhe).toBe("até 16/11 · renova sozinha");
+    expect(textoDaAssinatura(vista({ renova: false })).detalhe).toBe("até 16/11 · não renova");
+    // cancelada não renova: a troca não acontece (o texto de hoje)
+    expect(textoDaAssinatura({ ...deferred, estado: "cancelada" }).detalhe).toBe("vale até 16/11 · cancelada, não renova");
+  });
   it("o texto de cada estado (Pagamentos, Meu plano, a trava)", () => {
     expect(textoDaAssinatura(vista())).toEqual({ titulo: "Assinatura pela Google Play", detalhe: "até 16/11 · renova sozinha", tom: "n" });
     expect(textoDaAssinatura(vista({ estado: "cancelada", renova: false })).detalhe).toBe("vale até 16/11 · cancelada, não renova");
@@ -102,7 +125,8 @@ describe("a troca (decisão 6) e as mensagens", () => {
   });
   it("nada de site, Pix, cartão ou Mercado Pago nos textos da loja", () => {
     const textos = [...Object.values(MENSAGEM_PLAY), TEXTO_RENOVA, TEXTO_CANCELE, textoDaTroca("na_hora"), textoDaTroca("na_renovacao"),
-      ...(["pendente", "ativa", "cancelada", "carencia", "suspensa", "pausada"] as const).flatMap((estado) => Object.values(textoDaAssinatura(vista({ estado }))))];
+      ...(["pendente", "ativa", "cancelada", "carencia", "suspensa", "pausada"] as const).flatMap((estado) => Object.values(textoDaAssinatura(vista({ estado })))),
+      ...Object.values(textoDaAssinatura(vista({ produto: "app_treino_alimentacao", troca_para: "app_treino" })))];
     for (const t of textos) expect(t, t).not.toMatch(/Pix|cart[ãa]o|Mercado Pago|site|physiqcalc\.com\.br/i);
     expect(mensagemPlay("compra_de_outra_conta")).toMatch(/outra conta do Physiq/);
     expect(mensagemPlay("inexistente")).toBe("Não deu certo agora. Tente de novo.");

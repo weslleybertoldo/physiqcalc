@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { UserRound, Wallet } from "lucide-react";
 import { BotaoAssinarPlay, BotaoGerenciarPlay } from "@/app-aluno/sozinho/pecas/AssinaturaPlay";
 import { normalizarVistaPlay, playTravada, textoDaAssinatura } from "@/app-aluno/sozinho/playRegras";
+import { useReleituraDaTrava } from "@/app-aluno/sozinho/releituraDaTrava";
 import { usePlayDaLoja } from "@/app-aluno/sozinho/usePlayDaLoja";
 import { reais, soOTeste, travaDoInadimplente } from "@/financeiro/regras";
 import { useResumoFinanceiro } from "@/financeiro/useResumoFinanceiro";
@@ -29,6 +30,8 @@ import { TelaTrava } from "./pecas/TelaTrava";
  * — no site, no APK do site e na loja — mostra "Atualize o pagamento na Google Play" + o Gerenciar (nada de Pagar nem de Assinar de novo).
  * Na loja com a Play valendo (usePlayDaLoja), a trava da conta do app ganha "Assinar pela Google Play" (a folha da oferta, com o preço da
  * Play); sem ela, o texto neutro de antes.
+ * play-W6 · T2 (b), 26/10/2026: na loja, a trava da conta do app RELÊ a assinatura ao montar e ao voltar ao primeiro plano (o `estado` de
+ * novo + o resumo sem apagar o último — releituraDaTrava.ts): a suspensa vira "Assinatura suspensa" sem reabrir o app. O site não muda.
  */
 export default function GatePagamentoPendente({ children }: { children: ReactNode }) {
   const { situacao } = useSessao();
@@ -36,11 +39,14 @@ export default function GatePagamentoPendente({ children }: { children: ReactNod
   const navigate = useNavigate();
   const { resumo } = useResumoFinanceiro();
   const play = usePlayDaLoja();
-  if (!situacao || ehProfissional(situacao) || pathname.startsWith("/perfil/pagamentos")) return <>{children}</>;
   const lista = resumo ?? [];
   const travadas = lista.filter((r) => travaDoInadimplente(r));
-  if (!lista.length || travadas.length < lista.length) return <>{children}</>;
-  const r = ehLoja ? travadas.find((t) => !t.app) ?? travadas[0] : travadas[0];
+  const travado = !!situacao && !ehProfissional(situacao) && !pathname.startsWith("/perfil/pagamentos") && lista.length > 0
+    && travadas.length === lista.length;
+  const r = travado ? (ehLoja ? travadas.find((t) => !t.app) ?? travadas[0] : travadas[0]) : null;
+  // T2 (b): a trava da conta do app NA LOJA relê a assinatura (ao montar e ao voltar ao primeiro plano); o site não chama nada
+  useReleituraDaTrava(ehLoja && !!r?.app);
+  if (!r) return <>{children}</>;
   const meusDados = (
     <button type="button" className="pq-botao pq-botao-g w-full" onClick={() => navigate(ROTA_PERFIL_REDUZIDO)} data-trava-meus-dados>
       <UserRound aria-hidden /> Exportar ou excluir meus dados

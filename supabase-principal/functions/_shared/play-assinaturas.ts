@@ -29,8 +29,11 @@ export interface LinhaPlayBanco {
   expira_em: string | null;
   produto: string;
   teste: boolean;
+  /** T2 (26/10/2026): o produto que entra na renovação (a troca agendada — DEFERRED); null = sem troca. A coluna nasceu na
+   *  20261027010000_playw6_troca_para.sql (nos 2 schemas ANTES de publicar as funções que a leem) */
+  troca_para?: string | null;
 }
-const COLUNAS = "token, paciente_id, estado, renova, expira_em, produto, teste";
+const COLUNAS = "token, paciente_id, estado, renova, expira_em, produto, teste, troca_para";
 
 /** O que a play_aplicar devolve (supabase-principal/migrations/20261016010000_playw6_play_billing.sql). */
 export interface RespostaAplicar {
@@ -128,11 +131,11 @@ export async function vivasParaConferir(db: SupabaseClient, limite: number): Pro
   return { linhas, total: Math.max(typeof count === "number" ? count : 0, linhas.length) };
 }
 
-/** O que o app e as leituras mostram da assinatura (nunca o token nem o pedido). */
-export function vistaDaPlay(l: Pick<LinhaPlayBanco, "estado" | "renova" | "expira_em" | "produto"> | null): {
-  estado: EstadoPlay; renova: boolean; expira_em: string | null; produto: string;
+/** O que o app e as leituras mostram da assinatura (nunca o token nem o pedido). T2: + a troca agendada (troca_para; sem ela, null). */
+export function vistaDaPlay(l: Pick<LinhaPlayBanco, "estado" | "renova" | "expira_em" | "produto" | "troca_para"> | null): {
+  estado: EstadoPlay; renova: boolean; expira_em: string | null; produto: string; troca_para: string | null;
 } | null {
-  return l ? { estado: l.estado, renova: l.renova, expira_em: l.expira_em, produto: l.produto } : null;
+  return l ? { estado: l.estado, renova: l.renova, expira_em: l.expira_em, produto: l.produto, troca_para: l.troca_para ?? null } : null;
 }
 
 /** O GET lido; 404/410/400 = a compra não existe (null); o Google sem resposta que decida → PlayIndisponivel. */

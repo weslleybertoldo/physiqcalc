@@ -10,6 +10,7 @@
  */
 import { dataBR } from "@/financeiro/regras";
 import type { ProdutoPlay } from "@/lib/playBilling";
+import { PLANOS_APP_PADRAO } from "./regras";
 
 /** Os produtos da Play = os códigos dos planos do app no banco (planos_aluno.codigo). */
 export const PRODUTOS_PLAY = ["app_treino", "app_treino_alimentacao"] as const;
@@ -26,13 +27,17 @@ export interface VistaPlay {
   renova: boolean;
   expira_em: string | null;
   produto: string;
+  /** T2 (26/10/2026): a troca agendada para a renovação (o DEFERRED: o completo → o Treino) — o plano que entra quando o de hoje acabar.
+   *  Ausente = sem troca (o servidor de antes não manda). */
+  troca_para?: CodigoPlay;
 }
 
 export function ehCodigoPlay(v: unknown): v is CodigoPlay {
   return typeof v === "string" && (PRODUTOS_PLAY as readonly string[]).includes(v);
 }
 
-/** O JSON do servidor (tolerante): só as vivas viram vista; o resto (null, expirada, formato estranho) = null. */
+/** O JSON do servidor (tolerante): só as vivas viram vista; o resto (null, expirada, formato estranho) = null. A troca agendada só com
+ *  código do app (sem ela, a vista de sempre). */
 export function normalizarVistaPlay(bruto: unknown): VistaPlay | null {
   if (!bruto || typeof bruto !== "object") return null;
   const b = bruto as Record<string, unknown>;
@@ -42,7 +47,14 @@ export function normalizarVistaPlay(bruto: unknown): VistaPlay | null {
     renova: b.renova === true,
     expira_em: typeof b.expira_em === "string" ? b.expira_em : null,
     produto: b.produto,
+    ...(ehCodigoPlay(b.troca_para) ? { troca_para: b.troca_para } : {}),
   };
+}
+
+/** O nome do plano do app pelo código (o mesmo mapa dos planos padrão — PLANOS_APP_PADRAO); fora do app = null. Lido na hora da chamada
+ *  (o regras.ts também importa daqui). */
+function nomeDoPlanoApp(codigo: string): string | null {
+  return PLANOS_APP_PADRAO.find((p) => p.codigo === codigo)?.nome ?? null;
 }
 
 /** Há assinatura da Play viva (ainda vale ou pode voltar a valer): o site e o APK antigo não cobram de novo. */
@@ -60,7 +72,7 @@ export interface OfertaMensal {
   produto: CodigoPlay;
   /** o offerToken (a compra exige) */
   token: string;
-  /** o preço que a Play devolve, já formatado na moeda de quem compra ("R$ 29,90") */
+  /** o preço que a Play devolve, já formatado na moeda de quem compra ("R$ 20,00") */
   preco: string;
   micros: number;
   moeda: string;
@@ -86,14 +98,14 @@ export function ofertasMensais(produtos: readonly ProdutoPlay[]): Partial<Record
   return saida;
 }
 
-/** O menor preço das ofertas ("a partir de R$ 29,90"); sem oferta, null. */
+/** O menor preço das ofertas ("a partir de R$ 20,00"); sem oferta, null. */
 export function menorPreco(ofertas: Partial<Record<CodigoPlay, OfertaMensal>>): string | null {
   const lista = Object.values(ofertas).filter((o): o is OfertaMensal => !!o);
   if (!lista.length) return null;
   return lista.reduce((a, b) => (b.micros < a.micros ? b : a)).preco;
 }
 
-/** "R$ 29,90/mês" — o preço da Play com o período. */
+/** "R$ 20,00/mês" — o preço da Play com o período. */
 export const porMes = (preco: string): string => `${preco}/mês`;
 
 export const TEXTO_RENOVA = "Renova todo mês até você cancelar.";
@@ -120,12 +132,18 @@ export interface TextoAssinatura {
   tom: "n" | "a" | "r" | "g";
 }
 
-/** A assinatura numa frase (Pagamentos, Meu plano, a trava). */
+/** A assinatura numa frase (Pagamentos, Meu plano, a trava). T2 (26/10/2026): com a troca agendada para outro plano (o DEFERRED), a
+ *  ativa diz "vira <plano> em DD/MM" (o fim do plano de hoje; sem a data, "na renovação") no lugar de renova/não renova. */
 export function textoDaAssinatura(p: VistaPlay): TextoAssinatura {
   const ate = p.expira_em ? dataBR(p.expira_em) : "";
+  const vira = p.troca_para && p.troca_para !== p.produto ? nomeDoPlanoApp(p.troca_para) : null;
   switch (p.estado) {
     case "ativa":
-      return { titulo: "Assinatura pela Google Play", detalhe: `${ate ? `até ${ate} · ` : ""}${p.renova ? "renova sozinha" : "não renova"}`, tom: "n" };
+      return {
+        titulo: "Assinatura pela Google Play",
+        detalhe: `${ate ? `até ${ate} · ` : ""}${vira ? `vira ${vira} ${ate ? `em ${ate}` : "na renovação"}` : p.renova ? "renova sozinha" : "não renova"}`,
+        tom: "n",
+      };
     case "cancelada":
       return { titulo: "Assinatura pela Google Play", detalhe: `${ate ? `vale até ${ate} · ` : ""}cancelada, não renova`, tom: "a" };
     case "carencia":

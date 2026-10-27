@@ -14,6 +14,8 @@ export interface PlayDaMatricula {
   renova: boolean;
   expira_em: string | null;
   produto: string;
+  /** T2 (26/10/2026): a troca agendada para a renovação (o DEFERRED); null/ausente = sem troca */
+  troca_para?: string | null;
 }
 /** W2: 'mercadopago' = o Mercado Pago do Physiq (só o master liga); 'mercadopago_conta' = o Mercado Pago DO PERSONAL (o dono conecta o dele). */
 export type ModoRecebimento = "pix_manual" | "nenhum" | "mercadopago" | "infinitepay" | "mercadopago_conta";

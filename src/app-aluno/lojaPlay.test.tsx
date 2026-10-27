@@ -6,7 +6,7 @@ import { matricula, situacao } from "@/test/fixturesNucleo";
 import type { CobrancaVista, MatriculaPagamentos, PlayDaMatricula, ResumoMatricula, StatusAluno } from "@/financeiro/tipos";
 
 // play-W6 — as telas da conta do app COM a Play valendo (ehLoja + o plugin + a trava/conta de teste + o aparelho + as ofertas): o
-// "Treinar sem profissional" volta, o preço é SÓ o da Play (aqui R$ 31,90 / R$ 51,90, de propósito diferente do banco: 29,90 / 49,90),
+// "Treinar sem profissional" volta, o preço é SÓ o da Play (aqui R$ 31,90 / R$ 51,90, de propósito diferente do banco: 20,00 / 35,00),
 // assinar e trocar pela Play, Gerenciar na Google Play. E o site (e o APK do site) de quem tem a Play viva: a assinatura + o link de
 // gerenciar, sem Pix, cartão, automática nem trocar. A loja SEM a Play valendo é o src/app-aluno/loja.test.tsx (intacto).
 const h = vi.hoisted(() => {
@@ -70,7 +70,7 @@ import Pagamentos from "./perfil/Pagamentos";
 const dia = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString();
 const ddmm = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
 /** o que NUNCA aparece na conta do app na loja: o preço do banco, o site e as formas do site */
-const SO_DO_SITE = /29,90|49,90|Pix|cart[ãa]o|Mercado Pago/i;
+const SO_DO_SITE = /20,00|35,00|Pix|cart[ãa]o|Mercado Pago/i;
 
 const OFERTAS = {
   app_treino: { produto: "app_treino", token: "tok-t", preco: "R$ 31,90", micros: 31_900_000, moeda: "BRL" },
@@ -107,22 +107,22 @@ function resumo(p: Partial<ResumoMatricula> = {}): ResumoMatricula {
 }
 const resumoApp = (p: Partial<ResumoMatricula> = {}) =>
   resumo({ paciente_id: "pa", conta_id: "app", conta_nome: "Physiq", recebimento_modo: "mercadopago", bloquear_inadimplente: true, tem_chave: false,
-    profissional: "Physiq", mensalidade_valor: 29.9, plano_nome: "Treino", app: true, plano_codigo: "app_treino", ...p });
+    profissional: "Physiq", mensalidade_valor: 20, plano_nome: "Treino", app: true, plano_codigo: "app_treino", ...p });
 const matriculaApp = (p: Partial<MatriculaPagamentos> = {}): MatriculaPagamentos => ({
   paciente_id: "pa", nome: "Rafael Moura",
   conta: { id: "app", nome: "Physiq", modo: "mercadopago", bloquear: true, profissional: "Physiq", app: true },
   chave: null,
-  mensalidade: { valor: 29.9, plano_id: null, plano: "Treino", pausada: false, pago_ate: dia(20), desde: dia(-12), coberta: true, teste_ate: dia(-5), plano_codigo: "app_treino" },
+  mensalidade: { valor: 20, plano_id: null, plano: "Treino", pausada: false, pago_ate: dia(20), desde: dia(-12), coberta: true, teste_ate: dia(-5), plano_codigo: "app_treino" },
   assinatura: null, cobrancas: [], recibos: [], ...p,
 } as MatriculaPagamentos);
 const status = (matriculas: MatriculaPagamentos[]): StatusAluno => ({ ok: true, ambiente: "staging", simulacao: true, hoje: dia(0).slice(0, 10), agora: dia(0), matriculas });
 const PLANOS_APP = [
-  { codigo: "app_treino", nome: "Treino", valor: 29.9, modulos: ["treino"], descricao: null },
-  { codigo: "app_treino_alimentacao", nome: "Treino + Alimentação", valor: 49.9, modulos: ["treino", "nutricao"], descricao: null },
+  { codigo: "app_treino", nome: "Treino", valor: 20, modulos: ["treino"], descricao: null },
+  { codigo: "app_treino_alimentacao", nome: "Treino + Alimentação", valor: 35, modulos: ["treino", "nutricao"], descricao: null },
 ];
 const meuPlano = (m: Record<string, unknown> = {}) => ({
   teste_dias: 7, planos: PLANOS_APP, com_profissional: false,
-  matricula: { paciente_id: "pa", ativo: true, plano: "app_treino", plano_nome: "Treino", valor: 29.9, modulos: ["treino"], objetivo: "manter",
+  matricula: { paciente_id: "pa", ativo: true, plano: "app_treino", plano_nome: "Treino", valor: 20, modulos: ["treino"], objetivo: "manter",
     teste_de: dia(-2), teste_ate: dia(5), pago_ate: dia(5), pausada: false, encerrada_em: null, encerrada_motivo: null, aguardando: false, assinatura: null, ...m },
 });
 
@@ -281,8 +281,17 @@ describe("loja COM a Play valendo — a trava, a faixa, Meu plano, Pagamentos e 
     expect((await waitFor(() => document.querySelector("[data-play-troca]")))!.getAttribute("data-play-troca")).toBe("na_renovacao");
   });
 
+  it("T2 (a): Meu plano com a troca para o Treino AGENDADA (o DEFERRED): 'vira Treino em DD/MM' no lugar de 'não renova'", async () => {
+    const agendada = { ...VIVA, produto: "app_treino_alimentacao", renova: false, troca_para: "app_treino" as const };
+    h.plano.mockResolvedValue(meuPlano({ play: agendada, plano: "app_treino_alimentacao", plano_nome: "Treino + Alimentação", modulos: ["treino", "nutricao"] }));
+    montar(<MeuPlano />, "/perfil/meu-plano");
+    expect(await screen.findByText(`até ${ddmm(VIVA.expira_em)} · vira Treino em ${ddmm(VIVA.expira_em)}`)).toBeInTheDocument();
+    expect(screen.queryByText(/não renova/)).toBeNull();
+    expect(document.querySelector("[data-assinatura-play-titulo]")!.textContent).toBe("Assinatura pela Google Play · Treino + Alimentação");
+  });
+
   it("Meu plano com a automática do MP ainda viva: sem a oferta da Play ('Seu plano é pago no cartão')", async () => {
-    h.plano.mockResolvedValue(meuPlano({ assinatura: { status: "authorized", valor: 29.9, proximo_vencimento: dia(10) } }));
+    h.plano.mockResolvedValue(meuPlano({ assinatura: { status: "authorized", valor: 20, proximo_vencimento: dia(10) } }));
     montar(<MeuPlano />, "/perfil/meu-plano");
     expect(await screen.findByText(/Seu plano é pago no cartão/)).toBeInTheDocument();
     expect(document.querySelector("[data-play-assinar]")).toBeNull();

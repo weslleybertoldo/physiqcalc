@@ -54,9 +54,8 @@ export interface EstadoPlayServidor {
 export async function buscarEstadoPlay(): Promise<EstadoPlayServidor> {
   const r = await chamar<Record<string, unknown>>({ acao: "estado" });
   // a revisão, 🟡3: o servidor ressincronizou a viva vencida (a renovação ou o EXPIRED que a conferência de hora em hora ainda não trouxe) —
-  // o resumo guardado no
-  // aparelho (10 min) fica velho: a trava e a faixa leem de novo
-  if (r.ressincronizada === true) invalidarResumo();
+  // o resumo guardado no aparelho (10 min) fica velho: a trava e a faixa leem de novo. T2 (b): sem apagar o último (a trava não pisca)
+  if (r.ressincronizada === true) invalidarResumo({ manterUltimo: true });
   const m = r.matricula && typeof r.matricula === "object" ? (r.matricula as Record<string, unknown>) : null;
   return {
     disponivel: r.disponivel === true,

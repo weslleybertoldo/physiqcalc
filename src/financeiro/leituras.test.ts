@@ -85,7 +85,7 @@ vi.mock("@/integrations/principal/client", async () => {
 import { lerPedidoDeLeitura } from "../../supabase-principal/functions/_shared/leitura-lote";
 import { CONSULTAS_FINANCEIRO } from "../../supabase-principal/functions/_shared/financeiro-leituras";
 import * as dados from "@/painel/financeiro/dados";
-import { ErroFinanceiro, buscarResumo, buscarTotaisDoAluno, lerResumoGuardado } from "./api";
+import { ErroFinanceiro, assinarResumo, buscarResumo, buscarTotaisDoAluno, invalidarResumo, lerResumoGuardado } from "./api";
 import { ErroLeitura } from "./ler";
 import * as lancamentos from "./lancamentos";
 import * as recibos from "./recibos";
@@ -330,6 +330,24 @@ describe("hml-20d — o gate do app do aluno (buscarResumo → fin_do_aluno): 1 
     expect(itensLidos()).toEqual([{ q: "fin_do_aluno" }]);
     expect(h.args).toEqual([{ nome: "financeiro_do_aluno", args: {} }]);
     expect(lerResumoGuardado("u-aluna")).toEqual(a);
+  });
+
+  it("T2 (b): invalidar SEM apagar o último (a trava da loja relê sem piscar): deixa de valer, mas quem mostra segue com ele até o novo chegar; o padrão apaga (como sempre)", async () => {
+    h.rpcs = { financeiro_do_aluno: [{ paciente_id: ALUNO, situacao: "vencida" }] };
+    const a = await buscarResumo("u-aluna");
+    const avisados = vi.fn();
+    const sair = assinarResumo(avisados);
+    invalidarResumo({ manterUltimo: true });
+    expect(avisados).toHaveBeenCalledTimes(1);
+    expect(lerResumoGuardado("u-aluna")).toBeNull();
+    expect(lerResumoGuardado("u-aluna", Date.now(), true)).toEqual(a);
+    invalidarResumo();
+    expect(avisados).toHaveBeenCalledTimes(2);
+    expect(lerResumoGuardado("u-aluna", Date.now(), true)).toBeNull();
+    // sem nada guardado, manter o último não inventa nada
+    invalidarResumo({ manterUltimo: true });
+    expect(lerResumoGuardado("u-aluna", Date.now(), true)).toBeNull();
+    sair();
   });
 
   it("valor que não é lista → [] (como hoje); o erro rejeita (quem mostra só marca 'erro') e nada é guardado; depois, a próxima chama de novo", async () => {
