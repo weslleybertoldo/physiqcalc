@@ -44,4 +44,14 @@ describe("fecharDialogAberto (voltar do Android)", () => {
     expect(esc.teclas).toEqual(["Escape"]);
     esc.parar();
   });
+
+  it("hml-29: menu aberto (DropdownMenu) também fecha; menu fechado não conta", () => {
+    document.body.innerHTML = '<div role="menu" data-state="closed"></div>';
+    const esc = escutarEscape();
+    expect(fecharDialogAberto()).toBe(false);
+    document.body.innerHTML = '<div role="menu" data-state="open"></div>';
+    expect(fecharDialogAberto()).toBe(true);
+    expect(esc.teclas).toEqual(["Escape"]);
+    esc.parar();
+  });
 });
