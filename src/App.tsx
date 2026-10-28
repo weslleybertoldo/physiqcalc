@@ -19,6 +19,7 @@ import StagingGate from "@/components/StagingGate";
 import { Rotas } from "@/rotas/Rotas";
 import { BUILD_DO_APP } from "@/lib/plataforma";
 import { AbrirLinkDoApp } from "@/ui/casca/AbrirLinkDoApp";
+import { VoltarDoAndroid } from "@/ui/casca/VoltarDoAndroid";
 import { AvisosGlobais } from "@/ui/casca/AvisosGlobais";
 import { BoasVindasNutri } from "@/ui/casca/BoasVindasNutri";
 import { CarregandoTela } from "@/ui/casca/CarregandoTela";
@@ -84,6 +85,8 @@ const AppRoutes = () => {
     // hml-16d: a 7 do React Router grava o endereço dentro de startTransition; o usePaginaNaUrl e as telas de lista contam
     // com a gravação na hora (a busca volta à página 1), como na 6 — por isso sem transição
     <BrowserRouter useTransitions={false}>
+      {/* hml-29 (B22): o voltar do Android — na página inicial, "Deseja sair do Physiq?" (no site, nada) */}
+      <VoltarDoAndroid />
       <StagingGate>
         {/* H2: no navegador do Android, "Abrir no app Physiq" no alto das páginas do aluno (e da entrada, se veio de um link delas) */}
         <FaixaAbrirNoApp />
