@@ -38,10 +38,9 @@ import { EscolhaPlano, type Escolha } from "./EscolhaPlano";
 import { HistoricoFaturas } from "./Historico";
 import { PixAberto } from "./PixAberto";
 
-// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de pagar (Decreto 7.962/2013, art. 4º, I) — SÓ no build de staging até a
-// virada (o texto espera o advogado). Na produção o Vite troca o import.meta.env.VITE_DB_SCHEMA pelo valor e o Rollup corta o import():
-// o resumo nem entra no bundle. A expressão fica AQUI, direto na condição, sem função no meio (o jeito da hml-08 e da hml-10).
-const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de pagar (Decreto 7.962/2013, art. 4º, I) — em todo build desde a virada
+// (29/10/2026), menos na versão da Google Play (lá o profissional não paga). Carrega sob demanda.
+const ResumoAntesDePagar = lazy(() => import("@/publico/legal/ResumoAntesDePagar"));
 
 const ROTULO_SITUACAO = {
   teste: { chip: "TESTE", tom: "c" as const },
@@ -325,7 +324,7 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
                         Outro plano: o preço de hoje ({reais(precoDeHoje)}/mês) e as regras de hoje deixam de valer nesta conta.
                       </p>
                     )}
-                    {ResumoAntesDePagar && !ehLoja && (
+                    {!ehLoja && (
                       <Suspense fallback={null}>
                         <ResumoAntesDePagar tela="plano-profissional" />
                       </Suspense>
@@ -344,13 +343,11 @@ export function PlanoContaNova({ contaId }: { contaId: string }) {
                       )}
                     </div>
                     <p className="text-[11.5px] leading-relaxed text-texto-3">
-                      {/* hml-11 (D5): "sem aviso" conflita com os Termos de assinatura novos — a frase nova só no staging até a virada */}
+                      {/* hml-11 (D5): "sem aviso" conflitava com os Termos de assinatura — a frase nova em todo build desde a virada */}
                       {recorrente ? (
                         "A cobrança automática já paga todo mês — para pagar por Pix, cancele-a antes."
-                      ) : import.meta.env.VITE_DB_SCHEMA === "staging" ? (
-                        <span data-frase-renovacao>{`Pix vale 72 h e confirma na hora. Na cobrança automática a 1ª cobrança é ${primeiraCobranca} e renova todo mês até você cancelar.`}</span>
                       ) : (
-                        `Pix vale 72 h e confirma na hora. Na cobrança automática a 1ª cobrança é ${primeiraCobranca} e renova todo mês, sem aviso.`
+                        <span data-frase-renovacao>{`Pix vale 72 h e confirma na hora. Na cobrança automática a 1ª cobrança é ${primeiraCobranca} e renova todo mês até você cancelar.`}</span>
                       )}
                     </p>
                   </>

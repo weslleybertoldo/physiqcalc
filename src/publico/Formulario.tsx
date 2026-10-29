@@ -14,10 +14,10 @@ import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { EstadoCarregando, EstadoVazio } from "@/ui/premium/Estados";
 
-// hml-12 (H-30, H8): o consentimento das respostas de saúde, específico e em destaque, antes de "Enviar respostas" — SÓ no build de
-// staging até a virada; com ele vai a RPC de 6 argumentos (o consentimento fica gravado na resposta). Na produção o Rollup corta o
-// import() (a expressão do Vite fica aqui, direto na condição, sem função no meio — src/publico/legal/guarda.test.ts confere).
-const ConsentimentoSaude = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/aceite/ConsentimentoSaude")) : null;
+// hml-12 (H-30, H8): o consentimento das respostas de saúde, específico e em destaque, antes de "Enviar respostas" — em todo build desde a
+// virada (29/10/2026); com ele vai a RPC de 6 argumentos (o consentimento fica gravado na resposta; com a versão dos textos desligada no
+// banco, ela age como a de 5). Carrega sob demanda.
+const ConsentimentoSaude = lazy(() => import("@/publico/legal/aceite/ConsentimentoSaude"));
 
 /**
  * /f/:slug (W21 — N-7, N-55, spec 4.8): a pré-consulta PÚBLICA, sem login, igual à de hoje do Nutri — agora no visual do Physiq e
@@ -42,7 +42,7 @@ export default function Formulario() {
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState<RespostaEnviada | null>(null);
-  // hml-12 (só no staging): a versão do texto do consentimento que a pessoa marcou
+  // hml-12: a versão do texto do consentimento que a pessoa marcou
   const [consentimento, setConsentimento] = useState<{ versao: string } | null>(null);
   const respondidas = contarRespondidas(perguntas, respostas);
 
@@ -63,11 +63,11 @@ export default function Formulario() {
     e.preventDefault();
     const msg = validarRespostaPublica(nome, email, telefone, perguntas, respostas);
     if (msg) return setErro(msg);
-    if (ConsentimentoSaude && !consentimento) return setErro("Para enviar, marque o consentimento.");
+    if (!consentimento) return setErro("Para enviar, marque o consentimento.");
     setErro(null);
     setEnviando(true);
     try {
-      const r = await responderFormularioPublico(slug, nome, email, telefone, normalizarRespostas(perguntas, respostas), consentimento?.versao);
+      const r = await responderFormularioPublico(slug, nome, email, telefone, normalizarRespostas(perguntas, respostas), consentimento.versao);
       setEnviado(r);
       window.scrollTo({ top: 0 });
     } catch (err) {
@@ -154,17 +154,15 @@ export default function Formulario() {
           <PerguntasResposta perguntas={perguntas} respostas={respostas} onResponder={marcar} desabilitado={enviando} />
         </Cartao>
 
-        {ConsentimentoSaude && (
-          <Suspense fallback={null}>
-            <ConsentimentoSaude
-              variante="preconsulta"
-              profissional={form.nutricionista}
-              marcado={!!consentimento}
-              aoMudar={(c) => { setConsentimento(c); if (erro) setErro(null); }}
-              desabilitado={enviando}
-            />
-          </Suspense>
-        )}
+        <Suspense fallback={null}>
+          <ConsentimentoSaude
+            variante="preconsulta"
+            profissional={form.nutricionista}
+            marcado={!!consentimento}
+            aoMudar={(c) => { setConsentimento(c); if (erro) setErro(null); }}
+            desabilitado={enviando}
+          />
+        </Suspense>
         {erro && <MensagemForm data-erro-publico>{erro}</MensagemForm>}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[12px] text-texto-3">Suas respostas vão direto para o seu profissional.</p>

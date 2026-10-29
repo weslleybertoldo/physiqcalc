@@ -33,10 +33,10 @@ import { criarClienteDeConsultas } from "@/integrations/consultas";
 // a abertura do app (TreinosPage e a entrada) segue no JS inicial; painel, master, PDF, gráficos e o SDK
 // do Mercado Pago carregam sob demanda.
 
-// hml-12 (H-30, D6): a porta do aceite (os Termos de Uso e a Política, o consentimento de saúde e a trava de idade) — SÓ no build de
-// staging até a virada. Na produção o Rollup corta o import() (a porta nem entra no bundle; scripts/ci/sem-texto-legal-novo.sh
-// confere). A expressão fica AQUI, direto na condição, sem função no meio (src/publico/legal/guarda.test.ts confere).
-const PortaDoAceite = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/aceite/PortaDoAceite")) : null;
+// hml-12 (H-30, D6) → a virada (29/10/2026): a porta do aceite (os Termos de Uso e a Política, o consentimento de saúde e a trava de
+// idade) em TODO build. Ela só pede algo quando o banco liga a versão (app_config.textos_legais; versão nula = desligado, segue direto).
+// Carrega sob demanda (o texto dos Termos fica fora do JS inicial; o service worker do site guarda o pedaço para abrir sem internet).
+const PortaDoAceite = lazy(() => import("@/publico/legal/aceite/PortaDoAceite"));
 
 // hml-17 (H-53): a configuração mora em src/integrations/consultas.ts (o Vitest confere): retry 1 com 1 s (eram 3, até 4 s)
 const queryClient = criarClienteDeConsultas();
@@ -95,17 +95,10 @@ const AppRoutes = () => {
         {/* hml-08 (H-22): o painel master é só do site — no app, a conta master sai deste aparelho e vê "Conta master: use o site" */}
         <MasterSoNoSite>
           {/* hml-12 (H-30): quem não aceitou a versão vigente dos textos vê o aceite antes das rotas; os avisos vão à parte e só
-              montam sem nada pendente (numa rota livre com pendência, só as rotas) — só no staging */}
-          {PortaDoAceite ? (
-            <Suspense fallback={<CarregandoTela />}>
-              <PortaDoAceite avisos={avisos}>{rotas}</PortaDoAceite>
-            </Suspense>
-          ) : (
-            <>
-              {rotas}
-              {avisos}
-            </>
-          )}
+              montam sem nada pendente (numa rota livre com pendência, só as rotas) — em todo build desde a virada */}
+          <Suspense fallback={<CarregandoTela />}>
+            <PortaDoAceite avisos={avisos}>{rotas}</PortaDoAceite>
+          </Suspense>
         </MasterSoNoSite>
       </StagingGate>
     </BrowserRouter>

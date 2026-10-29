@@ -7,8 +7,8 @@ import { PRECOS_PADRAO } from "@/nucleo/cobranca/regras";
 import { conta, situacao } from "@/test/fixturesNucleo";
 
 const h = vi.hoisted(() => {
-  // hml-11 (D5): os testes de sempre rodam como a produção — sem o resumo antes de pagar e com a frase de hoje. O Vitest roda como o
-  // staging (vitest.config.ts) e a condição do Vite é lida quando a tela carrega: o schema troca ANTES dos imports.
+  // hml-11 (D5) → a virada (29/10/2026): os testes de sempre rodam como a produção — que agora tem o resumo antes de pagar e a frase
+  // nova da renovação, como o staging. O Vitest roda como o staging (vitest.config.ts): o schema troca ANTES dos imports.
   vi.stubEnv("VITE_DB_SCHEMA", "public");
   return {
     conta: null as unknown,
@@ -29,7 +29,7 @@ vi.mock("@/lib/distribuicao", () => ({
     return h.loja ? "play" : "site";
   },
 }));
-// hml-11: conta quando a tela pede o resumo (o import() que a produção corta)
+// hml-11: conta quando a tela pede o resumo (o import() sob demanda)
 vi.mock("@/publico/legal/ResumoAntesDePagar", async (orig) => {
   h.importouResumo += 1;
   return orig<typeof import("@/publico/legal/ResumoAntesDePagar")>();
@@ -197,9 +197,8 @@ describe("Configurações › Plano — conta nova (6.5)", () => {
     expect(await screen.findByDisplayValue("00020126PIX")).toBeInTheDocument();
     expect(screen.getByText(/Aguardando confirmação do Mercado Pago/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Simular aprovação/ })).toBeInTheDocument();
-    // hml-11: estes testes rodam como a produção (o stub do topo) — sem o resumo antes de pagar
-    expect(h.importouResumo).toBe(0);
-    expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
+    // hml-11 → a virada: estes testes rodam como a produção (o stub do topo) — com o resumo antes de pagar, acima dos botões
+    expect(document.querySelector('[data-resumo-antes-de-pagar="plano-profissional"]')).not.toBeNull();
   });
   it("faixa em que os alunos não cabem fica desabilitada", async () => {
     h.conta = conta();
@@ -247,10 +246,10 @@ describe("Configurações › Plano — conta nova (6.5)", () => {
   });
 });
 
-// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de pagar (Decreto 7.962/2013, art. 4º, I) e a frase da renovação nova,
-// SÓ no build de staging até a virada, e nunca na versão da Google Play. Cada teste importa a tela de novo com o schema do build
-// (fica no FIM do arquivo: depois do resetModules, nenhum teste usa a tela do import de cima).
-describe("Configurações › Plano — hml-11: o resumo antes de pagar só no staging", () => {
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de pagar (Decreto 7.962/2013, art. 4º, I) e a frase da renovação nova, no
+// staging e, desde a virada (29/10/2026), na produção — nunca na versão da Google Play. Cada teste importa a tela de novo com o schema do
+// build (fica no FIM do arquivo: depois do resetModules, nenhum teste usa a tela do import de cima).
+describe("Configurações › Plano — hml-11: o resumo antes de pagar em todo build (a virada)", () => {
   async function planoDoBuild(schema: "staging" | "public") {
     vi.stubEnv("VITE_DB_SCHEMA", schema);
     vi.resetModules();
@@ -260,8 +259,8 @@ describe("Configurações › Plano — hml-11: o resumo antes de pagar só no s
     vi.unstubAllEnvs();
   });
 
-  it("staging: o resumo acima dos botões de pagar, com os links, e 'renova todo mês até você cancelar'", async () => {
-    const PlanoDoStaging = await planoDoBuild("staging");
+  it.each(["staging", "public"] as const)("%s: o resumo acima dos botões de pagar, com os links, e 'renova todo mês até você cancelar'", async (schema) => {
+    const PlanoDoStaging = await planoDoBuild(schema);
     h.conta = conta();
     h.buscar.mockResolvedValue(status());
     montar(PlanoDoStaging);
@@ -273,7 +272,6 @@ describe("Configurações › Plano — hml-11: o resumo antes de pagar só no s
       },
       { timeout: 5000 },
     );
-    expect(h.importouResumo).toBe(1);
     expect(resumo.compareDocumentPosition(screen.getByRole("button", { name: /Pagar com Pix/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(resumo.querySelector('[data-link-legal="assinatura"]')?.getAttribute("href")).toBe("/assinatura");
     expect(resumo.querySelector('[data-link-legal="politica"]')?.getAttribute("href")).toBe("/privacidade");
@@ -295,15 +293,14 @@ describe("Configurações › Plano — hml-11: o resumo antes de pagar só no s
     expect(h.importouResumo).toBe(0);
   });
 
-  it("produção: sem o resumo (o import nem acontece) e com a frase de hoje", async () => {
+  it("versão da Google Play (produção): nunca o resumo", async () => {
+    h.loja = true;
     const PlanoDaProducao = await planoDoBuild("public");
     h.conta = conta();
     h.buscar.mockResolvedValue(status());
     montar(PlanoDaProducao);
-    expect(await screen.findByText("Escolha o plano", {}, { timeout: 5000 })).toBeInTheDocument();
-    expect(screen.getByText(/e renova todo mês, sem aviso\.$/)).toBeInTheDocument();
+    expect(await screen.findByText(/Teste grátis até 13\/10\/2026/, {}, { timeout: 5000 })).toBeInTheDocument();
     expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
-    expect(document.querySelector("[data-frase-renovacao]")).toBeNull();
     expect(h.importouResumo).toBe(0);
   });
 });

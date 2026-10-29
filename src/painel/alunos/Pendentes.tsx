@@ -23,7 +23,7 @@ function dataCurta(iso: string | null | undefined): string {
  * dono do link como responsável) e respeita o limite da faixa; recusar só tira da fila.
  * hml-12 (H-30): a regra dos menores pela data de nascimento do cadastro — 16 ou 17 anos: a dica de registrar o consentimento do
  * responsável na ficha depois de aprovar; menor de 16: não dá para aprovar (o gatilho do banco recusaria, e a função alunos devolveria
- * 500). SÓ no build de staging até a virada (a condição do Vite direto aqui).
+ * 500). Em todo build desde a virada (29/10/2026).
  * hml-17 (H-39): a leitura falhou → o aviso com "Tentar de novo" (antes, depois de ~21 s de "Carregando…", "Nada esperando").
  */
 export function Pendentes({ aberto, aoMudar, lista, aoMudou }: { aberto: boolean; aoMudar: (a: boolean) => void; lista: ListaAlunos; aoMudou: () => void }) {
@@ -80,7 +80,7 @@ export function Pendentes({ aberto, aoMudar, lista, aoMudou }: { aberto: boolean
                   </div>
                 </div>
                 {p.observacoes && <p className="rounded-xl bg-superficie px-3 py-2 text-[12.5px] text-texto-2">{p.observacoes}</p>}
-                {import.meta.env.VITE_DB_SCHEMA === "staging" && (faixa === "16_17" || faixa === "menor_16") && (
+                {(faixa === "16_17" || faixa === "menor_16") && (
                   <p className="flex items-start gap-2 text-[12px] leading-relaxed text-ambar-3" data-pendente-idade={faixa}>
                     <TriangleAlert aria-hidden className="mt-0.5 h-3.5 w-3.5 flex-none" />
                     <span>
@@ -92,7 +92,7 @@ export function Pendentes({ aberto, aoMudar, lista, aoMudou }: { aberto: boolean
                 )}
                 {erro?.id === p.id && <MensagemForm data-pendente-erro>{erro.texto}</MensagemForm>}
                 <div className="flex gap-2">
-                  <Botao variante="w" tamanho="sm" icone={Check} disabled={indo === p.id || (import.meta.env.VITE_DB_SCHEMA === "staging" && faixa === "menor_16")}
+                  <Botao variante="w" tamanho="sm" icone={Check} disabled={indo === p.id || faixa === "menor_16"}
                     onClick={() => void decidir(p, true)} data-pendente-aprovar={p.id}>Aprovar</Botao>
                   <Botao tamanho="sm" icone={X} disabled={indo === p.id} onClick={() => void decidir(p, false)} data-pendente-recusar={p.id}>Recusar</Botao>
                 </div>

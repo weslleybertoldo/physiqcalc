@@ -1,5 +1,5 @@
 /**
- * O contato do suporte do Physiq — UM lugar só (H4). Leem daqui a página de privacidade (src/publico/Privacidade.tsx) e as telas
+ * O contato do suporte do Physiq — UM lugar só (H4). Leem daqui os textos legais (src/publico/legal/versao.ts, VENDEDOR) e as telas
  * que mandam "falar com o suporte": o "Excluir minha conta" do profissional (que não se exclui pelo app — W7), a conta suspensa
  * pelo master (o painel trava — W27) e o Plano da conta suspensa.
  *

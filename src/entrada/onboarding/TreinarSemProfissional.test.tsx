@@ -4,8 +4,9 @@ import { MemoryRouter } from "react-router-dom";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
-  // hml-11 (D5): os testes de sempre rodam como a produção — sem o resumo antes de começar. O Vitest roda como o staging
-  // (vitest.config.ts) e a condição do Vite é lida quando a tela carrega: o schema troca ANTES dos imports.
+  // hml-11 (D5) → a virada (29/10/2026): os testes de sempre rodam como a produção — que agora tem o resumo antes de começar, a data de
+  // nascimento (18+) e o consentimento de saúde, como o staging. O Vitest roda como o staging (vitest.config.ts): o schema troca ANTES dos
+  // imports.
   vi.stubEnv("VITE_DB_SCHEMA", "public");
   return {
     entrar: vi.fn(),
@@ -24,7 +25,7 @@ vi.mock("@/lib/distribuicao", () => ({
     return h.loja ? "play" : "site";
   },
 }));
-// hml-11: conta quando a tela pede o resumo (o import() que a produção corta)
+// hml-11: conta quando a tela pede o resumo (o import() sob demanda)
 vi.mock("@/publico/legal/ResumoAntesDePagar", async (orig) => {
   h.importouResumo += 1;
   return orig<typeof import("@/publico/legal/ResumoAntesDePagar")>();
@@ -44,6 +45,22 @@ vi.mock("react-router-dom", async (orig) => ({ ...(await orig<typeof import("rea
 
 import TreinarSemProfissional from "./TreinarSemProfissional";
 import BoasVindas from "../BoasVindas";
+import { VERSAO_TEXTOS } from "@/publico/legal/versao";
+
+const NASCIMENTO_ADULTO = `${new Date().getFullYear() - 30}-05-20`;
+/** A virada: a data de nascimento (18+) e o consentimento de saúde valem também na produção — espera os 2 (carregam sob demanda) e
+ *  preenche; sem eles o "Começar" fica travado. */
+async function preencherDataEConsentimento(data = NASCIMENTO_ADULTO) {
+  const campo = () => document.querySelector("[data-campo-nascimento] input[type='date']");
+  await waitFor(
+    () => {
+      if (!campo() || !document.querySelector("[data-consentimento-saude-caixa]")) throw new Error("a data e o consentimento ainda não apareceram");
+    },
+    { timeout: 5000 },
+  );
+  fireEvent.change(campo()!, { target: { value: data } });
+  fireEvent.click(document.querySelector("[data-consentimento-saude-caixa]")!);
+}
 
 const PLANOS = {
   teste_dias: 7,
@@ -90,6 +107,9 @@ describe("Boas-vindas › Treinar sem profissional (W7b)", () => {
     abrir(<TreinarSemProfissional />);
     fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
     expect(await screen.findByText("R$ 35,00/mês")).toBeInTheDocument();
+    await preencherDataEConsentimento();
+    // hml-11 → a virada: estes testes rodam como a produção (o stub do topo) — com o resumo antes de começar
+    await waitFor(() => expect(document.querySelector('[data-resumo-antes-de-pagar="sem-profissional"]')).not.toBeNull(), { timeout: 5000 });
     // sem objetivo: pede
     fireEvent.click(screen.getByRole("button", { name: /Começar os 7 dias grátis/ }));
     expect(await screen.findByText("Escolha o seu objetivo.")).toBeInTheDocument();
@@ -97,13 +117,13 @@ describe("Boas-vindas › Treinar sem profissional (W7b)", () => {
     fireEvent.click(screen.getByRole("radio", { name: /Ganhar massa/ }));
     fireEvent.click(screen.getByRole("radio", { name: /Treino \+ Alimentação/ }));
     fireEvent.click(screen.getByRole("button", { name: /Começar os 7 dias grátis/ }));
-    // hml-12: a produção manda a RPC de 2 argumentos (sem a data e sem o consentimento)
-    await waitFor(() => expect(h.entrar).toHaveBeenCalledWith("ganhar_massa", "app_treino_alimentacao", undefined));
+    // hml-12 → a virada: a produção manda a RPC de 5 argumentos (a data, a versão do texto lido e a origem)
+    await waitFor(() =>
+      expect(h.entrar).toHaveBeenCalledWith("ganhar_massa", "app_treino_alimentacao", { nascimento: NASCIMENTO_ADULTO, consentimento: VERSAO_TEXTOS, origem: "site" }),
+    );
     expect(await screen.findByText(/Pronto! Grátis até 06\/10/)).toBeInTheDocument();
     expect(h.recarregar).toHaveBeenCalled();
     await waitFor(() => expect(h.navegar).toHaveBeenCalledWith("/perfil/treinos-prontos?inicio=1", { replace: true }), { timeout: 3000 });
-    // hml-11: estes testes rodam como a produção (o stub do topo) — sem o resumo antes de começar
-    expect(h.importouResumo).toBe(0);
   });
 
   it("recusa do banco vira a frase (ex.: já está com um profissional)", async () => {
@@ -112,16 +132,17 @@ describe("Boas-vindas › Treinar sem profissional (W7b)", () => {
     abrir(<TreinarSemProfissional />);
     fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
     fireEvent.click(await screen.findByRole("radio", { name: /Emagrecer/ }));
+    await preencherDataEConsentimento();
     fireEvent.click(screen.getByRole("button", { name: /Começar os 7 dias grátis/ }));
     expect(await screen.findByText("Você já está com um profissional — o seu plano é o dele.")).toBeInTheDocument();
     expect(h.navegar).not.toHaveBeenCalled();
   });
 });
 
-// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de "Começar os 7 dias grátis" (Decreto 7.962/2013, art. 4º, I), SÓ no
-// build de staging até a virada, e nunca na versão da Google Play. Cada teste importa a tela de novo com o schema do build (fica no FIM
-// do arquivo: depois do resetModules, nenhum teste usa a tela do import de cima).
-describe("Treinar sem profissional — hml-11: o resumo antes de começar só no staging", () => {
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de "Começar os 7 dias grátis" (Decreto 7.962/2013, art. 4º, I), no staging
+// e, desde a virada (29/10/2026), na produção — nunca na versão da Google Play. Cada teste importa a tela de novo com o schema do build
+// (fica no FIM do arquivo: depois do resetModules, nenhum teste usa a tela do import de cima).
+describe("Treinar sem profissional — hml-11: o resumo antes de começar em todo build (a virada)", () => {
   async function telaDoBuild(schema: "staging" | "public") {
     vi.stubEnv("VITE_DB_SCHEMA", schema);
     vi.resetModules();
@@ -131,8 +152,8 @@ describe("Treinar sem profissional — hml-11: o resumo antes de começar só no
     vi.unstubAllEnvs();
   });
 
-  it("staging: o resumo do plano do app logo antes de 'Começar os 7 dias grátis', com os links", async () => {
-    const Tela = await telaDoBuild("staging");
+  it.each(["staging", "public"] as const)("%s: o resumo do plano do app logo antes de 'Começar os 7 dias grátis', com os links", async (schema) => {
+    const Tela = await telaDoBuild(schema);
     abrir(<Tela />);
     // fechado (antes de "Quero treinar sozinho"), não há o que pagar: sem o resumo
     expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
@@ -145,7 +166,6 @@ describe("Treinar sem profissional — hml-11: o resumo antes de começar só no
       },
       { timeout: 5000 },
     );
-    expect(h.importouResumo).toBe(1);
     const comecar = screen.getByRole("button", { name: /Começar os 7 dias grátis/ });
     expect(resumo.compareDocumentPosition(comecar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(resumo.textContent?.replace(/\u00a0/g, " ")).toContain("Treino, R$ 20,00 por mês, ou Treino + Alimentação, R$ 35,00 por mês");
@@ -163,21 +183,21 @@ describe("Treinar sem profissional — hml-11: o resumo antes de começar só no
     expect(h.importouResumo).toBe(0);
   });
 
-  it("produção: sem o resumo (o import nem acontece)", async () => {
+  it("versão da Google Play (produção): nunca o resumo", async () => {
+    h.loja = true;
     const Tela = await telaDoBuild("public");
     abrir(<Tela />);
     fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
     expect(await screen.findByText("R$ 35,00/mês", {}, { timeout: 5000 })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Começar os 7 dias grátis/ })).toBeInTheDocument();
     expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
     expect(h.importouResumo).toBe(0);
   });
 });
 
-// hml-12 (H-30, P4): a data de nascimento (18+) e o consentimento dos dados de saúde, em destaque, antes de começar o plano do app — SÓ
-// no build de staging até a virada; com eles vai a RPC de 5 argumentos. Na produção, igual a hoje (fica no FIM do arquivo, pelo
-// resetModules, como o bloco da hml-11).
-describe("Treinar sem profissional — hml-12: a data (18+) e o consentimento de saúde só no staging", () => {
+// hml-12 (H-30, P4): a data de nascimento (18+) e o consentimento dos dados de saúde, em destaque, antes de começar o plano do app — no
+// staging e, desde a virada (29/10/2026), na produção; com eles vai a RPC de 5 argumentos (fica no FIM do arquivo, pelo resetModules, como
+// o bloco da hml-11).
+describe("Treinar sem profissional — hml-12: a data (18+) e o consentimento de saúde em todo build (a virada)", () => {
   async function telaDoBuild(schema: "staging" | "public") {
     vi.stubEnv("VITE_DB_SCHEMA", schema);
     vi.resetModules();
@@ -263,16 +283,27 @@ describe("Treinar sem profissional — hml-12: a data (18+) e o consentimento de
     expect(await screen.findByText("Marque o consentimento dos seus dados de saúde para começar.")).toBeInTheDocument();
   });
 
-  it("produção: igual a hoje — sem a data e sem o consentimento; a RPC de 2 argumentos", async () => {
+  it("produção (a virada): a data e o consentimento também — 'Começar' travado até as 2; a RPC de 5 argumentos", async () => {
     h.entrar.mockResolvedValue({ paciente_id: "p1", teste_ate: "2026-10-15T02:59:59Z", ja_era: false });
+    const { VERSAO_TEXTOS: versao } = await import("@/publico/legal/versao");
     const Tela = await telaDoBuild("public");
     abrir(<Tela />);
     fireEvent.click(screen.getByRole("button", { name: "Quero treinar sozinho" }));
     fireEvent.click(await screen.findByRole("radio", { name: /Emagrecer/ }, { timeout: 5000 }));
-    expect(document.querySelector("[data-consentimento-saude]")).toBeNull();
-    expect(document.querySelector("[data-campo-nascimento]")).toBeNull();
+    await waitFor(
+      () => {
+        if (!document.querySelector('[data-consentimento-saude="app"]') || !data()) throw new Error("a data e o consentimento ainda não apareceram");
+      },
+      { timeout: 5000 },
+    );
+    expect(comecar().disabled).toBe(true);
+    fireEvent.change(data(), { target: { value: `${ano - 30}-05-20` } });
+    expect(comecar().disabled).toBe(true); // falta o consentimento
+    fireEvent.click(document.querySelector("[data-consentimento-saude-caixa]")!);
     expect(comecar().disabled).toBe(false);
     fireEvent.click(comecar());
-    await waitFor(() => expect(h.entrar).toHaveBeenCalledWith("emagrecer", "app_treino", undefined));
+    await waitFor(() =>
+      expect(h.entrar).toHaveBeenCalledWith("emagrecer", "app_treino", { nascimento: `${ano - 30}-05-20`, consentimento: versao, origem: "site" }),
+    );
   });
 });

@@ -76,7 +76,7 @@ const montar = () =>
   );
 
 beforeEach(() => {
-  // hml-11 (D5): os testes rodam como a produção (a frase de hoje da cobrança); o do staging troca o schema
+  // os testes rodam como a produção (desde a virada, 29/10/2026, a frase nova da cobrança vale nela também); o do staging troca o schema
   vi.stubEnv("VITE_DB_SCHEMA", "public");
   h.loja = false;
   h.conferencia = DONO;
@@ -219,9 +219,9 @@ describe("Configurações › Excluir minha conta (W2 da loja)", () => {
   });
 });
 
-// hml-11 (H-28, D5): "sem reembolso do que já foi pago" conflita com a desistência em 7 dias dos Termos de assinatura novos — a frase
-// nova (com a marca do E2E) só no build de staging até a virada; na produção, a de hoje e sem a marca.
-describe("Configurações › Excluir minha conta — hml-11: a frase da desistência só no staging", () => {
+// hml-11 (H-28, D5): "sem reembolso do que já foi pago" conflitava com a desistência em 7 dias dos Termos de assinatura — desde a
+// virada (29/10/2026) a frase nova (com a marca do E2E) vale no staging e na produção.
+describe("Configurações › Excluir minha conta — hml-11: a frase da desistência em todo build (a virada)", () => {
   afterAll(() => {
     vi.unstubAllEnvs();
   });
@@ -238,9 +238,13 @@ describe("Configurações › Excluir minha conta — hml-11: a frase da desist�
     expect(document.body.textContent).not.toContain("sem reembolso");
   });
 
-  it("produção: a frase de hoje, sem a marca", async () => {
+  it("produção: a frase nova também, com a marca — 'sem reembolso' saiu", async () => {
     montar();
-    expect(await screen.findByText("A cobrança automática do plano desta conta é cancelada agora (sem reembolso do que já foi pago).")).toBeInTheDocument();
-    expect(document.querySelector("[data-frase-desistencia]")).toBeNull();
+    expect(await screen.findByText("Antes de excluir, confira o que acontece")).toBeInTheDocument();
+    expect(document.querySelector("[data-frase-desistencia]")?.textContent).toBe(
+      "A cobrança automática do plano desta conta é cancelada agora (o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento).",
+    );
+    expect(document.querySelectorAll("[data-frase-desistencia]")).toHaveLength(1);
+    expect(document.body.textContent).not.toContain("sem reembolso");
   });
 });

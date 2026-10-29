@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { LegalSituacao } from "@/nucleo/situacao";
 import { conta, situacao as fixture } from "@/test/fixturesNucleo";
-import { VERSAO_TEXTOS } from "../versao";
+import { DATA_DOS_TEXTOS, VERSAO_TEXTOS } from "../versao";
 
 // hml-12 (H-30, §4.3 T1) — a tela do aceite: o botão travado até as caixas (e a data), a caixa de saúde e a data só para quem falta,
 // a regra 18+, as recusas do banco (versão do banco na frente → no site Recarregar, no APK e na loja "Atualize o app"; atrás → a
@@ -91,7 +91,7 @@ describe("TelaDoAceite (hml-12)", () => {
   it("mostra o título, a versão, o resumo dos Termos e os 3 links; o botão fica travado até a caixa", async () => {
     const aoAceitar = abrir(legal());
     expect(screen.getByRole("heading", { name: "Termos de Uso e Política de Privacidade" })).toBeInTheDocument();
-    expect(screen.getByText(/leia e aceite os Termos de Uso e a Política de Privacidade \(versão de 8 de outubro de 2026\)/)).toBeInTheDocument();
+    expect(screen.getByText(`Para continuar no Physiq, leia e aceite os Termos de Uso e a Política de Privacidade (versão de ${DATA_DOS_TEXTOS}).`, { exact: false })).toBeInTheDocument();
     expect(el("[data-aceite-resumo] li")).not.toBeNull();
     expect(el("[data-aceite-resumo]")?.textContent).toContain("O Physiq é uma ferramenta.");
     expect(el('[data-aceite-link="termos"]')?.getAttribute("href")).toBe("/termos");

@@ -68,7 +68,7 @@ function AtualizarOApp() {
  * dos Termos de Uso e os links dos 3 textos (na mesma janela, com o Voltar do app), a caixa do aceite (que diz também a idade mínima,
  * P5) e, só para o aluno do app, o consentimento de saúde (em destaque, à parte) e a data de nascimento (18+). "Aceitar e continuar"
  * fica travado até as caixas e a data e enquanto grava; deu certo → a situação recarrega e a porta abre. Quem não concorda exclui a
- * conta ou sai. Só no build de staging até a virada (a porta é carregada pelo App.tsx atrás da condição do Vite).
+ * conta ou sai. Em todo build desde a virada (29/10/2026; a porta é carregada pelo App.tsx sob demanda).
  */
 export default function TelaDoAceite({ legal, aoAceitar }: { legal: LegalSituacao; aoAceitar: (legal: LegalSituacao | null) => void }) {
   const { situacao, sair, recarregarSituacao } = useSessao();

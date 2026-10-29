@@ -4,7 +4,7 @@ import { TITULO_ANEXO } from "./termos";
 import { ROTA_ASSINATURA, ROTA_TERMOS, VENDEDOR } from "./versao";
 
 /**
- * hml-11 (H-28, D6) — a Política de Privacidade NOVA, em revisão: só no build de staging até a virada (src/publico/legal/versao.ts).
+ * hml-11 (H-28, D6) — a Política de Privacidade, publicada na virada (29/10/2026, como estava; em todo build — src/publico/legal/versao.ts).
  * Base: o rascunho para o advogado (physiqcalc-scratch/hml/hml11/rascunhos/politica-de-privacidade.md, conferido no código do
  * 82064d3) com as decisões padrão da spec (P2: as séries saem também do banco; P4: o encarregado é o dono, pelo nome; P7: o e-mail
  * do suporte; P8: versão nova com aviso de 30 dias) e sem os marcadores do rascunho. A volta do advogado é copiada para cá.

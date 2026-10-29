@@ -198,17 +198,15 @@ export default function Cadastro() {
             <textarea value={f.observacoes} maxLength={OBSERVACOES_MAX} onChange={(e) => muda("observacoes", e.target.value)} placeholder="Objetivo, lesões, horários…" data-cad-obs
               className="min-h-[88px] w-full rounded-[14px] border border-linha-2 bg-superficie px-4 py-3 text-[14px] text-texto outline-none placeholder:text-texto-4 focus:border-violeta/60" />
           </label>
-          {/* hml-12 (H-30, P9): a idade mínima e para onde vão os dados — SÓ no build de staging até a virada */}
-          {import.meta.env.VITE_DB_SCHEMA === "staging" && (
-            <p className="text-[12px] leading-relaxed text-texto-3" data-aviso-idade-cadastro>
-              O Physiq é para quem tem 16 anos ou mais. Os seus dados vão para {d.profissional ?? "o profissional"}, que cuida deles no seu
-              atendimento — veja a{" "}
-              <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="font-semibold text-violeta-3 underline-offset-2 hover:underline">
-                Política de Privacidade
-              </a>
-              .
-            </p>
-          )}
+          {/* hml-12 (H-30, P9): a idade mínima e para onde vão os dados — em todo build desde a virada (29/10/2026) */}
+          <p className="text-[12px] leading-relaxed text-texto-3" data-aviso-idade-cadastro>
+            O Physiq é para quem tem 16 anos ou mais. Os seus dados vão para {d.profissional ?? "o profissional"}, que cuida deles no seu
+            atendimento — veja a{" "}
+            <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="font-semibold text-violeta-3 underline-offset-2 hover:underline">
+              Política de Privacidade
+            </a>
+            .
+          </p>
           {/* captcha invisível (Turnstile): a caixinha só aparece se o Cloudflare pedir a confirmação */}
           <div ref={captcha.refCaixa} data-captcha={captcha.estado} className="flex justify-center empty:hidden" />
           {erro && <MensagemForm data-cad-erro>{erro}</MensagemForm>}

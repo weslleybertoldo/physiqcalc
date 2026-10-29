@@ -20,8 +20,8 @@ const CLASSE_LINK = "font-semibold text-violeta-3 underline-offset-2 hover:under
  * - `app`: o aluno sem profissional (Treinar sem profissional e a tela do aceite do aluno do app que ainda não consentiu);
  * - `preconsulta`: quem responde a pré-consulta pelo link /f/ (sem login: o consentimento vai na própria resposta).
  * Diz para que serve o dado, que não vai para publicidade, como retirar e o que acontece sem ele (Política §4 e §10). A caixa é
- * controlada por quem chama; marcar devolve a versão do texto (VERSAO_TEXTOS) e a origem, que vão com o pedido. Entra só no build de
- * staging até a virada (quem está fora de src/publico/legal/ a carrega com o `lazy` atrás da condição do Vite).
+ * controlada por quem chama; marcar devolve a versão do texto (VERSAO_TEXTOS) e a origem, que vão com o pedido. Em todo build desde a
+ * virada (29/10/2026; quem está fora de src/publico/legal/ a carrega com o `lazy`).
  */
 export default function ConsentimentoSaude({
   variante,

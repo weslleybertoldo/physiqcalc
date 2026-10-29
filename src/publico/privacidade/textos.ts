@@ -1,5 +1,6 @@
 /**
- * Textos da Política de Privacidade (src/publico/Privacidade.tsx) que precisam morar num lugar só — W3 da loja:
+ * Textos da Política de Privacidade (desde a virada de 29/10/2026, src/publico/legal/politica.ts; antes, a src/publico/Privacidade.tsx,
+ * que saiu) que precisam morar num lugar só — W3 da loja:
  *
  * - FRASE_BACKUPS: a frase das cópias de segurança sai IGUAL na política (Retenção) e na /excluir-conta (O que fica guardado),
  *   para uma página nunca contradizer a outra. W4 da loja — decisão do Weslley de 06/10/2026 ("A"): os backups manuais (os feitos
@@ -15,7 +16,7 @@
  * existe desde a hml-07 (a cópia diária cifrada no notebook, docs/backup.md: 03:23, age, apagada com 29 dias; o provedor no Free
  * não tem backup); o Google (FCM) recebe só o texto fixo por tipo desde a hml-10 (_shared/push-regras.ts, corpoDoPush); o
  * Telegram (os avisos de erro da hml-10, _shared/erros.ts limpa antes) entrou na lista. FRASE_SUPORTE é a "frase A" da hml-08
- * (H-22) para a Política nova (src/publico/legal/politica.ts); a página de hoje não a usa.
+ * (H-22) da Política (src/publico/legal/politica.ts).
  * play-W6 (16/10/2026, decisão 12 — correção de FATO, o molde da hml-11 e da mp-cartao; a base legal e a Política nova seguem com o
  * advogado): a assinatura do plano do app pela Google Play (o Play Billing) entrou na lista — vale no site também (quem assinou pela loja
  * vê a assinatura em qualquer versão).

@@ -22,10 +22,10 @@ import { GrupoLista, ItemLista } from "@/ui/premium/Lista";
 import { PainelDeslizante } from "@/ui/premium/Sheet";
 import { useOnline } from "@/ui/premium/useOnline";
 
-// hml-11 (H-28, D5): o resumo dos Termos de assinatura sobre o Assinar/Pagar do plano do app (Decreto 7.962/2013, art. 4º, I) — SÓ no
-// build de staging até a virada. Na produção o Rollup corta o import() (a expressão do Vite fica aqui, direto na condição, sem função
-// no meio). Nunca na versão da Google Play (lá não há pagamento) nem no pagamento ao profissional (não é venda do Physiq).
-const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura sobre o Assinar/Pagar do plano do app (Decreto 7.962/2013, art. 4º, I) — em todo
+// build desde a virada (29/10/2026). Nunca na versão da Google Play (lá a folha da Play tem o resumo "loja") nem no pagamento ao
+// profissional (não é venda do Physiq). Carrega sob demanda.
+const ResumoAntesDePagar = lazy(() => import("@/publico/legal/ResumoAntesDePagar"));
 
 /**
  * Perfil › Meu plano (W7b — aluno sem profissional): o plano do app (Treino R$ 20,00 · Treino + Alimentação R$ 35,00 desde 26/10/2026 — os
@@ -188,7 +188,7 @@ export default function MeuPlano() {
             )}
             {/* play-W6: a assinatura da Play viva (no site e no APK do site, sem Pagar, automática nem trocar; na loja, + a troca pela Play) */}
             {vistaPlay && <CartaoAssinaturaPlay play={vistaPlay} nomePlano={planoAtual?.nome ?? m.plano_nome} />}
-            {ResumoAntesDePagar && !ehLoja && situacao?.tipo !== "isento" && !automatica && !vistaPlay && (
+            {!ehLoja && situacao?.tipo !== "isento" && !automatica && !vistaPlay && (
               <Suspense fallback={null}>
                 <ResumoAntesDePagar tela="meu-plano" />
               </Suspense>

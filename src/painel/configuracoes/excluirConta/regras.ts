@@ -39,17 +39,14 @@ export function textoDosAlunosDaEquipe(n: number): string {
 }
 
 /**
- * As linhas da cobrança automática (só informação — nenhum valor, nenhum "pague"). hml-11 (H-28, D5): "sem reembolso" conflita com a
- * desistência em 7 dias dos Termos de assinatura novos — a frase nova só no build de staging até a virada (a condição do Vite direto
- * aqui: na produção a frase nova nem entra no bundle).
+ * As linhas da cobrança automática (só informação — nenhum valor, nenhum "pague"). hml-11 (H-28, D5): "sem reembolso" conflitava com a
+ * desistência em 7 dias dos Termos de assinatura — a frase nova vale em todo build desde a virada (29/10/2026).
  */
 export function textosDaCobranca(c: ContaDoDono): string[] {
   const linhas: string[] = [];
   if (c.cobrancas.plano > 0) {
     linhas.push(
-      import.meta.env.VITE_DB_SCHEMA === "staging"
-        ? "A cobrança automática do plano desta conta é cancelada agora (o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento)."
-        : "A cobrança automática do plano desta conta é cancelada agora (sem reembolso do que já foi pago).",
+      "A cobrança automática do plano desta conta é cancelada agora (o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento).",
     );
   }
   if (c.cobrancas.alunos > 0) {
@@ -137,9 +134,8 @@ export function listaFica(c: Conferencia): string[] {
   if (montados) linhas.push(`Os treinos e exercícios que você montou para os alunos (${montados}) continuam com eles.`);
   if (c.aluno && c.aluno.matriculas > 0) linhas.push("A sua matrícula como aluno fica com o seu profissional, desligada do seu login (avaliações, planos e pagamentos).");
   linhas.push("Seu nome e registro profissional ficam nas anotações que você assinou.");
-  // hml-12 (H-30, P3): a prova do aceite fica depois da exclusão — a frase nova só no build de staging até a virada (a condição do Vite
-  // direto aqui: na produção a frase nem entra no bundle)
-  if (import.meta.env.VITE_DB_SCHEMA === "staging") linhas.push("O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.");
+  // hml-12 (H-30, P3): a prova do aceite fica depois da exclusão — em todo build desde a virada (29/10/2026)
+  linhas.push("O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.");
   return linhas;
 }
 

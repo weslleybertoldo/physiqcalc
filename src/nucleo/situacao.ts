@@ -101,9 +101,9 @@ export type MenorSituacao = "menor_16" | "sem_responsavel";
 
 /**
  * hml-12 (H-30) — o aceite dos textos legais e os consentimentos, como o banco vê (o `legal` da minha_situacao). `versao` nula =
- * desligado neste schema (a produção até a virada): nada pendente. Senão, o que falta a esta pessoa: o aceite da versão vigente dos
- * Termos e da Política, o consentimento de saúde e a data de nascimento (os 2 só do aluno do app) e a trava de idade. Aqui é só
- * dado (vai para todos os builds); a tela é a porta do aceite (src/publico/legal/aceite/, só no build de staging até a virada).
+ * desligado neste schema (a produção até a migração da virada, 20261029200000): nada pendente. Senão, o que falta a esta pessoa: o
+ * aceite da versão vigente dos Termos e da Política, o consentimento de saúde e a data de nascimento (os 2 só do aluno do app) e a
+ * trava de idade. Aqui é só dado; a tela é a porta do aceite (src/publico/legal/aceite/, em todo build desde a virada).
  */
 export interface LegalSituacao {
   versao: string | null;

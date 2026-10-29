@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createElement, Suspense, useEffect } from "react";
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { existe, listar, montarGrupo, nomeDoArquivo, ordenar, registro, rotasDaEntrada, rotasDaPaginaPublica, slug, tela } from "./registro";
+import { existe, listar, montarGrupo, nomeDoArquivo, ordenar, registro, ROTAS_PUBLICAS, rotasDaEntrada, rotasDaPaginaPublica, slug, tela } from "./registro";
 
 describe("registro por convenção (spec 11.1)", () => {
   it("nome do arquivo", () => {
@@ -70,7 +70,11 @@ describe("registro por convenção (spec 11.1)", () => {
     expect(rotasDaPaginaPublica("Cadastro")).toEqual(["/c/:codigo"]);
     expect(rotasDaPaginaPublica("LinkAntigo")).toEqual(["/p/:codigo"]);
     expect(rotasDaPaginaPublica("Calculadora")).toEqual(["/calculator"]);
-    expect(rotasDaPaginaPublica("Privacidade")).toEqual(["/privacidade", "/termos"]);
+    // a virada (29/10/2026): a Privacidade de antes saiu — /privacidade, /termos e /assinatura são da página legal (Rotas.tsx), fora
+    // do registro
+    expect(Object.keys(ROTAS_PUBLICAS)).not.toContain("Privacidade");
+    expect(Object.values(ROTAS_PUBLICAS).flat()).not.toContain("/privacidade");
+    expect(existe("publico", "Privacidade")).toBe(false);
   });
 
   it("grupos existem (vazios até as worktrees entrarem) e as buscas não quebram", () => {

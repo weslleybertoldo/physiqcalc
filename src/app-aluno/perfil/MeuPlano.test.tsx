@@ -5,8 +5,8 @@ import type { ComponentType } from "react";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // hml-11 (H-28, D5) — Perfil › Meu plano (aluno sem profissional): o resumo dos Termos de assinatura sobre o Assinar/Pagar (Decreto
-// 7.962/2013, art. 4º, I), SÓ no build de staging até a virada, e nunca na versão da Google Play. A condição do Vite é lida quando a
-// tela carrega: cada teste importa a tela de novo com o schema do build. O resto da tela é testado em src/app-aluno/loja.test.tsx.
+// 7.962/2013, art. 4º, I), no staging e, desde a virada (29/10/2026), na produção — nunca na versão da Google Play (lá a folha da Play tem
+// o resumo "loja"). Cada teste importa a tela de novo com o schema do build. O resto da tela é testado em src/app-aluno/loja.test.tsx.
 const h = vi.hoisted(() => ({ loja: false, plano: vi.fn(), importouResumo: 0 }));
 vi.mock("@/lib/distribuicao", () => ({
   get ehLoja() {
@@ -22,7 +22,7 @@ vi.mock("@/integrations/supabase/client", () => ({ DB_SCHEMA: "public", supabase
 vi.mock("@/integrations/principal/client", () => ({ principal: { rpc: vi.fn(), functions: { invoke: vi.fn() } } }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ recarregarSituacao: async () => null }) }));
 vi.mock("@/app-aluno/sozinho/api", async (orig) => ({ ...(await orig<typeof import("@/app-aluno/sozinho/api")>()), buscarMeuPlano: () => h.plano() }));
-// conta quando a tela pede o resumo (o import() que a produção corta)
+// conta quando a tela pede o resumo (o import() sob demanda)
 vi.mock("@/publico/legal/ResumoAntesDePagar", async (orig) => {
   h.importouResumo += 1;
   return orig<typeof import("@/publico/legal/ResumoAntesDePagar")>();
@@ -68,9 +68,9 @@ afterAll(() => {
   vi.unstubAllEnvs();
 });
 
-describe("Perfil › Meu plano — hml-11: o resumo antes de pagar só no staging", () => {
-  it("staging: o resumo do plano do app logo acima do 'Assinar por R$ 20,00/mês', com os links", async () => {
-    montar(await meuPlanoDoBuild("staging"));
+describe("Perfil › Meu plano — hml-11: o resumo antes de pagar em todo build (a virada)", () => {
+  it.each(["staging", "public"] as const)("%s: o resumo do plano do app logo acima do 'Assinar por R$ 20,00/mês', com os links", async (schema) => {
+    montar(await meuPlanoDoBuild(schema));
     const assinar = await screen.findByRole("button", { name: /Assinar por R\$\s?20,00\/mês/ }, { timeout: 5000 });
     const resumo = await waitFor(
       () => {
@@ -80,7 +80,6 @@ describe("Perfil › Meu plano — hml-11: o resumo antes de pagar só no stagin
       },
       { timeout: 5000 },
     );
-    expect(h.importouResumo).toBe(1);
     expect(resumo.compareDocumentPosition(assinar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(resumo.textContent).toContain("Aluno sem profissional:");
     // T2 (26/10/2026): os preços do plano do app nos Termos (o PLANOS_APP_PADRAO) = os do banco (a Migration B)
@@ -107,9 +106,10 @@ describe("Perfil › Meu plano — hml-11: o resumo antes de pagar só no stagin
     expect(h.importouResumo).toBe(0);
   });
 
-  it("produção: sem o resumo (o import nem acontece) e o Assinar igual a hoje", async () => {
+  it("versão da Google Play (produção): nunca o resumo nesta tela", async () => {
+    h.loja = true;
     montar(await meuPlanoDoBuild("public"));
-    expect(await screen.findByRole("button", { name: /Assinar por R\$\s?20,00\/mês/ }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText(/Grátis até/, {}, { timeout: 5000 })).toBeInTheDocument();
     expect(document.querySelector("[data-resumo-antes-de-pagar]")).toBeNull();
     expect(h.importouResumo).toBe(0);
   });

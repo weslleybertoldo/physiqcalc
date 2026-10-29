@@ -126,8 +126,8 @@ jobs:
       - name: Conferir que o APK sai sem o painel master
         run: bash scripts/ci/sem-master.sh dist
 
-      - name: Conferir que o APK sai sem os textos legais novos
-        # hml-11 (H-28): a Política, os Termos e os Termos de assinatura novos esperam o advogado — só no build de staging até a virada
+      - name: Conferir os textos legais do APK (com o texto, sem a faixa "em revisão")
+        # hml-11 (H-28) → a virada (29/10/2026): a Política, os Termos e os Termos de assinatura vão em todo build, sem a faixa
         run: bash scripts/ci/sem-texto-legal-novo.sh dist
 
       - name: Sync Capacitor
@@ -378,8 +378,8 @@ jobs:
       - name: Conferir que o APK sai sem o painel master
         run: bash scripts/ci/sem-master.sh dist
 
-      - name: Conferir que o APK sai sem os textos legais novos
-        # hml-11 (H-28): a Política, os Termos e os Termos de assinatura novos esperam o advogado — só no build de staging até a virada
+      - name: Conferir os textos legais do APK (com o texto, sem a faixa "em revisão")
+        # hml-11 (H-28) → a virada (29/10/2026): a Política, os Termos e os Termos de assinatura vão em todo build, sem a faixa
         run: bash scripts/ci/sem-texto-legal-novo.sh dist
 
       - name: Sync Capacitor

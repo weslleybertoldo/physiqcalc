@@ -5,7 +5,7 @@ import { ROTA_ASSINATURA, ROTA_POLITICA, ROTA_TERMOS, VERSAO_TEXTOS } from "../v
 
 /**
  * hml-12 (H-30) — as regras puras da porta do aceite (testadas em regras.test.ts). A porta (PortaDoAceite.tsx) fica na frente de
- * toda área logada SÓ no build de staging até a virada: quem não aceitou a versão vigente dos Termos de Uso e da Política de
+ * toda área logada em todo build desde a virada (29/10/2026): quem não aceitou a versão vigente dos Termos de Uso e da Política de
  * Privacidade (a do banco, `situacao.legal`) vê a tela do aceite; quem tem a trava de idade vê a tela da trava. As páginas públicas,
  * o Sair e o Excluir minha conta passam sempre.
  */

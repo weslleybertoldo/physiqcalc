@@ -16,7 +16,8 @@ const contaDono = (extra: Partial<ContaDoDono> = {}): ContaDoDono => ({
   ...extra,
 });
 
-// hml-11 (D5): a frase da cobrança depende do build (VITE_DB_SCHEMA); cada teste dela diz qual
+// hml-11 (D5) → a virada (29/10/2026): a frase da cobrança e a dos aceites não dependem mais do build; os testes que trocam o schema
+// conferem os 2 (staging e public)
 afterEach(() => {
   vi.unstubAllEnvs();
 });
@@ -41,25 +42,16 @@ describe("excluir conta do profissional — os textos da conferência", () => {
   it("sem alunos", () => {
     expect(textoDosAlunos(contaDono({ alunos: { total: 0, para_o_app: 0, guardados: 0, lista: [] } }), false)).toBe("Nenhum aluno na conta agora.");
   });
-  it("cobrança: só informação (cancelada, sem reembolso) — nenhum valor e nenhum 'pague'", () => {
-    vi.stubEnv("VITE_DB_SCHEMA", "public"); // hml-11: a frase de hoje é a da produção
-    const l = textosDaCobranca(contaDono());
-    expect(l).toEqual([
-      "A cobrança automática do plano desta conta é cancelada agora (sem reembolso do que já foi pago).",
-      "As cobranças automáticas de 2 alunos para você também são canceladas.",
-    ]);
-    expect(l.join(" ")).not.toMatch(/R\$|pague|assine|pix/i);
-    expect(textosDaCobranca(contaDono({ cobrancas: { plano: 0, alunos: 1 } }))).toEqual(["A cobrança automática de 1 aluno para você também é cancelada."]);
-    expect(textosDaCobranca(contaDono({ cobrancas: { plano: 0, alunos: 0 } }))).toEqual([]);
-  });
-  it("hml-11 (D5): no staging, 'sem reembolso' vira a desistência em 7 dias dos Termos de assinatura novos (ainda só informação)", () => {
-    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+  it.each(["public", "staging"])("cobrança (%s): só informação — a desistência em 7 dias dos Termos de assinatura, nenhum valor e nenhum 'pague'", (schema) => {
+    vi.stubEnv("VITE_DB_SCHEMA", schema); // a virada: a frase nova vale nos 2 builds
     const l = textosDaCobranca(contaDono());
     expect(l).toEqual([
       "A cobrança automática do plano desta conta é cancelada agora (o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento).",
       "As cobranças automáticas de 2 alunos para você também são canceladas.",
     ]);
     expect(l.join(" ")).not.toMatch(/R\$|pague|assine|pix|sem reembolso/i);
+    expect(textosDaCobranca(contaDono({ cobrancas: { plano: 0, alunos: 1 } }))).toEqual(["A cobrança automática de 1 aluno para você também é cancelada."]);
+    expect(textosDaCobranca(contaDono({ cobrancas: { plano: 0, alunos: 0 } }))).toEqual([]);
   });
   it("o membro que sai: os alunos dele ficam sem responsável (singular e plural)", () => {
     expect(textoDosAlunosDaEquipe(1)).toBe("O seu aluno fica na conta, sem responsável, para o dono atribuir a outro profissional.");
@@ -83,12 +75,10 @@ describe("excluir conta do profissional — os textos da conferência", () => {
     expect(fica[0]).toMatch(/Res\. CFN 594\/2017 e Lei 13\.787\/2018: 20 anos/);
     expect(fica).toContain("Os treinos e exercícios que você montou para os alunos (4) continuam com eles.");
   });
-  it("hml-12 (H-30, P3): no staging, o registro dos aceites fica 5 anos (a última linha do que fica); na produção, não", () => {
-    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+  it.each(["staging", "public"])("hml-12 (H-30, P3) — %s: o registro dos aceites fica 5 anos (a última linha do que fica; a virada: nos 2 builds)", (schema) => {
+    vi.stubEnv("VITE_DB_SCHEMA", schema);
     const fica = listaFica(conferencia());
     expect(fica[fica.length - 1]).toBe("O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.");
-    vi.stubEnv("VITE_DB_SCHEMA", "public");
-    expect(listaFica(conferencia()).join(" ")).not.toContain("provar o aceite");
   });
   it("a frase da última confirmação", () => {
     expect(resumoDaConfirmacao(conferencia())).toBe(

@@ -7,8 +7,9 @@ import { DATA_DOS_TEXTOS, ROTA_POLITICA, ROTA_TERMOS, VENDEDOR } from "./versao"
 const nomeDoPlanoApp = (codigo: string): string => PLANOS_APP_PADRAO.find((p) => p.codigo === codigo)?.nome ?? codigo;
 
 /**
- * hml-11 (H-28, D8) — os Termos de assinatura (a cobrança do plano do profissional e do plano do app), em revisão: só no build de
- * staging até a virada (src/publico/legal/versao.ts). Base: o rascunho para o advogado
+ * hml-11 (H-28, D8) — os Termos de assinatura (a cobrança do plano do profissional e do plano do app), publicados na virada (29/10/2026,
+ * como estavam — src/publico/legal/versao.ts). Na versão da Google Play, a página mostra o MESMO texto sem o que só vale no site
+ * (termosDeAssinatura, abaixo). Base: o rascunho para o advogado
  * (physiqcalc-scratch/hml/hml11/rascunhos/termos-de-assinatura.md, conferido no código do 82064d3) com as decisões padrão da spec
  * (P3: o Physiq recebe em nome do profissional nas contas com o Mercado Pago ligado; P6: o anual sem devolução depois dos 7 dias,
  * como hoje; P7: o e-mail do suporte) e sem os marcadores do rascunho.
@@ -293,10 +294,178 @@ export function resumoDaAssinatura(para?: "profissional" | "aluno" | "loja", md:
  * carência e a suspensão são as do Google) e a mensalidade ao profissional. Ficam quem vende, o cancelamento, a desistência, o que não é
  * devolvido e a mudança de preço. O filtro é pelo TEXTO do item: um item novo do site com essas palavras também sai.
  */
-const SO_DO_SITE = new RegExp(`${ROTULO_PROFISSIONAL}|${ROTULO_ALUNO}|Mercado Pago|\\bPix\\b|cart[ãa]o|R\\$|bloquead|ao profissional dele`, "i");
+const SO_DO_SITE = new RegExp(`${ROTULO_PROFISSIONAL}|${ROTULO_ALUNO}|Mercado Pago|\\bPix\\b|cart[ãa]o|autom[áa]tic|R\\$|bloquead|ao profissional dele`, "i");
 
 function textoDoItem(item: ItemLista): string {
   const dos = (blocos: ItemLista["dentro"]): string =>
     blocos.map((b) => (b.tipo === "lista" ? b.itens.map(textoDoItem).join(" ") : b.tipo === "paragrafo" ? b.trechos.map((x) => x.texto).join("") : "")).join(" ");
   return `${item.trechos.map((x) => x.texto).join("")} ${dos(item.dentro)}`;
+}
+
+// ───────────────────────── a página /assinatura da versão da Google Play ─────────────────────────
+/** Uma linha do Markdown: o recuo, se é título, item ou tabela, e o texto que a tela mostra (sem o "- ", o negrito e o endereço do link). */
+const recuoDe = (linha: string) => linha.length - linha.trimStart().length;
+const linhaBranca = (linha: string) => linha.trim() === "";
+const linhaDeItem = (linha: string) => linha.trimStart().startsWith("- ");
+const linhaDeTitulo = (linha: string) => /^#{2,3} /.test(linha);
+const linhaDeTabela = (linha: string) => linha.trimStart().startsWith("|");
+const textoVisivel = (linha: string) =>
+  linha.trim().replace(/^- /, "").replace(/\*\*/g, "").replace(/\[([^\]]+)\]\([^)\s]+\)/g, "$1");
+
+/** Um item de lista no texto-fonte: as linhas [ini, fim) — a "- ", as que o continuam e os subitens (`filhos`, mais recuados). */
+interface ItemFonte {
+  ini: number;
+  fim: number;
+  texto: string;
+  filhos: ItemFonte[];
+}
+/** Um pedaço do texto-fonte, fora dos itens: título, parágrafo, tabela ou lista, com as linhas [ini, fim). */
+interface PedacoFonte {
+  tipo: "titulo" | "paragrafo" | "tabela" | "lista";
+  ini: number;
+  fim: number;
+  texto: string;
+  nivel: 2 | 3;
+  itens: ItemFonte[];
+}
+/** Uma seção: o título (## ou ###; a abertura não tem), o que vem nela e as subseções; as linhas [ini, fim) vão até o próximo título do mesmo nível ou de cima. */
+interface SecaoFonte {
+  titulo: PedacoFonte | null;
+  corpo: PedacoFonte[];
+  filhas: SecaoFonte[];
+  ini: number;
+  fim: number;
+}
+
+function lerItensFonte(linhas: string[], pos: { i: number }, recuo: number): ItemFonte[] {
+  const itens: ItemFonte[] = [];
+  while (pos.i < linhas.length && !linhaBranca(linhas[pos.i]) && recuoDe(linhas[pos.i]) === recuo && linhaDeItem(linhas[pos.i])) {
+    const ini = pos.i++;
+    while (pos.i < linhas.length && !linhaBranca(linhas[pos.i]) && recuoDe(linhas[pos.i]) > recuo && !linhaDeItem(linhas[pos.i])) pos.i++;
+    const texto = linhas.slice(ini, pos.i).map(textoVisivel).join(" ");
+    const sub = pos.i < linhas.length && !linhaBranca(linhas[pos.i]) && recuoDe(linhas[pos.i]) > recuo && linhaDeItem(linhas[pos.i]);
+    const filhos = sub ? lerItensFonte(linhas, pos, recuoDe(linhas[pos.i])) : [];
+    itens.push({ ini, fim: pos.i, texto, filhos });
+  }
+  return itens;
+}
+
+function lerPedacosFonte(linhas: string[]): PedacoFonte[] {
+  const pedacos: PedacoFonte[] = [];
+  const pos = { i: 0 };
+  while (pos.i < linhas.length) {
+    const linha = linhas[pos.i];
+    const ini = pos.i;
+    if (linhaBranca(linha)) {
+      pos.i++;
+    } else if (linhaDeTitulo(linha)) {
+      pos.i++;
+      pedacos.push({ tipo: "titulo", ini, fim: pos.i, texto: linha.replace(/^#{2,3} /, "").trim(), nivel: linha.startsWith("### ") ? 3 : 2, itens: [] });
+    } else if (linhaDeItem(linha)) {
+      const itens = lerItensFonte(linhas, pos, recuoDe(linha));
+      pedacos.push({ tipo: "lista", ini, fim: pos.i, texto: "", nivel: 2, itens });
+    } else {
+      const tabela = linhaDeTabela(linha);
+      pos.i++;
+      while (pos.i < linhas.length && !linhaBranca(linhas[pos.i]) && (tabela ? linhaDeTabela(linhas[pos.i]) : !linhaDeTitulo(linhas[pos.i]) && !linhaDeItem(linhas[pos.i]) && !linhaDeTabela(linhas[pos.i]))) {
+        pos.i++;
+      }
+      pedacos.push({ tipo: tabela ? "tabela" : "paragrafo", ini, fim: pos.i, texto: linhas.slice(ini, pos.i).map(textoVisivel).join(" "), nivel: 2, itens: [] });
+    }
+  }
+  return pedacos;
+}
+
+/** As seções: cada título abre uma (o ### dentro do ## de cima); o que vem antes do 1º título é a abertura (sem título). */
+function lerSecoesFonte(linhas: string[]): SecaoFonte {
+  const abertura: SecaoFonte = { titulo: null, corpo: [], filhas: [], ini: 0, fim: linhas.length };
+  let secao2: SecaoFonte | null = null;
+  let atual: SecaoFonte = abertura;
+  for (const p of lerPedacosFonte(linhas)) {
+    if (p.tipo !== "titulo") {
+      atual.corpo.push(p);
+      continue;
+    }
+    const nova: SecaoFonte = { titulo: p, corpo: [], filhas: [], ini: p.ini, fim: linhas.length };
+    if (p.nivel === 3 && secao2) {
+      const irma = secao2.filhas[secao2.filhas.length - 1];
+      if (irma) irma.fim = p.ini;
+      secao2.filhas.push(nova);
+    } else {
+      if (secao2) {
+        secao2.fim = p.ini;
+        const ultima = secao2.filhas[secao2.filhas.length - 1];
+        if (ultima) ultima.fim = p.ini;
+      } else {
+        abertura.fim = p.ini;
+      }
+      abertura.filhas.push(nova);
+      secao2 = nova;
+    }
+    atual = nova;
+  }
+  return abertura;
+}
+
+const marcar = (fora: Set<number>, ini: number, fim: number) => {
+  for (let k = ini; k < fim; k++) fora.add(k);
+};
+
+/** Tira os itens do site (o texto do item bate no SO_DO_SITE; o rótulo terminado em ":" que fica sem subitem sai junto). Devolve quantos ficaram. */
+function tirarItensDoSite(itens: ItemFonte[], fora: Set<number>): number {
+  let ficam = 0;
+  for (const item of itens) {
+    if (SO_DO_SITE.test(item.texto)) {
+      marcar(fora, item.ini, item.fim);
+      continue;
+    }
+    if (item.filhos.length && tirarItensDoSite(item.filhos, fora) === 0 && item.texto.trimEnd().endsWith(":")) {
+      marcar(fora, item.ini, item.fim);
+      continue;
+    }
+    ficam++;
+  }
+  return ficam;
+}
+
+/** O pedaço fica na loja? (o parágrafo e a tabela do site saem inteiros; a lista perde os itens do site e sai se ficar vazia) */
+function pedacoFica(p: PedacoFonte, fora: Set<number>): boolean {
+  const fica = p.tipo === "lista" ? tirarItensDoSite(p.itens, fora) > 0 : !SO_DO_SITE.test(p.texto);
+  if (!fica) marcar(fora, p.ini, p.fim);
+  return fica;
+}
+
+/** A seção fica na loja? Sai inteira se o 1º pedaço dela (o que diz do que ela trata: a tabela de preços do banco, o Mercado Pago) é
+ *  do site, ou se não sobra nada nela. A abertura (sem título) nunca sai inteira. */
+function secaoFica(s: SecaoFonte, fora: Set<number>): boolean {
+  const pedacos = s.corpo.map((p) => pedacoFica(p, fora));
+  const filhas = s.filhas.map((f) => secaoFica(f, fora));
+  if (!s.titulo) return true;
+  const primeiroDoSite = pedacos.length > 0 && !pedacos[0];
+  if (primeiroDoSite || (!pedacos.some(Boolean) && !filhas.some(Boolean))) {
+    marcar(fora, s.ini, s.fim);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * A virada (29/10/2026, pedido da LINUX 1 — a regra de pagamentos da Google Play, o mesmo motivo do resumo "loja" da play-W6): o texto da
+ * página /assinatura. No site e no APK do site, os Termos de assinatura inteiros. Na versão da Google Play (`loja`), o MESMO texto
+ * publicado sem o que só vale no site, pela regra do resumo "loja" (SO_DO_SITE: o bloco do profissional pago pelo site, os preços do
+ * banco, o Mercado Pago — Pix, cartão, cobrança automática —, o "bloqueado no dia seguinte" e a mensalidade ao profissional), cortando
+ * por seção e por item: sai a seção cujo 1º pedaço é do site (os planos e preços, as formas de pagamento) ou que fica vazia; sai o
+ * item que bate na regra (com os subitens) e o rótulo que fica sem nada. SÓ TIRA LINHAS: nenhuma palavra nova, nada reescrito (o
+ * resumoLoja.test.ts confere linha a linha). Ficam quem vende, a vigência, o cancelamento, a desistência (também pela Google Play), o
+ * reajuste, a seção 15 (Versão da Google Play) e o atendimento; a numeração das seções fica a do texto publicado.
+ */
+export function termosDeAssinatura(loja: boolean, md: string = TERMOS_DE_ASSINATURA): string {
+  if (!loja) return md;
+  const linhas = md.split("\n");
+  const fora = new Set<number>();
+  secaoFica(lerSecoesFonte(linhas), fora);
+  return linhas
+    .filter((_linha, i) => !fora.has(i))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
 }

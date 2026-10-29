@@ -24,8 +24,8 @@ const permanente = (e: unknown) => ERRO_PERMANENTE.test(e instanceof Error ? e.m
  *   desligada no banco (`ligado` falso): nada;
  * - a leitura falhou (rede, erro do banco): a linha "Não deu para carregar…" com "Tentar de novo" — a seção não some calada (o aluno
  *   pode ter 16 ou 17 anos sem o registro). Sem data de nascimento ou sem acesso: nada.
- * A faixa, quem edita e o registro vêm do banco (aluno_responsavel). SÓ no build de staging até a virada: o CardDadosAluno carrega
- * esta seção por import() atrás da condição do Vite (na produção o Rollup corta).
+ * A faixa, quem edita e o registro vêm do banco (aluno_responsavel). Em todo build desde a virada (29/10/2026): o CardDadosAluno carrega
+ * esta seção por import() (sob demanda).
  */
 export default function SecaoResponsavel({ alunoId, nascimento }: { alunoId: string; nascimento?: string | null }) {
   const qc = useQueryClient();
