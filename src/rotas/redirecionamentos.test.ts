@@ -182,7 +182,8 @@ describe("W28 — Configurações do site antigo do Nutri (?aba=)", () => {
 
 // As rotas que o roteador monta no topo (src/rotas/Rotas.tsx) e as telas do Physiq (o painel de src/painel/menu.ts + RotasPainel.tsx,
 // o master de src/master/menu.ts e as públicas de ROTAS_PUBLICAS em src/rotas/registro.ts) — se o roteador mudar, mude aqui.
-const PUBLICAS = ["/f/:slug", "/d/:codigo", "/c/:codigo", "/p/:codigo", "/calculator", "/privacidade", "/termos"];
+// a virada (29/10/2026): /assinatura (os Termos de assinatura) em todo build, junto da /privacidade e da /termos
+const PUBLICAS = ["/f/:slug", "/d/:codigo", "/c/:codigo", "/p/:codigo", "/calculator", "/privacidade", "/termos", "/assinatura"];
 const TOPO = ["/", "/treino", "/dieta", "/evolucao", "/perfil", "/perfil/:item", "/entrar", "/entrar/email", "/boas-vindas", "/painel/*", "/master/*", ...PUBLICAS];
 const TELAS_DO_PHYSIQ = [
   "/", "/treino", "/dieta", "/evolucao", "/perfil", "/perfil/:item", "/entrar", "/entrar/email", "/boas-vindas",

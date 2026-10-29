@@ -1,42 +1,30 @@
 #!/usr/bin/env bash
-# hml-11 (H-28, D4) — os textos legais NOVOS (Política de Privacidade, Termos de Uso e Termos de assinatura, em src/publico/legal/)
-# esperam o advogado: até a virada (D12), eles e as peças deles (o resumo antes de pagar, o link "Assinatura" do rodapé e as 2 frases
-# de tela) existem SÓ no build de staging. Este script confere que uma pasta de build de PRODUÇÃO sai sem eles: o dist/ do
-# `npm run build:apk` (APK do site) e do `npm run build:loja` (AAB da Google Play), os 2 com VITE_DB_SCHEMA=public. A condição do Vite
-# (import.meta.env.VITE_DB_SCHEMA === "staging", direto no Rotas.tsx, nas 3 telas que vendem, no PublicoLayout e nas frases) faz o
-# Rollup cortar tudo na produção. No build de staging este script FALHA, e é o certo (o controle positivo, no local).
+# hml-11 (H-28, D4) → a VIRADA (D12 da hml-11 + hml-12 §10; 29/10/2026, decisão do dono: os textos publicados como estavam, sem
+# advogado). Até a virada, os textos legais novos (a Política de Privacidade, os Termos de Uso e os Termos de assinatura, em
+# src/publico/legal/) e as peças deles (o resumo antes de pagar, a porta do aceite, o consentimento de saúde, a idade…) existiam só no
+# build de staging, e este script conferia que o build de produção saía SEM eles. Desde a virada eles valem em todo build, e a faixa
+# "Versão em revisão — ainda não publicada" saiu do código (também do staging). O script passa a conferir, numa pasta de build (no CI:
+# o dist/ do `npm run build:apk` — o APK do site — e do `npm run build:loja` — o AAB da Google Play —, os 2 com VITE_DB_SCHEMA=public):
+#   1. PROIBIDAS: a faixa "em revisão" não está no build (nem no src/, fora dos testes: ela não volta sem querer);
+#   2. OBRIGATORIAS (o controle positivo): o texto legal ESTÁ no build — a página, a porta do aceite e o resumo antes de pagar. Prova
+#      que a pasta é um build de verdade e que a virada não voltou atrás (ex.: a condição de staging de novo, e o Rollup cortando).
 #
 #   uso: bash scripts/ci/sem-texto-legal-novo.sh <pasta>
 #
-# Falha se achar, em qualquer arquivo da pasta, uma das marcas abaixo: strings que só existem no texto novo e nas peças dele (só ASCII,
-# para o grep achar mesmo se o minificador escapar os acentos). Controle positivo: todas têm que existir no src/ (fora dos testes). Se
-# o código mudar e uma sumir, o teste ficaria oco (passaria sempre); então ele falha pedindo para trocar a marca.
-# Na virada (D12, passo 5): o texto novo vai para a produção, e a guarda passa a conferir só a faixa "em revisão" (as marcas da
-# hml-12 saem da lista junto com as condições de staging das telas delas).
+# As marcas são só ASCII (o grep acha mesmo se o minificador escapar os acentos). Cada OBRIGATORIA tem que existir no src/ (fora dos
+# testes): se o código mudar e uma sumir, a conferência ficaria oca — o script falha pedindo para trocar a marca.
+# Saída: 0 = ok; 1 = a faixa no build/src ou o texto legal faltando no build; 2 = erro de uso (pasta sem .js, marca sumida do src/).
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-MARCAS=(
+PROIBIDAS=(
+  "data-texto-em-revisao"          # a faixa "Versão em revisão — ainda não publicada" da src/publico/legal/PaginaLegal.tsx (saiu na virada)
+)
+OBRIGATORIAS=(
   "Termos de assinatura do Physiq" # src/publico/legal/PaginaLegal.tsx: o título da página /assinatura
-  "data-pagina-legal"              # src/publico/legal/PaginaLegal.tsx: as páginas novas (/privacidade, /termos e /assinatura)
-  "data-texto-em-revisao"          # src/publico/legal/PaginaLegal.tsx: a faixa "Versão em revisão — ainda não publicada"
-  "data-resumo-antes-de-pagar"     # src/publico/legal/ResumoAntesDePagar.tsx: o resumo nas 3 telas que vendem
-  "data-rodape-assinatura"         # src/publico/PublicoLayout.tsx: o link "Assinatura" do rodapé público
-  "data-frase-desistencia"         # src/publico/ExcluirConta.tsx e excluirConta/FluxoExclusao.tsx: a frase nova da desistência
-  "data-frase-renovacao"           # src/painel/configuracoes/plano/PlanoContaNova.tsx: a frase nova da renovação
-  "salvo a desist"                 # src/painel/configuracoes/excluirConta/regras.ts: o texto da frase nova ("salvo a desistência…")
-  # hml-12 (H-30): o aceite, o consentimento de saúde e a idade — também só no staging até a virada (a mesma condição do Vite)
+  "data-pagina-legal"              # src/publico/legal/PaginaLegal.tsx: as páginas /privacidade, /termos e /assinatura
   "data-aceite-no-acesso"          # src/publico/legal/aceite/TelaDoAceite.tsx: a tela do aceite (a porta do App.tsx)
-  "data-consentimento-saude"       # src/publico/legal/aceite/ConsentimentoSaude.tsx: Treinar sem profissional, o aceite e a pré-consulta /f/
-  "data-tela-menor"                # src/publico/legal/aceite/TelaMenor.tsx: a trava de idade
-  "data-secao-responsavel"         # src/publico/legal/responsavel/SecaoResponsavel.tsx: o consentimento do responsável na ficha
-  "data-rodape-aceite"             # src/entrada/pecas/Moldura.tsx: o rodapé da entrada só com os links
-  "data-aviso-idade-cadastro"      # src/publico/Cadastro.tsx: a linha da idade no link de cadastro /c/
-  "data-declaracao-profissional"   # src/entrada/onboarding/CriarConta.tsx: a declaração do "Sou profissional"
-  "data-pendente-idade"            # src/painel/alunos/Pendentes.tsx: a dica de idade dos cadastros pendentes
-  "data-novo-aviso-idade"          # src/painel/alunos/NovoAluno.tsx: a linha do responsável (16–17) no "Cadastrar aluno"
-  "data-frase-aceites"             # src/publico/ExcluirConta.tsx: o "O que fica guardado" da /excluir-conta (os aceites, 5 anos)
-  "registro dos seus aceites"      # src/painel/configuracoes/excluirConta/regras.ts e src/publico/ExcluirConta.tsx: o texto da frase (e a Política nova)
+  "data-resumo-antes-de-pagar"     # src/publico/legal/ResumoAntesDePagar.tsx: o resumo nas telas que vendem e na folha da Google Play
 )
 
 erro() {
@@ -57,16 +45,27 @@ if [ -z "$(find "$pasta" -type f -name '*.js' -print -quit)" ]; then
   exit 2
 fi
 
-# controle positivo: cada marca existe no código de verdade (os testes não contam)
-for marca in "${MARCAS[@]}"; do
+# controle positivo: cada marca obrigatória existe no código de verdade (os testes não contam)
+for marca in "${OBRIGATORIAS[@]}"; do
   if ! grep -rqF --include='*.ts' --include='*.tsx' --exclude='*.test.ts' --exclude='*.test.tsx' -- "$marca" "$RAIZ/src"; then
-    erro "sem-texto-legal-novo: a marca \"$marca\" sumiu do src/ — o teste ficou oco. Troque por outra string do texto novo (scripts/ci/sem-texto-legal-novo.sh)."
+    erro "sem-texto-legal-novo: a marca \"$marca\" sumiu do src/ — a conferência ficou oca. Troque por outra string do texto legal (scripts/ci/sem-texto-legal-novo.sh)."
     exit 2
   fi
 done
 
-achou=0
-for marca in "${MARCAS[@]}"; do
+falhas=0
+# 1. a faixa "em revisão": nem no src/ (fora dos testes) nem no build
+for marca in "${PROIBIDAS[@]}"; do
+  rc=0
+  noSrc="$(grep -rlF --include='*.ts' --include='*.tsx' --exclude='*.test.ts' --exclude='*.test.tsx' -- "$marca" "$RAIZ/src")" || rc=$?
+  if [ "$rc" -gt 1 ]; then
+    erro "sem-texto-legal-novo: o grep falhou ($rc) lendo o src/"
+    exit 2
+  fi
+  if [ -n "$noSrc" ]; then
+    falhas=$((falhas + 1))
+    erro "sem-texto-legal-novo: a faixa \"em revisão\" (\"$marca\") voltou ao src/: $(printf '%s\n' "$noSrc" | head -5 | tr '\n' ' ')"
+  fi
   rc=0
   arquivos="$(grep -rlF -- "$marca" "$pasta")" || rc=$?
   if [ "$rc" -gt 1 ]; then
@@ -74,13 +73,21 @@ for marca in "${MARCAS[@]}"; do
     exit 2
   fi
   if [ -n "$arquivos" ]; then
-    achou=$((achou + 1))
+    falhas=$((falhas + 1))
     erro "sem-texto-legal-novo: \"$marca\" está em $(printf '%s\n' "$arquivos" | head -5 | tr '\n' ' ')"
   fi
 done
 
-if [ "$achou" -gt 0 ]; then
-  erro "sem-texto-legal-novo: $pasta leva os textos legais novos ($achou de ${#MARCAS[@]} marcas). Eles esperam o advogado e ficam só no staging: o build de produção precisa de VITE_DB_SCHEMA=public e a condição do Vite direto no código (hml-11, D4)."
+# 2. o texto legal tem que estar no build (desde a virada, em todo build)
+for marca in "${OBRIGATORIAS[@]}"; do
+  if ! grep -rqF -- "$marca" "$pasta"; then
+    falhas=$((falhas + 1))
+    erro "sem-texto-legal-novo: \"$marca\" não está em $pasta — o build saiu sem o texto legal (a virada voltou atrás? a condição de staging de novo?)"
+  fi
+done
+
+if [ "$falhas" -gt 0 ]; then
+  erro "sem-texto-legal-novo: $pasta não passou ($falhas problema(s)). Desde a virada (29/10/2026) o texto legal vai em todo build, sem a faixa \"em revisão\" (docs/textos-legais.md)."
   exit 1
 fi
-echo "OK sem-texto-legal-novo: $pasta sai sem os textos legais novos (${#MARCAS[@]} marcas conferidas; as ${#MARCAS[@]} existem no src/)"
+echo "OK sem-texto-legal-novo: $pasta sem a faixa \"em revisão\" (${#PROIBIDAS[@]} marca) e com o texto legal (as ${#OBRIGATORIAS[@]} marcas obrigatórias no build e no src/)"

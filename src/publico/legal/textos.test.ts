@@ -6,7 +6,7 @@ import { PLANOS_APP_PADRAO, TESTE_DIAS_APP } from "@/app-aluno/sozinho/regras";
 import { FAIXAS, NOME_PLANO, PLANOS, PRECOS_PADRAO, TESTE_DIAS, TESTE_MAX_ALUNOS } from "@/nucleo/cobranca/regras";
 import { CONTATO_SUPORTE } from "@/nucleo/suporte";
 import { FRASE_BACKUPS, FRASE_SUPORTE, servicosDaVersao } from "@/publico/privacidade/textos";
-import { TERMOS_DE_ASSINATURA, TITULO_RESUMO, resumoDaAssinatura } from "./assinatura";
+import { TERMOS_DE_ASSINATURA, TITULO_RESUMO, resumoDaAssinatura, termosDeAssinatura } from "./assinatura";
 import { lerMarkdown, slug, type Bloco, type Trecho } from "./markdown";
 import { ONDE_FICA_O_SERVICO, politicaDePrivacidade } from "./politica";
 import { TERMOS_DE_USO, TITULO_ANEXO, TITULO_RESUMO_DOS_TERMOS, resumoDosTermos } from "./termos";
@@ -49,6 +49,8 @@ const DOCUMENTOS = [
   ["Política de Privacidade (Google Play)", politicaDePrivacidade(true), ROTA_POLITICA],
   ["Termos de Uso", TERMOS_DE_USO, ROTA_TERMOS],
   ["Termos de assinatura", TERMOS_DE_ASSINATURA, ROTA_ASSINATURA],
+  // a virada (29/10/2026): a página /assinatura da versão da Google Play (o mesmo texto sem o que só vale no site — resumoLoja.test.ts)
+  ["Termos de assinatura (Google Play)", termosDeAssinatura(true), ROTA_ASSINATURA],
 ] as const;
 
 /** As âncoras de cada página (para conferir os links com #). */
@@ -59,10 +61,36 @@ const ANCORAS: Record<string, string[]> = {
 };
 
 describe("a versão dos textos (uma só para os 3)", () => {
-  it("2026-10-08 = 8 de outubro de 2026", () => {
-    expect(VERSAO_TEXTOS).toBe("2026-10-08");
+  // A virada (29/10/2026): a versão é a data da publicação. Ela mora em versao.ts (VERSAO_TEXTOS e a mesma data por extenso) e a
+  // migração da virada liga a MESMA versão no banco (app_config.textos_legais, que o aceite confere: outra = versao_desatualizada). Se a
+  // data mudar, muda nos 2 juntos — estes testes acusam a diferença.
+  const MIGRACAO = "supabase-principal/migrations/20261029200000_virada_textos_legais.sql";
+  const REVERSA = "supabase-principal/reversas/20261029200000_virada_textos_legais_reversa.sql";
+  /** As datas 'AAAA-MM-DD' do SQL de verdade (sem as linhas de comentário). */
+  const datasDoSql = (caminho: string) =>
+    [...readFileSync(resolve(RAIZ, caminho), "utf8").split("\n").filter((l) => !l.trim().startsWith("--")).join("\n").matchAll(/'(\d{4}-\d{2}-\d{2})'/g)].map((m) => m[1]);
+
+  it("a data por extenso é a da versão", () => {
+    expect(VERSAO_TEXTOS).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     const porExtenso = new Date(`${VERSAO_TEXTOS}T12:00:00Z`).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
     expect(DATA_DOS_TEXTOS).toBe(porExtenso);
+  });
+
+  it("a versão publicada vem depois da que ficou em revisão no staging (2026-10-08)", () => {
+    expect(VERSAO_TEXTOS > "2026-10-08").toBe(true);
+  });
+
+  it("a migração da virada liga no banco a versão do app (nos 2 schemas) e só ela", () => {
+    const sql = readFileSync(resolve(RAIZ, MIGRACAO), "utf8");
+    expect(sql).toContain(`set valor = jsonb_build_object('versao', '${VERSAO_TEXTOS}')`);
+    expect(sql).toContain("where chave = 'textos_legais'");
+    expect(new Set(datasDoSql(MIGRACAO))).toEqual(new Set([VERSAO_TEXTOS]));
+  });
+
+  it("a reversa volta o staging à versão de revisão e o public à nula (desligado)", () => {
+    const sql = readFileSync(resolve(RAIZ, REVERSA), "utf8");
+    expect(sql).toContain("jsonb_build_object('versao', case when '{schema}' = 'staging' then '2026-10-08' end)");
+    expect(new Set(datasDoSql(REVERSA))).toEqual(new Set(["2026-10-08"]));
   });
 });
 

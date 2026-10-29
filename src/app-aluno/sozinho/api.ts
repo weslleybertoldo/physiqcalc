@@ -43,7 +43,7 @@ async function gravarDoApp(acao: "entrar_sem_profissional" | "mudar_objetivo_app
 }
 
 /**
- * hml-12 (H-30, P4): o que a tela nova manda junto (só o build de staging até a virada) — a data de nascimento (18+) e o consentimento
+ * hml-12 (H-30, P4): o que a tela manda junto (em todo build desde a virada, 29/10/2026) — a data de nascimento (18+) e o consentimento
  * de saúde: a versão do texto que a pessoa leu (VERSAO_TEXTOS) e de onde veio (site, apk ou loja).
  */
 export interface ExtraSemProfissional {

@@ -2,7 +2,7 @@ import { lerMarkdown, type ItemLista } from "./markdown";
 import { ROTA_ASSINATURA, ROTA_POLITICA, VENDEDOR } from "./versao";
 
 /**
- * hml-11 (H-28, D7) — os Termos de Uso NOVOS, em revisão: só no build de staging até a virada (src/publico/legal/versao.ts). Base:
+ * hml-11 (H-28, D7) — os Termos de Uso, publicados na virada (29/10/2026, como estavam; em todo build — src/publico/legal/versao.ts). Base:
  * o rascunho para o advogado (physiqcalc-scratch/hml/hml11/rascunhos/termos-de-uso.md, conferido no código do 82064d3) com as
  * decisões padrão da spec (P3: o Physiq recebe em nome do profissional nas contas com o Mercado Pago ligado; P5: o limite de 3
  * mensalidades; P7: o e-mail do suporte; P8: versão nova com aviso de 30 dias) e sem os marcadores do rascunho. O Anexo é o acordo

@@ -107,9 +107,9 @@ function CartaoConta({ c }: { c: ContaDoDono }) {
       {cobranca.length > 0 && (
         <Linha icone={CreditCard} tom="var(--p-rosa-3)">
           <span className="flex flex-col gap-0.5" data-exclusao-cobranca={c.cobrancas.plano + c.cobrancas.alunos}>
-            {/* hml-11 (D5): a frase nova da desistência (só no staging) ganha a marca dos testes e do E2E */}
+            {/* hml-11 (D5): a frase da desistência (em todo build desde a virada) ganha a marca dos testes e do E2E */}
             {cobranca.map((l) =>
-              import.meta.env.VITE_DB_SCHEMA === "staging" && l.includes("salvo a desistência") ? (
+              l.includes("salvo a desistência") ? (
                 <span key={l} data-frase-desistencia>
                   {l}
                 </span>

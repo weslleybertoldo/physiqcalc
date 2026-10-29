@@ -4,8 +4,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
-  // hml-12 (H-30): os testes de sempre rodam como a produção — sem o consentimento de saúde. O Vitest roda como o staging
-  // (vitest.config.ts) e a condição do Vite é lida quando a tela carrega: o schema troca ANTES dos imports.
+  // hml-12 (H-30) → a virada (29/10/2026): os testes de sempre rodam como a produção — que agora pede o consentimento de saúde antes de
+  // enviar, como o staging. O Vitest roda como o staging (vitest.config.ts): o schema troca ANTES dos imports.
   vi.stubEnv("VITE_DB_SCHEMA", "public");
   return { rpc: vi.fn(), importouConsentimento: 0 };
 });
@@ -17,6 +17,13 @@ vi.mock("@/publico/legal/aceite/ConsentimentoSaude", async (orig) => {
 });
 
 import Formulario from "./Formulario";
+import { VERSAO_TEXTOS } from "@/publico/legal/versao";
+
+/** O consentimento de saúde (carrega sob demanda): espera a caixa e marca. */
+async function marcarConsentimento() {
+  await waitFor(() => expect(document.querySelector("[data-consentimento-saude-caixa]")).not.toBeNull(), { timeout: 5000 });
+  fireEvent.click(document.querySelector("[data-consentimento-saude-caixa]")!);
+}
 
 const FORM = {
   id: "f1",
@@ -66,12 +73,17 @@ describe("W21 — /f/:slug (N-55): a pré-consulta pública, sem login", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sim" }));
     fireEvent.change(screen.getByLabelText("Qual o seu objetivo?"), { target: { value: "Ganhar força" } });
     fireEvent.click(screen.getByRole("button", { name: /Enviar respostas/ }));
+    // a virada: na produção também, sem o consentimento nada vai ao banco
+    expect(await screen.findByText("Para enviar, marque o consentimento.")).toBeInTheDocument();
+    expect(h.rpc.mock.calls.some((c) => c[0] === "preconsulta_responder")).toBe(false);
+    await marcarConsentimento();
+    fireEvent.click(screen.getByRole("button", { name: /Enviar respostas/ }));
     expect(await screen.findByText("Respostas enviadas")).toBeInTheDocument();
     const envio = h.rpc.mock.calls.find((c) => c[0] === "preconsulta_responder")!;
-    expect(envio[1]).toEqual({ p_slug: "abcd2345", p_nome: "Ana   Lima", p_email: "", p_telefone: "", p_respostas: { p1: true, p2: "Ganhar força" } });
+    expect(envio[1]).toEqual({ p_slug: "abcd2345", p_nome: "Ana   Lima", p_email: "", p_telefone: "", p_respostas: { p1: true, p2: "Ganhar força" }, p_consentimento: VERSAO_TEXTOS });
     expect(screen.queryByText("Seu resultado")).not.toBeInTheDocument(); // sem faixas, sem resultado
-    // hml-12: estes testes rodam como a produção (o stub do topo) — sem o consentimento, a RPC de 5 argumentos
-    expect(h.importouConsentimento).toBe(0);
+    // hml-12: estes testes rodam como a produção (o stub do topo) — desde a virada, com o consentimento (a frase acima) e a RPC de 6
+    // argumentos (o p_consentimento do envio)
   });
 
   it("questionário com faixas: o resultado aparece para quem respondeu", async () => {
@@ -82,6 +94,7 @@ describe("W21 — /f/:slug (N-55): a pré-consulta pública, sem login", () => {
     await screen.findByText("Pré-consulta da primeira avaliação");
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana" } });
     fireEvent.click(screen.getByRole("button", { name: "Sim" }));
+    await marcarConsentimento();
     fireEvent.click(screen.getByRole("button", { name: /Enviar respostas/ }));
     expect(await screen.findByText("Seu resultado")).toBeInTheDocument();
     expect(document.querySelector("[data-resultado-publico]")?.getAttribute("data-resultado-publico")).toBe("1/1 pontos · Média");
@@ -100,15 +113,16 @@ describe("W21 — /f/:slug (N-55): a pré-consulta pública, sem login", () => {
     await screen.findByText("Pré-consulta da primeira avaliação");
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana" } });
     fireEvent.click(screen.getByRole("button", { name: "Não" }));
+    await marcarConsentimento();
     fireEvent.click(screen.getByRole("button", { name: /Enviar respostas/ }));
     expect(await screen.findByText(/muitas respostas na última hora/)).toBeInTheDocument();
   });
 });
 
-// hml-12 (H-30, H8): o consentimento das respostas de saúde, específico e em destaque, antes de "Enviar respostas" — SÓ no build de
-// staging até a virada; com ele vai a RPC de 6 argumentos (o consentimento fica gravado na resposta). Cada teste importa a tela de
-// novo com o schema do build (fica no FIM do arquivo: depois do resetModules, nenhum teste usa a tela do import de cima).
-describe("/f/:slug — hml-12: o consentimento de saúde só no staging", () => {
+// hml-12 (H-30, H8): o consentimento das respostas de saúde, específico e em destaque, antes de "Enviar respostas" — no staging e, desde
+// a virada (29/10/2026), na produção; com ele vai a RPC de 6 argumentos (o consentimento fica gravado na resposta). Cada teste importa a
+// tela de novo com o schema do build (fica no FIM do arquivo: depois do resetModules, nenhum teste usa a tela do import de cima).
+describe("/f/:slug — hml-12: o consentimento de saúde em todo build (a virada)", () => {
   async function montarNoBuild(schema: "staging" | "public") {
     vi.stubEnv("VITE_DB_SCHEMA", schema);
     vi.resetModules();
@@ -141,7 +155,6 @@ describe("/f/:slug — hml-12: o consentimento de saúde só no staging", () => 
     respostaOk();
     await montarNoBuild("staging");
     await waitFor(() => expect(consentimento()).not.toBeNull(), { timeout: 5000 });
-    expect(h.importouConsentimento).toBe(1);
     expect(consentimento()?.textContent).toContain("Elas vão só para Rafael Lima");
     const enviar = screen.getByRole("button", { name: /Enviar respostas/ });
     expect(consentimento()!.compareDocumentPosition(enviar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -171,15 +184,19 @@ describe("/f/:slug — hml-12: o consentimento de saúde só no staging", () => 
     expect(await screen.findByText("Recarregue a página e marque o consentimento para enviar.")).toBeInTheDocument();
   });
 
-  it("produção: sem a caixa (o import nem acontece) e a RPC de 5 argumentos", async () => {
+  it("produção: a caixa também — sem marcar → a frase; marcado → a RPC de 6 argumentos", async () => {
     respostaOk();
     await montarNoBuild("public");
+    await waitFor(() => expect(consentimento()).not.toBeNull(), { timeout: 5000 });
     preencher();
     fireEvent.click(screen.getByRole("button", { name: /Enviar respostas/ }));
+    expect(await screen.findByText("Para enviar, marque o consentimento.")).toBeInTheDocument();
+    expect(h.rpc.mock.calls.some((c) => c[0] === "preconsulta_responder")).toBe(false);
+    const { VERSAO_TEXTOS: versao } = await import("@/publico/legal/versao");
+    fireEvent.click(document.querySelector("[data-consentimento-saude-caixa]")!);
+    fireEvent.click(screen.getByRole("button", { name: /Enviar respostas/ }));
     expect(await screen.findByText("Respostas enviadas")).toBeInTheDocument();
-    expect(consentimento()).toBeNull();
-    expect(h.importouConsentimento).toBe(0);
     const envio = h.rpc.mock.calls.find((c) => c[0] === "preconsulta_responder")!;
-    expect(envio[1]).not.toHaveProperty("p_consentimento");
+    expect(envio[1]).toEqual({ p_slug: "abcd2345", p_nome: "Ana", p_email: "", p_telefone: "", p_respostas: { p1: true }, p_consentimento: versao });
   });
 });

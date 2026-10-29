@@ -44,7 +44,7 @@ const abrir = (state?: unknown) =>
   );
 
 beforeEach(() => {
-  // hml-11 (D5): os testes rodam como a produção (a frase de hoje da cobrança); os do staging trocam o schema
+  // os testes rodam como a produção (desde a virada, 29/10/2026, as frases novas valem nela também); os do staging trocam o schema
   vi.stubEnv("VITE_DB_SCHEMA", "public");
   localStorage.clear();
   h.loja = false;
@@ -69,7 +69,9 @@ describe("/excluir-conta — sem login", () => {
     expect(container.querySelector("[data-secao-excluir='guardado'] [data-frase-backups]")?.textContent).toBe(FRASE_BACKUPS);
     // hml-11 (A2): a frase passou a dizer a cópia diária cifrada da hml-07 — o prazo é o mesmo
     expect(container.textContent).toMatch(/são cifradas, guardadas no Brasil e apagadas em até 30 dias depois de feitas/);
-    expect(container.textContent).not.toMatch(/até 7 dias/);
+    // o "até 7 dias" de antes era o prazo das cópias; a desistência "em até 7 dias depois do pagamento" (a virada) é outra frase
+    expect(container.querySelector("[data-secao-excluir='guardado']")?.textContent).not.toMatch(/até 7 dias/);
+    expect(container.textContent?.replace(/salvo a desistência em até 7 dias depois do pagamento/g, "")).not.toMatch(/até 7 dias/);
   });
   it("'Entrar para excluir' guarda o pedido e leva ao login voltando para esta página", () => {
     abrir();
@@ -112,9 +114,9 @@ describe("/excluir-conta — com login", () => {
   });
 });
 
-// hml-11 (H-28, D5): "sem reembolso do que já foi pago" conflita com a desistência em 7 dias dos Termos de assinatura novos — a frase
-// nova (com a marca do E2E) só no build de staging até a virada; na produção, a de hoje e sem a marca.
-describe("/excluir-conta — hml-11: a frase da desistência só no staging", () => {
+// hml-11 (H-28, D5): "sem reembolso do que já foi pago" conflitava com a desistência em 7 dias dos Termos de assinatura — desde a
+// virada (29/10/2026) a frase nova (com a marca do E2E) vale no staging e na produção.
+describe("/excluir-conta — hml-11: a frase da desistência em todo build (a virada)", () => {
   const profissional = () => screen.getByText((_texto, el) => el?.tagName === "LI" && /^Profissional: a foto/.test(el.textContent ?? ""));
   afterAll(() => {
     vi.unstubAllEnvs();
@@ -136,16 +138,24 @@ describe("/excluir-conta — hml-11: a frase da desistência só no staging", ()
     expect(container.textContent).not.toMatch(/R\$|grátis|Mercado Pago|pague|assine|Pix/i);
   });
 
-  it("produção: a frase de hoje, sem a marca", () => {
+  it("produção: a frase nova também, com a marca — 'sem reembolso' saiu", () => {
     abrir();
-    expect(profissional().textContent).toMatch(/a cobrança automática do plano é cancelada \(sem reembolso do que já foi pago\)\.$/);
-    expect(document.querySelector("[data-frase-desistencia]")).toBeNull();
+    expect(document.querySelector("[data-frase-desistencia]")?.textContent).toBe("o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento");
+    expect(profissional().textContent).toMatch(/a cobrança automática do plano é cancelada \(o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento\)\.$/);
+    expect(document.body.textContent).not.toContain("sem reembolso");
+  });
+
+  it("produção, versão da Google Play: a frase nova também, ainda sem preço nem como pagar", () => {
+    h.loja = true;
+    const { container } = abrir();
+    expect(container.querySelector("[data-frase-desistencia]")).not.toBeNull();
+    expect(container.textContent).not.toMatch(/R\$|grátis|Mercado Pago|pague|assine|Pix/i);
   });
 });
 
-// hml-12 (H-30, P3): a prova do aceite fica 5 anos depois da exclusão (a Política nova diz) — o item novo do "O que fica guardado" só no
-// build de staging até a virada; na produção, a lista de hoje.
-describe("/excluir-conta — hml-12: o registro dos aceites fica 5 anos, só no staging", () => {
+// hml-12 (H-30, P3): a prova do aceite fica 5 anos depois da exclusão (a Política diz) — o item do "O que fica guardado" vale no staging
+// e, desde a virada (29/10/2026), na produção.
+describe("/excluir-conta — hml-12: o registro dos aceites fica 5 anos, em todo build (a virada)", () => {
   afterAll(() => {
     vi.unstubAllEnvs();
   });
@@ -158,9 +168,10 @@ describe("/excluir-conta — hml-12: o registro dos aceites fica 5 anos, só no 
     expect(item?.nextElementSibling).toBe(container.querySelector("[data-frase-backups]"));
   });
 
-  it("produção: sem o item", () => {
+  it("produção: o item também, logo antes das cópias de segurança", () => {
     const { container } = abrir();
-    expect(container.querySelector("[data-frase-aceites]")).toBeNull();
-    expect(container.textContent).not.toContain("provar o aceite");
+    const item = container.querySelector("[data-secao-excluir='guardado'] [data-frase-aceites]");
+    expect(item?.textContent).toBe("O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.");
+    expect(item?.nextElementSibling).toBe(container.querySelector("[data-frase-backups]"));
   });
 });

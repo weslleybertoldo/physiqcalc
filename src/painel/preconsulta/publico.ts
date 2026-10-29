@@ -23,7 +23,7 @@ export type RespostaEnviada = { id: string; pontuacao: number; faixa: string; ni
 
 /**
  * Grava a resposta pela RPC (validação, pontuação e limite por hora no banco; a conta vem do formulário pelo gatilho). hml-12 (H-30,
- * H8): com o `consentimento` (a versão do texto que a pessoa leu — só o build de staging até a virada) vai a sobrecarga de 6
+ * H8): com o `consentimento` (a versão do texto que a pessoa leu — a tela manda sempre, desde a virada) vai a sobrecarga de 6
  * argumentos, que o grava na própria resposta; sem ele, a de 5 de sempre — que, depois da virada (versão dos textos ligada no banco),
  * recusa com sem_consentimento.
  */

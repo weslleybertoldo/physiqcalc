@@ -2,8 +2,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// hml-11 (H-28, D3/D4) — /privacidade, /termos e /assinatura com os textos legais novos (só no staging até a virada): o documento
-// certo em cada rota, a versão, "Imprimir ou salvar em PDF", os links entre os 3, a faixa "em revisão" e o Voltar do app.
+// hml-11 (H-28, D3/D4) — /privacidade, /termos e /assinatura com os textos legais (publicados na virada, 29/10/2026 — em todo build): o
+// documento certo em cada rota, a versão, "Imprimir ou salvar em PDF", os links entre os 3, sem a faixa "em revisão", e o Voltar do app.
 const h = vi.hoisted(() => ({ loja: false }));
 vi.mock("@/lib/distribuicao", () => ({
   get ehLoja() {
@@ -67,14 +67,14 @@ describe("PaginaLegal — os 3 documentos", () => {
     expect(linksLegais()).toEqual(outros);
   });
 
-  it("a faixa 'em revisão' no topo, com o link da versão em vigor", () => {
-    abrir("/termos");
-    const faixa = document.querySelector("[data-texto-em-revisao]") as HTMLElement;
-    expect(faixa).not.toBeNull();
-    expect(faixa.textContent).toBe("Versão em revisão — ainda não publicada. A versão em vigor está em physiqcalc.com.br/privacidade.");
-    expect(within(faixa).getByRole("link").getAttribute("href")).toBe("https://physiqcalc.com.br/privacidade");
-    // a faixa vem antes do título
-    expect(faixa.compareDocumentPosition(screen.getByRole("heading", { level: 1 })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  it.each(["/privacidade", "/termos", "/assinatura"])("%s: publicado — sem a faixa 'em revisão' nem o link para a versão de antes", (rota) => {
+    abrir(rota);
+    expect(document.querySelector("[data-texto-em-revisao]")).toBeNull();
+    expect(pagina()?.textContent).not.toMatch(/em revisão|ainda não publicada|versão em vigor/i);
+    expect(pagina()?.querySelector('a[href="https://physiqcalc.com.br/privacidade"]')).toBeNull();
+    // o Voltar e o título abrem a página
+    expect(pagina()?.querySelector("[data-voltar]")).not.toBeNull();
+    expect(within(pagina() as HTMLElement).getByRole("heading", { level: 1 })).toBeInTheDocument();
   });
 
   it("'Imprimir ou salvar em PDF' abre a impressão do navegador (Decreto 7.962/2013, art. 4º, IV)", () => {
@@ -103,6 +103,35 @@ describe("PaginaLegal — os 3 documentos", () => {
     for (const t of tabelas) {
       expect(t.className).toContain("overflow-x-auto");
       expect(t.querySelector("table")?.className).toMatch(/min-w-/);
+    }
+  });
+
+  // play-W6 → a virada (29/10/2026, pedido da LINUX 1 — a regra de pagamentos da Google Play): na versão da loja, os Termos de assinatura
+  // são o MESMO texto sem o que só vale no site (a regra do resumo "loja"); no site, o texto inteiro
+  it("versão da Google Play: /assinatura sem Pix, Mercado Pago, cartão, cobrança automática nem a tabela de preços em R$; com a §15 e a desistência", () => {
+    h.loja = true;
+    abrir("/assinatura");
+    // o que a pessoa lê: o cabeçalho e o documento (o textContent da página inteira levaria o CSS de impressão junto)
+    const texto = `${pagina()?.querySelector("header")?.textContent ?? ""} ${pagina()?.querySelector("[data-texto-legal]")?.textContent ?? ""}`;
+    expect(texto).not.toMatch(/\bPix\b|Mercado Pago|cart[ãa]o|autom[áa]tic|R\$/i);
+    expect(document.querySelectorAll("[data-tabela-legal]")).toHaveLength(0);
+    expect(screen.getByRole("heading", { level: 2, name: "15. Versão da Google Play" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "9. Desistência (direito de arrependimento)" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "8. Cancelamento" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "1. Quem vende" })).toBeInTheDocument();
+    expect(texto).toContain(VENDEDOR.nome);
+    expect(texto).toContain("A Google Play também recebe pedidos de reembolso pelas regras dela.");
+    expect(screen.queryByRole("heading", { name: /Formas de pagamento|Plano da conta do profissional|Plano do app/ })).toBeNull();
+  });
+
+  it("site: /assinatura com o texto inteiro (as formas de pagamento, as 2 tabelas de preço e a §15)", () => {
+    abrir("/assinatura");
+    const texto = pagina()?.querySelector("[data-texto-legal]")?.textContent ?? "";
+    expect(texto).toMatch(/Mercado Pago/);
+    expect(texto).toMatch(/\bPix\b/);
+    expect(document.querySelectorAll("[data-tabela-legal]")).toHaveLength(2);
+    for (const titulo of ["4. Formas de pagamento", "2.1 Plano da conta do profissional (por mês)", "15. Versão da Google Play", "16. O que não é venda do Physiq"]) {
+      expect(screen.getByRole("heading", { name: titulo })).toBeInTheDocument();
     }
   });
 

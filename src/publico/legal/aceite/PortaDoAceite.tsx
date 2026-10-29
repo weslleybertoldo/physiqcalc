@@ -9,8 +9,8 @@ import TelaDoAceite from "./TelaDoAceite";
 import TelaMenor from "./TelaMenor";
 
 /**
- * hml-12 (H-30, D6) — a porta do aceite: o invólucro global do App.tsx (por dentro do MasterSoNoSite), carregado SÓ no build de
- * staging até a virada. Quem não aceitou a versão vigente dos textos (o `legal` da situação) vê a tela do aceite antes de qualquer
+ * hml-12 (H-30, D6) — a porta do aceite: o invólucro global do App.tsx (por dentro do MasterSoNoSite), em todo build desde a virada
+ * (29/10/2026). Quem não aceitou a versão vigente dos textos (o `legal` da situação) vê a tela do aceite antes de qualquer
  * área logada (app, Boas-vindas, painel, master); quem tem a trava de idade vê a tela da trava. As páginas públicas, o Sair e o
  * Excluir minha conta passam sempre (regras.ts).
  * - `children` são as rotas; `avisos` são os avisos globais (o popup do ?prof=, "o Physiq mudou", o pedido de push…) e o link do site

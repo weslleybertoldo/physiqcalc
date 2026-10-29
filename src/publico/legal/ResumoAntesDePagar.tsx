@@ -14,8 +14,7 @@ const CLASSE_LINK = "font-semibold text-violeta-3 underline-offset-2 hover:under
  * hml-11 (H-28, D5) — o resumo dos Termos de assinatura ANTES de pagar (Decreto 7.962/2013, art. 4º, I: o sumário do contrato antes
  * de contratar, com destaque nas cláusulas que limitam direitos — o negrito do próprio texto). Os itens são a seção "Resumo" de
  * assinatura.ts, sem o bloco do outro público, e os links abrem os documentos completos em outra aba (o pagamento fica onde está).
- * Entra SÓ no build de staging até a virada (cada tela o importa com a condição do Vite direto no `lazy`) e nunca no pagamento ao
- * profissional. Na versão da Google Play, só na folha da oferta da Play, com o resumo "loja" (sem o Mercado Pago e sem o preço do banco).
+ * Entra em todo build desde a virada (29/10/2026; cada tela o importa com o `lazy`) e nunca no pagamento ao profissional. Na versão da Google Play, só na folha da oferta da Play, com o resumo "loja" (sem o Mercado Pago e sem o preço do banco).
  */
 export default function ResumoAntesDePagar({ tela }: { tela: TelaQueVende }) {
   const itens = resumoDaAssinatura(tela === "plano-profissional" ? "profissional" : tela === "loja" ? "loja" : "aluno");

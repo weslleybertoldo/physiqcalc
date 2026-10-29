@@ -27,12 +27,12 @@ const TelaCodigo = import.meta.env.VITE_APP_NATIVO === "1" ? null : lazy(() => i
 // staging. O Vite troca o import.meta.env.VITE_DB_SCHEMA pelo valor e, na produção, o Rollup corta o import(): a página nem entra no
 // bundle (o mesmo jeito do master na hml-08; a expressão fica AQUI, direto na condição, sem função no meio).
 const ErroDeTeste = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/ErroDeTeste")) : null;
-// hml-11 (H-28, D4): os textos legais NOVOS (Política, Termos de Uso e Termos de assinatura — src/publico/legal/) esperam o advogado:
-// até a virada (D12), /privacidade, /termos e /assinatura com eles SÓ no build de staging. Na produção o Rollup corta o import() (o
-// texto novo nem entra no bundle; scripts/ci/sem-texto-legal-novo.sh confere) e as 2 primeiras seguem com a Privacidade de hoje. A
-// expressão fica AQUI, direto na condição, sem função no meio (o mesmo jeito do master na hml-08 e da /erro-teste na hml-10).
-const PaginaLegal = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/PaginaLegal")) : null;
-// W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx, pelo registro) — as antigas saíram
+// hml-11 (H-28, D4) → a virada (D12, 29/10/2026): /privacidade, /termos e /assinatura são os textos legais (a Política, os Termos de Uso
+// e os Termos de assinatura — src/publico/legal/) em TODO build; a Privacidade de antes (src/publico/Privacidade.tsx) saiu. Carrega sob
+// demanda (o JS inicial não leva o texto). A guarda scripts/ci/sem-texto-legal-novo.sh confere que o build de produção tem a página.
+const PaginaLegal = lazy(() => import("@/publico/legal/PaginaLegal"));
+const ROTAS_LEGAIS = ["/privacidade", "/termos", "/assinatura"];
+// W26: /calculator é a página nova (src/publico/Calculadora.tsx, pelo registro) — a antiga saiu
 
 /**
  * hml-22 (H-22): quem tem a verificação em 2 etapas ligada e entrou só com a senha ou o Google (aal1) vê a tela do código ANTES de
@@ -93,9 +93,7 @@ export function RotaEntrada({ nome }: { nome: string }) {
  * públicas e os redirecionamentos das rotas antigas. As telas entram pelo registro por convenção.
  */
 export function Rotas() {
-  // hml-11 (D4): com a página legal nova (só no staging), /privacidade e /termos são dela — a Privacidade de hoje sai das públicas,
-  // para nenhuma rota ter 2 donos
-  const publicas = Object.values(registro.publico).filter((r) => !(PaginaLegal && r.nome === "Privacidade"));
+  const publicas = Object.values(registro.publico);
   return (
     <Routes>
       {/* App do aluno */}
@@ -142,19 +140,18 @@ export function Rotas() {
             }
           />
         )}
-        {/* hml-11 (D4): os textos legais novos, só no staging até a virada (a faixa "versão em revisão" fica na página) */}
-        {PaginaLegal &&
-          ["/privacidade", "/termos", "/assinatura"].map((caminho) => (
-            <Route
-              key={caminho}
-              path={caminho}
-              element={
-                <Carregavel nome="página legal">
-                  <PaginaLegal />
-                </Carregavel>
-              }
-            />
-          ))}
+        {/* hml-11 (D4) → a virada (29/10/2026): os textos legais, em todo build */}
+        {ROTAS_LEGAIS.map((caminho) => (
+          <Route
+            key={caminho}
+            path={caminho}
+            element={
+              <Carregavel nome="página legal">
+                <PaginaLegal />
+              </Carregavel>
+            }
+          />
+        ))}
         {publicas.flatMap((r) =>
           rotasDaPaginaPublica(r.nome).map((caminho) => (
             <Route

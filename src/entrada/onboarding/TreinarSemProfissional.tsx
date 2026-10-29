@@ -16,14 +16,14 @@ import { Chip } from "@/ui/premium/Chip";
 import { useOnline } from "@/ui/premium/useOnline";
 import { MensagemForm } from "../pecas/Campo";
 
-// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de começar o plano do app (Decreto 7.962/2013, art. 4º, I) — SÓ no build
-// de staging até a virada. Na produção o Rollup corta o import() (a expressão do Vite fica aqui, direto na condição, sem função no meio).
-const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
+// hml-11 (H-28, D5): o resumo dos Termos de assinatura antes de começar o plano do app (Decreto 7.962/2013, art. 4º, I) — em todo build
+// desde a virada (29/10/2026), menos na versão da Google Play (lá a folha da Play tem o resumo "loja"). Carrega sob demanda.
+const ResumoAntesDePagar = lazy(() => import("@/publico/legal/ResumoAntesDePagar"));
 // hml-12 (H-30, P4): a data de nascimento (o plano do app é para 18+) e o consentimento dos dados de saúde, em destaque, antes de
-// começar — SÓ no build de staging até a virada; com eles vai a RPC de 5 argumentos. Na produção o Rollup corta os import() (a
-// expressão do Vite fica aqui, direto na condição, sem função no meio — src/publico/legal/guarda.test.ts confere).
-const ConsentimentoSaude = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/aceite/ConsentimentoSaude")) : null;
-const CampoNascimento = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/aceite/CampoNascimento")) : null;
+// começar — em todo build desde a virada; com eles vai a RPC de 5 argumentos (com a versão dos textos desligada no banco, ela age como
+// a de 2). Carregam sob demanda.
+const ConsentimentoSaude = lazy(() => import("@/publico/legal/aceite/ConsentimentoSaude"));
+const CampoNascimento = lazy(() => import("@/publico/legal/aceite/CampoNascimento"));
 
 /**
  * Boas-vindas › "Treinar sem profissional" (W7b — regra dele, 29/09): quem entra sem código treina sozinho. Escolhe o objetivo
@@ -33,6 +33,7 @@ const CampoNascimento = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() =
  * play-W6: na versão da Google Play (com a Play valendo — só então as Boas-vindas mostram este cartão), os preços são os da PLAY e o
  * texto diz que, depois dos dias grátis, a assinatura é pela Google Play — nada é cobrado sem a pessoa assinar. Começar o teste é o
  * mesmo entrar_sem_profissional (nada vai ao Google agora).
+ * hml-12 → a virada (29/10/2026): antes de começar, a data de nascimento (18+) e o consentimento dos dados de saúde, em todo build.
  */
 export default function TreinarSemProfissional() {
   const navigate = useNavigate();
@@ -44,11 +45,10 @@ export default function TreinarSemProfissional() {
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [pronto, setPronto] = useState<string | null>(null);
-  // hml-12 (só no staging): a data, o erro dela pela regra 18+ e o consentimento dado (a versão do texto lido e de onde veio)
+  // hml-12: a data, o erro dela pela regra 18+ e o consentimento dado (a versão do texto lido e de onde veio)
   const [nascimento, setNascimento] = useState("");
   const [erroNascimento, setErroNascimento] = useState<string | null>(null);
   const [consentimento, setConsentimento] = useState<{ versao: string; origem: string } | null>(null);
-  const pedeConsentimento = !!(ConsentimentoSaude && CampoNascimento);
   const consulta = useQuery({ queryKey: ["plano-app"], queryFn: buscarMeuPlano, staleTime: 60_000, retry: 1, networkMode: "online" });
   // play-W6: na loja com a Play, só os planos que a Play vende, com o preço DELA
   const play = usePlayDaLoja();
@@ -76,14 +76,11 @@ export default function TreinarSemProfissional() {
     if (!online) return setErro(mensagemApp("sem_internet"));
     if (!objetivo) return setErro(mensagemApp("objetivo_invalido"));
     if (!plano) return setErro(mensagemApp("plano_invalido"));
-    if (pedeConsentimento) {
-      if (!nascimento || erroNascimento) return setErro(mensagemApp(erroNascimento ?? "nascimento_invalido"));
-      if (!consentimento) return setErro(mensagemApp("sem_consentimento_saude"));
-    }
+    if (!nascimento || erroNascimento) return setErro(mensagemApp(erroNascimento ?? "nascimento_invalido"));
+    if (!consentimento) return setErro(mensagemApp("sem_consentimento_saude"));
     setEnviando(true);
     try {
-      const extra = pedeConsentimento && consentimento ? { nascimento, consentimento: consentimento.versao, origem: consentimento.origem } : undefined;
-      const r = await entrarSemProfissional(objetivo, plano, extra);
+      const r = await entrarSemProfissional(objetivo, plano, { nascimento, consentimento: consentimento.versao, origem: consentimento.origem });
       setPronto(r.teste_ate);
       await recarregarSituacao();
       lembrarArea("aluno");
@@ -143,22 +140,20 @@ export default function TreinarSemProfissional() {
               Pix ou cartão em Perfil › Pagamentos. Sem o pagamento, o app fica fechado até pagar.
             </p>
           )}
-          {CampoNascimento && ConsentimentoSaude && (
-            <Suspense fallback={null}>
-              <CampoNascimento
-                valor={nascimento}
-                aoMudar={(valor, erroDaData) => { setNascimento(valor); setErroNascimento(erroDaData); setErro(""); }}
-                desabilitado={enviando}
-              />
-              <ConsentimentoSaude
-                variante="app"
-                marcado={!!consentimento}
-                aoMudar={(c) => { setConsentimento(c); setErro(""); }}
-                desabilitado={enviando}
-              />
-            </Suspense>
-          )}
-          {ResumoAntesDePagar && !ehLoja && (
+          <Suspense fallback={null}>
+            <CampoNascimento
+              valor={nascimento}
+              aoMudar={(valor, erroDaData) => { setNascimento(valor); setErroNascimento(erroDaData); setErro(""); }}
+              desabilitado={enviando}
+            />
+            <ConsentimentoSaude
+              variante="app"
+              marcado={!!consentimento}
+              aoMudar={(c) => { setConsentimento(c); setErro(""); }}
+              desabilitado={enviando}
+            />
+          </Suspense>
+          {!ehLoja && (
             <Suspense fallback={null}>
               <ResumoAntesDePagar tela="sem-profissional" />
             </Suspense>
@@ -166,7 +161,7 @@ export default function TreinarSemProfissional() {
           {erro && <MensagemForm data-sozinho-erro>{erro}</MensagemForm>}
           <button
             type="submit"
-            disabled={enviando || !planos.length || (pedeConsentimento && (!nascimento || !consentimento))}
+            disabled={enviando || !planos.length || !nascimento || !consentimento}
             className="pq-botao pq-botao-w h-12 w-full rounded-2xl"
             data-sozinho-enviar
           >

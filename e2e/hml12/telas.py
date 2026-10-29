@@ -2,15 +2,17 @@
 """hml-12 (H-30) — as telas do aceite no acesso e do consentimento: a porta do aceite (Termos de Uso + Política de Privacidade da
 versão vigente), o consentimento de saúde destacado (aluno do app, Treinar sem profissional e a pré-consulta /f/), a regra de idade
 (16+; 16–17 só com o consentimento do responsável registrado pelo profissional; plano do app e profissional 18+) e o que muda nas
-telas que já existem. Tudo isso só existe no build de staging até a virada (a produção sai sem as peças: a prova é o JS).
+telas que já existem. Até a virada (29/10/2026) tudo isso só existia no build de staging; desde a virada vale em TODO build (a porta
+só pede algo quando o banco do schema liga a versão dos textos — app_config.textos_legais).
 
-Dois modos (o build decide o que existe):
+Dois modos (o build decide o banco; as peças são as mesmas nos 2 desde a virada):
   --modo staging    build com VITE_DB_SCHEMA=staging (o vite preview local — a "ponte": o build de staging com o banco de staging —
                     ou o physiqcalc-staging.vercel.app), contas de TESTE do schema staging. Antes de entrar com qualquer conta, o
                     teste confere que o build é o de staging (a faixa "Ambiente de teste") e que a versão dos textos no banco do
                     staging é a do app (src/publico/legal/versao.ts); senão para.
-  --modo producao   build public (o vite preview local ou physiqcalc.com.br): SÓ visitante e SÓ leitura — o rodapé antigo, o /c/ e o
-                    /f/ sem as peças novas, /assinatura "não encontrada" e nenhuma das 8 marcas no HTML nem nos JS.
+  --modo producao   build public (o vite preview local ou physiqcalc.com.br): SÓ visitante e SÓ leitura — o rodapé só com os links,
+                    o /c/ com a linha da idade e o /f/ com a caixa do consentimento (T7/T8 leem o public: só com --casos T7,T8), a
+                    /assinatura e as marcas no HTML/JS (o controle positivo da guarda de CI) sem a faixa "em revisão".
 
 Casos (spec §9.3; contas de TESTE do schema staging, todas *.teste.claude@physiqnutri.app):
   T1   porta: aluno de profissional (w5-aluno2) → caixa, links (o Voltar do texto volta), Aceitar → app; o 2º acesso não pede e o
@@ -26,11 +28,11 @@ Casos (spec §9.3; contas de TESTE do schema staging, todas *.teste.claude@physi
   T10  app do aluno de 17 sem registro → trava; menor de 16 (forçado só na resposta) → a outra trava; depois do registro → abre
   T11  Editar dados com 15 anos → "menor de 16" (o banco recusa; a data fica)
   T12  Exportar meus dados (w5-aluno2) → o arquivo tem `aceites`
-  T13  o rodapé da entrada só com os links (produção: o antigo)
+  T13  o rodapé da entrada só com os links (staging e, desde a virada, produção)
   T14  Sou profissional com a linha de declaração (excluir2; sem criar a conta)
   T15  Pendentes com a dica dos 16–17 (cadastro pendente de teste criado e apagado aqui)
   T16  celular 390 px: a tela do aceite cabe na largura
-  JS   produção: nenhuma das 8 marcas no HTML nem nos JS e /assinatura "não encontrada"; staging: controle (as marcas existem)
+  JS   as marcas das peças existem nos JS (staging e produção, desde a virada) e a faixa "em revisão" em nenhum
 
 Repetível: a conta que aceitou uma vez não vê mais a porta (o aceite só cresce). Para a porta aparecer de novo, o teste força SÓ NA
 RESPOSTA da situação (pos-login e rpc/minha_situacao) o `legal` pendente; o clique em "Aceitar" chama a RPC de verdade (o 2º aceite
@@ -74,7 +76,9 @@ BASES = {"local": "http://localhost:8080", "staging": "https://physiqcalc-stagin
 HOSTS_DE_PRODUCAO = {"physiqcalc.com.br", "www.physiqcalc.com.br"}
 VERSAO = B5.versao_dos_textos()
 PORTA = B5.PORTA
-# as marcas que só existem no código cortado na produção (as mesmas da guarda scripts/ci/sem-texto-legal-novo.sh, spec §4.5)
+# as marcas das peças do aceite, do consentimento e da idade (spec §4.5) — até a virada só no build de staging; desde a virada, em todo
+# build (o JS confere que estão lá). A faixa "em revisão" saiu na virada: em nenhum build.
+MARCA_EM_REVISAO = "data-texto-em-revisao"
 MARCAS_NOVAS = ("data-aceite-no-acesso", "data-consentimento-saude", "data-tela-menor", "data-secao-responsavel", "data-rodape-aceite",
                 "data-aviso-idade-cadastro", "data-declaracao-profissional", "data-pendente-idade",
                 # as 3 que a revisão acrescentou à guarda (a linha do Novo aluno e a frase dos aceites na exclusão)
@@ -241,7 +245,8 @@ class Forcar:
                falha dizendo isso);
     sem_nada   a conta sem nada (as Boas-vindas), como na hml-11;
     recusa     a resposta do aceitar_no_acesso: o pedido vai ao banco com uma versão velha (recusado lá, nada gravado) e a resposta
-               volta com esta recusa (os cabeçalhos são os de verdade);
+               volta com esta recusa (os cabeçalhos são os de verdade). Desde a hml-21a (H-43, jeito 2) o app aceita pela função
+               conta (acao aceitar_textos; o { ok, erro, versao, legal } da RPC volta no `resultado`) — as 2 portas são vigiadas;
     ate_o_fim  força o tempo todo (o T10); senão, o `legal` para de ser forçado assim que o aceite der certo — a situação recarregada
                é a real (a conta já aceitou), e a porta libera.
     """
@@ -252,6 +257,20 @@ class Forcar:
         caso.pg.route("**/functions/v1/pos-login*", self._situacao)
         caso.pg.route("**/rest/v1/rpc/minha_situacao*", self._situacao)
         caso.pg.route("**/rest/v1/rpc/aceitar_no_acesso*", self._aceite)
+        caso.pg.route("**/functions/v1/conta", self._aceite_pela_conta)
+
+    def _forcar(self, alvo: object) -> None:
+        """Força a situação `alvo` (o dict da minha_situacao) como o caso pede."""
+        if isinstance(alvo, dict):
+            if self.sem_nada and "sem_nada" in alvo:
+                alvo["sem_nada"] = True
+            leg = alvo.get("legal")
+            if self.legal:
+                if isinstance(leg, dict) and leg.get("versao"):
+                    leg.update(self.legal)
+                    self.n += 1
+                else:
+                    self.sem_versao += 1
 
     def _situacao(self, route) -> None:
         if route.request.method == "OPTIONS" or (not self.legal and not self.sem_nada):
@@ -263,17 +282,7 @@ class Forcar:
         except Exception:  # noqa: BLE001
             route.fulfill(response=r)
             return
-        alvo = corpo.get("situacao") if isinstance(corpo, dict) and isinstance(corpo.get("situacao"), dict) else corpo
-        if isinstance(alvo, dict):
-            if self.sem_nada and "sem_nada" in alvo:
-                alvo["sem_nada"] = True
-            leg = alvo.get("legal")
-            if self.legal:
-                if isinstance(leg, dict) and leg.get("versao"):
-                    leg.update(self.legal)
-                    self.n += 1
-                else:
-                    self.sem_versao += 1
+        self._forcar(corpo.get("situacao") if isinstance(corpo, dict) and isinstance(corpo.get("situacao"), dict) else corpo)
         route.fulfill(response=r, json=corpo)
 
     def _aceite(self, route) -> None:
@@ -296,6 +305,47 @@ class Forcar:
         except Exception:  # noqa: BLE001
             corpo = None
         if isinstance(corpo, dict) and corpo.get("ok") is True and not self.ate_o_fim:
+            self.legal = None  # o aceite valeu: daqui em diante a situação é a do banco
+        route.fulfill(response=r)
+
+    def _aceite_pela_conta(self, route) -> None:
+        """hml-21a (H-43): pela função conta — o aceite (POST { …, acao: "aceitar_textos" }) e a situação lida no lote do `ler`
+        ({ acao: "ler", itens: [{ q: "situacao" }, …] } → { itens: [{ ok, valor }] }: só o item da situação é forçado); o resto passa."""
+        try:
+            pedido = json.loads(route.request.post_data or "{}") if route.request.method == "POST" else {}
+        except Exception:  # noqa: BLE001
+            pedido = {}
+        if isinstance(pedido, dict) and pedido.get("acao") == "ler" and (self.legal or self.sem_nada):
+            posicoes = [k for k, it in enumerate(pedido.get("itens") or []) if isinstance(it, dict) and it.get("q") == "situacao"]
+            if posicoes:
+                r = route.fetch()
+                try:
+                    dados = r.json()
+                except Exception:  # noqa: BLE001
+                    route.fulfill(response=r)
+                    return
+                itens = dados.get("itens") if isinstance(dados, dict) else None
+                for k in posicoes:
+                    if isinstance(itens, list) and k < len(itens) and isinstance(itens[k], dict) and itens[k].get("ok") is True:
+                        self._forcar(itens[k].get("valor"))
+                route.fulfill(response=r, json=dados)
+                return
+        if not isinstance(pedido, dict) or pedido.get("acao") != "aceitar_textos":
+            route.continue_()
+            return
+        self.aceites += 1
+        if self.recusa is not None:
+            pedido["versao"] = "2000-01-01"  # o banco recusa (versao_desatualizada) antes de gravar qualquer coisa
+            r = route.fetch(post_data=json.dumps(pedido))
+            route.fulfill(response=r, status=200, json={"ok": True, "resultado": self.recusa})
+            return
+        r = route.fetch()
+        try:
+            corpo = r.json()
+        except Exception:  # noqa: BLE001
+            corpo = None
+        res = corpo.get("resultado") if isinstance(corpo, dict) else None
+        if isinstance(res, dict) and res.get("ok") is True and not self.ate_o_fim:
             self.legal = None  # o aceite valeu: daqui em diante a situação é a do banco
         route.fulfill(response=r)
 
@@ -332,8 +382,10 @@ def g_t13_build(o, nav, base: str, prefixo: str, staging: bool, guarda: dict) ->
             o.ok("Ao continuar você aceita" not in rodape, "T13 sem 'Ao continuar você aceita…' (o aceite é a porta, depois do login)")
         else:
             o.ok(not e_staging, "o build é o de produção (sem a faixa 'Ambiente de teste')")
-            o.ok("Ao continuar você aceita" in rodape and caso.pg.locator("[data-rodape-aceite]").count() == 0,
-                 "T13 (produção) o rodapé antigo: 'Ao continuar você aceita a Política de Privacidade e os termos de uso', sem a marca nova")
+            # a virada: o rodapé da produção também é só os links (o aceite é a porta, depois do login)
+            links = {(l.get_attribute("href"), l.inner_text().strip()) for l in caso.pg.locator("[data-rodape-aceite] a").all()}
+            o.ok(caso.tem("[data-rodape-aceite]") and {("/termos", "Termos de Uso"), ("/privacidade", "Política de Privacidade")} <= links
+                 and "Ao continuar você aceita" not in rodape, f"T13 (produção) o rodapé só com os links, sem 'Ao continuar você aceita' ({sorted(links)})")
         rolar_ate(caso, "footer")
         o.linha(f"   print: {caso.print('T13_rodape_entrada')}")
     finally:
@@ -930,20 +982,20 @@ def g_producao_publicas(o, nav, base: str, prefixo: str) -> None:
         if o.ok(bool(cod), "T8 (produção) o código do /c/ da conta de teste nutri.teste.claude existe no public"):
             caso.ir(f"/c/{urllib.parse.quote(cod)}")
             ok = caso.esperar(lambda: caso.tem("[data-form-cadastro-publico]"), 60)
-            o.ok(ok and caso.pg.locator("[data-aviso-idade-cadastro]").count() == 0, "T8 (produção) o /c/ de teste igual a hoje, sem a linha nova (sem enviar)")
+            o.ok(ok and caso.esperar(lambda: caso.tem("[data-aviso-idade-cadastro]"), 10), "T8 (produção) o /c/ de teste com a linha da idade mínima (sem enviar)")
             o.linha(f"   print: {caso.print('T8_producao_cadastro')}")
         slug = slug_de_teste_producao()
         caso.ir(f"/f/{slug or 'hml12-nao-existe'}")
         if slug:
             ok = caso.esperar(lambda: caso.tem("[data-form-publico]"), 60)
-            o.ok(ok and caso.pg.locator("[data-consentimento-saude]").count() == 0, "T7 (produção) o /f/ de teste igual a hoje, sem a caixa (sem enviar)")
+            o.ok(ok and caso.esperar(lambda: caso.tem('[data-consentimento-saude="preconsulta"]'), 15),
+                 "T7 (produção) o /f/ de teste com a caixa do consentimento (sem enviar)")
         else:
             ok = caso.esperar(lambda: caso.tem("[data-formulario-nao-encontrado]"), 60)
-            o.ok(ok and caso.pg.locator("[data-consentimento-saude]").count() == 0,
-                 "T7 (produção) sem formulário de teste no public: o /f/ abre (não encontrado) sem a caixa — a prova da caixa é o JS")
+            o.ok(ok, "T7 (produção) sem formulário de teste no public: o /f/ abre (não encontrado) — a prova da caixa é o JS")
         o.linha(f"   print: {caso.print('T7_producao_preconsulta')}")
         caso.ir("/assinatura")
-        o.ok(caso.esperar(lambda: caso.tem("[data-nao-encontrada]"), 30), "JS (produção) /assinatura → 'Página não encontrada'")
+        o.ok(caso.esperar(lambda: caso.tem("[data-pagina-legal='assinatura']"), 30), "T7/T8 (produção) /assinatura abre os Termos de assinatura (a virada)")
     finally:
         caso.fim()
 
@@ -962,7 +1014,7 @@ def marcas_nos_js(base: str) -> tuple[int, dict[str, list[str]], str]:
     html = baixar(base + "/")
     vistos: set[str] = set()
     fila = set(re.findall(r'(?:src|href)="(/assets/[^"]+\.js)"', html))
-    achados: dict[str, list[str]] = {m: [] for m in MARCAS_NOVAS}
+    achados: dict[str, list[str]] = {m: [] for m in (*MARCAS_NOVAS, MARCA_EM_REVISAO)}
     while len(vistos) < 800:
         # um nome pode entrar na fila e ser baixado no MESMO lote: tirar os já vistos antes de montar o próximo (sem isso o lote
         # sai vazio, a fila nunca diminui e o laço não termina — o PR #156 da hml-11)
@@ -974,7 +1026,7 @@ def marcas_nos_js(base: str) -> tuple[int, dict[str, list[str]], str]:
         with cf.ThreadPoolExecutor(8) as ex:
             for caminho, corpo in zip(lote, ex.map(lambda c: baixar(base + c), lote)):
                 vistos.add(caminho)
-                for m in MARCAS_NOVAS:
+                for m in achados:
                     if m in corpo:
                         achados[m].append(caminho)
                 fila |= {"/assets/" + n for n in re.findall(r'(?:assets/)?([A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}\.js)', corpo)} - vistos
@@ -982,16 +1034,13 @@ def marcas_nos_js(base: str) -> tuple[int, dict[str, list[str]], str]:
 
 
 def js(o, base: str, staging: bool) -> None:
+    """A virada: as peças do aceite, do consentimento e da idade vão em TODO build — as marcas existem nos chunks (staging e produção) — e
+    a faixa "em revisão" em nenhum."""
     n, achados, html = marcas_nos_js(base)
     o.ok(n > 50, f"JS baixados: {n} arquivos")
-    if staging:
-        # controle: no build de staging as 8 marcas existem — prova que a varredura acha o que procura (senão o "nenhuma" da produção
-        # não valeria nada)
-        faltam = [m for m, onde in achados.items() if not onde]
-        o.ok(not faltam, f"JS (staging, controle) as 8 marcas novas existem nos chunks ({len(MARCAS_NOVAS) - len(faltam)} de 8; faltam {faltam})")
-    else:
-        com = {m: onde[:2] for m, onde in achados.items() if onde}
-        o.ok(not com and not any(m in html for m in MARCAS_NOVAS), f"JS (produção) nenhuma das 8 marcas no HTML nem nos JS ({com})")
+    faltam = [m for m in MARCAS_NOVAS if not achados[m]]
+    o.ok(not faltam, f"JS ({'staging' if staging else 'produção'}) as {len(MARCAS_NOVAS)} marcas das peças existem nos chunks (faltam {faltam})")
+    o.ok(not achados[MARCA_EM_REVISAO] and MARCA_EM_REVISAO not in html, f"JS a faixa 'em revisão' em nenhum arquivo ({achados[MARCA_EM_REVISAO][:2]})")
 
 
 # ───────────────────────── principal ─────────────────────────
@@ -1048,10 +1097,10 @@ def main() -> int:
         try:
             guarda: dict = {}
             if not staging:
-                o.linha("modo produção: só visitante e só leitura (T13, o /c/ e o /f/ sem as peças novas, /assinatura e o JS); os casos com conta "
+                o.linha("modo produção: só visitante e só leitura (T13, o /c/ e o /f/ com as peças, /assinatura e o JS); os casos com conta "
                         "são só do staging")
                 rodar(g_t13_build, base, a.prefixo, False, guarda)
-                if casos & {"T7", "T8", "JS"}:
+                if casos & {"T7", "T8"}:
                     rodar(g_producao_publicas, base, a.prefixo)
                 if "JS" in casos:
                     js(o, base, staging=False)

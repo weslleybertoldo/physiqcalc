@@ -26,7 +26,7 @@ vi.mock("@/app-aluno/perfil/pecas/api", async (orig) => {
 });
 
 import { SheetExcluir } from "@/app-aluno/perfil/pecas/SheetExcluir";
-import Privacidade from "@/publico/Privacidade";
+import PaginaLegal from "@/publico/legal/PaginaLegal";
 import { CONTATO_SUPORTE, linkDoSuporte } from "./suporte";
 
 // H4 (achado da revisão do Calc): o contato do suporte mora num lugar só — a página de privacidade e as telas que mandam "falar
@@ -36,9 +36,11 @@ describe("H4 — o contato do suporte (constante única)", () => {
     expect(CONTATO_SUPORTE).toBe("bertoldo.code@gmail.com");
     expect(linkDoSuporte("Excluir minha conta")).toBe("mailto:bertoldo.code@gmail.com?subject=Excluir%20minha%20conta");
   });
-  it("a página de privacidade mostra o contato da constante", () => {
-    render(<MemoryRouter useTransitions={false} initialEntries={["/privacidade"]}><Privacidade /></MemoryRouter>);
-    expect(screen.getByText(new RegExp(`Contato: ${CONTATO_SUPORTE.replace(/[.]/g, "\\.")}\\.`))).toBeInTheDocument();
+  it("a Política de Privacidade (a página legal, desde a virada) mostra o contato da constante, com o link do e-mail", () => {
+    render(<MemoryRouter useTransitions={false} initialEntries={["/privacidade"]}><PaginaLegal /></MemoryRouter>);
+    const links = screen.getAllByRole("link", { name: CONTATO_SUPORTE });
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) expect(link.getAttribute("href")).toBe(`mailto:${CONTATO_SUPORTE}`);
   });
   it("W2 da loja: o profissional que tenta excluir pelo app do aluno vê o caminho certo (painel › Configurações), sem excluir nada", async () => {
     h.erroProfissional = "nao_profissional";

@@ -68,9 +68,9 @@ vi.mock("@/app-aluno/abas/Treino", () => h.marcador("aba-treino"));
 vi.mock("@/app-aluno/abas/Evolucao", () => h.marcador("aba-evolucao"));
 // W12: o Início (src/app-aluno/abas/Inicio.tsx) é a tela de abertura do app
 vi.mock("@/app-aluno/abas/Inicio", () => h.marcador("aba-inicio"));
-// W26: /calculator, /privacidade e /termos são as páginas novas (src/publico/{Calculadora,Privacidade}.tsx) — as antigas saíram
+// W26: /calculator é a página nova (src/publico/Calculadora.tsx) — a antiga saiu. /privacidade e /termos: a página legal (a virada,
+// 29/10/2026: a src/publico/Privacidade.tsx de antes saiu)
 vi.mock("@/publico/Calculadora", () => h.marcador("publica-calculadora"));
-vi.mock("@/publico/Privacidade", () => h.marcador("publica-privacidade"));
 // W13: a página Alunos é a nova (src/painel/paginas/Alunos.tsx, pelo registro) — a AlunosPage do Calc saiu
 vi.mock("@/painel/paginas/Alunos", () => h.marcador("pagina-alunos"));
 // W23: a página Treinos é a nova (src/painel/paginas/Treinos.tsx, pelo registro) — a TreinosAdminPage do Calc saiu
@@ -465,20 +465,19 @@ describe("páginas públicas (sem login)", () => {
     expect(document.querySelector('[data-casca="publico"]')).not.toBeNull();
   });
 
-  // hml-11 (H-28, D4): o Vitest roda como o build de staging — /privacidade, /termos e /assinatura são as páginas dos textos legais
-  // novos (com a faixa "em revisão"), na casca pública com o link "Assinatura" no rodapé; a Privacidade de hoje não responde por
-  // nenhuma rota. A produção fica no fim do arquivo.
+  // hml-11 (H-28, D4) → a virada (29/10/2026): /privacidade, /termos e /assinatura são as páginas dos textos legais, sem a faixa "em
+  // revisão", na casca pública com o link "Assinatura" no rodapé. O Vitest roda como o build de staging; a produção fica no fim do
+  // arquivo (a mesma coisa).
   it.each([
     ["/privacidade", "politica"],
     ["/termos", "termos"],
     ["/assinatura", "assinatura"],
-  ])("staging: %s abre a página legal nova (%s)", async (de, doc) => {
+  ])("staging: %s abre a página legal (%s)", async (de, doc) => {
     abrir(de);
     await waitFor(() => expect(document.querySelector(`[data-pagina-legal="${doc}"]`)).not.toBeNull(), { timeout: 4000 });
     expect(document.querySelector('[data-casca="publico"]')).not.toBeNull();
-    expect(document.querySelector("[data-texto-em-revisao]")).not.toBeNull();
+    expect(document.querySelector("[data-texto-em-revisao]")).toBeNull();
     expect(document.querySelector("[data-rodape-assinatura]")?.getAttribute("href")).toBe("/assinatura");
-    expect(screen.queryByTestId("publica-privacidade")).toBeNull();
     expect(onde()).toBe(de);
   });
 
@@ -517,10 +516,11 @@ describe("páginas públicas (sem login)", () => {
   });
 });
 
-// hml-11 (H-28, D4): na produção (VITE_DB_SCHEMA=public) os textos legais novos não existem — /privacidade e /termos seguem com a
-// Privacidade de hoje e /assinatura cai em "Página não encontrada". A condição do Vite é lida quando o Rotas.tsx carrega: o módulo é
-// importado de novo com o schema trocado. Fica no FIM do arquivo: depois do resetModules, nenhum teste usa o Rotas do import de cima.
-describe("produção: sem os textos legais novos (hml-11)", () => {
+// A virada (hml-11 D12, 29/10/2026): na produção (VITE_DB_SCHEMA=public) os textos legais valem como no staging — /privacidade,
+// /termos e /assinatura são a página legal, sem a faixa "em revisão" e com o link da assinatura no rodapé; a /erro-teste continua só no
+// staging. O módulo é importado de novo com o schema trocado. Fica no FIM do arquivo: depois do resetModules, nenhum teste usa o Rotas
+// do import de cima.
+describe("produção: os textos legais publicados (a virada)", () => {
   async function rotasDaProducao() {
     vi.stubEnv("VITE_DB_SCHEMA", "public");
     vi.resetModules();
@@ -531,20 +531,21 @@ describe("produção: sem os textos legais novos (hml-11)", () => {
   });
 
   it.each([
-    ["/privacidade", "publica-privacidade"],
-    ["/termos", "publica-privacidade"],
-  ])("%s → a Privacidade de hoje, sem a faixa nem o link da assinatura", async (de, tela) => {
+    ["/privacidade", "politica"],
+    ["/termos", "termos"],
+    ["/assinatura", "assinatura"],
+  ])("%s → a página legal (%s), sem a faixa, com o link da assinatura no rodapé", async (de, doc) => {
     abrir(de, await rotasDaProducao());
-    expect(await screen.findByTestId(tela, {}, { timeout: 4000 })).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector(`[data-pagina-legal="${doc}"]`)).not.toBeNull(), { timeout: 4000 });
     expect(document.querySelector('[data-casca="publico"]')).not.toBeNull();
-    expect(document.querySelector("[data-pagina-legal]")).toBeNull();
     expect(document.querySelector("[data-texto-em-revisao]")).toBeNull();
-    expect(document.querySelector("[data-rodape-assinatura]")).toBeNull();
+    expect(document.querySelector("[data-rodape-assinatura]")?.getAttribute("href")).toBe("/assinatura");
+    expect(screen.queryByText("Página não encontrada")).toBeNull();
   });
 
-  it("/assinatura → Página não encontrada", async () => {
-    abrir("/assinatura", await rotasDaProducao());
+  it("/erro-teste continua só no staging → Página não encontrada na produção", async () => {
+    abrir("/erro-teste", await rotasDaProducao());
     expect(await screen.findByText("Página não encontrada", {}, { timeout: 4000 })).toBeInTheDocument();
-    expect(document.querySelector("[data-pagina-legal]")).toBeNull();
+    expect(screen.queryByRole("button", { name: "quebrar a tela" })).toBeNull();
   });
 });

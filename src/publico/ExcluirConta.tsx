@@ -163,12 +163,8 @@ export default function ExcluirConta() {
               <ul className="space-y-1">
                 <li><strong>O seu login</strong> (e-mail, senha e o acesso pelo Google): não dá mais para entrar com ele.</li>
                 <li><strong>Aluno</strong>: os seus dados de treino (séries, cargas, histórico), o que você enviou pelo app (fotos do diário, refeições e metas marcadas), a foto do perfil e os avisos.</li>
-                <li><strong>Profissional</strong>: a foto, os contatos e o carimbo do perfil e o código de convite. A sua conta é encerrada e a equipe perde o acesso; a cobrança automática do plano é cancelada ({/* hml-11 (D5): a frase nova só no staging até a virada */}
-                  {import.meta.env.VITE_DB_SCHEMA === "staging" ? (
-                    <span data-frase-desistencia>o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento</span>
-                  ) : (
-                    "sem reembolso do que já foi pago"
-                  )}
+                <li><strong>Profissional</strong>: a foto, os contatos e o carimbo do perfil e o código de convite. A sua conta é encerrada e a equipe perde o acesso; a cobrança automática do plano é cancelada ({/* hml-11 (D5): a frase nova, em todo build desde a virada */}
+                  <span data-frase-desistencia>o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento</span>
                   ).</li>
               </ul>
             </Secao>
@@ -180,10 +176,8 @@ export default function ExcluirConta() {
                   ? "os alunos com login continuam usando o app, sem profissional;"
                   : "os alunos com login continuam no app, sem profissional, com 7 dias grátis;"} o histórico fica com cada aluno.</li>
                 <li>Quando um <strong>membro de equipe</strong> exclui: ele sai da equipe e os alunos dele ficam com o dono da conta.</li>
-                {/* hml-12 (H-30, P3): a prova do aceite fica depois da exclusão — a frase nova só no staging até a virada */}
-                {import.meta.env.VITE_DB_SCHEMA === "staging" && (
-                  <li data-frase-aceites>O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.</li>
-                )}
+                {/* hml-12 (H-30, P3): a prova do aceite fica depois da exclusão — em todo build desde a virada */}
+                <li data-frase-aceites>O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.</li>
                 <li data-frase-backups>{FRASE_BACKUPS}</li>
               </ul>
             </Secao>

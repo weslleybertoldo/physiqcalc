@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import { ehLoja } from "@/lib/distribuicao";
 import { ESTADO_ABERTA_PELO_APP, abertaPeloApp } from "@/publico/privacidade/textos";
 import { Botao } from "@/ui/premium/Botao";
 import { Cartao } from "@/ui/premium/Cartao";
 import { Chip, type TomChip } from "@/ui/premium/Chip";
-import { TERMOS_DE_ASSINATURA } from "./assinatura";
+import { termosDeAssinatura } from "./assinatura";
 import { politicaDePrivacidade } from "./politica";
 import { TERMOS_DE_USO } from "./termos";
 import { TextoLegal } from "./TextoLegal";
@@ -17,7 +17,8 @@ type Documento = "politica" | "termos" | "assinatura";
 const DOCUMENTOS: Record<Documento, { rota: string; titulo: string; rotulo: string; chip: string; tom: TomChip; texto: (loja: boolean) => string }> = {
   politica: { rota: ROTA_POLITICA, titulo: "Política de Privacidade do Physiq", rotulo: "Política de Privacidade", chip: "PRIVACIDADE", tom: "t", texto: politicaDePrivacidade },
   termos: { rota: ROTA_TERMOS, titulo: "Termos de Uso do Physiq", rotulo: "Termos de Uso", chip: "TERMOS DE USO", tom: "n", texto: () => TERMOS_DE_USO },
-  assinatura: { rota: ROTA_ASSINATURA, titulo: "Termos de assinatura do Physiq", rotulo: "Termos de assinatura", chip: "ASSINATURA", tom: "c", texto: () => TERMOS_DE_ASSINATURA },
+  // a virada (29/10/2026): na versão da Google Play, os Termos de assinatura sem o que só vale no site (assinatura.ts, termosDeAssinatura)
+  assinatura: { rota: ROTA_ASSINATURA, titulo: "Termos de assinatura do Physiq", rotulo: "Termos de assinatura", chip: "ASSINATURA", tom: "c", texto: (loja) => termosDeAssinatura(loja) },
 };
 const ORDEM: Documento[] = ["politica", "termos", "assinatura"];
 
@@ -40,7 +41,7 @@ const CLASSE_LINK = "font-semibold text-violeta-3 underline-offset-2 hover:under
 /**
  * Impressão ("Imprimir ou salvar em PDF" — o Decreto 7.962/2013, art. 4º, IV, pede o contrato num meio que se guarde): só o
  * documento, em preto no branco, sem a casca pública (marca e rodapé), sem o halo e sem os botões, e a tabela inteira (sem a
- * rolagem do celular). Fica aqui, no pedaço que só o staging baixa, e não no CSS do app.
+ * rolagem do celular). Fica aqui, no pedaço que só a página legal baixa, e não no CSS do app.
  */
 const CSS_DE_IMPRESSAO = `@media print {
   @page { margin: 16mm 14mm; }
@@ -56,11 +57,11 @@ const CSS_DE_IMPRESSAO = `@media print {
 }`;
 
 /**
- * hml-11 (H-28, D3/D4) — /privacidade, /termos e /assinatura com os textos legais NOVOS, na casca pública. Existe SÓ no build de
- * staging até a virada (src/rotas/Rotas.tsx corta o import na produção): o advogado lê no staging, com a faixa "versão em revisão".
- * O documento sai da rota; a versão é a única dos 3 (versao.ts). O "Voltar" volta para o app quando a página foi aberta por um link
- * de dentro dele (o mesmo da Privacidade de hoje), e os links entre os documentos levam esse estado junto, trocando a página no
- * histórico (o Voltar continua voltando para o app).
+ * hml-11 (H-28, D3/D4) — /privacidade, /termos e /assinatura com os textos legais, na casca pública. Publicados na virada (29/10/2026,
+ * D12): em todo build, sem a faixa "versão em revisão" (que existiu só no staging enquanto o texto esperava). O documento sai da rota; a
+ * versão é a única dos 3 (versao.ts). O "Voltar" volta para o app quando a página foi aberta por um link de dentro dele (o `state` de
+ * src/publico/privacidade/textos.ts), e os links entre os documentos levam esse estado junto, trocando a página no histórico (o Voltar
+ * continua voltando para o app).
  */
 export default function PaginaLegal() {
   const { pathname, hash, state } = useLocation();
@@ -80,23 +81,6 @@ export default function PaginaLegal() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-6 pt-5 sm:px-8" data-pagina-legal={doc} data-versao={VERSAO_TEXTOS}>
       <style>{CSS_DE_IMPRESSAO}</style>
-
-      {/* sai na virada (D12), junto com a condição das rotas */}
-      <p
-        role="note"
-        className="mb-3 flex items-start gap-2.5 rounded-2xl border border-ambar/30 px-3.5 py-3 text-[13px] leading-relaxed text-texto"
-        style={{ background: "linear-gradient(90deg, var(--p-chip-a-fundo), transparent)" }}
-        data-texto-em-revisao
-      >
-        <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 flex-none text-ambar-3" />
-        <span>
-          <b className="font-semibold">Versão em revisão — ainda não publicada.</b> A versão em vigor está em{" "}
-          <a href="https://physiqcalc.com.br/privacidade" className={CLASSE_LINK}>
-            physiqcalc.com.br/privacidade
-          </a>
-          .
-        </span>
-      </p>
 
       <div className="print:hidden">
         {doApp ? (

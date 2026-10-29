@@ -204,7 +204,7 @@ export const ROTAS_PUBLICAS: Record<string, string[]> = {
   Cadastro: ["/c/:codigo"],
   LinkAntigo: ["/p/:codigo"],
   Calculadora: ["/calculator"],
-  Privacidade: ["/privacidade", "/termos"],
+  // a virada (29/10/2026): /privacidade, /termos e /assinatura são a página legal (src/rotas/Rotas.tsx), fora do registro
 };
 
 export function rotasDaEntrada(nome: string): string {

@@ -1,16 +1,18 @@
 import { CONTATO_SUPORTE } from "@/nucleo/suporte";
 
 /**
- * hml-11 (H-28, D3) — os textos legais NOVOS do Physiq: a Política de Privacidade, os Termos de Uso e os Termos de assinatura. O
- * texto final só vai para a produção depois que o advogado conferir (regra do dono): até a virada (D12), as 3 páginas e o resumo
- * antes de pagar existem só no build de staging (src/rotas/Rotas.tsx e as 3 telas que vendem), e a guarda de CI
- * (scripts/ci/sem-texto-legal-novo.sh) confere que a produção sai sem eles.
+ * hml-11 (H-28, D3) — os textos legais do Physiq: a Política de Privacidade, os Termos de Uso e os Termos de assinatura. A virada (D12
+ * da hml-11 + a hml-12) publicou os 3 em 29/10/2026, COMO ESTAVAM no código, sem advogado — decisão do dono ("Não tenho advogado" →
+ * "Sim, como estão"). Desde então eles, o resumo antes de pagar, o aceite no próximo acesso, o consentimento de saúde e a regra de idade
+ * valem em todo build (site, APK e Google Play); a revisão no staging (8/10/2026) ficou no histórico (docs/textos-legais.md).
  *
- * A versão é UMA para os 3 documentos e é a data do texto (AAAA-MM-DD): é o que a hml-12 grava no aceite. Até a virada é a data da
- * revisão; na virada, passa à data da publicação. Mudou o texto de forma relevante → data nova aqui (e o aviso de 30 dias, P8).
+ * A versão é UMA para os 3 documentos e é a data da publicação (AAAA-MM-DD): é o que a hml-12 grava no aceite, e o banco tem que ter a
+ * MESMA (app_config.textos_legais, a migração supabase-principal/migrations/20261029200000_virada_textos_legais.sql — o textos.test.ts
+ * confere). A data da publicação mudou? Troque as 2 constantes abaixo e a data da migração, juntas. Mudou o texto de forma relevante →
+ * data nova aqui + 1 migração de 1 linha + o aviso de 30 dias (P8; docs/textos-legais.md, processo 8).
  */
-export const VERSAO_TEXTOS = "2026-10-08";
-export const DATA_DOS_TEXTOS = "8 de outubro de 2026";
+export const VERSAO_TEXTOS = "2026-10-29";
+export const DATA_DOS_TEXTOS = "29 de outubro de 2026";
 
 /**
  * Quem vende (Decreto 7.962/2013, art. 2º: nome, CPF, endereço físico e eletrônico, em destaque): os dados do MEI do dono, os

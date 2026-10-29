@@ -19,9 +19,9 @@ import {
 } from "../playRegras";
 import { usePlayDaLoja } from "../usePlayDaLoja";
 
-// o resumo dos Termos de assinatura antes de pagar: SÓ no build de staging até a virada (hml-11; a expressão do Vite direto na condição — o
-// Rollup corta o import() na produção). Na folha da oferta da Play ele entra só com os Termos novos (o contrato da play-W6, §2.6).
-const ResumoAntesDePagar = import.meta.env.VITE_DB_SCHEMA === "staging" ? lazy(() => import("@/publico/legal/ResumoAntesDePagar")) : null;
+// o resumo dos Termos de assinatura antes de pagar (hml-11): na folha da oferta da Play, o resumo "loja" (o contrato da play-W6, §2.6:
+// sem o Mercado Pago, o Pix nem o preço do banco) — em todo build desde a virada (29/10/2026). Carrega sob demanda.
+const ResumoAntesDePagar = lazy(() => import("@/publico/legal/ResumoAntesDePagar"));
 
 const CLASSE_LINK = "font-semibold text-violeta-3 underline-offset-2 hover:underline";
 /** O "Assinar pela Google Play · R$ X/mês" é longo: o pq-botao é nowrap com 44 px fixos e, a 390, passava da borda do cartão da trava
@@ -127,11 +127,9 @@ export function FolhaOfertaPlay({
             ))}
           </ul>
           {troca && <p className="text-[12.5px] leading-relaxed text-texto-2" data-play-troca={troca.modo}>{textoDaTroca(troca.modo)}</p>}
-          {ResumoAntesDePagar && (
-            <Suspense fallback={null}>
-              <ResumoAntesDePagar tela="loja" />
-            </Suspense>
-          )}
+          <Suspense fallback={null}>
+            <ResumoAntesDePagar tela="loja" />
+          </Suspense>
           <p className="text-[12px] leading-relaxed text-texto-3" data-play-termos>
             Ao assinar, você concorda com os{" "}
             <Link to="/termos" state={ESTADO_ABERTA_PELO_APP} className={CLASSE_LINK}>Termos de uso</Link> e a{" "}

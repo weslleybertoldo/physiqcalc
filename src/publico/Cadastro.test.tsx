@@ -140,8 +140,9 @@ describe("hml-12 — /c/: a idade mínima", () => {
     expect(screen.queryByText("Cadastro enviado")).toBeNull();
   });
 
-  it("staging: a linha da idade mínima e para onde vão os dados, com a Política, antes do envio", async () => {
-    vi.stubEnv("VITE_DB_SCHEMA", "staging");
+  // a virada (29/10/2026): a linha vale no staging e na produção
+  it.each(["staging", "public"])("%s: a linha da idade mínima e para onde vão os dados, com a Política, antes do envio", async (schema) => {
+    vi.stubEnv("VITE_DB_SCHEMA", schema);
     infoOk();
     montar();
     await screen.findByText("Lucas Ferreira");
@@ -151,15 +152,6 @@ describe("hml-12 — /c/: a idade mínima", () => {
     );
     expect(linha.querySelector("a")).toHaveAttribute("href", "/privacidade");
     expect(linha.querySelector("a")).toHaveAttribute("target", "_blank");
-  });
-
-  it("produção: sem a linha", async () => {
-    vi.stubEnv("VITE_DB_SCHEMA", "public");
-    infoOk();
-    montar();
-    await screen.findByText("Lucas Ferreira");
-    expect(document.querySelector("[data-aviso-idade-cadastro]")).toBeNull();
-    expect(document.body.textContent).not.toContain("16 anos ou mais");
   });
 });
 

@@ -1,43 +1,49 @@
 # Textos legais (Physiq)
 
-Homologação, hml-11 e hml-12 (08/10/2026; H-28 e H-30). Onde mora cada texto legal, o aceite e os consentimentos, como mudar um
-texto, o histórico de revisões e os processos à mão que os textos prometem.
+Homologação, hml-11 e hml-12 (08/10/2026; H-28 e H-30) e a virada (29/10/2026). Onde mora cada texto legal, o aceite e os
+consentimentos, como mudar um texto, o histórico de revisões e os processos à mão que os textos prometem.
 
-**Regra do dono: o texto legal final só vai para a produção depois que o advogado conferir.**
+**A virada, 29/10/2026 — sem advogado, decisão do dono:** até aqui a regra era "o texto legal final só vai para a produção depois
+que o advogado conferir". Em 29/10/2026 o dono decidiu publicar sem advogado ("Não tenho advogado" → "Sim, como estão"): a Política
+de Privacidade, os Termos de Uso e os Termos de assinatura foram publicados COMO ESTAVAM no código, junto com o aceite no próximo
+acesso, o consentimento de saúde e a regra de idade (hml-12). Nenhuma frase jurídica mudou na virada; na versão da Google Play, a
+página dos Termos de assinatura só tira o que vale só no site (abaixo).
 
-## Onde mora cada texto hoje (em vigor)
+## Onde mora cada texto (em vigor desde a virada, 29/10/2026)
 
 | Texto | Arquivo | Rota |
 |---|---|---|
-| Política de Privacidade e "Termos de uso" (uma página só) | `src/publico/Privacidade.tsx`. A data fica em `ATUALIZADA_EM`; não há número de versão | `/privacidade` e `/termos` (a mesma página; `/termos` rola até `#termos`) |
-| As frases que saem igual em 2 páginas: as cópias de segurança (`FRASE_BACKUPS`), os serviços de terceiros (`SERVICOS_TERCEIROS`; `servicosDaVersao` tira o GitHub na versão da loja) e o "Voltar" do app (`abertaPeloApp`) | `src/publico/privacidade/textos.ts` | entram na Política e na `/excluir-conta` |
+| Política de Privacidade, Termos de Uso (com o Anexo do tratamento de dados) e Termos de assinatura | `src/publico/legal/` (`politica.ts`, `termos.ts`, `assinatura.ts`, em Markdown; a página é a `PaginaLegal.tsx`). A versão é uma só para os 3: `VERSAO_TEXTOS` e `DATA_DOS_TEXTOS` em `versao.ts` | `/privacidade`, `/termos` e `/assinatura` (em todo build: site, APK e Google Play) |
+| As frases que saem igual em 2 páginas: as cópias de segurança (`FRASE_BACKUPS`), os serviços de terceiros (`SERVICOS_TERCEIROS`; `servicosDaVersao` tira o GitHub na versão da loja), a frase do suporte (`FRASE_SUPORTE`) e o "Voltar" do app (`abertaPeloApp`) | `src/publico/privacidade/textos.ts` | entram na Política e na `/excluir-conta` |
 | Exclusão de conta: o que é apagado e o que fica guardado | `src/publico/ExcluirConta.tsx` | `/excluir-conta` (a URL da Segurança dos dados na Play) |
-| Rodapés e links | `src/publico/PublicoLayout.tsx` (páginas públicas); `src/entrada/pecas/Moldura.tsx` ("Ao continuar você aceita…", sem registro do aceite; no build de staging, só os links: o aceite é a tela depois do login, hml-12); `src/publico/privacidade/LinksPrivacidade.tsx` (dentro do app) | — |
-| O aceite e os consentimentos (hml-12, só no build de staging até a virada) | `src/publico/legal/aceite/` (a tela do aceite, a trava de idade e o consentimento de saúde) e `src/publico/legal/responsavel/` (o consentimento do responsável, na ficha do aluno) | antes de qualquer área logada |
+| Rodapés e links | `src/publico/PublicoLayout.tsx` (páginas públicas: Privacidade, Termos e Assinatura); `src/entrada/pecas/Moldura.tsx` (só os links: o aceite é a tela depois do login); `src/publico/privacidade/LinksPrivacidade.tsx` (dentro do app) | — |
+| O resumo antes de pagar (Decreto 7.962/2013, art. 4º, I) | `src/publico/legal/ResumoAntesDePagar.tsx` (a seção "Resumo" dos Termos de assinatura) | Configurações › Plano, Treinar sem profissional, Perfil › Meu plano e, na versão da Google Play, a folha da oferta da Play (o resumo "loja") |
+| O aceite e os consentimentos (hml-12) | `src/publico/legal/aceite/` (a tela do aceite, a trava de idade e o consentimento de saúde) e `src/publico/legal/responsavel/` (o consentimento do responsável, na ficha do aluno) | antes de qualquer área logada |
 | Contato | `src/nucleo/suporte.ts` (`CONTATO_SUPORTE`) | — |
-| Cobrança | não há texto próprio, só as frases das telas que vendem | — |
 
-A URL da Política na Google Play é `https://physiqcalc.com.br/privacidade`.
+A URL da Política na Google Play é `https://physiqcalc.com.br/privacidade`. A Política de antes (`src/publico/Privacidade.tsx`, uma
+página só para a Política e os "Termos de uso") saiu na virada.
 
-## O texto novo (em revisão, só no staging)
+## Os textos publicados (a virada)
 
-- Mora em `src/publico/legal/`:
-  - `versao.ts`: `VERSAO_TEXTOS` e `DATA_DOS_TEXTOS`, uma versão só para os 3 documentos (é a versão que a hml-12 vai gravar no
-    aceite); o `VENDEDOR`; as rotas;
-  - `politica.ts` (Política de Privacidade), `termos.ts` (Termos de Uso, com o Anexo do tratamento de dados) e `assinatura.ts`
-    (Termos de assinatura, com o resumo `resumoDaAssinatura()`), em Markdown;
-  - `PaginaLegal.tsx` (a página, com "Imprimir ou salvar em PDF"), `TextoLegal.tsx` e `markdown.ts` (o leitor) e
-    `ResumoAntesDePagar.tsx` (o resumo nas telas que vendem).
-- **Só no build de staging.** As rotas novas, o resumo antes de pagar e as 2 frases novas das telas (a da desistência ao excluir
-  a conta e a da renovação no Plano) só existem com `VITE_DB_SCHEMA === "staging"`, no molde da `/erro-teste`
-  (`src/rotas/Rotas.tsx`). Na produção o Rollup corta o `import()`: o texto novo nem entra no bundle, e `/assinatura` dá "Página
-  não encontrada".
-- No topo das 3 páginas, a faixa "Versão em revisão — ainda não publicada" (atributo `data-texto-em-revisao`).
-- **Guarda de CI:** `scripts/ci/sem-texto-legal-novo.sh <pasta>` roda depois de cada build de produção (`build-apk.yml` e
-  `build-apk-check.yml`) e falha se achar uma marca do texto novo (desde a hml-12, também as 8 marcas das telas do aceite, do
-  consentimento e da idade). O site da Vercel não roda a guarda: a prova dele é o E2E de produção, que procura as marcas nos JS.
-- Os rascunhos com as marcas para o advogado ficam fora do repo. No `.ts` entra o texto limpo.
-- O advogado lê no staging: `https://physiqcalc-staging.vercel.app/privacidade`, `/termos` e `/assinatura`.
+- Valem em todo build: as 3 páginas, o resumo antes de pagar, as frases das telas (a da desistência ao excluir a conta, a da
+  renovação no Plano e a dos aceites guardados 5 anos), o rodapé da entrada só com os links, a declaração do "Sou profissional", a
+  linha da idade no `/c/`, as dicas de idade do painel e a porta do aceite. As peças carregam sob demanda (`lazy`): o JS inicial não
+  leva o texto. A condição de staging (`VITE_DB_SCHEMA === "staging"`) sobrou só na `/erro-teste`.
+- A faixa "Versão em revisão — ainda não publicada" saiu (também do staging).
+- **Na versão da Google Play**, a página `/assinatura` mostra os Termos de assinatura SEM o que só vale no site
+  (`termosDeAssinatura(loja)` em `assinatura.ts`), pela mesma regra do resumo "loja" da folha da Play (`SO_DO_SITE`): saem os planos e
+  preços do banco, o teste pago pelo site, o Mercado Pago (Pix, cartão, cobrança automática), o "bloqueado no dia seguinte", a troca,
+  o comprovante do site e a mensalidade ao profissional; ficam quem vende, a vigência, o cancelamento, a desistência (também pela
+  Google Play), o reajuste, a seção 15 (Versão da Google Play) e o atendimento. Só tira linhas: nenhuma palavra nova (o
+  `resumoLoja.test.ts` confere linha a linha); a numeração das seções fica a do texto publicado. Motivo: a regra de pagamentos da
+  Google Play (texto de outro meio de pagamento dentro do app da Play).
+- **Guarda de CI:** `scripts/ci/sem-texto-legal-novo.sh <pasta>` roda depois de cada build de produção (`build-apk.yml`,
+  `build-apk-check.yml` e o `aab-loja.sh`, também no AAB de staging do notebook). Desde a virada ela falha se achar a faixa "em
+  revisão" (`data-texto-em-revisao`, no build ou no `src/`) e, de controle positivo, se o build sair SEM o texto legal (a página, a
+  porta do aceite e o resumo) — a virada não volta atrás sem querer. O site da Vercel não roda a guarda: a prova dele é o E2E.
+- Os rascunhos com as marcas para o advogado ficaram fora do repo (`physiqcalc-scratch/hml/hml11/rascunhos/`). Se um dia houver
+  advogado, a volta dele é uma versão nova (abaixo, "Como mudar um texto legal").
 
 ## O aceite e os consentimentos (hml-12)
 
@@ -68,14 +74,17 @@ Os códigos Pn e Dn desta página são as perguntas (com o padrão seguido) e as
 
 ### A versão vigente
 
-- Mora no banco, por schema: `app_config`, chave `textos_legais`, valor `{"versao": "AAAA-MM-DD"}`. O staging está em
-  `2026-10-08`; a produção está com a versão nula, que desliga tudo: sem a tela do aceite, sem a regra de idade, e as funções de
-  antes respondem igual.
+- Mora no banco, por schema: `app_config`, chave `textos_legais`, valor `{"versao": "AAAA-MM-DD"}`. A virada liga a versão
+  `2026-10-29` nos 2 schemas pela migração `supabase-principal/migrations/20261029200000_virada_textos_legais.sql` (o staging
+  antes; o `public` SÓ depois do front publicado). Antes dela, o staging estava em `2026-10-08` e a produção com a versão nula, que
+  desliga tudo: sem a tela do aceite, sem a regra de idade, e as funções de antes respondem igual.
 - O app manda a versão que a pessoa leu (`VERSAO_TEXTOS`, em `src/publico/legal/versao.ts`). O banco recusa outra
   (`versao_desatualizada`): um app antigo não grava o aceite de um texto velho.
-- As 2 têm que ser iguais. No staging, o `e2e/hml12/banco.py` confere; na produção, o passo 6 da virada.
+- As 2 têm que ser iguais: o `src/publico/legal/textos.test.ts` confere a versão do `versao.ts` com a da migração da virada; no
+  banco, o `e2e/hml12/banco.py` (staging) e o passo 6 da virada (produção). A data da publicação mudou? Troque as 2 constantes do
+  `versao.ts` e a data da migração, juntas.
 
-### O que muda nas telas (só no build de staging até a virada)
+### O que muda nas telas (em todo build desde a virada, 29/10/2026)
 
 - **A tela do aceite** vem antes de qualquer área logada (app, Boas-vindas, painel e master) para quem não aceitou a versão
   vigente. Passam sempre: as páginas públicas, o Sair e o Excluir minha conta. Sem internet, o aceite pendente não barra (o treino
@@ -97,7 +106,8 @@ Os códigos Pn e Dn desta página são as perguntas (com o padrão seguido) e as
 1. Versão nova: `VERSAO_TEXTOS` e `DATA_DOS_TEXTOS` (`src/publico/legal/versao.ts`). Uma versão vale para os 3 documentos.
 2. Rascunho em Markdown, com as marcas do que conferir.
 3. O advogado confere.
-4. Staging, com a faixa "em revisão".
+4. Staging. A faixa "em revisão" saiu na virada e a guarda de CI hoje recusa a marca dela até no `src/`: para mostrar uma versão
+   em revisão no staging de novo, a faixa volta só no build de staging E a guarda muda junto (as marcas do texto em revisão).
 5. A virada (abaixo).
 6. O aviso por e-mail 30 dias antes e, na data, a versão nova no banco: todos aceitam no próximo acesso (processo 8, abaixo).
 
@@ -108,22 +118,24 @@ O que vai sem o advogado:
   da versão nova.
 - **A troca do e-mail de contato** (`CONTATO_SUPORTE`): é um fato, não uma versão nova.
 
-## A virada (depois do OK do advogado)
+## A virada (29/10/2026, sem advogado — decisão do dono)
 
-O texto novo promete o aceite registrado, o consentimento e a regra de idade (hml-12): a virada da hml-11 e a da hml-12 são um
-passo só, com 1 PR e 1 migração. **A ordem é: o front, depois o banco, depois o e-mail.** Assim não há janela em que o banco
-recusa e o front ainda é o velho.
+O texto promete o aceite registrado, o consentimento e a regra de idade (hml-12): a virada da hml-11 e a da hml-12 são um passo
+só, com 1 PR (`feat/virada-textos-legais`) e 1 migração (`20261029200000_virada_textos_legais.sql`). **A ordem é: o front, depois
+o banco, depois o e-mail.** Assim não há janela em que o banco recusa e o front ainda é o velho. Feito no PR: os passos 2 a 5 e a
+migração no `staging`; o resto (o merge, a migração no `public`, o e-mail, a prova viva e a Play) fica com quem publica.
 
-1. Aplicar as mudanças do advogado nos `.ts` (os 3 textos e as frases da hml-12).
+1. ~~Aplicar as mudanças do advogado nos `.ts`~~ — sem advogado: os textos foram publicados como estavam (decisão do dono, 29/10/2026).
 2. `VERSAO_TEXTOS` e `DATA_DOS_TEXTOS` passam à data da publicação.
 3. Tirar as condições de staging:
    - da hml-11: `src/rotas/Rotas.tsx`, as 3 telas que vendem e o `PublicoLayout`;
    - da hml-12: o `App.tsx` (a tela do aceite), `TreinarSemProfissional`, `Formulario`, `CardDadosAluno`, `Pendentes`,
      `NovoAluno`, `CriarConta`, `Cadastro`, `Moldura` e as frases da exclusão.
 4. Apagar `src/publico/Privacidade.tsx`. O `textos.ts` fica (`FRASE_BACKUPS`, `SERVICOS_TERCEIROS` e `abertaPeloApp`).
-5. A guarda de CI: as marcas da hml-12 saem da lista, e ela passa a conferir só a faixa "em revisão", que sai também do staging.
-   Merge → Vercel + APK + AAB.
-6. **Depois do front publicado**, a migração de 1 linha que liga a versão no banco (no `public` e a mesma no `staging`):
+5. A guarda de CI: as marcas da hml-12 saem da lista, e ela passa a conferir só a faixa "em revisão", que sai também do staging (e,
+   de controle positivo, que o build tem o texto legal). Merge → Vercel + APK + AAB.
+6. **Depois do front publicado**, a migração de 1 linha que liga a versão no banco (no `public` e a mesma no `staging`) —
+   `supabase-principal/migrations/20261029200000_virada_textos_legais.sql` (`--so staging` já aplicado no PR; `--so public` na virada):
    `update {schema}.app_config set valor = jsonb_build_object('versao', '<data da publicação>') where chave = 'textos_legais';`
    A reversa: o `public` volta à versão nula; o `staging`, à versão de revisão. Conferir por SQL só leitura que
    `textos_legais.versao` é igual a `VERSAO_TEXTOS` nos 2 schemas. Sem o update, a tela do aceite nem aparece (versão nula =
@@ -146,6 +158,7 @@ recusa e o front ainda é o velho.
 | 08/10/2026 | `2026-10-08` (Política, Termos de Uso e Termos de assinatura) | versão nova, em revisão no staging | pendente |
 | 08/10/2026 | `2026-10-08` | o aceite registrado, os consentimentos e a regra de idade (hml-12): no staging; na produção, só o banco, com a versão nula | pendente |
 | 13/10/2026 | `2026-10-08` (em revisão) | W-A: as rotinas e lembretes e o que o aluno registra com a dieta liberada — os dados, os sensíveis, quem vê, o que sai ao excluir, o aparelho e os lembretes: no staging (a Política em vigor não muda) | pendente |
+| 29/10/2026 | `2026-10-29` (publicada) | **a virada**: a Política, os Termos de Uso e os Termos de assinatura publicados como estavam no código (a revisão de 08/10 + W-A + play-W6), com o aceite no próximo acesso, o consentimento de saúde e a regra de idade (hml-12), em todo build; a faixa "em revisão" saiu; a Política de antes (`Privacidade.tsx`) saiu; na versão da Google Play, a `/assinatura` sem o que só vale no site (só tira linhas) | **não — sem advogado: decisão do dono em 29/10/2026** ("Não tenho advogado" → "Sim, como estão") |
 
 ## Os processos à mão que os textos prometem
 
@@ -162,8 +175,8 @@ profissional. Hoje o pedido é só por e-mail.
    painel).
 5. Responder em até 5 dias (Decreto nº 7.962/2013, art. 4º, parágrafo único).
 
-As telas de hoje dizem "sem reembolso do que já foi pago" ao excluir a conta do profissional. Isso conflita com o art. 49 e muda
-na virada.
+Até a virada as telas diziam "sem reembolso do que já foi pago" ao excluir a conta do profissional, o que conflitava com o art. 49.
+Desde 29/10/2026 dizem "o que já foi pago não volta, salvo a desistência em até 7 dias depois do pagamento".
 
 ### 2. Pedido do titular dos dados
 
@@ -240,7 +253,7 @@ A Política diz que o consentimento do dado de saúde se retira pelo e-mail de c
 
 ### 8. Aviso de versão nova dos textos
 
-1. O texto novo: rascunho → o advogado confere → o staging com a faixa "em revisão" (`VERSAO_TEXTOS` e `DATA_DOS_TEXTOS` novas, e
+1. O texto novo: rascunho → (o advogado confere, se houver) → o staging (ver "Como mudar um texto legal", passo 4) (`VERSAO_TEXTOS` e `DATA_DOS_TEXTOS` novas, e
    a mesma versão no `staging` do banco, por 1 migração de 1 linha).
 2. 30 dias antes da data (P2): o e-mail, com o texto dizendo a data de início ("A partir de …"):
    `python3 scripts/legal/avisar_textos.py prod --previo` só simula → o dono aprova o texto → `--enviar --previo`. O `--previo` só
