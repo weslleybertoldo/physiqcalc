@@ -33,11 +33,13 @@ const FUNCOES = [
   "aluno-dia", // W-A P2: as rotinas e a dieta livre (o app do aluno e o painel), pela porta-pessoa
   "play-compras", // play-W6: a assinatura da Google Play do lado do app (estado e registrar), pela porta-pessoa
   "play-conferir", // play-W6 (22/10): a conferência de hora em hora da Google Play (pg_cron → pg_net, S11; verify_jwt false)
+  "chave-restauracao", // restaurar-login (30/10): guardar e apagar a chave de volta do Android, pela porta-pessoa
+  "restaurar-login", // restaurar-login (30/10): o celular novo entra com a chave de volta (pública; verify_jwt false)
 ];
 const MASTER = ["master-contas", "master-financeiro", "master-planos"];
 /** hml-19a: as do jeito 2 que gravam como a pessoa — servirComoPessoa, da _shared/porta-pessoa.ts (hml-19d: + a financeiro; hml-21a: + a conta;
  *  W-A P2: + a acessos e a aluno-dia). */
-const PESSOA = ["nutricao", "financeiro", "conta", "acessos", "aluno-dia", "play-compras"];
+const PESSOA = ["nutricao", "financeiro", "conta", "acessos", "aluno-dia", "play-compras", "chave-restauracao"];
 /** Onde mora o catch final: na index.ts, menos nas 3 master-* (servir, da master-porta) e na erro-avisar (atenderPedido). */
 const CATCH_FINAL: Record<string, string> = {
   ...Object.fromEntries(MASTER.map((f) => [f, "_shared/master-porta.ts"])),
@@ -164,7 +166,25 @@ describe("hml-10 (D2/D6): as funções do principal desta W", () => {
     // play-W6: as 4 peças da Play (as regras, o OAuth, a API e o banco/ordem) passam pelas mesmas guardas
     for (const s of ["play-regras", "google-oauth", "play-api", "play-assinaturas"]) expect(todos).toContain(`_shared/${s}.ts`);
     expect(todos).toContain("play-conferir/rodada.ts"); // play-W6 (22/10): a rodada da conferência de hora em hora
+    expect(todos).toContain("_shared/restaurar-login-regras.ts"); // restaurar-login (30/10): as regras da chave de volta
     expect(todos).not.toContain(LOG);
+  });
+
+  it("restaurar-login: nenhuma chamada de log leva o e-mail, os tokens, a sessão, a resposta do Android, a chave ou o aparelho (só códigos e o ref)", () => {
+    const arquivos = ["restaurar-login/index.ts", "chave-restauracao/index.ts", "_shared/restaurar-login-regras.ts"];
+    const proibidos = /\b(email|pessoa|token|hashed|link|sessao|resposta|corpo|chave|chavePublica|k|u|uso|ud|pedido|aparelho|ip|req)\b(?!\s*:)/;
+    const achados: string[] = [];
+    let chamadas = 0;
+    for (const rel of arquivos) {
+      for (const c of chamadasDeLog(ler(rel))) {
+        chamadas++;
+        // fora das aspas e sem os nomes dos campos do log (codigo:, schema:, acao:, ref:, n:, resultado:)
+        const semTextos = c.argumentos.replace(/"[^"]*"|'[^']*'|`[^`]*`/g, '""');
+        if (proibidos.test(semTextos)) achados.push(`${rel}:${c.linha}: ${semTextos}`);
+      }
+    }
+    expect(achados).toEqual([]);
+    expect(chamadas).toBeGreaterThan(12);
   });
 
   it("play-W6: nenhuma chamada de log das peças da Play leva o token, o pedido, o etag ou o e-mail (só códigos; ref = a matrícula)", () => {
