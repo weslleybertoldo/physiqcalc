@@ -230,7 +230,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         if (!s && !online()) s = sessaoGuardada(PRINCIPAL_STORAGE_KEY);
         if (!s && vivo) {
           // restaurar-login (APK Android): o celular novo entra sozinho com a chave de volta, ainda no Carregando (antes do pronto). Só
-          // nesse caso a segurança de 6 s sobe para o prazo da restauração (~8 s) + 1,5 s. A sessão que sumiu do aparelho sem o nosso
+          // nesse caso a segurança de 6 s sobe para o teto da restauração (12 s; até a chave 8 s) + 1,5 s. A sessão que sumiu do aparelho sem o nosso
           // Sair (esta instalação tinha a chave) apaga a chave e nunca restaura no mesmo aparelho.
           const passo = semSessaoNaAbertura();
           if (passo === "derrubada") sessaoDerrubada();

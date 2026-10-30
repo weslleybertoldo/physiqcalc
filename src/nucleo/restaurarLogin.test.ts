@@ -41,9 +41,12 @@ vi.mock("@/integrations/principal/client", () => ({
 import {
   MARCA_BEM_VINDO,
   MARCA_CHAVE,
+  MARCA_ESPERA,
   MARCA_PAUSA,
   MARCA_TENTADA,
+  PRAZOS_RESTAURAR,
   PRAZO_RESTAURAR_MS,
+  RECUO_MS,
   RENOVAR_MS,
   _zerarParaTestes,
   bemVindoMostrado,
@@ -69,11 +72,16 @@ const SESSAO = { access_token: "eyJ.acesso.teste", refresh_token: "r1", expires_
 type Resposta = { status: number; corpo: unknown } | "rede" | Promise<never>;
 
 /** o que o SessaoProvider passa: o principal.auth.setSession (aqui, o falso) */
-const restaurar = (prazoMs?: number) =>
+const restaurar = (prazos?: Partial<typeof PRAZOS_RESTAURAR>) =>
   tentarRestaurar(async (t) => {
     const r = await h.setSession(t);
     return r.error ? null : r.data.session;
-  }, prazoMs);
+  }, prazos);
+/** a espera (o recuo) gravada, em ms a partir de agora (null = nenhuma) */
+const espera = () => {
+  const v = Number(localStorage.getItem(MARCA_ESPERA));
+  return Number.isFinite(v) && v > 0 ? v - Date.now() : null;
+};
 let respostas: Record<"opcoes" | "entrar", Resposta>;
 
 function servidorRestaurar(r: Partial<Record<"opcoes" | "entrar", Resposta>>) {
@@ -180,18 +188,56 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
     expect((await restaurar()).tipo).toBe("entrou");
   });
 
-  it("o servidor desligado (HTTP 200 ok:false 'desligado'): não faz nada e não marca; 429/503: idem", async () => {
+  it("o recuo (2ª revisão, achado 5): desligado → 24 h sem tentar; 503/429 → 1 h; sem marca definitiva; dentro da espera nem chama", async () => {
     servidorRestaurar({ opcoes: { status: 200, corpo: { ok: false, erro: "desligado" } } });
     expect(await restaurar()).toEqual({ tipo: "desligado" });
     expect(h.plugin.obter).not.toHaveBeenCalled();
-    servidorRestaurar({ entrar: { status: 200, corpo: { ok: false, erro: "desligado" } } });
-    expect(await restaurar()).toEqual({ tipo: "desligado" });
-    servidorRestaurar({ entrar: { status: 503, corpo: { ok: false, erro: "indisponivel" } } });
-    expect(await restaurar()).toEqual({ tipo: "servidor" });
-    servidorRestaurar({ opcoes: { status: 429, corpo: { ok: false, erro: "muitas_tentativas" } } });
-    expect(await restaurar()).toEqual({ tipo: "servidor" });
+    expect(espera()).toBeGreaterThan(RECUO_MS.desligado - 5000);
+    // dentro da espera: a abertura nem tenta (nem servidor nem plugin)
+    h.fetch.mockClear();
+    expect(semSessaoNaAbertura()).toBe("nada");
+    expect(await restaurar()).toEqual({ tipo: "pulado" });
+    expect(h.fetch).not.toHaveBeenCalled();
+    for (const [r, esperado, recuo] of [
+      [{ entrar: { status: 200, corpo: { ok: false, erro: "desligado" } } }, "desligado", RECUO_MS.desligado],
+      [{ entrar: { status: 503, corpo: { ok: false, erro: "indisponivel" } } }, "servidor", RECUO_MS.servidor],
+      [{ opcoes: { status: 429, corpo: { ok: false, erro: "muitas_tentativas" } } }, "servidor", RECUO_MS.servidor],
+      [{ entrar: { status: 429, corpo: { ok: false, erro: "muitas_tentativas" } } }, "servidor", RECUO_MS.servidor],
+    ] as const) {
+      localStorage.removeItem(MARCA_ESPERA);
+      servidorRestaurar(r as Parameters<typeof servidorRestaurar>[0]);
+      expect(await restaurar()).toEqual({ tipo: esperado });
+      expect(espera()).toBeGreaterThan(recuo - 5000);
+      expect(espera()).toBeLessThanOrEqual(recuo);
+    }
     expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
     expect(h.setSession).not.toHaveBeenCalled();
+    expect(h.plugin.apagar).not.toHaveBeenCalled();
+  });
+
+  it("só o 401 chave_invalida apaga a chave (2ª revisão, achado 2): 409 tenta na próxima; 403 conferencia_falhou e 400 esperam 7 dias sem apagar; 401 sem o código = servidor", async () => {
+    // 409: o desafio repetido ou vencido — nada de marca, de recuo ou de apagar
+    servidorRestaurar({ entrar: { status: 409, corpo: { ok: false, erro: "desafio_invalido" } } });
+    expect(await restaurar()).toEqual({ tipo: "desafio" });
+    expect([localStorage.getItem(MARCA_TENTADA), espera()]).toEqual([null, null]);
+    // 403 conferencia_falhou (UP, contador, assinatura…): a chave fica; 7 dias de espera, sem a marca definitiva
+    servidorRestaurar({ entrar: { status: 403, corpo: { ok: false, erro: "conferencia_falhou" } } });
+    expect(await restaurar()).toEqual({ tipo: "pausa", erro: "conferencia_falhou" });
+    expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
+    expect(espera()).toBeGreaterThan(RECUO_MS.pausa - 5000);
+    expect(semSessaoNaAbertura()).toBe("nada");
+    // 400 dados_invalidos: o mesmo
+    localStorage.removeItem(MARCA_ESPERA);
+    servidorRestaurar({ entrar: { status: 400, corpo: { ok: false, erro: "dados_invalidos" } } });
+    expect(await restaurar()).toEqual({ tipo: "pausa", erro: "dados_invalidos" });
+    // um 401 SEM o chave_invalida (o gateway, p. ex. com o verify_jwt ligado por engano): não apaga — servidor, 1 h
+    localStorage.removeItem(MARCA_ESPERA);
+    servidorRestaurar({ entrar: { status: 401, corpo: { code: 401, message: "Missing authorization header" } } });
+    expect(await restaurar()).toEqual({ tipo: "servidor" });
+    expect(espera()).toBeLessThanOrEqual(RECUO_MS.servidor);
+    expect(h.plugin.apagar).not.toHaveBeenCalled();
+    expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
+    expect(h.plugin.log.mock.calls.map((c) => c[0].codigo)).toEqual(["restauracao_desafio", "restauracao_pausa", "restauracao_pausa", "restauracao_servidor"]);
   });
 
   it("o prazo (~8 s) estourado: tela de entrar sem marca; o 'sem chave' que chega DEPOIS marca; a sessão que chega depois não entra", async () => {
@@ -199,9 +245,10 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
     let soltar: (v: unknown) => void = () => undefined;
     h.plugin.obter.mockReturnValue(new Promise((ok) => (soltar = ok)));
     const p = restaurar();
-    await vi.advanceTimersByTimeAsync(PRAZO_RESTAURAR_MS + 10);
+    await vi.advanceTimersByTimeAsync(PRAZOS_RESTAURAR.ateAChaveMs + 10);
     expect(await p).toEqual({ tipo: "prazo" });
     expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
+    expect(espera()).toBeNull();
     soltar({ semChave: true });
     await vi.advanceTimersByTimeAsync(10);
     expect(localStorage.getItem(MARCA_TENTADA)).toBe("1");
@@ -211,12 +258,90 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
     h.plugin.obter.mockResolvedValue({ responseJson: JSON.stringify(RESPOSTA_ANDROID) });
     servidorRestaurar({ entrar: new Promise((ok) => (liberarEntrar = ok)) as unknown as Resposta });
     const p2 = restaurar();
-    await vi.advanceTimersByTimeAsync(PRAZO_RESTAURAR_MS + 10);
+    await vi.advanceTimersByTimeAsync(PRAZOS_RESTAURAR.ateAChaveMs + 10);
     expect(await p2).toEqual({ tipo: "prazo" });
     liberarEntrar({ status: 200, corpo: { ok: true, sessao: SESSAO } });
     await vi.advanceTimersByTimeAsync(50);
     expect(h.setSession).not.toHaveBeenCalled();
     expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
+  });
+
+  it("os prazos (2ª revisão, achado 4): a chave obtida aos 7 s ainda entra — o entrar ganha 4 s próprios (até os 11 s); o teto é 12 s", async () => {
+    vi.useFakeTimers();
+    let soltarChave: () => void = () => undefined;
+    h.plugin.obter.mockReturnValue(new Promise((ok) => (soltarChave = () => ok({ responseJson: JSON.stringify(RESPOSTA_ANDROID) }))));
+    let liberarEntrar: (v: { status: number; corpo: unknown }) => void = () => undefined;
+    servidorRestaurar({ entrar: new Promise((ok) => (liberarEntrar = ok)) as unknown as Resposta });
+    const p = restaurar();
+    await vi.advanceTimersByTimeAsync(7_000);
+    soltarChave();
+    await vi.advanceTimersByTimeAsync(2_500); // 9,5 s: o prazo de 8 s já teria cortado
+    liberarEntrar({ status: 200, corpo: { ok: true, sessao: SESSAO } });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(await p).toMatchObject({ tipo: "entrou" });
+    expect(h.setSession).toHaveBeenCalledTimes(1);
+
+    // a chave aos 7 s e o entrar que não responde: o prazo vem aos 11 s (não aos 8), e a sessão que chega depois não é gravada
+    localStorage.clear();
+    h.setSession.mockClear();
+    h.plugin.obter.mockReturnValue(new Promise((ok) => (soltarChave = () => ok({ responseJson: JSON.stringify(RESPOSTA_ANDROID) }))));
+    servidorRestaurar({ entrar: new Promise((ok) => (liberarEntrar = ok)) as unknown as Resposta });
+    let fim = "";
+    const p2 = restaurar().then((r) => (fim = r.tipo));
+    await vi.advanceTimersByTimeAsync(7_000);
+    soltarChave();
+    await vi.advanceTimersByTimeAsync(3_900);
+    expect(fim).toBe("");
+    await vi.advanceTimersByTimeAsync(200);
+    await p2;
+    expect(fim).toBe("prazo");
+    liberarEntrar({ status: 200, corpo: { ok: true, sessao: SESSAO } });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(h.setSession).not.toHaveBeenCalled();
+  });
+
+  it("os prazos: a sessão que o servidor entregou DENTRO do prazo é gravada mesmo que o setSession passe do prazo (nunca 'prazo' com a sessão gravada)", async () => {
+    vi.useFakeTimers();
+    let liberarEntrar: (v: { status: number; corpo: unknown }) => void = () => undefined;
+    servidorRestaurar({ entrar: new Promise((ok) => (liberarEntrar = ok)) as unknown as Resposta });
+    let soltarSessao: () => void = () => undefined;
+    h.setSession.mockImplementation(
+      (s: { access_token: string }) =>
+        new Promise((ok) => (soltarSessao = () => ok({ data: { session: { access_token: s.access_token, user: { id: UID } } }, error: null }))),
+    );
+    let fim = "";
+    const p = restaurar().then((r) => (fim = r.tipo));
+    await vi.advanceTimersByTimeAsync(7_500); // a sessão chega aos 7,5 s: dentro do prazo (a chave veio na hora → 8 s)
+    liberarEntrar({ status: 200, corpo: { ok: true, sessao: SESSAO } });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(h.setSession).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(3_000); // o setSession (o GET /user) lento passa dos 8 s
+    expect(fim).toBe("");
+    soltarSessao();
+    await vi.advanceTimersByTimeAsync(10);
+    await p;
+    expect(fim).toBe("entrou");
+    expect(localStorage.getItem(MARCA_TENTADA)).toBe("1");
+  });
+
+  it("os números da 2ª revisão (achados 4 e 5): até a chave 8 s, o entrar 4 s, o mínimo 2,5 s, o teto 12 s; o recuo 24 h, 1 h e 7 dias", () => {
+    expect(PRAZOS_RESTAURAR).toEqual({ ateAChaveMs: 8_000, doEntrarMs: 4_000, minimoEntrarMs: 2_500, totalMs: 12_000 });
+    expect(PRAZO_RESTAURAR_MS).toBe(12_000);
+    expect(RECUO_MS).toEqual({ desligado: 24 * 60 * 60 * 1000, servidor: 60 * 60 * 1000, pausa: 7 * 24 * 60 * 60 * 1000 });
+  });
+
+  it("os prazos: com menos de 2,5 s até o teto, o entrar NEM começa (o servidor gastaria o desafio e 1 das 3 entradas da hora)", async () => {
+    vi.useFakeTimers();
+    let soltarChave: () => void = () => undefined;
+    h.plugin.obter.mockReturnValue(new Promise((ok) => (soltarChave = () => ok({ responseJson: JSON.stringify(RESPOSTA_ANDROID) }))));
+    // um prazo até a chave quase do tamanho do teto: a chave aos 10,5 s deixa só 1,5 s
+    const p = restaurar({ ateAChaveMs: 11_000, totalMs: 12_000 });
+    await vi.advanceTimersByTimeAsync(10_500);
+    soltarChave();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(await p).toEqual({ tipo: "prazo" });
+    expect(pedidosRestaurar().map((x) => x.acao)).toEqual(["opcoes"]);
+    expect(h.setSession).not.toHaveBeenCalled();
   });
 
   it("o Android sem a API (flag do Google desligada: indisponivel_17): marca e não chama o entrar; disponivel false: nem chama o servidor", async () => {
@@ -336,6 +461,45 @@ describe("garantirChave — criar a chave com sessão", () => {
     await p;
     await vi.waitFor(() => expect(lerMarcaChave(UID)).toMatchObject({ id: ID_ANTIGA, sessao: "sessao-1" }));
     expect(registros).toBe(2);
+  });
+
+  it("o desafio de registro vencido (409 desafio_vencido, 2ª revisão achado 3): pede de novo NA HORA e registra; sem a pausa de 7 dias", async () => {
+    let registros = 0;
+    h.invoke.mockImplementation(async (_f: string, o: { body: { acao: string } }) => {
+      if (o.body.acao === "opcoes") return { data: { ok: true, opcoes: OPCOES_REGISTRO }, error: null };
+      registros++;
+      return registros === 1
+        ? { data: null, error: { name: "FunctionsHttpError", context: new Response(JSON.stringify({ ok: false, erro: "desafio_vencido" }), { status: 409 }) } }
+        : { data: { ok: true, credencial: ID_CHAVE }, error: null };
+    });
+    expect(await garantirChave(UID, "sessao-1")).toBe("registrada");
+    // 2 voltas: o Android trocou a chave na 1ª; a 2ª registra a que ficou no aparelho
+    expect(h.plugin.criar).toHaveBeenCalledTimes(2);
+    expect(h.invoke.mock.calls.map((c) => (c[1] as { body: { acao: string } }).body.acao)).toEqual(["opcoes", "registrar", "opcoes", "registrar"]);
+    expect(lerMarcaChave(UID)).toMatchObject({ id: ID_CHAVE, sessao: "sessao-1" });
+    expect(localStorage.getItem(MARCA_PAUSA)).toBeNull();
+
+    // 2 vencidos seguidos (na renovação: a marca antiga, de 6+ meses): erro, sem pausa e a marca antiga INTACTA — o aparelho ficou com uma
+    // chave que o servidor não conhece, e a marca velha faz a próxima oportunidade tentar de novo (nunca "em dia")
+    localStorage.clear();
+    localStorage.setItem(MARCA_CHAVE + UID, JSON.stringify({ em: Date.now() - RENOVAR_MS - 1000, id: ID_ANTIGA, sessao: "sessao-1" }));
+    h.plugin.criar.mockClear();
+    h.invoke.mockImplementation(async (_f: string, o: { body: { acao: string } }) =>
+      o.body.acao === "opcoes"
+        ? { data: { ok: true, opcoes: OPCOES_REGISTRO }, error: null }
+        : { data: null, error: { name: "FunctionsHttpError", context: new Response(JSON.stringify({ ok: false, erro: "desafio_vencido" }), { status: 409 }) } });
+    expect(await garantirChave(UID, "sessao-1")).toBe("erro");
+    expect(h.plugin.criar).toHaveBeenCalledTimes(2);
+    expect(localStorage.getItem(MARCA_PAUSA)).toBeNull();
+    expect(lerMarcaChave(UID)).toMatchObject({ id: ID_ANTIGA });
+    expect(h.plugin.log).toHaveBeenCalledWith({ codigo: "chave_desafio_vencido" });
+    // a próxima oportunidade (a próxima abertura com sessão): registra a chave nova e SUBSTITUI a antiga no servidor
+    h.invoke.mockClear();
+    h.invoke.mockImplementation(async (_f: string, o: { body: { acao: string } }) =>
+      o.body.acao === "opcoes" ? { data: { ok: true, opcoes: OPCOES_REGISTRO }, error: null } : { data: { ok: true, credencial: ID_CHAVE }, error: null });
+    expect(await garantirChave(UID, "sessao-1")).toBe("registrada");
+    expect((h.invoke.mock.calls[1][1] as { body: Record<string, unknown> }).body).toMatchObject({ acao: "registrar", substitui: ID_ANTIGA });
+    expect(lerMarcaChave(UID)).toMatchObject({ id: ID_CHAVE, sessao: "sessao-1" });
   });
 
   it("o servidor desligado: não cria nada, não marca, não pausa", async () => {

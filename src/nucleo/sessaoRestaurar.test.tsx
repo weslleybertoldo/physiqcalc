@@ -85,7 +85,7 @@ vi.mock("@/push/aparelho", () => ({
 }));
 
 import { SessaoProvider, useSessao, type SessaoValor } from "./sessao";
-import { MARCA_CHAVE, MARCA_TENTADA, PRAZO_RESTAURAR_MS, _zerarParaTestes, bemVindoPendente, chaveInvalidadaPelaSenha, lerMarcaChave } from "./restaurarLogin";
+import { MARCA_CHAVE, MARCA_TENTADA, PRAZOS_RESTAURAR, _zerarParaTestes, bemVindoPendente, chaveInvalidadaPelaSenha, lerMarcaChave } from "./restaurarLogin";
 
 let atual: SessaoValor | null = null;
 function Espiao() {
@@ -197,7 +197,7 @@ describe("SessaoProvider — a restauração na 1ª abertura (antes do pronto)",
     h.plugin.obter.mockImplementation(() => new Promise(() => undefined));
     montar();
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(PRAZO_RESTAURAR_MS - 500);
+      await vi.advanceTimersByTimeAsync(PRAZOS_RESTAURAR.ateAChaveMs - 500);
     });
     expect(atual?.pronto).toBe(false);
     await act(async () => {
