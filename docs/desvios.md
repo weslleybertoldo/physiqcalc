@@ -39,6 +39,10 @@ leitura, 14/10/2026 05:24): são estas 22 (16 no principal, 6 no Treino), as mes
 de depois: `automaticas-fila`, `infinitepay-webhook-aluno`, `mp-conectar-retorno`, `mp-contas-renovar` e, no Treino, `treino-acessos`.)
 22/10/2026 (play-W6): + a `play-conferir`, ainda **a publicar** (sobe com a W6, na F4) — está na tabela abaixo com a marca; a `play-rtdn`
 (o aviso do Google pelo Pub/Sub, que também era `false`) saiu do PR antes de ser publicada.
+30/10/2026 (restaurar-login, "entrar já logado no celular novo"): + a `restaurar-login`, publicada (v5, endurecida pela revisão de segurança
+de 30/10) — só o staging tem a migração e a trava ligada; no public a trava não existe e ela responde "desligado" sem tocar no banco. A
+`chave-restauracao`, que nasceu junto, é `true`. O desafio de entrar é sem estado (HMAC com o segredo `RESTAURAR_LOGIN_SEGREDO`, só nas
+funções do principal e no cofre): o pedido público não grava nada.
 "Segredo entre servidores" é o cabeçalho `x-espelho-segredo`, com um segredo por finalidade (hml-16c, H-51): quem manda
 guarda o valor e quem recebe confere pelo sha256 numa lista própria (`<SEGREDO>_ACEITOS`). Os 11 e como trocar:
 [incidente.md](incidente.md) › "Segredo exposto". Até o fim da troca da hml-16c, o `ESPELHO_SEGREDO` de antes ainda vale.
@@ -60,6 +64,7 @@ guarda o valor e quem recebe confere pelo sha256 numa lista própria (`<SEGREDO>
 | principal | `play-conferir` | o banco (`pg_net`/`pg_cron`, de hora em hora, no minuto 25) | o segredo entre servidores (o S11) | **a publicar** (play-W6, F4) |
 | principal | `pos-login` | o app, logo depois do login | o login, no Auth, dentro dela | 29/09/2026 |
 | principal | `push-enviar` | o banco (o gatilho dos avisos, `pg_net`) | o segredo do push (`x-push-segredo`) | 01/10/2026 |
+| principal | `restaurar-login` | o celular novo, na 1ª abertura (ainda sem login) | a chave de volta do Android (WebAuthn: o desafio SEM ESTADO — HMAC e 5 min — gasto no banco só depois da assinatura conferida, a origem do app, o RP ID, o UP e a assinatura da chave guardada, não apagada e da sessão que a criou ainda viva), a trava `app_config.restaurar_login` (falha fechada; o banco confere de novo, com o so_teste e o staging só teste), o master recusado, no máximo 3 entradas por chave por hora e o limite por IP | 30/10/2026 (só o staging ligado) |
 | principal | `vincular-aluno` | o app e o Treino | app: o login, no Auth, dentro dela; Treino: o segredo entre servidores | 29/09/2026 |
 | principal | `whatsapp-agente` | o agente no Moto G7 | o token do agente (`x-agente-token`) | 29/09/2026 |
 | Treino | `espelho-nucleo` | a `espelho-enviar` do principal | o segredo entre servidores | 29/09/2026 |

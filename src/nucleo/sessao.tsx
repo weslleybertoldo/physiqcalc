@@ -9,6 +9,8 @@
  *      profissional" (src/ui/avisos/AvisoVinculoPendente.tsx).
  * Sair = sair dos 2 bancos + limpar os caches (como o signOut de hoje). As telas antigas seguem lendo `useAuth()` (o
  * usuário do Treino vindo da troca); as novas usam `useSessao()` e `useConta()`.
+ * restaurar-login (30/10/2026, src/nucleo/restaurarLogin.ts): no APK Android, a 1ª abertura sem sessão tenta entrar sozinha com a chave de
+ * volta do Android (antes do `pronto`); com sessão, a chave é criada em segundo plano; o Sair e a sessão derrubada apagam a chave.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
@@ -19,6 +21,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/capacitorAuth";
 import { estadoDoisFatores, type DoisFatores } from "./doisFatoresRegras";
 import { entrarComSenhaNoServidor } from "./entrarSenha";
+import {
+  esquecerChave,
+  garantirChave,
+  ouvirChaveInvalidada,
+  PRAZO_RESTAURAR_MS,
+  semSessaoNaAbertura,
+  sessaoDerrubada,
+  tentarRestaurar,
+} from "./restaurarLogin";
+import { idDaSessao } from "./senha";
 import { limparProfPendente } from "@/lib/profPendente";
 import { esquecerAparelhoPush } from "@/push/aparelho";
 import {
@@ -210,12 +222,29 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   // 1. login do principal: lê do aparelho e acompanha as mudanças (Google volta com ?code=, e-mail e senha, sair)
   useEffect(() => {
     let vivo = true;
-    const seguranca = setTimeout(() => vivo && setPronto(true), 6000);
+    let seguranca = setTimeout(() => vivo && setPronto(true), 6000);
     (async () => {
       try {
         const { data } = await principal.auth.getSession();
         let s = data.session;
         if (!s && !online()) s = sessaoGuardada(PRINCIPAL_STORAGE_KEY);
+        if (!s && vivo) {
+          // restaurar-login (APK Android): o celular novo entra sozinho com a chave de volta, ainda no Carregando (antes do pronto). Só
+          // nesse caso a segurança de 6 s sobe para o teto da restauração (12 s; até a chave 8 s) + 1,5 s. A sessão que sumiu do aparelho sem o nosso
+          // Sair (esta instalação tinha a chave) apaga a chave e nunca restaura no mesmo aparelho.
+          const passo = semSessaoNaAbertura();
+          if (passo === "derrubada") sessaoDerrubada();
+          if (passo === "restaurar") {
+            clearTimeout(seguranca);
+            seguranca = setTimeout(() => vivo && setPronto(true), PRAZO_RESTAURAR_MS + 1500);
+            // a sessão restaurada entra como a do entrarComEmail: o setSession (dispara o SIGNED_IN, o pos-login e a troca)
+            const r = await tentarRestaurar(async (t) => {
+              const { data: d, error } = await principal.auth.setSession(t);
+              return error ? null : d.session;
+            });
+            if (r.tipo === "entrou") s = r.sessao;
+          }
+        }
         if (vivo) setSessao(s);
       } catch {
         if (vivo) setSessao(online() ? null : sessaoGuardada(PRINCIPAL_STORAGE_KEY));
@@ -228,6 +257,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       if (evento === "SIGNED_OUT") {
         // sai de verdade no logout pedido ou com internet (sessão revogada); sem internet mantém (renovação falhou)
         if (saindo.current || online()) setSessao(null);
+        // restaurar-login: a sessão derrubada de fora (não foi o nosso Sair) apaga a chave de volta deste aparelho (a regra 5 da Google)
+        if (!saindo.current && online()) sessaoDerrubada();
         return;
       }
       if (nova) setSessao(nova);
@@ -405,6 +436,20 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // restaurar-login: com sessão, a situação carregada e sem ser master (o master sai do app — MasterSoNoSite), a chave de volta deste
+  // aparelho é criada em segundo plano (logo depois de entrar e na abertura de quem já está logado, sem a marca, com ela > 6 meses ou de
+  // outra sessão — o servidor amarra a chave à sessão que a criou). Só no APK Android com o plugin; falha = só log. A sessão restaurada
+  // também passa aqui: a chave nova substitui a que veio no backup. A senha trocada pelo app invalida a chave: recria na hora.
+  const situacaoPronta = Boolean(situacao) && !carregandoSituacao;
+  const ehMaster = situacao?.master === true;
+  const sessaoId = idDaSessao(sessao);
+  const [pedidoChave, setPedidoChave] = useState(0);
+  useEffect(() => ouvirChaveInvalidada(() => setPedidoChave((n) => n + 1)), []);
+  useEffect(() => {
+    if (!uid || !situacaoPronta || ehMaster) return;
+    void garantirChave(uid, sessaoId);
+  }, [uid, situacaoPronta, ehMaster, sessaoId, pedidoChave]);
+
   // quando a internet volta: refaz o que ficou pendente
   useEffect(() => {
     const aoVoltar = () => {
@@ -483,10 +528,16 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         /* fora de https */
       }
     }
-    // W20c: este aparelho deixa de receber o push desta pessoa (antes do signOut — a função do banco precisa do login)
-    await esquecerAparelhoPush().catch(() => undefined);
     // hml-08: o escopo local revoga só a sessão deste aparelho nos 2 bancos; sem ele, o signOut de sempre (sem argumento)
     const local = opcoes?.escopo === "local";
+    // antes do signOut (as funções do banco precisam do login), juntos e no máximo 3 s cada; sem internet não esperam:
+    // W20c: este aparelho deixa de receber o push desta pessoa;
+    // restaurar-login (D3): o servidor apaga TODAS as chaves de volta da pessoa (no Sair local do master, só a deste aparelho) e o plugin
+    // apaga a do aparelho e do backup — quem saiu abre o celular novo na tela de entrar
+    await Promise.all([
+      esquecerAparelhoPush().catch(() => undefined),
+      esquecerChave({ local, uid: uidRef.current }).catch(() => undefined),
+    ]);
     const r1 = await (local ? principal.auth.signOut({ scope: "local" }) : principal.auth.signOut()).catch((e) => ({ error: e }));
     const r2 = await (local ? supabase.auth.signOut({ scope: "local" }) : supabase.auth.signOut()).catch((e) => ({ error: e }));
     // sem internet o supabase-js não apaga a sessão guardada: apaga aqui (sair vale nos 2 bancos)

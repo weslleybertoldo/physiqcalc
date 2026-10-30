@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="false"
@@ -86,6 +87,16 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
     </application>
+
+    <!-- restaurar-login: o RestaurarLoginPlugin confere se o Google Play services existe, está LIGADO e é 24.22+ (a régua da chave de
+         volta). No Android 11+ outro pacote só é visível com a consulta declarada — esta é só a do Play services (sem QUERY_ALL_PACKAGES). -->
+    <queries>
+        <package android:name="com.google.android.gms" />
+    </queries>
+    <!-- restaurar-login: o androidx.credentials 1.6.0 puxa o androidx.biometric 1.1.0, que declara estas 2 permissões. O Physiq não usa
+         biometria (a chave de volta nunca pede a verificação da pessoa: UV = 0, medido na fase 0) — saem do app (o mínimo necessário). -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
 
     <!-- Permissions -->
 

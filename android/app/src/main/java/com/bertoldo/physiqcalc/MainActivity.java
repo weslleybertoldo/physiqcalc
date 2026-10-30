@@ -14,6 +14,8 @@ public class MainActivity extends BridgeActivity {
         }
         registerPlugin(GalleryImagePlugin.class);
         registerPlugin(PushFirebasePlugin.class);
+        // restaurar-login: a chave de volta do Android (Restore Credentials) — nos 2 builds (D2); a trava do servidor desliga tudo
+        registerPlugin(RestaurarLoginPlugin.class);
         // play-W6: a cobrança da Google Play só no playRelease (PlataformaLoja por build type; no APK do site, vazia)
         PlataformaLoja.registrar(this);
         super.onCreate(savedInstanceState);

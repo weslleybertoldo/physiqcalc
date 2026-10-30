@@ -94,6 +94,12 @@ dependencies {
     // permissão com.android.vending.BILLING que o AAR declara (scripts/ci/aab-loja.sh confere as 2 saídas). O plugin que a
     // usa mora em src/playRelease/java (PlayBillingPlugin + PlataformaLoja). A 9 vale até 31/08/2028 (a 8, até 31/08/2027).
     playReleaseImplementation "com.android.billingclient:billing:9.1.0"
+    // restaurar-login: "entrar já logado no celular novo" — a chave de volta (API Restore Credentials; a regra "Zero-Tap Sign-In" da
+    // Google Play de abr/2027) no RestaurarLoginPlugin. Nos 2 builds (D2: o APK do site e o da loja — a trava do servidor desliga tudo).
+    // A 1.6.0 é a estável (08/04/2026); o AAR credentials-play-services-auth já traz a regra do R8 (a fase 0 provou: sem regra nova no
+    // proguard-rules.pro, o build minificado se comporta igual). Puxa play-services-auth, -fido, -auth-blockstore e o kotlin-stdlib (+~330 KB de DEX).
+    implementation "androidx.credentials:credentials:1.6.0"
+    implementation "androidx.credentials:credentials-play-services-auth:1.6.0"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

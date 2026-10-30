@@ -87,7 +87,7 @@ export function RodapePerfil() {
       <LinksPrivacidade className="-mt-1 justify-center" />
 
       <PainelDeslizante aberto={confirmarSaida} aoMudar={setConfirmarSaida} titulo="Sair do Physiq?"
-        descricao="Você sai deste aparelho. O que já está salvo continua na sua conta.">
+        descricao="Você sai de todos os aparelhos. O que já está salvo continua na sua conta.">
         <div className="flex gap-2 pt-2">
           <Botao className="flex-1" onClick={() => setConfirmarSaida(false)}>Cancelar</Botao>
           <Botao variante="w" className="flex-1" icone={LogOut} onClick={() => { setConfirmarSaida(false); void sair(); }} data-perfil-sair-confirmar>Sair</Botao>
