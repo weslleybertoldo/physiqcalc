@@ -20,7 +20,8 @@
 // só guardados; o androidPackageName (só vem no registro) e o response.publicKey (COSE, não SPKI) são ignorados — a chave sai do
 // attestationObject. Tudo no objeto TOLERANCIA (mudar = trocar 1 valor; cada ponto tem teste, inclusive com as respostas REAIS do Android).
 // RÍGIDO sempre: o desafio de uso único (o banco), a origem na lista, o RP ID, a assinatura e a chave não apagada (o banco).
-// Para fora, toda recusa da conferência vira 401 chave_invalida (sem oráculo); o motivo exato vai só para o log (MotivoConferencia).
+// Para fora, toda recusa da conferência vira 403 conferencia_falhou (o app NÃO apaga a chave; o 401 é só a chave que não vale mais —
+// STATUS_DA_RECUSA, 2ª revisão, achado 2); o motivo exato vai só para o log (MotivoConferencia).
 import { emailDeTeste, type UsuarioAuth } from "./login-regras.ts";
 import type { Schema } from "./master-regras.ts";
 
