@@ -67,6 +67,13 @@ const RESPOSTA_ANDROID = { id: ID_CHAVE, rawId: ID_CHAVE, type: "public-key", re
 const SESSAO = { access_token: "eyJ.acesso.teste", refresh_token: "r1", expires_in: 3600, expires_at: 1793333333, token_type: "bearer", user: { id: UID } };
 
 type Resposta = { status: number; corpo: unknown } | "rede" | Promise<never>;
+
+/** o que o SessaoProvider passa: o principal.auth.setSession (aqui, o falso) */
+const restaurar = (prazoMs?: number) =>
+  tentarRestaurar(async (t) => {
+    const r = await h.setSession(t);
+    return r.error ? null : r.data.session;
+  }, prazoMs);
 let respostas: Record<"opcoes" | "entrar", Resposta>;
 
 function servidorRestaurar(r: Partial<Record<"opcoes" | "entrar", Resposta>>) {
@@ -119,7 +126,7 @@ afterEach(() => {
 
 describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
   it("entra: opções (sem login: apikey + x-schema) → o Android assina → entrar → setSession; marca a tentativa, a chave restaurada e o Bem-vindo", async () => {
-    const r = await tentarRestaurar();
+    const r = await restaurar();
     expect(r).toMatchObject({ tipo: "entrou", sessao: { user: { id: UID } } });
     expect(pedidosRestaurar().map((p) => p.acao)).toEqual(["opcoes", "entrar"]);
     const [url, init] = h.fetch.mock.calls[0] as [string, RequestInit];
@@ -139,7 +146,7 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
 
   it("sem chave no aparelho (NoCredentialException → semChave): tela de entrar, marca a tentativa, nem chama o entrar", async () => {
     h.plugin.obter.mockResolvedValue({ semChave: true });
-    expect(await tentarRestaurar()).toEqual({ tipo: "sem_chave" });
+    expect(await restaurar()).toEqual({ tipo: "sem_chave" });
     expect(pedidosRestaurar().map((p) => p.acao)).toEqual(["opcoes"]);
     expect(localStorage.getItem(MARCA_TENTADA)).toBe("1");
     expect(h.setSession).not.toHaveBeenCalled();
@@ -148,7 +155,7 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
 
   it("401 chave_invalida: o plugin APAGA a chave do aparelho, marca a tentativa e não entra", async () => {
     servidorRestaurar({ entrar: { status: 401, corpo: { ok: false, erro: "chave_invalida" } } });
-    expect(await tentarRestaurar()).toEqual({ tipo: "recusado", erro: "chave_invalida" });
+    expect(await restaurar()).toEqual({ tipo: "recusado", erro: "chave_invalida" });
     expect(h.plugin.apagar).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(MARCA_TENTADA)).toBe("1");
     expect(h.setSession).not.toHaveBeenCalled();
@@ -156,33 +163,33 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
 
   it("403 (conta desativada, e-mail não confirmado, conta real no staging): recusado e marcado, a chave fica", async () => {
     servidorRestaurar({ entrar: { status: 403, corpo: { ok: false, erro: "conta_real_no_staging" } } });
-    expect(await tentarRestaurar()).toEqual({ tipo: "recusado", erro: "conta_real_no_staging" });
+    expect(await restaurar()).toEqual({ tipo: "recusado", erro: "conta_real_no_staging" });
     expect(h.plugin.apagar).not.toHaveBeenCalled();
     expect(localStorage.getItem(MARCA_TENTADA)).toBe("1");
   });
 
   it("sem rede (o fetch falha) nas opções ou no entrar: SEM marca — tenta de novo na próxima abertura", async () => {
     servidorRestaurar({ opcoes: "rede" });
-    expect(await tentarRestaurar()).toEqual({ tipo: "rede" });
+    expect(await restaurar()).toEqual({ tipo: "rede" });
     expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
     expect(h.plugin.obter).not.toHaveBeenCalled();
     servidorRestaurar({ entrar: "rede" });
-    expect(await tentarRestaurar()).toEqual({ tipo: "rede" });
+    expect(await restaurar()).toEqual({ tipo: "rede" });
     expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
     servidorRestaurar({});
-    expect((await tentarRestaurar()).tipo).toBe("entrou");
+    expect((await restaurar()).tipo).toBe("entrou");
   });
 
   it("o servidor desligado (HTTP 200 ok:false 'desligado'): não faz nada e não marca; 429/503: idem", async () => {
     servidorRestaurar({ opcoes: { status: 200, corpo: { ok: false, erro: "desligado" } } });
-    expect(await tentarRestaurar()).toEqual({ tipo: "desligado" });
+    expect(await restaurar()).toEqual({ tipo: "desligado" });
     expect(h.plugin.obter).not.toHaveBeenCalled();
     servidorRestaurar({ entrar: { status: 200, corpo: { ok: false, erro: "desligado" } } });
-    expect(await tentarRestaurar()).toEqual({ tipo: "desligado" });
+    expect(await restaurar()).toEqual({ tipo: "desligado" });
     servidorRestaurar({ entrar: { status: 503, corpo: { ok: false, erro: "indisponivel" } } });
-    expect(await tentarRestaurar()).toEqual({ tipo: "servidor" });
+    expect(await restaurar()).toEqual({ tipo: "servidor" });
     servidorRestaurar({ opcoes: { status: 429, corpo: { ok: false, erro: "muitas_tentativas" } } });
-    expect(await tentarRestaurar()).toEqual({ tipo: "servidor" });
+    expect(await restaurar()).toEqual({ tipo: "servidor" });
     expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
     expect(h.setSession).not.toHaveBeenCalled();
   });
@@ -191,7 +198,7 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
     vi.useFakeTimers();
     let soltar: (v: unknown) => void = () => undefined;
     h.plugin.obter.mockReturnValue(new Promise((ok) => (soltar = ok)));
-    const p = tentarRestaurar();
+    const p = restaurar();
     await vi.advanceTimersByTimeAsync(PRAZO_RESTAURAR_MS + 10);
     expect(await p).toEqual({ tipo: "prazo" });
     expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
@@ -203,7 +210,7 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
     let liberarEntrar: (v: { status: number; corpo: unknown }) => void = () => undefined;
     h.plugin.obter.mockResolvedValue({ responseJson: JSON.stringify(RESPOSTA_ANDROID) });
     servidorRestaurar({ entrar: new Promise((ok) => (liberarEntrar = ok)) as unknown as Resposta });
-    const p2 = tentarRestaurar();
+    const p2 = restaurar();
     await vi.advanceTimersByTimeAsync(PRAZO_RESTAURAR_MS + 10);
     expect(await p2).toEqual({ tipo: "prazo" });
     liberarEntrar({ status: 200, corpo: { ok: true, sessao: SESSAO } });
@@ -214,13 +221,13 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
 
   it("o Android sem a API (flag do Google desligada: indisponivel_17): marca e não chama o entrar; disponivel false: nem chama o servidor", async () => {
     h.plugin.obter.mockResolvedValue({ indisponivel: true, motivo: "17" });
-    expect(await tentarRestaurar()).toEqual({ tipo: "indisponivel" });
+    expect(await restaurar()).toEqual({ tipo: "indisponivel" });
     expect(localStorage.getItem(MARCA_TENTADA)).toBe("1");
     localStorage.clear();
     _zerarParaTestes();
     h.fetch.mockClear();
     h.plugin.disponivel.mockResolvedValue({ disponivel: false, motivo: "sem_play_services" });
-    expect(await tentarRestaurar()).toEqual({ tipo: "pulado" });
+    expect(await restaurar()).toEqual({ tipo: "pulado" });
     expect(h.fetch).not.toHaveBeenCalled();
     expect(localStorage.getItem(MARCA_TENTADA)).toBeNull();
   });
@@ -228,13 +235,13 @@ describe("tentarRestaurar — a 1ª abertura no celular novo", () => {
   it("o site/PWA (web), sem internet ou já tentado: nada roda (nem servidor nem plugin)", async () => {
     h.plataforma = "web";
     h.plugins = new Set();
-    expect(await tentarRestaurar()).toEqual({ tipo: "pulado" });
+    expect(await restaurar()).toEqual({ tipo: "pulado" });
     android();
     Object.defineProperty(navigator, "onLine", { configurable: true, get: () => false });
-    expect(await tentarRestaurar()).toEqual({ tipo: "pulado" });
+    expect(await restaurar()).toEqual({ tipo: "pulado" });
     Object.defineProperty(navigator, "onLine", { configurable: true, get: () => true });
     localStorage.setItem(MARCA_TENTADA, "1");
-    expect(await tentarRestaurar()).toEqual({ tipo: "pulado" });
+    expect(await restaurar()).toEqual({ tipo: "pulado" });
     expect(h.fetch).not.toHaveBeenCalled();
     expect(h.plugin.disponivel).not.toHaveBeenCalled();
   });
@@ -483,7 +490,7 @@ describe("esquecerChave e sessaoDerrubada — apagar", () => {
   });
 
   it("o log leva só códigos: nenhuma chamada carrega o JSON do Android, a chave, o token ou o id da pessoa", async () => {
-    await tentarRestaurar();
+    await restaurar();
     const logs = [...h.plugin.log.mock.calls.map((c) => c[0].codigo), ...(console.info as unknown as { mock: { calls: unknown[][] } }).mock.calls.map((c) => String(c[0]))];
     expect(logs.length).toBeGreaterThan(0);
     for (const l of logs) {

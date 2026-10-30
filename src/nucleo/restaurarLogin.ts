@@ -13,8 +13,8 @@
  *                            sai e o SessaoProvider recria a chave na hora (ouvirChaveInvalidada).
  *   semSessaoNaAbertura()    a abertura SEM sessão: "restaurar" (o celular novo: nada desta instalação no aparelho), "derrubada" (esta
  *                            instalação tinha sessão e chave, e a sessão sumiu do aparelho sem o nosso Sair) ou "nada".
- *   tentarRestaurar()        o efeito 1 do SessaoProvider, ANTES do pronto: opções → o plugin obtém → entrar → setSession (como o
- *                            entrarComEmail). Prazo total ~8 s. A marca physiq_restauracao_tentada só com resultado DEFINITIVO (sem chave,
+ *   tentarRestaurar(gravar)  o efeito 1 do SessaoProvider, ANTES do pronto: opções → o plugin obtém → entrar → `gravar` (o setSession, que
+ *                            fica no SessaoProvider, como o do entrarComEmail — o login é a exceção do jeito 2). Prazo total ~8 s. A marca physiq_restauracao_tentada só com resultado DEFINITIVO (sem chave,
  *                            entrou, recusado, o Android sem a API); sem rede, servidor desligado ou prazo estourado: tenta na próxima.
  *   esquecerChave(...)       o Sair, ANTES do signOut (a função precisa do login), no máximo 3 s: o servidor apaga TODAS as chaves da
  *                            pessoa (D3 — o Sair é global; no Sair local do master, só a deste aparelho) e o plugin apaga a do aparelho
@@ -25,6 +25,7 @@
  */
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import type { Session } from "@supabase/supabase-js";
+// o principal aqui só chama as FUNÇÕES (jeito 2); a sessão restaurada é gravada pelo SessaoProvider (o arquivo do login)
 import { principal, PRINCIPAL_ANON, PRINCIPAL_SCHEMA, PRINCIPAL_STORAGE_KEY, PRINCIPAL_URL } from "@/integrations/principal/client";
 
 // ───────────────────────── o plugin nativo ─────────────────────────
@@ -408,10 +409,13 @@ export type ResultadoRestaurar =
   | { tipo: "sem_chave" | "indisponivel" | "desligado" | "rede" | "servidor" | "prazo" | "pulado" | "erro" }
   | { tipo: "recusado"; erro: string };
 
-interface SessaoRecebida {
+export interface SessaoRecebida {
   access_token: string;
   refresh_token: string;
 }
+
+/** Grava a sessão que a restaurar-login devolveu (o principal.auth.setSession do SessaoProvider); null = não gravou. */
+export type GravarSessao = (s: SessaoRecebida) => Promise<Session | null>;
 
 function sessaoDaResposta(v: unknown): SessaoRecebida | null {
   const s = v && typeof v === "object" ? (v as Record<string, unknown>) : null;
@@ -424,7 +428,7 @@ function sessaoDaResposta(v: unknown): SessaoRecebida | null {
  * Nunca lança; no prazo estourado devolve "prazo" e o que chegar depois é ignorado (menos o "sem chave"/"indisponível" do aparelho, que
  * marcam a tentativa — o Android sem a API pode levar ~10 s na 1ª chamada, fase 0).
  */
-export async function tentarRestaurar(prazoMs: number = PRAZO_RESTAURAR_MS): Promise<ResultadoRestaurar> {
+export async function tentarRestaurar(gravarSessao: GravarSessao, prazoMs: number = PRAZO_RESTAURAR_MS): Promise<ResultadoRestaurar> {
   if (!online() || !ehAndroidNativo() || ler(MARCA_TENTADA)) return { tipo: "pulado" };
   const fim = Date.now() + prazoMs;
   const restante = () => Math.min(LIMITE_FETCH_MS, fim - Date.now());
@@ -474,13 +478,13 @@ export async function tentarRestaurar(prazoMs: number = PRAZO_RESTAURAR_MS): Pro
     // depois do prazo a tela de entrar já apareceu: a sessão que chegou tarde fica sem uso (vence sozinha; o desafio já foi gasto e a
     // chave segue valendo — a próxima abertura tenta de novo)
     if (encerrado) return { tipo: "prazo" };
-    const { data, error } = await principal.auth.setSession(recebida);
-    if (error || !data?.session?.user?.id) return { tipo: "erro" };
-    const uid = data.session.user.id;
+    const sessao = await gravarSessao(recebida).catch(() => null);
+    if (!sessao?.user?.id) return { tipo: "erro" };
+    const uid = sessao.user.id;
     // a chave restaurada é a "antiga deste aparelho": o garantirChave cria a própria e marca a restaurada como substituída
     gravarMarcaChave(uid, { em: 0, id: typeof resposta.id === "string" ? resposta.id : null, sessao: null });
     gravar(MARCA_BEM_VINDO, uid);
-    return { tipo: "entrou", sessao: data.session };
+    return { tipo: "entrou", sessao };
   })().catch((): ResultadoRestaurar => ({ tipo: "erro" }));
 
   const prazo = new Promise<ResultadoRestaurar>((ok) => {

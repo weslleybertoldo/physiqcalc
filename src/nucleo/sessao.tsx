@@ -237,7 +237,11 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
           if (passo === "restaurar") {
             clearTimeout(seguranca);
             seguranca = setTimeout(() => vivo && setPronto(true), PRAZO_RESTAURAR_MS + 1500);
-            const r = await tentarRestaurar();
+            // a sessão restaurada entra como a do entrarComEmail: o setSession (dispara o SIGNED_IN, o pos-login e a troca)
+            const r = await tentarRestaurar(async (t) => {
+              const { data: d, error } = await principal.auth.setSession(t);
+              return error ? null : d.session;
+            });
             if (r.tipo === "entrou") s = r.sessao;
           }
         }
