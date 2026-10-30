@@ -14,7 +14,7 @@ Casos (o pedido A, peça 6):
   entrar     restaurar-login opcoes → o autenticador assina → entrar → a sessão VALE no Auth (/auth/v1/user = a Lia; o refresh gira; AMR otp)
   desafio    a MESMA resposta de novo → 401 (o desafio não repete)
   erradas    origem errada, assinatura de outra chave, RP de outro site, userHandle de outra pessoa → 401; o desafio queimado não volta
-  tolerante  o que a conferência TOLERA até a fase 0 medir (TOLERANCIA nas regras): sem o UP entra; contador 0 depois de 5 entra, 3 depois
+  tolerante  a conferência pelo MEDIDO na fase 0 (TOLERANCIA nas regras): sem o UP RECUSA (401); contador 0 depois de 5 entra, 3 depois
              de 5 não (clone); AAGUID não zerado + androidPackageName + a origem de debug do notebook (só staging) registram e entram
   apagada    a chave apagada (o Sair local) → 401; a outra chave da Lia segue entrando
   sair       o Sair (apagar todas) → nenhuma chave da Lia entra; a do Otto segue
@@ -297,8 +297,8 @@ def caso_registrar() -> None:
     ln = linha(a.id) or {}
     p.check(ln.get("user_id") == uid("lia") and ln.get("algoritmo") == -7 and ln.get("origem") == ORIGEM_PLAY and ln.get("nuvem") is True
             and ln.get("aparelho") == "Autenticador virtual E2E · Android 14" and ln.get("backup_elegivel") is True and ln.get("apagada") is False
-            and ln.get("aaguid") == "00000000-0000-0000-0000-000000000000" and (ln.get("tam") or 0) > 60,
-            f"a linha no staging: dona, ES256, origem da Play, nuvem, aparelho, BE, AAGUID zerado, a chave COSE ({ln})")
+            and ln.get("backup_estado") is False and ln.get("aaguid") == "00000000-0000-0000-0000-000000000000" and (ln.get("tam") or 0) > 60,
+            f"a linha no staging: dona, ES256, origem da Play, nuvem, aparelho, BE 1 e BS 0 (o medido), AAGUID zerado, a chave COSE ({ln})")
     st, r = chave(s["access_token"], {"acao": "registrar", "resposta": a.registrar(o)})
     p.check(st == 400 and r.get("erro") == "chave_invalida", f"registrar de novo com o MESMO desafio → 400 chave_invalida ({st} {r})")
 
@@ -360,7 +360,9 @@ def caso_erradas() -> None:
 def caso_tolerante() -> None:
     a: Autenticador = ESTADO["a"]
     st, r = entrar(a.entrar(desafio_entrar(), up=False))
-    p.check(st == 200, f"sem o UP (o toque) → entra (tolerado até a fase 0 medir) ({st} {r.get('erro')})")
+    p.check(st == 401 and r.get("erro") == "chave_invalida", f"sem o UP (o toque) → 401 chave_invalida (a fase 0 mediu UP = 1: exigido) ({st} {r.get('erro')})")
+    st, r = entrar(a.entrar(desafio_entrar()))
+    p.check(st == 200, f"…e com o UP (o formato medido: flags 0x09) a mesma chave entra ({st} {r.get('erro')})")
     for contador, esperado, nome in ((5, 200, "contador 5 (o 1º com contador)"), (0, 200, "contador 0 depois de 5 (a cópia volta com 0: tolerado)"),
                                      (3, 401, "contador 3 depois de 5 (não sobe: sinal de clone — recusa SEMPRE)"), (6, 200, "contador 6 depois de 5")):
         st, r = entrar(a.entrar(desafio_entrar(), contador=contador))

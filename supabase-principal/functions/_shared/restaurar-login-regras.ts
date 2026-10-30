@@ -12,10 +12,14 @@
 //              expectedRPID — sempre passado) · atestação "none" · o id da resposta = o id do authData (a biblioteca não compara) ·
 //              algoritmo -7 ou -257. UP e UV NÃO são exigidos: a criação é silenciosa (o app cria logo depois do login).
 //   entrar     clientDataJSON.type = webauthn.get · o desafio dado · a origem · o id = o da chave guardada · o userHandle (quando vem) =
-//              o id da pessoa dona da chave · o RP ID, a assinatura e o contador (só sobe, se algum dos 2 passar de 0) pela biblioteca.
-// TOLERANTE até a fase 0 medir a chave do Android num aparelho com Play services (coordenação de 30/10, fase0.md §4): UP e UV não exigidos,
-// contador 0 aceito, qualquer AAGUID, BE/BS só guardados, nada do androidPackageName — tudo no objeto TOLERANCIA (apertar = trocar 1 valor;
-// cada um tem teste). RÍGIDO sempre: o desafio de uso único (o banco), a origem na lista, o RP ID, a assinatura e a chave não apagada (o banco).
+//              o id da pessoa dona da chave · o UP (TOLERANCIA.exigirPresenca) · o RP ID, a assinatura e o contador (só sobe, se algum dos 2
+//              passar de 0) pela biblioteca.
+// A TOLERANCIA segue o que a fase 0 MEDIU no Android (fase0.md §2–§3: 16 respostas, emulador Google APIs, Android 15, Play services 24.23.35):
+// o UP veio 1 em todas → EXIGIDO na entrada (o padrão da biblioteca); o UV veio 0 em todas → não exigido; o contador vem sempre 0 → aceito
+// (o > 0 que não sobe é recusado sempre); o AAGUID vem zerado com fmt "none" (autodeclarado: restringir não dá segurança) → qualquer um; BE/BS
+// só guardados; o androidPackageName (só vem no registro) e o response.publicKey (COSE, não SPKI) são ignorados — a chave sai do
+// attestationObject. Tudo no objeto TOLERANCIA (mudar = trocar 1 valor; cada ponto tem teste, inclusive com as respostas REAIS do Android).
+// RÍGIDO sempre: o desafio de uso único (o banco), a origem na lista, o RP ID, a assinatura e a chave não apagada (o banco).
 // Para fora, toda recusa da conferência vira 401 chave_invalida (sem oráculo); o motivo exato vai só para o log (MotivoConferencia).
 import { emailConfirmado, emailDeTeste, type UsuarioAuth } from "./login-regras.ts";
 import type { Schema } from "./master-regras.ts";
@@ -27,23 +31,27 @@ export const RP_NOME = "Physiq";
 export const TEMPO_DO_PEDIDO_MS = 60_000;
 export const ALGORITMOS = [-7, -257] as const;
 
-/** O que a conferência deixa passar enquanto a chave do Android não foi medida (a fase 0). Apertar = trocar o valor aqui (+ o teste). */
+/** O que a conferência deixa passar (medido na fase 0 — fase0.md). Mudar = trocar o valor aqui (+ o teste que fixa o valor). */
 export interface Tolerancia {
-  /** UP (o "toque") na entrada. false = não exige (a chave de volta é buscada em silêncio — a dúvida Q2). O registro nunca exige. */
+  /** UP (o "toque") na entrada. true = exige (a fase 0 mediu UP = 1 em 16/16 respostas — a Q2 fechada). O registro nunca exige. */
   exigirPresenca: boolean;
-  /** UV (a biometria/PIN) na entrada e no registro. false = não exige (o Android força "discouraged" na restauração). */
+  /** UV (a biometria/PIN) na entrada e no registro. false = não exige (a fase 0 mediu UV = 0 em 16/16; o Android força "discouraged"). */
   exigirVerificacao: boolean;
   /**
-   * Contador 0 na entrada vale mesmo com o guardado > 0? true = sim (a chave que vai na cópia pode voltar com 0; 0 = "sem contador" no
-   * WebAuthn). Contador > 0 que não sobe é recusado sempre (contador_voltou: sinal de clone).
+   * Contador 0 na entrada vale mesmo com o guardado > 0? true = sim (a fase 0 mediu o contador SEMPRE 0 — no registro e em 2 entradas
+   * seguidas; 0 = "sem contador" no WebAuthn). Contador > 0 que não sobe é recusado sempre (contador_voltou: sinal de clone).
    */
   aceitarContadorZero: boolean;
-  /** Os AAGUID aceitos no registro; null = qualquer (a dúvida Q3: o Android manda zerado?). */
+  /**
+   * Os AAGUID aceitos no registro; null = qualquer. A fase 0 mediu o AAGUID ZERADO com a atestação "none" (a Q3): sem atestação o AAGUID é
+   * autodeclarado — uma lista não daria segurança nenhuma e arriscaria recusar um celular de verdade que mande outro. Fica aberto (decisão).
+   */
   aaguidsAceitos: readonly string[] | null;
 }
 
+/** Medido na fase 0 (30/10/2026): UP exigido na entrada; UV não (vem sempre 0); contador 0 aceito (vem sempre 0); AAGUID aberto. */
 export const TOLERANCIA: Readonly<Tolerancia> = {
-  exigirPresenca: false,
+  exigirPresenca: true,
   exigirVerificacao: false,
   aceitarContadorZero: true,
   aaguidsAceitos: null,

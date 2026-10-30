@@ -1,14 +1,16 @@
 // Physiq restaurar-login (30/10/2026) — o AUTENTICADOR VIRTUAL dos testes: o "Android" de mentira da chave de volta. Um par de chaves de
 // verdade (WebCrypto: ES256 = ECDSA P-256 ou RS256 = RSASSA-PKCS1-v1_5 2048), atestação "none" e a origem android:apk-key-hash:… — devolve
 // o RegistrationResponseJSON e o AuthenticationResponseJSON no formato do Credential Manager (CreateRestoreCredentialResponse.responseJson
-// e RestoreCredential.authenticationResponseJson). O formato exato do Android sai da fase 0; aqui vale o do WebAuthn (o que a biblioteca
-// confere). Usado pelas regras (src/nucleo/restaurarLoginRegras.test.ts) e pelas funções (src/nucleo/restaurarLoginFuncoes.test.ts);
-// a mesma receita em Python no E2E do staging (e2e/restaurar_login/_autenticador.py).
+// e RestoreCredential.authenticationResponseJson) — no formato MEDIDO na fase 0 (fase0.md §2): flags 0x49 no registro (UP, BE, AT) e 0x09 na
+// entrada (UP, BE), BS 0, contador 0, AAGUID zerado, id de 32 bytes, transports ["internal","hybrid"], publicKeyAlgorithm e o publicKey em
+// COSE (não SPKI) no registro, o androidPackageName só no clientDataJSON do registro e sem crossOrigin. As respostas REAIS do Android estão em
+// src/test/respostasAndroidFase0.ts. Usado pelas regras (src/nucleo/restaurarLoginRegras.test.ts) e pelas funções
+// (src/nucleo/restaurarLoginFuncoes.test.ts); a mesma receita em Python no E2E do staging (e2e/restaurar_login/_autenticador.py).
 // Rodar no ambiente node do Vitest (// @vitest-environment node): o crypto.subtle de verdade.
 import { isoCBOR } from "@simplewebauthn/server/helpers";
 import { RP_ID, base64urlParaBytes, bytesParaBase64url } from "../../supabase-principal/functions/_shared/restaurar-login-regras";
 
-/** As flags do authenticatorData: UP 0x01, UV 0x04, BE 0x08, BS 0x10, AT 0x40 (dados da chave junto). */
+/** As flags do authenticatorData: UP 0x01, UV 0x04, BE 0x08, BS 0x10, AT 0x40 (dados da chave junto). Padrão = o medido: UP 1, UV 0, BE 1, BS 0. */
 export interface Flags {
   up?: boolean;
   uv?: boolean;
@@ -25,8 +27,11 @@ export interface OpcoesDoPedido extends Flags {
   tipo?: string;
   /** o contador que vai no authenticatorData (padrão: o do autenticador — 0, como a chave que vai na cópia) */
   contador?: number;
-  /** o androidPackageName no clientDataJSON (o Android pode mandar; o servidor não depende dele) */
-  androidPackageName?: string;
+  /**
+   * o androidPackageName no clientDataJSON (o servidor não depende dele). Padrão = o medido: com.bertoldo.physiqcalc no registro, nada na
+   * entrada; null = não manda.
+   */
+  androidPackageName?: string | null;
 }
 
 export interface OpcoesDoRegistro extends OpcoesDoPedido {
@@ -48,6 +53,8 @@ export interface OpcoesDaEntrada extends OpcoesDoPedido {
 }
 
 const enc = new TextEncoder();
+/** O pacote do app (o que o Android põe no clientDataJSON do registro). */
+export const PACOTE_ANDROID = "com.bertoldo.physiqcalc";
 
 function concat(...partes: Uint8Array[]): Uint8Array {
   const out = new Uint8Array(partes.reduce((n, p) => n + p.length, 0));
@@ -81,7 +88,7 @@ export function rsParaDer(rs: Uint8Array): Uint8Array {
 }
 
 function flagsByte(f: Flags, comChave: boolean): number {
-  return (f.up === false ? 0 : 0x01) | (f.uv ? 0x04 : 0) | (f.be ? 0x08 : 0) | (f.bs ? 0x10 : 0) | (comChave ? 0x40 : 0);
+  return (f.up === false ? 0 : 0x01) | (f.uv ? 0x04 : 0) | (f.be === false ? 0 : 0x08) | (f.bs ? 0x10 : 0) | (comChave ? 0x40 : 0);
 }
 
 export interface AutenticadorVirtual {
@@ -123,8 +130,9 @@ export async function criarAutenticador(origemPadrao: string, alg: -7 | -257 = -
     return new Uint8Array(await crypto.subtle.sign({ name: "RSASSA-PKCS1-v1_5" }, par.privateKey, dados));
   }
 
-  const clientData = (tipo: string, desafio: string, origem: string, pacote?: string) =>
-    enc.encode(JSON.stringify({ type: tipo, challenge: desafio, origin: origem, crossOrigin: false, ...(pacote ? { androidPackageName: pacote } : {}) }));
+  // a ordem e os campos do Android (fase 0): type, challenge, origin e, só no registro, androidPackageName — sem crossOrigin
+  const clientData = (tipo: string, desafio: string, origem: string, pacote?: string | null) =>
+    enc.encode(JSON.stringify({ type: tipo, challenge: desafio, origin: origem, ...(pacote ? { androidPackageName: pacote } : {}) }));
 
   const auto: AutenticadorVirtual = {
     id,
@@ -132,7 +140,9 @@ export async function criarAutenticador(origemPadrao: string, alg: -7 | -257 = -
     userHandle: null,
     async registrar(opcoes, o = {}) {
       auto.userHandle = opcoes.user.id;
-      const cd = clientData(o.tipo ?? "webauthn.create", opcoes.challenge, o.origem ?? origemPadrao, o.androidPackageName);
+      const cd = clientData(o.tipo ?? "webauthn.create", opcoes.challenge, o.origem ?? origemPadrao,
+        o.androidPackageName === undefined ? PACOTE_ANDROID : o.androidPackageName);
+      const chaveCose = cosePublica(o.algNaChave ?? alg);
       const authData = concat(
         await sha256(enc.encode(o.rpId ?? RP_ID)),
         new Uint8Array([flagsByte(o, true)]),
@@ -140,7 +150,7 @@ export async function criarAutenticador(origemPadrao: string, alg: -7 | -257 = -
         o.aaguid ?? new Uint8Array(16),
         new Uint8Array([(credId.length >> 8) & 0xff, credId.length & 0xff]),
         credId,
-        cosePublica(o.algNaChave ?? alg),
+        chaveCose,
       );
       const attStmt = o.autoAtestacao
         ? new Map<string, unknown>([["alg", alg], ["sig", await assinar(concat(authData, await sha256(cd)))]])
@@ -152,7 +162,11 @@ export async function criarAutenticador(origemPadrao: string, alg: -7 | -257 = -
         rawId: idJson,
         type: "public-key",
         authenticatorAttachment: "platform",
-        response: { clientDataJSON: bytesParaBase64url(cd), attestationObject: bytesParaBase64url(atestacao), transports: ["internal"] },
+        // o Android manda também o publicKeyAlgorithm e o publicKey em COSE (não SPKI) — o servidor ignora os 2 e lê a chave da atestação
+        response: {
+          clientDataJSON: bytesParaBase64url(cd), attestationObject: bytesParaBase64url(atestacao), transports: ["internal", "hybrid"],
+          publicKeyAlgorithm: alg, publicKey: bytesParaBase64url(chaveCose),
+        },
         clientExtensionResults: {},
       };
     },

@@ -3,7 +3,8 @@
 // com um AUTENTICADOR VIRTUAL (src/test/autenticadorVirtual.ts: par ES256/RS256 de verdade, atestação "none", origem android:apk-key-hash:)
 // e a biblioteca de verdade (@simplewebauthn/server 13.3.3, a mesma versão que a função pega pelo JSR). Prova: a origem, o RP ID, o desafio,
 // a assinatura, o contador, o userHandle, o UP, a atestação e o algoritmo; as origens batem com o assetlinks.json; a trava falha fechada;
-// a pessoa (staging só teste, so_teste, desativada, e-mail não confirmado); a sessão sai só com o id.
+// a pessoa (staging só teste, so_teste, desativada, e-mail não confirmado); a sessão sai só com o id. E as respostas REAIS do Android da
+// fase 0 (src/test/respostasAndroidFase0.ts): passam com a origem certa, recusam com a de outro schema e sem o UP.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { verifyAuthenticationResponse, verifyRegistrationResponse } from "@simplewebauthn/server";
@@ -49,6 +50,7 @@ import {
   type RespostaRegistro,
 } from "../../supabase-principal/functions/_shared/restaurar-login-regras";
 import { criarAutenticador, rsParaDer, type AutenticadorVirtual } from "../test/autenticadorVirtual";
+import { PAR_DEBUG, PAR_UPLOAD, USER_ID_FASE0 } from "../test/respostasAndroidFase0";
 
 const LIB = { verifyRegistrationResponse, verifyAuthenticationResponse, decodeCredentialPublicKey } as unknown as LibWebAuthn;
 const EU = "f3513284-3e44-40cc-84bb-d7a39a929e8d";
@@ -133,7 +135,9 @@ describe("restaurar-login — o que o app manda (leitura)", () => {
     const lida = lerRespostaRegistro({ ...bruto, extra: "x", clientExtensionResults: { credProps: { rk: true } } })!;
     expect(Object.keys(lida).sort()).toEqual(["clientExtensionResults", "id", "rawId", "response", "type"]);
     expect(lida.clientExtensionResults).toEqual({});
-    expect(lida.response.transports).toEqual(["internal"]);
+    expect(lida.response.transports).toEqual(["internal", "hybrid"]);
+    // o publicKey (COSE no Android, não SPKI) e o publicKeyAlgorithm não passam: a chave sai do attestationObject
+    expect(Object.keys(lida.response).sort()).toEqual(["attestationObject", "clientDataJSON", "transports"]);
     expect(lerRespostaRegistro({ ...bruto, rawId: "outro-id-de-chave-qualquer" })).toBeNull();
     expect(lerRespostaRegistro({ ...bruto, type: "password" })).toBeNull();
     const r = bruto.response as Record<string, unknown>;
@@ -297,20 +301,20 @@ describe("restaurar-login — entrar (a conferência com o autenticador virtual)
     expect(await conferir(0, 0)).toMatchObject({ ok: true, novoContador: 0 });
   });
 
-  it("a TOLERANCIA de hoje (até a fase 0 medir): UP e UV não exigidos, contador 0 aceito, qualquer AAGUID — mudar aqui = apertar", () => {
-    expect(TOLERANCIA).toEqual({ exigirPresenca: false, exigirVerificacao: false, aceitarContadorZero: true, aaguidsAceitos: null });
+  it("a TOLERANCIA MEDIDA (fase 0, 30/10): UP exigido, UV não, contador 0 aceito, qualquer AAGUID — mudar aqui = mudar a conferência", () => {
+    expect(TOLERANCIA).toEqual({ exigirPresenca: true, exigirVerificacao: false, aceitarContadorZero: true, aaguidsAceitos: null });
   });
 
-  it("UP e UV: tolerados por padrão; apertando (exigirPresenca / exigirVerificacao) a falta de cada um recusa", async () => {
+  it("UP: exigido por padrão (sem o toque recusa; afrouxando, passa); UV: não exigido (apertando, a falta recusa)", async () => {
     const a = await criarAutenticador(ORIGEM_PLAY);
     const chave = await registrado(a);
     const d = novoDesafio();
     const conferir = (r: RespostaEntrada, tolerancia = {}) => conferirEntrada(r, { desafio: d, schema: "staging", chave, tolerancia }, LIB);
     const semToque = await entrada(a, d, { up: false });
-    expect(await conferir(semToque)).toMatchObject({ ok: true });
-    expect(await conferir(semToque, { exigirPresenca: true })).toEqual({ ok: false, motivo: "presenca_ausente" });
+    expect(await conferir(semToque)).toEqual({ ok: false, motivo: "presenca_ausente" });
+    expect(await conferir(semToque, { exigirPresenca: false })).toMatchObject({ ok: true });
     const comToque = await entrada(a, d, { up: true, uv: false });
-    expect(await conferir(comToque, { exigirPresenca: true })).toMatchObject({ ok: true });
+    expect(await conferir(comToque)).toMatchObject({ ok: true });
     expect(await conferir(comToque, { exigirVerificacao: true })).toEqual({ ok: false, motivo: "verificacao_ausente" });
     expect(await conferir(await entrada(a, d, { up: true, uv: true }), { exigirVerificacao: true })).toMatchObject({ ok: true });
     // o registro nunca exige UP; o UV só se apertar
@@ -399,6 +403,83 @@ describe("restaurar-login — entrar (a conferência com o autenticador virtual)
     expect(Array.from(der.slice(0, 4))).toEqual([0x30, der.length - 2, 0x02, 33]);
     expect(der[4]).toBe(0);
     expect(Array.from(der.slice(-3))).toEqual([0x02, 1, 1]);
+  });
+});
+
+describe("restaurar-login — as respostas REAIS do Android (fase 0: emulador Google APIs, Android 15, Play services 24.23.35)", () => {
+  const lerJson = (texto: string) => JSON.parse(texto) as Record<string, unknown>;
+  const desafioDe = (r: { response: { clientDataJSON: string } }) => clientDataDe(r.response.clientDataJSON)!.challenge;
+
+  it.each([
+    ["APK A (debug, sem R8)", PAR_DEBUG, ORIGEM_DEBUG_STAGING],
+    ["APK B (upload, com R8)", PAR_UPLOAD, ORIGEM_UPLOAD],
+  ] as const)("%s: o registro passa no staging (o desafio do próprio clientDataJSON) e a chave é a da atestação", async (_nome, par, origem) => {
+    const bruto = lerJson(par.registro);
+    // o formato medido: publicKey em COSE (a5 01 02 03 26 …) e o publicKeyAlgorithm vêm, mas não passam da leitura
+    const resp = bruto.response as Record<string, unknown>;
+    expect(resp.publicKeyAlgorithm).toBe(-7);
+    expect(Array.from(base64urlParaBytes(resp.publicKey as string)!.slice(0, 5))).toEqual([0xa5, 0x01, 0x02, 0x03, 0x26]);
+    expect(resp.transports).toEqual(["internal", "hybrid"]);
+    const reg = lerRespostaRegistro(bruto)!;
+    expect(reg).not.toBeNull();
+    expect(Object.keys(reg.response).sort()).toEqual(["attestationObject", "clientDataJSON", "transports"]);
+    const desafio = desafioDe(reg);
+    expect(desafio).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const c = await conferirRegistro(reg, { desafio, schema: "staging" }, LIB);
+    expect(c).toMatchObject({
+      ok: true,
+      chave: { credencialId: bruto.id, contador: 0, algoritmo: -7, aaguid: "00000000-0000-0000-0000-000000000000", backupElegivel: true, backupEstado: false, origem },
+    });
+    if (c.ok === false) return;
+    // a chave guardada (da atestação) = o publicKey COSE que o Android mandou à parte
+    expect(bytesParaHex(c.chave.chavePublica)).toBe(bytesParaHex(base64urlParaBytes(resp.publicKey as string)!));
+  });
+
+  it.each([
+    ["APK A (debug, sem R8)", PAR_DEBUG],
+    ["APK B (upload, com R8)", PAR_UPLOAD],
+  ] as const)("%s: a entrada do MESMO par passa no staging (UP 1, UV 0, contador 0, o userHandle da pessoa); no public a origem recusa", async (_nome, par) => {
+    const reg = lerRespostaRegistro(lerJson(par.registro))!;
+    const c = await conferirRegistro(reg, { desafio: desafioDe(reg), schema: "staging" }, LIB);
+    if (c.ok === false) throw new Error(`registro recusado: ${c.motivo}`);
+    const chave: ChaveGuardada = { credencialId: c.chave.credencialId, userId: USER_ID_FASE0, chavePublica: c.chave.chavePublica, contador: 0 };
+    const ent = lerRespostaEntrada(lerJson(par.entrada))!;
+    expect(ent.id).toBe(chave.credencialId);
+    expect(ent.response.userHandle).toBe(userHandleDe(USER_ID_FASE0));
+    const auth = base64urlParaBytes(ent.response.authenticatorData)!;
+    expect(auth.length).toBe(37);
+    expect(auth[32]).toBe(0x09); // UP 1, UV 0, BE 1, BS 0 — o medido
+    const desafio = desafioDe(ent);
+    expect(await conferirEntrada(ent, { desafio, schema: "staging", chave }, LIB)).toEqual({ ok: true, novoContador: 0, origem: clientDataDe(ent.response.clientDataJSON)!.origin });
+    // a origem do APK de teste (debug/upload) não vale no schema de produção
+    expect(await conferirEntrada(ent, { desafio, schema: "public", chave }, LIB)).toEqual({ ok: false, motivo: "origem_invalida" });
+    expect(await conferirRegistro(reg, { desafio: desafioDe(reg), schema: "public" }, LIB)).toEqual({ ok: false, motivo: "origem_invalida" });
+    // o desafio é o do próprio pedido: com outro desafio a mesma resposta recusa
+    expect(await conferirEntrada(ent, { desafio: novoDesafio(), schema: "staging", chave }, LIB)).toEqual({ ok: false, motivo: "desafio_invalido" });
+  });
+
+  it("sem o UP (o bit 0x01 tirado do authenticatorData de verdade) recusa por presenca_ausente; afrouxando, cai na assinatura (o bit é assinado)", async () => {
+    const reg = lerRespostaRegistro(lerJson(PAR_DEBUG.registro))!;
+    const c = await conferirRegistro(reg, { desafio: desafioDe(reg), schema: "staging" }, LIB);
+    if (c.ok === false) throw new Error(`registro recusado: ${c.motivo}`);
+    const chave: ChaveGuardada = { credencialId: c.chave.credencialId, userId: USER_ID_FASE0, chavePublica: c.chave.chavePublica, contador: 0 };
+    const ent = lerRespostaEntrada(lerJson(PAR_DEBUG.entrada))!;
+    const auth = base64urlParaBytes(ent.response.authenticatorData)!;
+    auth[32] &= ~0x01;
+    const semUp = { ...ent, response: { ...ent.response, authenticatorData: bytesParaBase64url(auth) } };
+    const desafio = desafioDe(ent);
+    expect(await conferirEntrada(semUp, { desafio, schema: "staging", chave }, LIB)).toEqual({ ok: false, motivo: "presenca_ausente" });
+    expect(await conferirEntrada(semUp, { desafio, schema: "staging", chave, tolerancia: { exigirPresenca: false } }, LIB))
+      .toEqual({ ok: false, motivo: "assinatura_invalida" });
+  });
+
+  it("a assinatura de um par não serve para a chave do outro (debug × upload)", async () => {
+    const regB = lerRespostaRegistro(lerJson(PAR_UPLOAD.registro))!;
+    const cB = await conferirRegistro(regB, { desafio: desafioDe(regB), schema: "staging" }, LIB);
+    if (cB.ok === false) throw new Error(`registro recusado: ${cB.motivo}`);
+    const entA = lerRespostaEntrada(lerJson(PAR_DEBUG.entrada))!;
+    const chaveB: ChaveGuardada = { credencialId: entA.id, userId: USER_ID_FASE0, chavePublica: cB.chave.chavePublica, contador: 0 };
+    expect(await conferirEntrada(entA, { desafio: desafioDe(entA), schema: "staging", chave: chaveB }, LIB)).toEqual({ ok: false, motivo: "assinatura_invalida" });
   });
 });
 

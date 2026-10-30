@@ -1,8 +1,10 @@
 """Physiq restaurar-login (30/10/2026) — o AUTENTICADOR VIRTUAL do E2E: o "Android" de mentira da chave de volta, a mesma receita do
 src/test/autenticadorVirtual.ts (o do Vitest). Um par ES256 de verdade (cryptography, P-256), atestação "none", origem
-android:apk-key-hash:… — devolve o RegistrationResponseJSON e o AuthenticationResponseJSON no formato do WebAuthn (o que o Credential
-Manager devolve em CreateRestoreCredentialResponse.responseJson e RestoreCredential.authenticationResponseJson; o formato exato do Android
-sai da fase 0). A assinatura do cryptography já sai em DER (o formato do WebAuthn).
+android:apk-key-hash:… — devolve o RegistrationResponseJSON e o AuthenticationResponseJSON no formato MEDIDO na fase 0 (fase0.md §2: o que
+o Credential Manager devolve em CreateRestoreCredentialResponse.responseJson e RestoreCredential.authenticationResponseJson): flags 0x49 no
+registro (UP, BE, AT) e 0x09 na entrada (UP, BE), BS 0, contador 0, AAGUID zerado, transports ["internal","hybrid"], publicKeyAlgorithm e
+o publicKey em COSE no registro, o androidPackageName só no clientDataJSON do registro e sem crossOrigin. A assinatura do cryptography já
+sai em DER (o formato do WebAuthn).
 """
 from __future__ import annotations
 
@@ -20,6 +22,7 @@ RP_ID = "physiqcalc.com.br"
 ORIGEM_PLAY = "android:apk-key-hash:neGb1EVsM6ZD2RD0DZkTbTRsnpKVn_OabkwH9QTZLHY"
 ORIGEM_UPLOAD = "android:apk-key-hash:VK67sCdxC-oBwEdTRtsXjGZPcxFB3YyUuohP0jilJk0"
 ORIGEM_DEBUG_STAGING = "android:apk-key-hash:05haVpcS9Tr4n5ZkaJwGYowtzEhHIQzQyLWHvcYYnKg"  # a de debug do notebook (fase0.md M5)
+PACOTE = "com.bertoldo.physiqcalc"  # o que o Android põe no clientDataJSON do registro (só nele)
 
 
 def b64u(b: bytes) -> str:
@@ -73,13 +76,13 @@ class Autenticador:
 
     @staticmethod
     def _client_data(tipo: str, desafio: str, origem: str, pacote: str | None = None) -> bytes:
-        cd = {"type": tipo, "challenge": desafio, "origin": origem, "crossOrigin": False}
+        cd = {"type": tipo, "challenge": desafio, "origin": origem}  # a ordem e os campos do Android (sem crossOrigin)
         if pacote:
             cd["androidPackageName"] = pacote
         return json.dumps(cd, separators=(",", ":")).encode()
 
-    def registrar(self, opcoes: dict, origem: str | None = None, rp_id: str = RP_ID, up: bool = True, be: bool = True, bs: bool = True,
-                  aaguid: bytes = bytes(16), pacote: str | None = None) -> dict:
+    def registrar(self, opcoes: dict, origem: str | None = None, rp_id: str = RP_ID, up: bool = True, be: bool = True, bs: bool = False,
+                  aaguid: bytes = bytes(16), pacote: str | None = PACOTE) -> dict:
         """A resposta do CreateRestoreCredentialRequest para as opções que a chave-restauracao deu."""
         self.user_handle = opcoes["user"]["id"]
         cd = self._client_data("webauthn.create", opcoes["challenge"], origem or self.origem, pacote)
@@ -88,15 +91,16 @@ class Autenticador:
                 + struct.pack(">H", len(self.cred)) + self.cred + self.cose)
         atestacao = cbor({"fmt": "none", "attStmt": {}, "authData": auth})
         return {"id": self.id, "rawId": self.id, "type": "public-key", "authenticatorAttachment": "platform",
-                "response": {"clientDataJSON": b64u(cd), "attestationObject": b64u(atestacao), "transports": ["internal"]},
+                "response": {"clientDataJSON": b64u(cd), "attestationObject": b64u(atestacao), "transports": ["internal", "hybrid"],
+                             "publicKeyAlgorithm": -7, "publicKey": b64u(self.cose)},
                 "clientExtensionResults": {}}
 
-    def entrar(self, desafio: str, origem: str | None = None, rp_id: str = RP_ID, contador: int = 0, up: bool = True,
+    def entrar(self, desafio: str, origem: str | None = None, rp_id: str = RP_ID, contador: int = 0, up: bool = True, be: bool = True,
                user_handle: str | None | bool = True, assinar_com: "Autenticador | None" = None, pacote: str | None = None) -> dict:
         """A resposta do GetRestoreCredentialOption (a assinatura sobre authenticatorData || SHA-256(clientDataJSON)).
         user_handle=True manda o do registro; None não manda; texto manda esse. assinar_com = assina com a chave de OUTRO aparelho."""
         cd = self._client_data("webauthn.get", desafio, origem or self.origem, pacote)
-        auth = hashlib.sha256(rp_id.encode()).digest() + bytes([0x01 if up else 0x00]) + struct.pack(">I", contador)
+        auth = hashlib.sha256(rp_id.encode()).digest() + bytes([(0x01 if up else 0) | (0x08 if be else 0)]) + struct.pack(">I", contador)
         quem = assinar_com.chave if assinar_com else self.chave
         assinatura = quem.sign(auth + hashlib.sha256(cd).digest(), ec.ECDSA(hashes.SHA256()))
         handle = self.user_handle if user_handle is True else user_handle
