@@ -124,7 +124,7 @@ export function lerMarcaChave(uid: string): MarcaChave | null {
   try {
     const v = JSON.parse(bruto) as { em?: unknown; id?: unknown; sessao?: unknown };
     const em = typeof v.em === "number" && Number.isFinite(v.em) ? v.em : 0;
-    const id = typeof v.id === "string" && /^[A-Za-z0-9_-]{16,1400}$/.test(v.id) ? v.id : null;
+    const id = typeof v.id === "string" && /^[A-Za-z0-9_-]{16,128}$/.test(v.id) ? v.id : null;
     const sessao = typeof v.sessao === "string" && v.sessao ? v.sessao : null;
     return { em, id, sessao };
   } catch {
@@ -273,8 +273,12 @@ async function chamarChave(corpo: Record<string, unknown>): Promise<RespostaChav
   }
 }
 
-/** A recusa da chave-restauracao é definitiva para este build/conta (pausa 7 dias)? */
-const recusaDefinitiva = (erro: string) => erro === "chave_invalida" || erro === "dados_invalidos" || erro === "conta_real_no_staging";
+/**
+ * A recusa da chave-restauracao é definitiva para este build/conta (pausa 7 dias)? O precisa_2fa (conta com 2 etapas fora do aal2) e o
+ * muitas_tentativas não: na próxima abertura (com o código / passado o teto) a chave sai.
+ */
+const recusaDefinitiva = (erro: string) =>
+  erro === "chave_invalida" || erro === "dados_invalidos" || erro === "conta_real_no_staging" || erro === "conta_master";
 
 type RespostaRestaurar = { status: number; corpo: Record<string, unknown> } | { rede: true };
 

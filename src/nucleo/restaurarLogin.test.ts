@@ -359,6 +359,20 @@ describe("garantirChave — criar a chave com sessão", () => {
     expect(localStorage.getItem(MARCA_PAUSA)).not.toBeNull();
   });
 
+  it("o servidor recusa o master (conta_master): pausa; a conta com 2 etapas fora do aal2 (precisa_2fa) e o teto (429): não pausam", async () => {
+    const recusa = (erro: string, status: number) => ({
+      data: null, error: { name: "FunctionsHttpError", context: new Response(JSON.stringify({ ok: false, erro }), { status }) },
+    });
+    for (const [erro, status] of [["precisa_2fa", 403], ["muitas_tentativas", 429]] as const) {
+      h.invoke.mockResolvedValue(recusa(erro, status));
+      expect(await garantirChave(UID)).toBe("erro");
+      expect(localStorage.getItem(MARCA_PAUSA), erro).toBeNull();
+    }
+    h.invoke.mockResolvedValue(recusa("conta_master", 403));
+    expect(await garantirChave(UID)).toBe("erro");
+    expect(localStorage.getItem(MARCA_PAUSA)).not.toBeNull();
+  });
+
   it("a rede caindo (FunctionsFetchError): só log — sem marca e sem pausa (tenta na próxima)", async () => {
     h.invoke.mockResolvedValue({ data: null, error: { name: "FunctionsFetchError", message: "Failed to send a request" } });
     expect(await garantirChave(UID)).toBe("erro");

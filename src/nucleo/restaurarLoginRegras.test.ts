@@ -18,14 +18,17 @@ import {
   RP_ID,
   STATUS_DA_RECUSA,
   TOLERANCIA,
+  VIDA_DO_DESAFIO_S,
   base64urlParaBytes,
   bytesParaBase64url,
   bytesParaHex,
   clientDataDe,
+  conferirDesafioEntrar,
   conferirEntrada,
   contadorDaResposta,
   conferirRegistro,
   credencialValida,
+  criarDesafioEntrar,
   desafioDaResposta,
   hexParaBytes,
   lerPedidoApagar,
@@ -40,6 +43,7 @@ import {
   origensDoSchema,
   recusaDaPessoa,
   refDaChave,
+  segredoDoDesafio,
   sessaoParaApp,
   textoDoAparelho,
   userHandleDe,
@@ -189,7 +193,9 @@ describe("restaurar-login — o que o app manda (leitura)", () => {
     expect(lerPedidoApagar({ todas: "true" })).toBeNull();
     expect(lerPedidoApagar({ credencial: "curta" })).toBeNull();
     expect(lerPedidoApagar({})).toBeNull();
-    expect(credencialValida("A".repeat(1401))).toBe(false);
+    // o id da chave: 16 a 128 caracteres (o Android manda 43 — fase 0; o banco aceita o mesmo — revisão, achado 3)
+    expect(credencialValida("A".repeat(128))).toBe(true);
+    expect(credencialValida("A".repeat(129))).toBe(false);
   });
 });
 
@@ -483,6 +489,46 @@ describe("restaurar-login — as respostas REAIS do Android (fase 0: emulador Go
   });
 });
 
+describe("restaurar-login — o desafio de entrar SEM ESTADO (revisão de segurança, achado 4)", () => {
+  const SEG = segredoDoDesafio(bytesParaBase64url(new Uint8Array(32).fill(42)))!;
+  const AGORA = 1_793_333_000;
+
+  it("43 caracteres (32 bytes: validade + aleatório + HMAC); confere com o mesmo segredo e schema e devolve a validade", async () => {
+    const d = await criarDesafioEntrar(SEG, "staging", AGORA);
+    expect(d).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(await conferirDesafioEntrar(d, SEG, "staging", AGORA + 10)).toEqual({ ok: true, expiraEm: AGORA + VIDA_DO_DESAFIO_S });
+    // 2 desafios do mesmo segundo são diferentes (o aleatório)
+    expect(await criarDesafioEntrar(SEG, "staging", AGORA)).not.toBe(d);
+    // determinístico com o mesmo aleatório (a marca é o HMAC)
+    const fixo = new Uint8Array(12).fill(3);
+    expect(await criarDesafioEntrar(SEG, "staging", AGORA, fixo)).toBe(await criarDesafioEntrar(SEG, "staging", AGORA, fixo));
+  });
+
+  it("recusa: outro segredo, outro schema, um bit mexido (na validade, no aleatório ou na marca), vencido e fora do formato", async () => {
+    const d = await criarDesafioEntrar(SEG, "staging", AGORA);
+    const outro = segredoDoDesafio(bytesParaBase64url(new Uint8Array(32).fill(7)))!;
+    expect(await conferirDesafioEntrar(d, outro, "staging", AGORA)).toEqual({ ok: false, motivo: "assinatura" });
+    expect(await conferirDesafioEntrar(d, SEG, "public", AGORA)).toEqual({ ok: false, motivo: "assinatura" });
+    for (const i of [0, 3, 4, 15, 16, 31]) {
+      const b = base64urlParaBytes(d)!;
+      b[i] ^= 0x01;
+      expect(await conferirDesafioEntrar(bytesParaBase64url(b), SEG, "staging", AGORA), `byte ${i}`).toEqual({ ok: false, motivo: "assinatura" });
+    }
+    expect(await conferirDesafioEntrar(d, SEG, "staging", AGORA + VIDA_DO_DESAFIO_S)).toEqual({ ok: false, motivo: "vencido" });
+    expect(await conferirDesafioEntrar(d, SEG, "staging", AGORA - 10)).toEqual({ ok: false, motivo: "vencido" }); // validade longa demais
+    expect(await conferirDesafioEntrar("curto", SEG, "staging", AGORA)).toEqual({ ok: false, motivo: "formato" });
+    expect(await conferirDesafioEntrar("+".repeat(43), SEG, "staging", AGORA)).toEqual({ ok: false, motivo: "formato" });
+  });
+
+  it("o segredo: base64url de 32 bytes ou mais; menos, vazio ou fora do formato = falta (a função responde 503)", () => {
+    expect(segredoDoDesafio(bytesParaBase64url(new Uint8Array(32)))).toHaveLength(32);
+    expect(segredoDoDesafio(bytesParaBase64url(new Uint8Array(31)))).toBeNull();
+    expect(segredoDoDesafio("")).toBeNull();
+    expect(segredoDoDesafio(undefined)).toBeNull();
+    expect(segredoDoDesafio("não é base64url")).toBeNull();
+  });
+});
+
 describe("restaurar-login — a trava, a pessoa e a sessão", () => {
   it("a trava falha fechada: só liga com ligado = true; o so_teste só sai com false explícito", () => {
     expect(lerTrava({ ligado: true, so_teste: false })).toEqual({ ligado: true, soTeste: false });
@@ -503,8 +549,17 @@ describe("restaurar-login — a trava, a pessoa e a sessão", () => {
     expect(recusaDaPessoa({ ...real, banned_until: "2027-01-01T00:00:00Z" }, { schema: "public", soTeste: false, agora })).toBe("acesso_desativado");
     expect(recusaDaPessoa({ ...real, banned_until: "2026-01-01T00:00:00Z" }, { schema: "public", soTeste: false, agora })).toBeNull();
     expect(recusaDaPessoa({ ...real, email_confirmed_at: null }, { schema: "public", soTeste: false, agora })).toBe("email_nao_confirmado");
+    // o confirmed_at do GoTrue também vem do TELEFONE confirmado: não basta (revisão, achado 7)
+    expect(recusaDaPessoa({ ...real, email_confirmed_at: null, confirmed_at: "2026-10-01T00:00:00Z" }, { schema: "public", soTeste: false, agora }))
+      .toBe("email_nao_confirmado");
+    // o master não tem chave de volta (revisão, achado 2)
+    expect(recusaDaPessoa({ ...real, app_metadata: { role: "master" } }, { schema: "public", soTeste: false, agora })).toBe("conta_master");
+    expect(recusaDaPessoa({ ...teste, app_metadata: { role: "master" } }, { schema: "staging", soTeste: true, agora })).toBe("conta_master");
     expect(recusaDaPessoa(null, { schema: "public", soTeste: false, agora })).toBe("chave_invalida");
-    expect(STATUS_DA_RECUSA).toMatchObject({ chave_invalida: 401, conta_real_no_staging: 403, acesso_desativado: 403, email_nao_confirmado: 403, desligado: 200 });
+    expect(STATUS_DA_RECUSA).toMatchObject({
+      chave_invalida: 401, conta_real_no_staging: 403, acesso_desativado: 403, email_nao_confirmado: 403, conta_master: 403, desligado: 200,
+      muitas_tentativas: 429,
+    });
   });
 
   it("a sessão para o app: os tokens e SÓ o id (nada do e-mail); de outra pessoa ou sem token → null", () => {

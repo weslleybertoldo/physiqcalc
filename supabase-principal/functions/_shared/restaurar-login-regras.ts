@@ -21,7 +21,7 @@
 // attestationObject. Tudo no objeto TOLERANCIA (mudar = trocar 1 valor; cada ponto tem teste, inclusive com as respostas REAIS do Android).
 // RÍGIDO sempre: o desafio de uso único (o banco), a origem na lista, o RP ID, a assinatura e a chave não apagada (o banco).
 // Para fora, toda recusa da conferência vira 401 chave_invalida (sem oráculo); o motivo exato vai só para o log (MotivoConferencia).
-import { emailConfirmado, emailDeTeste, type UsuarioAuth } from "./login-regras.ts";
+import { emailDeTeste, type UsuarioAuth } from "./login-regras.ts";
 import type { Schema } from "./master-regras.ts";
 
 /** O RP ID das chaves de volta nos 2 schemas (o Auth é um só). Trocar inutiliza as chaves guardadas: escolhido uma vez. */
@@ -149,8 +149,11 @@ export function opcoesDeEntrada(desafio: string) {
 
 // ───────────────────────── o que o app manda ─────────────────────────
 
-/** Tamanhos máximos (caracteres base64url): o id da chave (até 1023 bytes), o clientDataJSON, a atestação, o authData e a assinatura. */
-export const LIMITES = { id: 1400, clientData: 4096, atestacao: 16384, authData: 4096, assinatura: 1024, userHandle: 128 } as const;
+/**
+ * Tamanhos máximos (caracteres base64url): o id da chave (o Android manda 32 bytes = 43 caracteres — fase 0; até 128, como o banco), o
+ * clientDataJSON, a atestação, o authData e a assinatura.
+ */
+export const LIMITES = { id: 128, clientData: 4096, atestacao: 16384, authData: 4096, assinatura: 1024, userHandle: 128 } as const;
 /** O corpo máximo dos 2 pedidos (bytes). */
 export const LIMITE_CORPO = 32_768;
 /** O desafio: base64url de 32 bytes (43 caracteres). */
@@ -161,7 +164,7 @@ const objeto = (v: unknown): Record<string, unknown> | null =>
 const b64u = (v: unknown, min: number, max: number): v is string =>
   typeof v === "string" && v.length >= min && v.length <= max && /^[A-Za-z0-9_-]+$/.test(v);
 
-/** O id de uma chave (base64url, 16 a 1400 caracteres). */
+/** O id de uma chave (base64url, 16 a 128 caracteres). */
 export function credencialValida(v: unknown): v is string {
   return b64u(v, 16, LIMITES.id);
 }
@@ -470,6 +473,70 @@ export async function conferirEntrada(
   return { ok: true, novoContador: Number.isInteger(novo) && novo >= 0 ? novo : 0, origem: cd.origem };
 }
 
+// ───────────────────────── o desafio de ENTRAR sem estado (revisão de segurança, achado 4) ─────────────────────────
+
+/** O desafio de entrar vale 5 minutos (o mesmo de antes, no banco). */
+export const VIDA_DO_DESAFIO_S = 300;
+
+/** O segredo do desafio (RESTAURAR_LOGIN_SEGREDO: base64url de 32 bytes ou mais, só nos segredos das funções) → bytes; null = falta. */
+export function segredoDoDesafio(valor: string | null | undefined): Uint8Array | null {
+  const b = base64urlParaBytes((valor ?? "").trim());
+  return b && b.length >= 32 ? b : null;
+}
+
+async function marcaDoDesafio(segredo: Uint8Array, schema: Schema, corpo: Uint8Array): Promise<Uint8Array> {
+  const chave = await crypto.subtle.importKey("raw", segredo, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const dados = new Uint8Array([...new TextEncoder().encode(schema), 0, ...corpo]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", chave, dados)).slice(0, 16);
+}
+
+/**
+ * Cria o desafio de entrar SEM gravar nada: 32 bytes = validade (4, segundos unix, big-endian) + aleatório (12) + HMAC-SHA256(segredo,
+ * schema ‖ 0 ‖ validade ‖ aleatório) cortado em 16 → base64url de 43 caracteres (o formato de sempre). Quem não tem conta não enche tabela
+ * nenhuma; o desafio só é gasto (a chave primária, no banco) depois da assinatura conferida.
+ */
+export async function criarDesafioEntrar(
+  segredo: Uint8Array,
+  schema: Schema,
+  agoraS: number = Math.floor(Date.now() / 1000),
+  aleatorio: Uint8Array = crypto.getRandomValues(new Uint8Array(12)),
+): Promise<string> {
+  const validade = agoraS + VIDA_DO_DESAFIO_S;
+  const corpo = new Uint8Array(16);
+  new DataView(corpo.buffer).setUint32(0, validade >>> 0, false);
+  corpo.set(aleatorio.slice(0, 12), 4);
+  const marca = await marcaDoDesafio(segredo, schema, corpo);
+  const tudo = new Uint8Array(32);
+  tudo.set(corpo, 0);
+  tudo.set(marca, 16);
+  return bytesParaBase64url(tudo);
+}
+
+export type ConferenciaDoDesafio = { ok: true; expiraEm: number } | { ok: false; motivo: "formato" | "assinatura" | "vencido" };
+
+/**
+ * O desafio de entrar é nosso, deste schema, e não venceu? Compara a marca em tempo constante. `expiraEm` (segundos unix) vai com o
+ * desafio gasto para o banco (a limpeza).
+ */
+export async function conferirDesafioEntrar(
+  desafio: string,
+  segredo: Uint8Array,
+  schema: Schema,
+  agoraS: number = Math.floor(Date.now() / 1000),
+): Promise<ConferenciaDoDesafio> {
+  const b = RE_DESAFIO.test(desafio) ? base64urlParaBytes(desafio) : null;
+  if (!b || b.length !== 32) return { ok: false, motivo: "formato" };
+  const corpo = b.slice(0, 16);
+  const esperada = await marcaDoDesafio(segredo, schema, corpo);
+  let dif = 0;
+  for (let i = 0; i < 16; i++) dif |= esperada[i] ^ b[16 + i];
+  if (dif !== 0) return { ok: false, motivo: "assinatura" };
+  const validade = new DataView(corpo.buffer, corpo.byteOffset, 4).getUint32(0, false);
+  // vencido, ou com uma validade mais longa do que a função dá (só ela assina: não acontece)
+  if (validade <= agoraS || validade > agoraS + VIDA_DO_DESAFIO_S + 5) return { ok: false, motivo: "vencido" };
+  return { ok: true, expiraEm: validade };
+}
+
 // ───────────────────────── a trava, a pessoa e a sessão ─────────────────────────
 
 export interface Trava {
@@ -489,20 +556,24 @@ export interface UsuarioDaChave extends UsuarioAuth {
   banned_until?: string | null;
 }
 
-export type RecusaDaPessoa = "chave_invalida" | "conta_real_no_staging" | "desligado" | "acesso_desativado" | "email_nao_confirmado";
+export type RecusaDaPessoa =
+  | "chave_invalida" | "conta_real_no_staging" | "desligado" | "acesso_desativado" | "email_nao_confirmado" | "conta_master";
 
 /**
- * A pessoa pode entrar pela chave? Staging só conta de TESTE (P26); com o so_teste, só conta de teste (as outras: desligado); desativada
- * (banida) não entra; e-mail não confirmado não entra — o link de uso único CONFIRMARIA o e-mail (o /verify do Auth confirma).
+ * A pessoa pode entrar pela chave? Staging só conta de TESTE (P26); com o so_teste, só conta de teste (as outras: desligado); o master não
+ * (o papel no Auth — o banco confere também o perfil: revisão, achado 2); desativada (banida) não entra; e-mail não confirmado não entra —
+ * o link de uso único CONFIRMARIA o e-mail. Aqui vale SÓ o email_confirmed_at: o confirmed_at do GoTrue também vem do telefone (achado 7;
+ * a regra compartilhada dos outros logins não muda).
  */
 export function recusaDaPessoa(u: UsuarioDaChave | null, o: { schema: Schema; soTeste: boolean; agora?: number }): RecusaDaPessoa | null {
   if (!u || typeof u.id !== "string" || !UUID.test(u.id)) return "chave_invalida";
   const teste = emailDeTeste(u.email);
   if (o.schema === "staging" && !teste) return "conta_real_no_staging";
   if (o.soTeste && !teste) return "desligado";
+  if ((u.app_metadata as { role?: unknown } | null | undefined)?.role === "master") return "conta_master";
   const ban = u.banned_until ? Date.parse(u.banned_until) : NaN;
   if (Number.isFinite(ban) && ban > (o.agora ?? Date.now())) return "acesso_desativado";
-  if (!emailConfirmado(u)) return "email_nao_confirmado";
+  if (!(u.email && u.email.trim()) || !u.email_confirmed_at) return "email_nao_confirmado";
   return null;
 }
 
@@ -512,6 +583,7 @@ export const STATUS_DA_RECUSA: Record<RecusaDaPessoa | "muitas_tentativas" | "in
   conta_real_no_staging: 403,
   acesso_desativado: 403,
   email_nao_confirmado: 403,
+  conta_master: 403,
   desligado: 200,
   muitas_tentativas: 429,
   indisponivel: 503,
