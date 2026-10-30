@@ -14,9 +14,10 @@
 //                         → 200 { ok: true, apagadas } (o Sair — D3: todas as chaves da pessoa; o Sair local: a deste aparelho). NÃO olha a
 //                           trava: apagar vale sempre.
 // Recusas: 200 { ok: false, erro: "desligado" } (a trava app_config.restaurar_login desligada; o so_teste com conta que não é de teste; o
-//          schema sem a migração — a RPC não existe: falha fechada) · 400 chave_invalida (a conferência ou o desafio; o motivo exato só no
-//          log) · dados_invalidos · acao_invalida · 403 conta_real_no_staging · conta_master (o master não tem chave) · precisa_2fa (conta
-//          com 2 etapas fora do aal2) · 409 chave_repetida · 429 muitas_tentativas (20 registros em 24 h) · 401 sem_login (a sessão do JWT
+//          schema sem a migração — a RPC não existe: falha fechada) · 400 chave_invalida (a conferência; o motivo exato só no log) ·
+//          dados_invalidos · acao_invalida · 409 desafio_vencido (o desafio venceu ou já foi usado: passageiro — o app pede de novo) ·
+//          403 conta_real_no_staging · conta_master (o master não tem chave) · precisa_2fa (conta com 2 etapas fora do aal2) ·
+//          409 chave_repetida · 429 muitas_tentativas (20 registros em 24 h) · 401 sem_login (a sessão do JWT
 //          não existe no Auth) · e as da porta: 400 schema_invalido, 401 sem_login, 405 metodo, 413 corpo_grande, 429 muitas_acoes, 500
 //          erro_interno. A chave fica AMARRADA à sessão de quem registra (o session_id do JWT): o Sair, a revogação e a troca de senha a
 //          matam junto (revisão de segurança, achado 1).
@@ -48,7 +49,9 @@ const RECUSAS: Record<string, [string, number]> = {
   precisa_2fa: ["precisa_2fa", 403],
   muitas_tentativas: ["muitas_tentativas", 429],
   sem_login: ["sem_login", 401],
-  desafio_invalido: ["chave_invalida", 400],
+  // o desafio de registro que venceu ou já foi usado (o app parado entre o opcoes e o registrar; o 6º desafio vivo): passageiro — o app
+  // pede de novo na hora, sem a pausa de 7 dias (2ª revisão, achado 3)
+  desafio_invalido: ["desafio_vencido", 409],
   dados_invalidos: ["dados_invalidos", 400],
   chave_repetida: ["chave_repetida", 409],
 };

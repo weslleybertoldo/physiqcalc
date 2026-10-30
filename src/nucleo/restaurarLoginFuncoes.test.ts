@@ -378,37 +378,39 @@ describe("restaurar-login — o caminho inteiro (registrar → entrar → sessã
 });
 
 describe("restaurar-login — o desafio, a origem, a assinatura e a chave apagada", () => {
-  it("o desafio não repete: a MESMA resposta de novo → 401 chave_invalida (o desafio já foi gasto)", async () => {
+  it("o desafio não repete: a MESMA resposta de novo → 409 desafio_invalido (gasto; NÃO é 401, que apagaria a chave — 2ª revisão)", async () => {
     const a = await criarAutenticador(ORIGEM_PLAY);
     await registrar(a);
     const resposta = await a.entrar(await opcoesDeEntrar());
     expect((await entrar(resposta)).status).toBe(200);
     const de2 = await entrar(resposta);
-    expect(de2.status).toBe(401);
-    expect(await corpoDe(de2)).toEqual({ ok: false, erro: "chave_invalida" });
+    expect(de2.status).toBe(409);
+    expect(await corpoDe(de2)).toEqual({ ok: false, erro: "desafio_invalido" });
     expect(codigosDoLog()).toContain("desafio_ja_usado");
     expect(auth.chamadas).toHaveLength(2); // só a 1ª emitiu sessão
   });
 
-  it("origem errada e assinatura de outra chave → 401 SEM gastar o desafio (só a assinatura conferida gasta): a resposta certa com ele entra", async () => {
+  it("origem errada e assinatura de outra chave → 403 conferencia_falhou (não 401) SEM gastar o desafio: a resposta certa com ele entra", async () => {
     const a = await criarAutenticador(ORIGEM_PLAY);
     const b = await criarAutenticador(ORIGEM_PLAY);
     await registrar(a);
     const d1 = await opcoesDeEntrar();
     const r1 = await entrar(await a.entrar(d1, { origem: ORIGEM_FALSA }));
-    expect([r1.status, (await corpoDe(r1)).erro]).toEqual([401, "chave_invalida"]);
+    expect([r1.status, (await corpoDe(r1)).erro]).toEqual([403, "conferencia_falhou"]);
     const certa = await a.entrar(d1);
     const daOutra = await b.entrar(d1, { userHandle: userHandleDe(LIA) });
     const falsa = { ...certa, response: { ...(certa.response as object), signature: (daOutra.response as { signature: string }).signature } };
-    expect((await entrar(falsa)).status).toBe(401);
-    expect(codigosDoLog()).toEqual(expect.arrayContaining(["origem_invalida", "assinatura_invalida"]));
+    expect((await entrar(falsa)).status).toBe(403);
+    // sem o UP (o bit tirado: a conferência recusa antes da assinatura) também 403
+    expect((await entrar(await a.entrar(d1, { up: false }))).status).toBe(403);
+    expect(codigosDoLog()).toEqual(expect.arrayContaining(["origem_invalida", "assinatura_invalida", "presenca_ausente"]));
     expect(auth.chamadas).toHaveLength(0);
     expect([...banco.desafios.values()].filter((d) => d.tipo === "entrar")).toHaveLength(0);
     expect((await entrar(certa)).status).toBe(200);
-    expect((await entrar(certa)).status).toBe(401); // e agora sim: gasto
+    expect((await entrar(certa)).status).toBe(409); // e agora sim: gasto (409, não 401 — a chave segue valendo)
   });
 
-  it("o desafio de entrar é SEM ESTADO: o opcoes não chama o banco; o desafio de outro segredo, de outro schema, mexido ou vencido → 401", async () => {
+  it("o desafio de entrar é SEM ESTADO: o opcoes não chama o banco; o desafio de outro segredo, de outro schema, mexido ou vencido → 409", async () => {
     const a = await criarAutenticador(ORIGEM_PLAY);
     await registrar(a);
     banco.rpcs = [];
@@ -425,7 +427,7 @@ describe("restaurar-login — o desafio, a origem, a assinatura e a chave apagad
     })();
     for (const x of [outroSegredo, doPublic, vencido, mexido]) {
       const r = await entrar(await a.entrar(x));
-      expect([r.status, (await corpoDe(r)).erro]).toEqual([401, "chave_invalida"]);
+      expect([r.status, (await corpoDe(r)).erro]).toEqual([409, "desafio_invalido"]);
     }
     expect(codigosDoLog()).toEqual(expect.arrayContaining(["desafio_assinatura", "desafio_vencido"]));
     // nada disso chegou ao banco: o desafio que não é nosso nem consulta a chave
@@ -464,12 +466,14 @@ describe("restaurar-login — o desafio, a origem, a assinatura e a chave apagad
     expect((await entrar(await o.entrar(await opcoesDeEntrar()))).status).toBe(200);
   });
 
-  it("o userHandle de outra pessoa e o id de uma chave desconhecida → 401", async () => {
+  it("o userHandle de outra pessoa → 403 conferencia_falhou; o id de uma chave desconhecida → 401 chave_invalida (a única que apaga)", async () => {
     const a = await criarAutenticador(ORIGEM_PLAY);
     await registrar(a);
-    expect((await entrar(await a.entrar(await opcoesDeEntrar(), { userHandle: userHandleDe(OTTO) }))).status).toBe(401);
+    const r = await entrar(await a.entrar(await opcoesDeEntrar(), { userHandle: userHandleDe(OTTO) }));
+    expect([r.status, (await corpoDe(r)).erro]).toEqual([403, "conferencia_falhou"]);
     const nunca = await criarAutenticador(ORIGEM_PLAY);
-    expect((await entrar(await nunca.entrar(await opcoesDeEntrar()))).status).toBe(401);
+    const r2 = await entrar(await nunca.entrar(await opcoesDeEntrar()));
+    expect([r2.status, (await corpoDe(r2)).erro]).toEqual([401, "chave_invalida"]);
   });
 });
 
@@ -479,11 +483,12 @@ describe("chave-restauracao — o registro (como a pessoa)", () => {
     expect((op.opcoes as { user: { id: string } }).user.id).toBe(userHandleDe(LIA));
     const a = await criarAutenticador(ORIGEM_PLAY);
     const resposta = await a.registrar(op.opcoes as { challenge: string; user: { id: string } });
+    // o desafio de outra pessoa ou já usado é "desafio_vencido" (409, passageiro: o app pede de novo — 2ª revisão, achado 3)
     const doOtto = await pedir(f.chave, { acao: "registrar", resposta }, { token: TOKEN[OTTO] });
-    expect([doOtto.status, (await corpoDe(doOtto)).erro]).toEqual([400, "chave_invalida"]);
+    expect([doOtto.status, (await corpoDe(doOtto)).erro]).toEqual([409, "desafio_vencido"]);
     expect((await pedir(f.chave, { acao: "registrar", resposta }, { token: TOKEN[LIA] })).status).toBe(200);
     const de2 = await pedir(f.chave, { acao: "registrar", resposta }, { token: TOKEN[LIA] });
-    expect([de2.status, (await corpoDe(de2)).erro]).toEqual([400, "chave_invalida"]);
+    expect([de2.status, (await corpoDe(de2)).erro]).toEqual([409, "desafio_vencido"]);
     expect(banco.chaves.size).toBe(1);
   });
 

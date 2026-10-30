@@ -485,7 +485,9 @@ export function segredoDoDesafio(valor: string | null | undefined): Uint8Array |
 }
 
 async function marcaDoDesafio(segredo: Uint8Array, schema: Schema, corpo: Uint8Array): Promise<Uint8Array> {
-  const chave = await crypto.subtle.importKey("raw", segredo, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  // a cópia é Uint8Array<ArrayBuffer>: o importKey do Deno 2.5 (TS 5.9) recusa o Uint8Array genérico (TS2769 no deno check; o mesmo
+  // caso do pemParaDer e do cifra-mp) — só o tipo muda
+  const chave = await crypto.subtle.importKey("raw", new Uint8Array(segredo), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const dados = new Uint8Array([...new TextEncoder().encode(schema), 0, ...corpo]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", chave, dados)).slice(0, 16);
 }
@@ -577,9 +579,20 @@ export function recusaDaPessoa(u: UsuarioDaChave | null, o: { schema: Schema; so
   return null;
 }
 
-/** O HTTP de cada recusa de quem entra (desligado é um estado da trava: 200 com ok false). */
-export const STATUS_DA_RECUSA: Record<RecusaDaPessoa | "muitas_tentativas" | "indisponivel" | "dados_invalidos", number> = {
+/**
+ * O HTTP de cada recusa de quem entra (desligado é um estado da trava: 200 com ok false). O 401 é SÓ "a chave não vale mais" (não existe,
+ * apagada, vencida, a sessão dela acabou, a senha foi trocada, a dona saiu) — é o único que faz o app apagar a chave do aparelho e do backup
+ * (2ª revisão, achado 2). O desafio repetido, vencido ou de outro segredo é 409 (o app tenta na próxima abertura); a resposta do Android que
+ * não confere (assinatura, UP, contador, origem, RP) é 403 conferencia_falhou (o app NÃO apaga: espera 7 dias). Códigos distintos não abrem
+ * enumeração útil: o 403 só aparece com um id de chave ATIVA, que é aleatório de 32 bytes, e o freio por IP e o de 3 por chave seguem.
+ */
+export const STATUS_DA_RECUSA: Record<
+  RecusaDaPessoa | "muitas_tentativas" | "indisponivel" | "dados_invalidos" | "desafio_invalido" | "conferencia_falhou",
+  number
+> = {
   chave_invalida: 401,
+  desafio_invalido: 409,
+  conferencia_falhou: 403,
   conta_real_no_staging: 403,
   acesso_desativado: 403,
   email_nao_confirmado: 403,

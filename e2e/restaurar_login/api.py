@@ -14,11 +14,12 @@ Casos (o pedido A, peça 6):
              limpeza (13 meses da criação) e o gatilho (senha trocada, conta excluída)
   registrar  a Lia entra (senha) → chave-restauracao opcoes → o autenticador cria → registrar → a linha no banco
   entrar     restaurar-login opcoes → o autenticador assina → entrar → a sessão VALE no Auth (/auth/v1/user = a Lia; o refresh gira; AMR otp)
-  desafio    a MESMA resposta de novo → 401 (o desafio não repete)
-  erradas    origem errada, assinatura de outra chave, RP de outro site, userHandle de outra pessoa → 401; o desafio NÃO é gasto por elas
+  desafio    a MESMA resposta de novo → 409 desafio_invalido (o desafio não repete; não é 401, que faria o app apagar a chave)
+  erradas    origem errada, assinatura de outra chave, RP de outro site, userHandle de outra pessoa → 403 conferencia_falhou; o desafio
+             NÃO é gasto por elas; a chave que nunca foi registrada → 401 chave_invalida (o único 401: a chave não vale)
              (só depois da assinatura conferida): a resposta certa com ele entra
-  sem_estado o desafio de entrar não grava nada no banco (HMAC na função); mexido ou inventado → 401
-  tolerante  a conferência pelo MEDIDO na fase 0 (TOLERANCIA nas regras): sem o UP RECUSA (401); contador 0 depois de 5 entra, 3 depois
+  sem_estado o desafio de entrar não grava nada no banco (HMAC na função); mexido ou inventado → 409
+  tolerante  a conferência pelo MEDIDO na fase 0 (TOLERANCIA nas regras): sem o UP RECUSA (403); contador 0 depois de 5 entra, 3 depois
              de 5 não (clone); AAGUID não zerado + androidPackageName + a origem de debug do notebook (só staging) registram e entram
   limite     no máximo 3 entradas por chave por hora: a 4ª → 429 (nunca 401)
   sessao     a sessão que registrou a chave encerrada (logout) → a chave → 401
@@ -315,7 +316,9 @@ def caso_sql() -> None:
     # 5. o servidor: a chave ativa com a sessão viva; o desafio gasto 1 vez só depois da assinatura (restauracao_gastar); 3 por hora;
     #    o contador que só sobe; a limpeza; o gatilho (senha trocada e conta excluída); a origem no formato
     r = resultado(desfeito(f"""declare k1 jsonb; k2 jsonb; k3 jsonb; g1 jsonb; g2 jsonb; g3 jsonb; g4 jsonb; g5 jsonb; g6 jsonb; gv jsonb; lp jsonb;
-      cont bigint; usos int; resto int; origem_ruim text; senha text; excluida text; d1 text := repeat('a', 43); d2 text := repeat('b', 43);
+      cont bigint; usos int; resto int; origem_ruim text; aparelho_ruim text; aparelho_limpo text; versao_ruim text; versao_limpa text;
+      sem_tabela text; gv2 jsonb; dd text;
+      senha text; excluida text; d1 text := repeat('a', 43); d2 text := repeat('b', 43);
       d3 text := repeat('c', 43); d4 text := repeat('d', 43); d5 text := repeat('e', 43);
     begin
       insert into staging.chaves_restauracao (user_id, credencial_id, chave_publica, algoritmo, origem, sessao_id)
@@ -357,8 +360,38 @@ def caso_sql() -> None:
       select motivo_apagada into senha from staging.chaves_restauracao where credencial_id = 'cred-srv-senha-00000';
       update auth.users set deleted_at = now() where id = '{otto}';
       select motivo_apagada into excluida from staging.chaves_restauracao where credencial_id = 'cred-srv-otto-000000';
+      -- 2ª revisão (achado 8): o aparelho com caractere de controle — a tabela recusa; a RPC direta limpa
+      begin
+        insert into staging.chaves_restauracao (user_id, credencial_id, chave_publica, algoritmo, origem, sessao_id, aparelho)
+          values ('{lia}', 'cred-srv-ctrl-000000', {CHAVE_SQL}, -7, '{ORIGEM_PLAY}', '{sid_lia}', 'Moto' || chr(10) || 'G');
+        aparelho_ruim := 'ENTROU';
+      exception when check_violation then aparelho_ruim := 'recusado';
+      end;
+      begin
+        insert into staging.chaves_restauracao (user_id, credencial_id, chave_publica, algoritmo, origem, sessao_id, versao_app)
+          values ('{lia}', 'cred-srv-ctrl-versao', {CHAVE_SQL}, -7, '{ORIGEM_PLAY}', '{sid_lia}', '3.1' || chr(9) || '39');
+        versao_ruim := 'ENTROU';
+      exception when check_violation then versao_ruim := 'recusado';
+      end;
+      {como('authenticated', lia, sid_lia)}
+      dd := staging.chave_restauracao_desafio() ->> 'desafio';
+      gv2 := staging.chave_restauracao_gravar(dd, 'cred-srv-limpo-00000', {CHAVE_SQL}, 0, -7, '{ORIGEM_PLAY}',
+                                              p_aparelho => 'Moto' || chr(10) || chr(7) || ' G(7)' || chr(27) || '[31m',
+                                              p_versao => '3.1' || chr(9) || '39' || chr(13));
+      execute 'reset role';
+      select aparelho, versao_app into aparelho_limpo, versao_limpa from staging.chaves_restauracao where credencial_id = 'cred-srv-limpo-00000';
+      -- 2ª revisão (achado 7): sem a tabela (um "reset" sem a reversa), a troca de senha do Auth inteiro NÃO pode quebrar
+      begin
+        alter table staging.chaves_restauracao rename to chaves_restauracao_sumiu;
+        update auth.users set encrypted_password = encrypted_password || 'z' where id = '{otto}';
+        sem_tabela := 'senha trocada';
+        alter table staging.chaves_restauracao_sumiu rename to chaves_restauracao;
+      exception when others then sem_tabela := 'QUEBROU: ' || sqlerrm;
+      end;
       raise exception 'R:%', jsonb_build_object('k1', k1 - 'chave', 'k2', k2, 'k3', k3, 'g1', g1, 'g2', g2, 'g3', g3, 'g4', g4, 'g5', g5, 'g6', g6,
         'gv', gv, 'contador', cont, 'usos', usos, 'limpeza', lp, 'resto', resto, 'origem_ruim', origem_ruim, 'senha', senha, 'excluida', excluida,
+        'aparelho_ruim', aparelho_ruim, 'gv2', gv2 - 'id', 'aparelho_limpo', aparelho_limpo, 'versao_ruim', versao_ruim,
+        'versao_limpa', versao_limpa, 'sem_tabela', sem_tabela,
         'velha', (select motivo_apagada from staging.chaves_restauracao where credencial_id = 'cred-srv-velha-00000'),
         'b_existe', (select count(*) from staging.chaves_restauracao where credencial_id = 'cred-srv-b-0000000000'));
     end"""))
@@ -377,6 +410,12 @@ def caso_sql() -> None:
     p.check(r.get("resto") == 0 and lp.get("removidas", 0) >= 1 and r.get("b_existe") == 0 and r.get("velha") == "vencida",
             f"[sql] a limpeza: desafios vencidos saem, apagada há 91 dias sai, ativa CRIADA há 14 meses vira 'vencida' mesmo usada ontem ({lp})")
     p.check(r.get("origem_ruim") == "recusada", f"[sql] a tabela só aceita origem android:apk-key-hash: ({r.get('origem_ruim')})")
+    p.check(r.get("aparelho_ruim") == "recusado" and (r.get("gv2") or {}).get("ok") is True and r.get("aparelho_limpo") == "Moto G(7)[31m",
+            f"[sql] o aparelho com caractere de controle: a tabela recusa; a RPC direta limpa ({r.get('aparelho_ruim')} / {r.get('aparelho_limpo')!r})")
+    p.check(r.get("versao_ruim") == "recusado" and r.get("versao_limpa") == "3.139",
+            f"[sql] a versão com caractere de controle: a tabela recusa; a RPC direta limpa ({r.get('versao_ruim')} / {r.get('versao_limpa')!r})")
+    p.check(r.get("sem_tabela") == "senha trocada",
+            f"[sql] sem a tabela (um 'reset' sem a reversa), o gatilho sai quieto e a troca de senha do Auth NÃO quebra ({r.get('sem_tabela')})")
     p.check(r.get("senha") == "senha_trocada" and r.get("excluida") == "conta_excluida",
             f"[sql] o gatilho: a senha trocada → 'senha_trocada'; a conta excluída (soft delete) → 'conta_excluida' (achados 1 e 9) ({r.get('senha')}/{r.get('excluida')})")
     p.check(q(f"select count(*)::int as n from staging.chaves_restauracao where credencial_id like 'cred-s%'")[0]["n"] == 0,
@@ -402,7 +441,8 @@ def caso_registrar() -> None:
             and ln.get("backup_estado") is False and ln.get("aaguid") == "00000000-0000-0000-0000-000000000000" and (ln.get("tam") or 0) > 60,
             f"a linha no staging: dona, ES256, origem da Play, nuvem, aparelho, BE 1 e BS 0 (o medido), AAGUID zerado, a chave COSE ({ln})")
     st, r = chave(s["access_token"], {"acao": "registrar", "resposta": a.registrar(o)})
-    p.check(st == 400 and r.get("erro") == "chave_invalida", f"registrar de novo com o MESMO desafio → 400 chave_invalida ({st} {r})")
+    p.check(st == 409 and r.get("erro") == "desafio_vencido",
+            f"registrar de novo com o MESMO desafio → 409 desafio_vencido (passageiro: o app pede de novo — 2ª revisão) ({st} {r})")
 
 
 def caso_entrar() -> None:
@@ -432,7 +472,8 @@ def caso_entrar() -> None:
 
 def caso_desafio() -> None:
     st, r = entrar(ESTADO["resp_usada"])
-    p.check(st == 401 and r == {"ok": False, "erro": "chave_invalida"}, f"a MESMA resposta de novo → 401 chave_invalida (o desafio não repete) ({st} {r})")
+    p.check(st == 409 and r == {"ok": False, "erro": "desafio_invalido"},
+            f"a MESMA resposta de novo → 409 desafio_invalido (o desafio não repete; não é 401) ({st} {r})")
 
 
 def caso_erradas() -> None:
@@ -448,18 +489,18 @@ def caso_erradas() -> None:
     d = desafio_entrar()
     for nome, fazer in casos:
         st, r = entrar(fazer(d))
-        p.check(st == 401 and r.get("erro") == "chave_invalida", f"{nome} → 401 chave_invalida ({st} {r.get('erro')})")
+        p.check(st == 403 and r.get("erro") == "conferencia_falhou", f"{nome} → 403 conferencia_falhou ({st} {r.get('erro')})")
     # o desafio só é gasto DEPOIS da assinatura conferida (achado 4): as 5 erradas não o queimaram
     st, r = entrar(a.entrar(d))
     p.check(st == 200, f"…e o desafio NÃO foi gasto pelas erradas: a resposta certa com ele entra ({st} {r.get('erro')})")
     nunca = Autenticador(ORIGEM_PLAY)
     nunca.user_handle = user_handle_de(uid("lia"))
     st, r = entrar(nunca.entrar(desafio_entrar()))
-    p.check(st == 401, f"uma chave que nunca foi registrada → 401 ({st})")
+    p.check(st == 401 and r.get("erro") == "chave_invalida", f"uma chave que nunca foi registrada → 401 chave_invalida (o único 401) ({st})")
 
 
 def caso_sem_estado() -> None:
-    """O desafio de entrar não grava nada (HMAC na função — achado 4): 10 opcoes, 0 linha nova; o desafio mexido ou de outro schema → 401."""
+    """O desafio de entrar não grava nada (HMAC na função — achado 4): 10 opcoes, 0 linha nova; o desafio mexido ou inventado → 409."""
     antes = q("select count(*)::int as n from staging.restauracao_desafios")[0]["n"]
     ds = [desafio_entrar() for _ in range(10)]
     depois = q("select count(*)::int as n from staging.restauracao_desafios")[0]["n"]
@@ -470,9 +511,9 @@ def caso_sem_estado() -> None:
     bruto[20] ^= 1
     mexido = base64.urlsafe_b64encode(bytes(bruto)).decode().rstrip("=")
     st, r = entrar(a.entrar(mexido))
-    p.check(st == 401 and r.get("erro") == "chave_invalida", f"o desafio com 1 bit mexido (a marca HMAC não confere) → 401 ({st} {r.get('erro')})")
+    p.check(st == 409 and r.get("erro") == "desafio_invalido", f"o desafio com 1 bit mexido (a marca HMAC não confere) → 409 ({st} {r.get('erro')})")
     st, r = entrar(a.entrar("A" * 43))
-    p.check(st == 401, f"um desafio inventado → 401 ({st})")
+    p.check(st == 409, f"um desafio inventado → 409 ({st})")
     st, r = entrar(a.entrar(ds[1]))
     p.check(st == 200, f"o desafio de verdade (pedido antes) entra ({st} {r.get('erro')})")
 
@@ -482,14 +523,15 @@ def caso_tolerante() -> None:
     t1 = Autenticador(ORIGEM_PLAY)
     registrar(tok, t1)
     st, r = entrar(t1.entrar(desafio_entrar(), up=False))
-    p.check(st == 401 and r.get("erro") == "chave_invalida", f"sem o UP (o toque) → 401 chave_invalida (a fase 0 mediu UP = 1: exigido) ({st} {r.get('erro')})")
+    p.check(st == 403 and r.get("erro") == "conferencia_falhou",
+            f"sem o UP (o toque) → 403 conferencia_falhou (a fase 0 mediu UP = 1: exigido; NÃO 401) ({st} {r.get('erro')})")
     st, r = entrar(t1.entrar(desafio_entrar()))
     p.check(st == 200, f"…e com o UP (o formato medido: flags 0x09) a mesma chave entra ({st} {r.get('erro')})")
     # o contador numa chave própria (no máximo 3 entradas por chave por hora — o 3 que não sobe é recusado antes de gastar)
     t2 = Autenticador(ORIGEM_PLAY)
     registrar(tok, t2)
     for contador, esperado, nome in ((5, 200, "contador 5 (o 1º com contador)"), (0, 200, "contador 0 depois de 5 (a cópia volta com 0: tolerado)"),
-                                     (3, 401, "contador 3 depois de 5 (não sobe: sinal de clone — recusa SEMPRE)"), (6, 200, "contador 6 depois de 5")):
+                                     (3, 403, "contador 3 depois de 5 (não sobe: sinal de clone — recusa SEMPRE, 403)"), (6, 200, "contador 6 depois de 5")):
         st, r = entrar(t2.entrar(desafio_entrar(), contador=contador))
         p.check(st == esperado, f"{nome} → {esperado} ({st} {r.get('erro')})")
     p.check((linha(t2.id) or {}).get("contador") == 6, f"no banco: o contador guardado é o maior (6) ({(linha(t2.id) or {}).get('contador')})")

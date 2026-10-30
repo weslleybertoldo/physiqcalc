@@ -558,8 +558,10 @@ describe("restaurar-login — a trava, a pessoa e a sessão", () => {
     expect(recusaDaPessoa(null, { schema: "public", soTeste: false, agora })).toBe("chave_invalida");
     expect(STATUS_DA_RECUSA).toMatchObject({
       chave_invalida: 401, conta_real_no_staging: 403, acesso_desativado: 403, email_nao_confirmado: 403, conta_master: 403, desligado: 200,
-      muitas_tentativas: 429,
+      muitas_tentativas: 429, desafio_invalido: 409, conferencia_falhou: 403,
     });
+    // 2ª revisão (achado 2): o 401 é SÓ a chave que não vale mais — é o único que faz o app apagar a chave do aparelho
+    expect(Object.entries(STATUS_DA_RECUSA).filter(([, st]) => st === 401).map(([c]) => c)).toEqual(["chave_invalida"]);
   });
 
   it("a sessão para o app: os tokens e SÓ o id (nada do e-mail); de outra pessoa ou sem token → null", () => {

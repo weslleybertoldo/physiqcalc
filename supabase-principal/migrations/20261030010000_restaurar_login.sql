@@ -82,13 +82,21 @@ create table if not exists {schema}.chaves_restauracao (
   constraint chaves_restauracao_contador_check check (contador >= 0 and usos >= 0),
   constraint chaves_restauracao_algoritmo_check check (algoritmo in (-7, -257)),
   constraint chaves_restauracao_origem_check check (origem ~ '^android:apk-key-hash:[A-Za-z0-9_-]{43}$'),
-  constraint chaves_restauracao_aparelho_check check (aparelho is null or char_length(aparelho) <= 80),
-  constraint chaves_restauracao_versao_check check (versao_app is null or char_length(versao_app) <= 32),
+  constraint chaves_restauracao_aparelho_check check (aparelho is null or (char_length(aparelho) <= 80 and aparelho !~ '[[:cntrl:]]')),
+  constraint chaves_restauracao_versao_check check (versao_app is null or (char_length(versao_app) <= 32 and versao_app !~ '[[:cntrl:]]')),
   constraint chaves_restauracao_motivo_check
     check (motivo_apagada in ('saiu', 'saiu_todos', 'substituida', 'limite', 'vencida', 'sessao_derrubada', 'senha_trocada', 'conta_excluida')),
   constraint chaves_restauracao_apagada_check check ((apagada_em is null) = (motivo_apagada is null))
 );
 create index if not exists chaves_restauracao_user_idx on {schema}.chaves_restauracao (user_id);
+-- 2ª revisão (achado 8): o aparelho e a versão também pela RPC direta — no máximo 80/32 caracteres e sem caractere de controle. Idempotente:
+-- refaz as 2 conferências na tabela que já existia (o staging), com as mesmas regras do create acima.
+alter table {schema}.chaves_restauracao drop constraint if exists chaves_restauracao_aparelho_check;
+alter table {schema}.chaves_restauracao add constraint chaves_restauracao_aparelho_check
+  check (aparelho is null or (char_length(aparelho) <= 80 and aparelho !~ '[[:cntrl:]]'));
+alter table {schema}.chaves_restauracao drop constraint if exists chaves_restauracao_versao_check;
+alter table {schema}.chaves_restauracao add constraint chaves_restauracao_versao_check
+  check (versao_app is null or (char_length(versao_app) <= 32 and versao_app !~ '[[:cntrl:]]'));
 revoke all on {schema}.chaves_restauracao from public, anon, authenticated;
 grant all on {schema}.chaves_restauracao to service_role;
 alter table {schema}.chaves_restauracao enable row level security;
@@ -245,8 +253,10 @@ begin
   end if;
   insert into {schema}.chaves_restauracao (user_id, credencial_id, chave_publica, contador, algoritmo, aaguid, nuvem, backup_elegivel,
     backup_estado, origem, sessao_id, aparelho, versao_app)
+  -- o aparelho e a versão limpos de caractere de controle e cortados (a RPC direta não passa pelo textoDoAparelho da função — 2ª revisão)
   values (v_uid, p_credencial, p_chave, p_contador, p_alg, p_aaguid, p_nuvem, p_be, p_bs, p_origem, v_sessao,
-    left(nullif(btrim(coalesce(p_aparelho, '')), ''), 80), left(nullif(btrim(coalesce(p_versao, '')), ''), 32))
+    left(nullif(btrim(regexp_replace(coalesce(p_aparelho, ''), '[[:cntrl:]]', '', 'g')), ''), 80),
+    left(nullif(btrim(regexp_replace(coalesce(p_versao, ''), '[[:cntrl:]]', '', 'g')), ''), 32))
   on conflict (credencial_id) do nothing
   returning id into v_id;
   if v_id is null then
@@ -421,10 +431,16 @@ grant execute on function {schema}.restauracao_limpar() to service_role;
 -- 5. O gatilho em auth.users: a senha trocada e a conta excluída apagam as chaves (achados 1 e 9)
 -- ============================================================================================================
 -- 1 gatilho por schema (a migração de cada um cria o seu): a troca de senha (no app, "esqueci a senha", o P25, o reset pelo master) e o soft
--- delete (a exclusão do profissional: deleteUser(uid, true)). Nunca lança: só marca as chaves ATIVAS daquela pessoa neste schema.
+-- delete (a exclusão do profissional: deleteUser(uid, true)). Só marca as chaves ATIVAS daquela pessoa neste schema (1 UPDATE pelo índice).
+-- 2ª revisão (achado 7): o gatilho roda em TODA troca de senha e soft delete do Auth inteiro (Physiq e Nutri) — se a tabela sumir sem a
+-- reversa (um "reset" do schema), ele sai sem fazer nada em vez de quebrar o Auth. Resetar o restaurar-login SÓ pela reversa (ela tira o
+-- gatilho antes da tabela).
 create or replace function {schema}.restauracao_auth_mudou() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
+  if to_regclass('{schema}.chaves_restauracao') is null then
+    return null;
+  end if;
   if new.deleted_at is not null and old.deleted_at is null then
     update {schema}.chaves_restauracao c set apagada_em = now(), motivo_apagada = 'conta_excluida'
      where c.user_id = new.id and c.apagada_em is null;

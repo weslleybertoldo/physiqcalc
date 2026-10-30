@@ -14,11 +14,13 @@
 //   da assinatura: os 403 não viram oráculo) → a pessoa no Auth (getUserById: desativada, e-mail confirmado só pelo email_confirmed_at, o
 //   master pelo papel) → restauracao_gastar (no máximo 3 entradas por chave por hora; o desafio gasto: uso único; o contador) → a sessão.
 // Recusas: 200 { ok: false, erro: "desligado" } (a trava app_config.restaurar_login desligada; o so_teste com conta que não é de teste; o
-//          schema sem a migração — falha FECHADA: sem a trava, nada é conferido nem gravado) · 401 chave_invalida (desafio, origem, RP, tipo,
-//          assinatura, contador, userHandle, chave apagada, sessão da chave encerrada — o motivo exato só no log) · 403
-//          conta_real_no_staging · conta_master · acesso_desativado · email_nao_confirmado · 429 muitas_tentativas (o freio por IP e o
-//          limite por chave — nunca 401, que faz o app apagar a chave) · 400 dados_invalidos · acao_invalida · schema_invalido · 405 metodo
-//          · 413 corpo_grande · 503 indisponivel
+//          schema sem a migração — falha FECHADA: sem a trava, nada é conferido nem gravado) · 401 chave_invalida SÓ quando a chave não vale
+//          mais (não existe, apagada, vencida, a sessão dela acabou, a dona saiu — o app apaga a chave do aparelho; 2ª revisão, achado 2) ·
+//          409 desafio_invalido (o desafio repetido, vencido ou de outro segredo — o app tenta na próxima abertura) · 403 conferencia_falhou
+//          (a resposta do Android não confere: assinatura, UP, contador, origem, RP, userHandle — o motivo exato só no log; o app espera 7
+//          dias, sem apagar) · 403 conta_real_no_staging · conta_master · acesso_desativado · email_nao_confirmado · 429 muitas_tentativas
+//          (o freio por IP e o limite por chave) · 400 dados_invalidos · acao_invalida · schema_invalido · 405 metodo · 413 corpo_grande ·
+//          503 indisponivel
 // A sessão (decisão D1 = a opção A do desenho; o molde é o emitirSessao da trocar-token): conferida a chave, o e-mail sai do DONO DA CHAVE
 // (getUserById) — nunca do pedido —, o link de uso único (recovery: para e-mail que não existe o Auth responde 404 e NÃO cria conta, o que o
 // magiclink faria — achado 8) é pedido E GASTO aqui dentro (POST /auth/v1/verify com o token_hash) e só a sessão volta. O link que voltar
@@ -183,7 +185,13 @@ function recusaDoBanco(erro: unknown, schema: Schema, ref: string, origin: strin
     log.aviso({ codigo: erro, schema, acao: "entrar", ref });
     return recusa(erro, origin);
   }
-  log.aviso({ codigo: erro === "desafio_invalido" ? "desafio_ja_usado" : "chave_apagada_ou_desconhecida", schema, acao: "entrar", ref });
+  if (erro === "desafio_invalido") {
+    // o desafio já foi gasto (a mesma resposta 2 vezes) ou venceu no meio: "tente depois", nunca "a chave morreu" (2ª revisão, achado 2)
+    log.aviso({ codigo: "desafio_ja_usado", schema, acao: "entrar", ref });
+    return recusa("desafio_invalido", origin);
+  }
+  // a chave não existe, foi apagada ou venceu, a sessão dela acabou, a dona saiu: o ÚNICO 401 (o app apaga a chave do aparelho)
+  log.aviso({ codigo: "chave_apagada_ou_desconhecida", schema, acao: "entrar", ref });
   return recusa("chave_invalida", origin);
 }
 
@@ -200,7 +208,7 @@ async function entrar(db: SupabaseClient, schema: Schema, corpo: Record<string, 
   const d = desafio ? await conferirDesafioEntrar(desafio, segredo, schema) : null;
   if (!desafio || !d || d.ok === false) {
     log.aviso({ codigo: d && d.ok === false ? `desafio_${d.motivo}` : "desafio_invalido", schema, acao: "entrar", ref });
-    return recusa("chave_invalida", origin);
+    return recusa("desafio_invalido", origin);
   }
   const { data: kc, error: ek } = await db.rpc("restauracao_chave", { p_credencial: resposta.id });
   if (ek) throw ek;
@@ -215,8 +223,9 @@ async function entrar(db: SupabaseClient, schema: Schema, corpo: Record<string, 
     chave: { credencialId: resposta.id, userId, chavePublica, contador: Number(k.contador) || 0 },
   }, LIB);
   if (conf.ok === false) {
+    // a resposta do Android não confere (assinatura, UP, contador, origem, RP): não é "a chave morreu" — o app espera, sem apagar
     log.aviso({ codigo: conf.motivo, schema, acao: "entrar", ref });
-    return recusa("chave_invalida", origin);
+    return recusa("conferencia_falhou", origin);
   }
   // a recusa da dona pelo banco (o so_teste e o staging só teste de agora, sem o cache; o master pelo perfil — achados 2 e 6)
   if (k.recusa !== null && k.recusa !== undefined) return recusaDoBanco(k.recusa, schema, ref, origin);
