@@ -58,6 +58,17 @@ describe("salvarMinhaSenha — grava e tira a marca", () => {
     expect(h.rpc).toHaveBeenCalledWith("minha_senha_definida");
     expect(h.refresh).toHaveBeenCalledTimes(1);
   });
+  it("restaurar-login: a senha gravada pelo app tira a marca da chave de volta (o servidor apagou as chaves: o app recria); o erro não", async () => {
+    localStorage.setItem("physiq_chave_restauracao:u1", JSON.stringify({ em: Date.now(), id: "A".repeat(43), sessao: "s1" }));
+    h.updateUser.mockResolvedValue({ error: { message: "boom" } });
+    await salvarMinhaSenha("NovaSenha9");
+    expect(localStorage.getItem("physiq_chave_restauracao:u1")).not.toBeNull();
+    h.updateUser.mockResolvedValue({ error: null });
+    h.rpc.mockResolvedValue({ data: true, error: null });
+    h.refresh.mockResolvedValue({ data: {}, error: null });
+    await expect(salvarMinhaSenha("NovaSenha9")).resolves.toEqual({ ok: true });
+    expect(localStorage.getItem("physiq_chave_restauracao:u1")).toBeNull();
+  });
   it("erro do Auth vira frase e não tira a marca", async () => {
     h.updateUser.mockResolvedValue({ error: { message: "New password should be different from the old password." } });
     await expect(salvarMinhaSenha("igual123")).resolves.toEqual({ ok: false, erro: "A nova senha precisa ser diferente da atual." });

@@ -8,6 +8,7 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { acaoConta } from "@/conta/gravar";
 import { principal } from "@/integrations/principal/client";
+import { chaveInvalidadaPelaSenha } from "./restaurarLogin";
 
 /** Payload do JWT (sem conferir assinatura: é só para a tela decidir o que mostrar; quem confere é o servidor). */
 export function claimsDoToken(token: string | null | undefined): Record<string, unknown> | null {
@@ -83,6 +84,9 @@ export function textoErroSenha(mensagem: string): string {
 export async function salvarMinhaSenha(senha: string): Promise<{ ok: true } | { ok: false; erro: string }> {
   const { error } = await principal.auth.updateUser({ password: senha });
   if (error) return { ok: false, erro: textoErroSenha(String(error.message ?? "")) };
+  // restaurar-login: a troca de senha apaga no servidor as chaves de volta da pessoa (gatilho senha_trocada); a deste aparelho é recriada
+  // já (a marca sai e o SessaoProvider refaz — src/nucleo/restaurarLogin.ts)
+  chaveInvalidadaPelaSenha();
   try {
     // hml-21a (H-43 · jeito 2): a marca sai pela função conta (ação senha_definida = a minha_senha_definida() de hoje); a falha não impede a
     // sessão nova (como antes: o rpc não lançava)
