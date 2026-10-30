@@ -135,6 +135,18 @@ describe("aba Perfil (tela 5)", () => {
     expect(screen.getByRole("button", { name: "Conta" })).toBeInTheDocument();
   });
 
+  it("o Sair pergunta antes e diz a verdade: sai de TODOS os aparelhos (o signOut é global; a D3 apaga as chaves de todos) — e só no Confirmar", async () => {
+    montar();
+    expect(await screen.findByText("Aluno desde mar/2026 · Objetivo: definição")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Sair"));
+    expect(await screen.findByText("Sair do Physiq?")).toBeInTheDocument();
+    expect(screen.getByText("Você sai de todos os aparelhos. O que já está salvo continua na sua conta.")).toBeInTheDocument();
+    expect(screen.queryByText(/sai deste aparelho/)).toBeNull();
+    expect(sair).not.toHaveBeenCalled();
+    fireEvent.click(document.querySelector("[data-perfil-sair-confirmar]")!);
+    await waitFor(() => expect(sair).toHaveBeenCalledTimes(1));
+  });
+
   it("W3 da loja: embaixo do Sair, os links da política de privacidade e dos termos", async () => {
     montar();
     expect(await screen.findByText("Aluno desde mar/2026 · Objetivo: definição")).toBeInTheDocument();
