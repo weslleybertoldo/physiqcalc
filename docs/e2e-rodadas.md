@@ -37,6 +37,22 @@ a mais nova em cima. Sem dado pessoal e sem segredo (só o nome do script, a bas
 
 | data (BRT) | worktree | commit | script (argumentos) | base | resultado | obs. |
 |---|---|---|---|---|---|---|
+| 29/10 22:57 | hml12-banco-depois-da-virada | `80be5022` + este PR | `e2e/hml12/banco.py --schema public` | produção (só leitura) | 10/10 | as 3 que esperavam o banco desligado conferem agora a versão ligada (2026-10-29 = `VERSAO_TEXTOS`), o 1º aceite gravado (≥ 1) e o aceite pendente de um login sem aceite; com o script antigo: 7/10 (20:39 e 22:57) |
+| 29/10 21:10 | virada-textos | `2816fb30` | `e2e/hml10/logs.py` (os 30 min depois da migração) | produção | 7/7 | 0 5xx, 0 erro no console, `avisos_erro` sem nada novo |
+| 29/10 20:42 | virada-textos | `2816fb30` | `e2e/hml12/telas.py` (T13+T7+T8+JS, depois da migração `--so public`) | produção | 11/11 | antes da migração: 7/7 (T13+JS, 20:29) |
+| 29/10 20:39 | virada-textos | `2816fb30` | `e2e/hml01/banco.py --schema public` | produção (só leitura) | 14/14 | a rotina "mexeu em migration" |
+| 29/10 20:39 | virada-textos | `2816fb30` | `e2e/hml12/banco.py --schema public` | produção (só leitura) | 7/10 | as 3 falhas esperavam o banco desligado de antes da virada → script corrigido (a linha de 22:57) |
+| 29/10 20:38 | virada-textos | `2816fb30` | sonda fora do repo (`aceite_real.py prod`, nada forçado na resposta) | produção (conta de TESTE nutri-legado) | 19/19 | a porta de verdade: 0 aceite antes → a tela da versão 2026-10-29 → aceitou → o painel abriu → 1 aceite no `public` → o 2º acesso não pede |
+| 29/10 20:29 | virada-textos | `2816fb30` | `e2e/hml12/telas.py` (T13+JS, antes da migração) | produção | 7/7 | |
+| 29/10 20:28 | virada-textos | `2816fb30` | `e2e/hml11/telas.py` | produção | 78/78 | sem a faixa "em revisão"; repetido depois da migração: 78/78 |
+| 29/10 20:25 | virada-textos | `4a658338` | sonda fora do repo (`aceite_real.py staging`) | staging | 13/13 | a porta de verdade no site do staging (conta de teste w5-aluno1) |
+| 29/10 20:24 | virada-textos | `4a658338` | `e2e/hml12/telas.py` | staging | 52/52 | T2/T7–T11/T15 pulados (fazem SQL direto) |
+| 29/10 20:22 | virada-textos | `4a658338` | `e2e/hml11/telas.py` | staging | 104/104 | |
+| 29/10 19:04 | virada-textos | — | `e2e/hml11/telas.py` (a loja) | local (o build `build:loja` do `public`) | 11/11 | |
+| 29/10 19:03 | virada-textos | — | `e2e/hml12/telas.py` | local (o build do `public`) | 7/7 | |
+| 29/10 19:03 | virada-textos | — | `e2e/hml11/telas.py` | local (o build do `public`) | 78/78 | |
+| 29/10 19:02 | virada-textos | — | `e2e/hml12/telas.py` | local (o build de staging) | 52/52 | o E2E da hml-12 vigiava a RPC direta e não a `conta` (defeito antigo) → corrigido no `4a658338` |
+| 29/10 18:54 | virada-textos | — | `e2e/hml11/telas.py` | local (o build de staging) | 104/104 | o S7 reimpresso: 8/8 |
 | 27/10 02:50 | alertas-falsos | `41a71763` + o `aviso.py` corrigido | `e2e/hml10/aviso.py --schema public --so options,origem,grande,valido,robo` | produção (a função publicada, `x-schema public`; só o que não manda aviso) | 20/20 | T4: 4 robôs → 204 + `aviso_de_robo` (public), nada nos logs e 0 linha na `public.avisos_erro`; o `valido` fica de fora sem `--p6` (o celular provado no staging, mesma função) |
 | 27/10 02:50 | alertas-falsos | `41a71763` + o `aviso.py` corrigido | `e2e/hml10/aviso.py --schema staging --so robo` | staging | 16/16 | T4: a checagem "nada saiu" agora exige os logs respondendo + 0 linha na `staging.avisos_erro` |
 | 27/10 02:46 | alertas-falsos | `41a71763` | `e2e/hml10/aviso.py --schema staging --so options,origem,grande,valido,robo,segredo` | staging (as funções publicadas: erro-avisar v30) | 22/22 | T4: o `valido` com UA de celular sem marca → `aviso_enviado` (o único aviso ao grupo, [staging]) + o repetido segurado; 4 robôs → 204 + `aviso_de_robo`. A checagem "nada saiu" do robô `google` passou vazia por um 429 do endpoint de logs → corrigida (a linha de cima) |

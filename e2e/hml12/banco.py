@@ -18,7 +18,8 @@ Roda DEPOIS da migração supabase-principal/migrations/20261008200000_hml12_ace
                      versão desligada, como um de antes da virada) pela função alunos → 400 {"ok": false, "erro": "menor_de_16"}, sem
                      matrícula; profissional de outra conta → sem_acesso; o aceite do staging não aparece em public.aceites
        conferência   staging textos_legais.versao = VERSAO_TEXTOS (src/publico/legal/versao.ts); os privilégios da spec §3.4
-  --schema public    SÓ LEITURA: a tabela existe, 0 linhas, RLS ligada, sem policy e sem privilégio da API; a versão nula; as
+  --schema public    SÓ LEITURA: a tabela existe, RLS ligada, sem policy e sem privilégio da API, com os aceites (≥ 1 desde a
+                     virada de 29/10/2026); a versão ligada = VERSAO_TEXTOS (um login sem aceite fica com o aceite pendente); as
                      funções novas existem (com os privilégios da §3.4); minha_situacao com o 'legal' (pelo corpo); os gatilhos.
 
 Contas de TESTE do staging (senhas em ~/.physiq-teste-<nome>; nenhuma é usada pelos outros E2E do repo):
@@ -197,10 +198,10 @@ def estrutura(S: str, p: Placar) -> None:
             f"[{S}] tabela aceites: existe, RLS ligada, {x['policies']} policy, privilégio da API: {x['com_privilegio'] or 'nenhum'}")
     p.check(x["gatilhos"] == 2, f"[{S}] gatilho idade_minima_guarda em pacientes e cadastros_pendentes ({x['gatilhos']} de 2)")
     p.check(x["colunas"] == 2, f"[{S}] respostas_preconsulta com consentimento_versao e consentimento_em ({x['colunas']} de 2)")
-    esperado = versao_do_app() if S == "staging" else None
+    esperado = versao_do_app()  # desde a virada (29/10/2026) a versão está ligada nos 2 schemas
     tl = x["textos_legais"]
     p.check(isinstance(tl, dict) and "versao" in tl and tl["versao"] == esperado,
-            f"[{S}] textos_legais = {tl} (esperado: versao {esperado!r}" + (" = VERSAO_TEXTOS do app)" if S == "staging" else ", desligado)"))
+            f"[{S}] textos_legais = {tl} (esperado: versao {esperado!r} = VERSAO_TEXTOS do app)")
 
 
 def publico(p: Placar) -> None:
@@ -208,9 +209,13 @@ def publico(p: Placar) -> None:
     ok_, r = ler("""select (select count(*) from public.aceites) as linhas, public.versao_dos_textos() as versao,
                            public.legal_da_situacao('00000000-0000-4000-8000-0000000000aa'::uuid) as legal""")
     x = r[0] if ok_ and r else {}
-    p.check(ok_ and x.get("linhas") == 0, f"[public] public.aceites com 0 linhas ({x.get('linhas') if ok_ else r})")
-    p.check(ok_ and x.get("versao") is None and x.get("legal") == {"versao": None},
-            f"[public] versão nula: versao_dos_textos() = {x.get('versao')!r}, legal = {x.get('legal')} (nada muda na produção)")
+    # depois da virada (29/10/2026): a prova de produção gravou o 1º aceite, e a tabela só cresce
+    p.check(ok_ and (x.get("linhas") or 0) >= 1, f"[public] public.aceites com os aceites ({x.get('linhas') if ok_ else r} linha(s), ≥ 1)")
+    V = versao_do_app()
+    pendente = {"versao": V, "aceite_pendente": True, "saude_pendente": False, "nascimento_pendente": False, "menor": None}
+    p.check(ok_ and x.get("versao") == V and x.get("legal") == pendente,
+            f"[public] versão ligada: versao_dos_textos() = {x.get('versao')!r} (= VERSAO_TEXTOS {V!r}), "
+            f"legal de um login sem aceite = {x.get('legal')} (aceite pendente)")
 
 
 # ───────────────────────────── staging (versão ligada) ─────────────────────────────
@@ -501,7 +506,7 @@ def limpar(p: Placar, S: str, uid: dict, tok: dict, mat: dict, mat_app: dict, fo
 def main() -> int:
     ap = argparse.ArgumentParser(description="hml-12: aceite e consentimentos no banco principal (spec §9.2)")
     ap.add_argument("--schema", choices=["staging", "public"], required=True,
-                    help="staging: positivos e negativos com as contas de teste; public: só leitura (a estrutura, versão nula)")
+                    help="staging: positivos e negativos com as contas de teste; public: só leitura (a estrutura, a versão ligada desde a virada)")
     a = ap.parse_args()
     p = Placar()
     if a.schema == "staging":
