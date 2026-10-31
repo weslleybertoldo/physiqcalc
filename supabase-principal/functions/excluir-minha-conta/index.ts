@@ -18,6 +18,11 @@
 //
 // Ordem (idempotente — pedir de novo depois de um erro no meio refaz só o que faltou; depois de pronto o token deixa de valer):
 //   1. confere (principal: excluir_dados_aluno simular; Treino: conferir) — qualquer recusa para ANTES de mexer em algo;
+//   1a. F (31/10/2026): quem já foi profissional (o ex-membro de equipe — o ativo o 1 recusa) segue pela ordem do PROFISSIONAL
+//       (_shared/exclusao-profissional.ts: soft delete, a linha de equipe fica de âncora), simular e excluir, com a resposta no formato
+//       do aluno (_shared/exclusao-aluno-regras.ts). Antes o login saía de vez e o CHECK conta_membros_pessoa_ou_convite dava 500;
+//       o aluno com 2 matrículas vivas com o mesmo e-mail (o 500 paciente_email_repetido no passo 4) a migração
+//       20261031170000_excluir_conta_desligar_login corrige no gatilho;
 //   2. Treino: delete-my-account "excluir" (dados de treino + soft delete do login de lá + vínculo);
 //   3. principal: excluir_dados_aluno (o que o aluno enviou + matrícula desligada) → arquivos do diário e a foto do Perfil;
 //   4. por último o login do principal (auth.admin.deleteUser) — a FK "on delete set null" desliga a matrícula.
@@ -44,6 +49,7 @@ import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import { STATUS_DA_RECUSA, confirmacaoValida, pegadaBloqueia } from "../_shared/conta-aluno-regras.ts";
 import { chamarTreino } from "../_shared/treino-servidor.ts";
 import { fluxoDoPedido } from "../_shared/exclusao-profissional-regras.ts";
+import { caminhoDoPedidoDoAluno, respostaParaOAluno } from "../_shared/exclusao-aluno-regras.ts";
 import { apagarFotosDoPerfil, excluirContaProfissionalNaBorda } from "../_shared/exclusao-profissional.ts";
 import type { Schema } from "../_shared/cobranca-mp.ts";
 import { cancelarPlayNaExclusao } from "../_shared/play-assinaturas.ts";
@@ -165,6 +171,20 @@ Deno.serve(async (req) => {
     if (ep) throw ep;
     const conferencia = (pre ?? {}) as Record<string, unknown>;
     if (conferencia.ok !== true) return recusa(String(conferencia.erro ?? "erro_interno"), origin, { motivo: conferencia.motivo ?? null });
+    // 1a. F (31/10/2026): quem já foi profissional (o ex-membro de equipe) não pode perder o login DE VEZ — o hard delete esbarra no
+    // CHECK conta_membros_pessoa_ou_convite (500 e o login ficava). Antes de mexer em qualquer coisa: o banco diz (nada muda) e ele sai
+    // pela ORDEM DO PROFISSIONAL (soft delete; a linha de equipe fica de âncora) — a mesma da folha do app novo —, no formato do aluno
+    const { data: prof, error: eprof } = await db.rpc("excluir_conta_profissional", { p_uid: user.id, p_simular: true });
+    if (eprof) throw eprof;
+    const caminho = caminhoDoPedidoDoAluno(prof);
+    if (caminho.caminho === "recusa") return recusa(caminho.erro, origin, { motivo: caminho.motivo });
+    if (caminho.caminho === "profissional") {
+      const r = await excluirContaProfissionalNaBorda({
+        schema: schema as Schema, user, authAdmin, simular, confirmacao: body.confirmacao, log, prazo: p,
+      });
+      const resposta = respostaParaOAluno(r, conferencia, simular);
+      return json(resposta.corpo, resposta.status, origin);
+    }
     const treinoPre = await chamarTreino(schema, "conferir", user.id, log, { prazo: p });
     if (treinoPre.passo === "profissional") return recusa("profissional", origin, { motivo: "treino" });
     if (treinoPre.passo === "conta_real") return dadosEmProducao(origin);
