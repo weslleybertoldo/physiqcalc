@@ -23,6 +23,7 @@ import sys
 import time
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # o _comum da w02 não deixa __pycache__ na árvore
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "w02"))
 import _comum as C  # noqa: E402
 
