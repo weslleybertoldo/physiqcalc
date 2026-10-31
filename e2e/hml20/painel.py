@@ -150,7 +150,7 @@ def telas_da_conta(conta: str) -> list[tuple[str, str, str, int]]:
 PRODUCAO = B.PROD_CONTA  # nutri-legado: a conta de teste do painel na produção
 # as seções que chamam o padroes_garantir ao abrir (hml-19a — GRAVA no 1º acesso): na produção só abrem se os padrões da conta já existem
 SECOES_COM_PADRAO = {"prontuario_anamnese": "modelos_anamnese", "prontuario_exames": "exames_catalogo", "prontuario_documentos": "modelos_documento"}
-SUFIXO_DE_TESTE = ".teste.claude@physiqnutri.app"  # o e-mail das contas de TESTE (e2e/hml09/_comum.py: eh_email_de_teste)
+SUFIXO_DE_TESTE = ".teste.claude@physiqcalc.com.br"  # o e-mail das contas de TESTE (e2e/hml09/_comum.py: eh_email_de_teste; e2e/CONTAS_DE_TESTE.md)
 
 
 def sql_uid_da_conta(email: str) -> str:

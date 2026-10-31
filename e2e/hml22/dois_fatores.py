@@ -90,7 +90,7 @@ ORIGENS_ACEITAS = re.compile(r"^(https://(www\.)?physiqcalc\.com\.br|https://phy
 def email_de_teste(email: str | None) -> bool:
     """A regra do servidor (supabase-principal/functions/_shared/master-regras.ts › emailDeTeste) — conta de TESTE."""
     e = (email or "").strip().lower()
-    return e == "teste@teste.com" or re.fullmatch(r"[a-z0-9._+-]*teste[a-z0-9._+-]*@physiq(calc|nutri)\.app", e) is not None
+    return re.fullmatch(r"[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\.com\.br", e) is not None  # 31/10/2026: e2e/CONTAS_DE_TESTE.md
 
 
 def exigir_conta_de_teste(email: str | None) -> None:
@@ -834,7 +834,7 @@ def seco() -> int:
             "[seco] controle: as varreduras pegam o vazamento de mentira (4 linhas) e o trace/vídeo")
     # 4. a conta: só o w27-master de teste; a regra do servidor
     ts = (REPO / "supabase-principal" / "functions" / "_shared" / "master-regras.ts").read_text(encoding="utf-8")
-    p.check("/^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiq(calc|nutri)\\.app$/" in ts, "[seco] a regra de conta de teste do E2E = a do servidor (master-regras.ts)")
+    p.check("/^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\\.com\\.br$/" in ts, "[seco] a regra de conta de teste do E2E = a do servidor (master-regras.ts)")
     p.check(email_de_teste(EMAIL_CONTA) and not email_de_teste("pessoa@gmail.com") and not email_de_teste("w27.master@physiqnutri.app"),
             "[seco] o w27-master é conta de teste; e-mail real não")
     recusas = 0

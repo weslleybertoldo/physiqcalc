@@ -74,7 +74,7 @@ ESTADO = SAIDA / "massa_staging.json"
 PARTES = ("14b", "treino", "master", "aluno")
 PADRAO_MARCA = "HOMOLOG lista [0-9]{2}h[0-9]{2}"  # regex do Postgres: qualquer hora
 FORMATO_MARCA = re.compile(r"^HOMOLOG lista \d{2}h\d{2}$")
-SUFIXO_TESTE = ".teste.claude@physiqnutri.app"
+SUFIXO_TESTE = ".teste.claude@physiqcalc.com.br"  # 31/10/2026: as contas de teste mudaram para o domínio próprio (e2e/CONTAS_DE_TESTE.md)
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 BRT = dt.timezone(dt.timedelta(hours=-3))
 CONFIG_ALUNO = '{"mensagens_automaticas": false}'

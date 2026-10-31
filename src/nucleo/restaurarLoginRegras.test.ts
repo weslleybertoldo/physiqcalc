@@ -540,7 +540,7 @@ describe("restaurar-login — a trava, a pessoa e a sessão", () => {
 
   it("a pessoa: staging só conta de teste; so_teste barra a conta real (desligado); desativada; e-mail não confirmado; sem pessoa", () => {
     const agora = Date.parse("2026-10-30T12:00:00Z");
-    const teste = { id: EU, email: "w26.lia.teste.claude@physiqnutri.app", email_confirmed_at: "2026-10-01T00:00:00Z" };
+    const teste = { id: EU, email: "w26.lia.teste.claude@physiqcalc.com.br", email_confirmed_at: "2026-10-01T00:00:00Z" };
     const real = { ...teste, email: "alguem@gmail.com" };
     expect(recusaDaPessoa(teste, { schema: "staging", soTeste: true, agora })).toBeNull();
     expect(recusaDaPessoa(real, { schema: "staging", soTeste: false, agora })).toBe("conta_real_no_staging");
@@ -567,7 +567,7 @@ describe("restaurar-login — a trava, a pessoa e a sessão", () => {
   it("a sessão para o app: os tokens e SÓ o id (nada do e-mail); de outra pessoa ou sem token → null", () => {
     const doAuth = {
       access_token: "eyJ.a.b", refresh_token: "r1", expires_in: 3600, expires_at: 1793333333, token_type: "bearer",
-      user: { id: EU, email: "w26.lia.teste.claude@physiqnutri.app", app_metadata: { provider: "email" } },
+      user: { id: EU, email: "w26.lia.teste.claude@physiqcalc.com.br", app_metadata: { provider: "email" } },
     };
     expect(sessaoParaApp(doAuth, EU)).toEqual({
       access_token: "eyJ.a.b", refresh_token: "r1", expires_in: 3600, expires_at: 1793333333, token_type: "bearer", user: { id: EU },

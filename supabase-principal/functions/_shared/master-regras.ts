@@ -74,10 +74,13 @@ export function origemDoApp(origin: string | null | undefined): boolean {
   return typeof origin === "string" && ORIGENS_DO_APP.includes(origin);
 }
 
-/** Contas de TESTE (P26): o staging só cria/aceita estas (o Auth é o mesmo da produção). Igual ao criar_minha_conta (W4). */
+/**
+ * Contas de TESTE (P26): o staging só cria/aceita estas (o Auth é o mesmo da produção). Igual ao criar_minha_conta (W4) e à
+ * emailDeTeste de login-regras.ts: SÓ *teste*@physiqcalc.com.br (31/10/2026: saíram o teste@teste.com e os domínios .app).
+ */
 export function emailDeTeste(email: string | null | undefined): boolean {
   const e = (email || "").trim().toLowerCase();
-  return e === "teste@teste.com" || /^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiq(calc|nutri)\.app$/.test(e);
+  return /^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\.com\.br$/.test(e);
 }
 
 export function emailValido(email: string | null | undefined): boolean {

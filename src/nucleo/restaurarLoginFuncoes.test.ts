@@ -18,7 +18,7 @@ const LIA = "f3513284-3e44-40cc-84bb-d7a39a929e8d";
 const OTTO = "f411a2c9-bf1d-42dd-9d19-00c6e08c0721";
 const REAL = "0b9c6f1e-2a3b-4c5d-8e9f-001122334455";
 const TOKEN = { [LIA]: "token-da-lia-0000000000000", [OTTO]: "token-do-otto-000000000000", [REAL]: "token-da-real-000000000000" };
-const EMAIL = { [LIA]: "w26.lia.teste.claude@physiqnutri.app", [OTTO]: "w26.otto.teste.claude@physiqnutri.app", [REAL]: "maria.real@gmail.com" };
+const EMAIL = { [LIA]: "w26.lia.teste.claude@physiqcalc.com.br", [OTTO]: "w26.otto.teste.claude@physiqcalc.com.br", [REAL]: "maria.real@gmail.com" };
 const SERVICE = "service-role-de-teste";
 /** O segredo do HMAC do desafio de entrar (falso; 32 bytes em base64url) — o da função vem de RESTAURAR_LOGIN_SEGREDO. */
 const SEGREDO = bytesParaBase64url(new Uint8Array(32).fill(42));
@@ -98,7 +98,8 @@ class BancoFalso {
     if (!userId) return null;
     const u = this.usuarios.get(userId);
     if (!u || u.deleted_at) return "sem_login";
-    const teste = /teste/.test(u.email) && /@physiq(calc|nutri)\.app$/.test(u.email);
+    // a {schema}.email_de_teste do banco (31/10/2026: SÓ *teste*@physiqcalc.com.br — migração 20261031150000)
+    const teste = /^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\.com\.br$/.test(u.email.trim().toLowerCase());
     if (schema === "staging" && !teste) return "conta_real_no_staging";
     if (cfg.so_teste !== false && !teste) return "desligado";
     if (u.app_metadata?.role === "master" || this.perfisMaster.has(userId)) return "conta_master";

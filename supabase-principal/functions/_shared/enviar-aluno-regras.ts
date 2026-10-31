@@ -11,7 +11,7 @@ export type ModuloEnvio = "treino" | "dieta";
 /**
  * Para onde o e-mail vai de verdade. STAGING → SEMPRE a caixa de teste do Resend (nenhum e-mail do ambiente de teste chega a
  * uma pessoa real, mesmo que o cadastro tenha um endereço de verdade); produção → a regra dos convites (conta de teste dos
- * domínios physiq*.app → caixa de teste; endereço real → ele mesmo).
+ * conta de teste e todo @physiqcalc.com.br, que não tem caixa → caixa de teste; endereço real → ele mesmo).
  */
 export function destinoDoEnvio(schema: Schema, email: string): { para: string; teste: boolean } {
   if (schema === "staging") return { para: CAIXA_DE_TESTE_RESEND, teste: true };

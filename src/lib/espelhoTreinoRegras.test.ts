@@ -157,11 +157,15 @@ describe("hml-14 (H-51 item 4): a trava por conta da treino-leitura (regra escri
   });
 });
 
-describe("staging só com conta de teste (P26)", () => {
+describe("staging só com conta de teste (P26) — 31/10/2026: SÓ *teste*@physiqcalc.com.br", () => {
   it.each([
-    ["admin.teste.claude@physiqcalc.app", true], ["aluno1.teste.claude@physiqcalc.app", true], ["teste@teste.com", true],
-    ["teste@physiqnutri.app", true], ["master.teste@physiqnutri.app", true], ["personal.teste.claude@physiqnutri.app", true],
-    ["weslley@gmail.com", false], ["teste@gmail.com", false], ["cliente@physiqnutri.app", false], ["", false],
+    ["teste@physiqcalc.com.br", true], ["w30.aluno.teste.claude@physiqcalc.com.br", true], ["Master.TESTE@PhysiqCalc.com.br", true],
+    ["revisao.aluno@physiqcalc.com.br", false], ["contato@physiqcalc.com.br", false],
+    // os de antes NÃO são mais de teste: teste.com é de outra pessoa; os 2 .app não são registrados
+    ["teste@teste.com", false], ["admin.teste.claude@physiqcalc.app", false], ["teste@physiqnutri.app", false],
+    ["personal.teste.claude@physiqnutri.app", false],
+    ["weslley@gmail.com", false], ["teste@gmail.com", false], ["teste@physiqcalc.com.br.evil.com", false],
+    ["teste@sub.physiqcalc.com.br", false], ["teste@physiqcalc.com", false], ["", false],
   ])("%s → %s", (email, esperado) => {
     expect(emailDeTeste(email)).toBe(esperado);
   });

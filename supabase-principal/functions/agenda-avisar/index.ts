@@ -11,7 +11,8 @@
 // POST, headers: Authorization: Bearer <access_token do principal> · x-schema: public|staging. Corpo: { agendamento: <id> }
 // 200 → { ok, email: { enviado, motivo?, teste, id?, erro?, consultas? } } · 4xx → { ok: false, erro }
 // E-mail: só para aluno com login e com e-mail no cadastro. STAGING → sempre a caixa de teste do Resend (delivered@resend.dev,
-// com "[teste → <e-mail>]" no assunto); produção → conta de teste (physiq*.app) também vai para a caixa de teste.
+// com "[teste → <e-mail>]" no assunto); produção → conta de teste e todo @physiqcalc.com.br (sem caixa) também vão para a caixa
+// de teste (_shared/convites-regras.ts › destinoDoEmail).
 // verify_jwt = true (chamada com o login da pessoa). Publicar:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions agenda-avisar true
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL (+ os automáticos).

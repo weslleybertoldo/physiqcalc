@@ -9,8 +9,8 @@
 //   { acao: "cancelar", convite_id }                                                   → cancela um convite pendente
 // 200 → { ok, convite_id, reenvio, email_enviado, email_teste, email_id? } · 4xx → { ok: false, erro } (erros do banco: so_dono,
 // conta_legada, conta_travada, email_invalido, papeis_invalidos, papel_sem_modulo, proprio_email, ja_e_membro,
-// muitos_convites, conta_real_no_staging…). Conta de TESTE (domínios physiq*.app, que não existem): o e-mail vai para a caixa
-// de teste do Resend (delivered@resend.dev), nunca para uma pessoa real.
+// muitos_convites, conta_real_no_staging…). Conta de TESTE (*teste*@physiqcalc.com.br) e todo @physiqcalc.com.br (o domínio
+// não tem caixa de e-mail): o e-mail vai para a caixa de teste do Resend (delivered@resend.dev), nunca para uma pessoa real.
 // verify_jwt = true (chamada com o login da pessoa). Publicar:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions convites true
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL (+ os automáticos).

@@ -84,7 +84,7 @@ OUTRO = {A: P, P: A}
 SOZINHO = "w7b-sozinho"  # o alvo (d) sem professor
 DONO_W13 = "w13-dono"    # o professor de outra conta: o alvo (d) é um aluno de TESTE dele
 EMAIL = {c: B5.CONTAS[c][0].lower() for c in (*CONTAS.values(), SOZINHO, DONO_W13)}
-SUFIXO_TESTE = "%.teste.claude@physiqnutri.app"
+SUFIXO_TESTE = "%.teste.claude@physiqcalc.com.br"  # 31/10/2026: as contas de teste mudaram para o domínio próprio (e2e/CONTAS_DE_TESTE.md)
 
 # ───────────────────────── as 15 tabelas da fila e o RETRATO do catálogo (congelado aqui) ─────────────────────────
 # Retrato lido no staging do Treino em 14/10/2026 04:17–04:40 pelo redator do contrato da 21e (SQL só leitura: hml21/tmp/redator21e/

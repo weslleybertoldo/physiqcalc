@@ -28,13 +28,13 @@ TREINO_CONN = os.environ.get(
     "host=aws-1-us-east-1.pooler.supabase.com port=5432 dbname=postgres user=postgres.uxwpwdbbnlticxgtzcsb sslmode=require",
 )
 SCHEMAS = ("public", "staging")
-_EMAIL_TESTE = re.compile(r"^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiq(calc|nutri)\.app$")
+_EMAIL_TESTE = re.compile(r"^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\.com\.br$")  # 31/10/2026: só o domínio próprio
 
 
 def email_de_teste(email: str | None) -> bool:
     """A mesma regra da trocar-token e do pos-login (P26)."""
     e = (email or "").strip().lower()
-    return e == "teste@teste.com" or bool(_EMAIL_TESTE.match(e))
+    return bool(_EMAIL_TESTE.match(e))
 
 
 def hoje_sp() -> str:

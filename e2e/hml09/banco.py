@@ -32,8 +32,7 @@ TREINO_EM_PRODUCAO = ["admin.teste.claude@physiqcalc.app", "teste@teste.com"]
 DESCARTAVEIS = [f"excluir{i}.teste.claude@physiqnutri.app" for i in (1, 2, 3)]
 UUID_FALSO = "00000000-0000-4000-8000-00000000abcd"
 # a mesma regra do emailDeTeste das Edge Functions (o Treino não tem a staging.email_de_teste)
-TESTE_SQL = ("(lower(btrim(coalesce(u.email, ''))) = 'teste@teste.com' "
-             "or lower(btrim(coalesce(u.email, ''))) ~ '^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiq(calc|nutri)\\.app$')")
+TESTE_SQL = ("(lower(btrim(coalesce(u.email, ''))) ~ '^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\\.com\\.br$')")  # 31/10/2026: e2e/CONTAS_DE_TESTE.md
 FKS_SQL = """select cl.relname as t, a.attname as c, cardinality(c.conkey) as n
                from pg_constraint c join pg_class cl on cl.oid = c.conrelid
                join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]

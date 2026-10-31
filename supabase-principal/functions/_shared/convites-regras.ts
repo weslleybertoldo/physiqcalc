@@ -9,23 +9,33 @@ export { escaparHtml };
 export type Papel = "dono" | "personal" | "nutricionista";
 export type Schema = "public" | "staging";
 
-/** Contas de TESTE (P26): os domínios physiqcalc.app/physiqnutri.app NÃO existem (NXDOMAIN) — e-mail para lá só voltaria. */
+/**
+ * Contas de TESTE (P26): SÓ *teste*@physiqcalc.com.br — a mesma regra da emailDeTeste (login-regras.ts). 31/10/2026: saíram o
+ * teste@teste.com e os domínios physiqcalc.app / physiqnutri.app (não registrados).
+ */
 export function emailDeTesteDoPhysiq(email: string | null | undefined): boolean {
   const e = (email || "").trim().toLowerCase();
-  if (e === "teste@teste.com") return true;
-  return /^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiq(calc|nutri)\.app$/.test(e);
+  return /^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\.com\.br$/.test(e);
 }
+
+/**
+ * O domínio próprio das contas de teste e das contas da revisão da Play (revisao.*@physiqcalc.com.br): NÃO tem caixa de e-mail
+ * (sem MX, conferido em 31/10/2026) — e-mail para lá só voltaria (bounce) e sujaria o remetente. Nenhum e-mail das funções vai
+ * para ele: vai para a caixa de teste do Resend, como o da conta de teste.
+ */
+export const DOMINIO_SEM_CAIXA = "physiqcalc.com.br";
 
 /** Caixa de teste do próprio Resend: recebe e confirma a entrega sem prejudicar a reputação do domínio que envia. */
 export const CAIXA_DE_TESTE_RESEND = "delivered@resend.dev";
 
 /**
- * Para onde o e-mail vai de verdade. Endereço real → ele mesmo. Conta de TESTE → a caixa de teste do Resend (o domínio de
- * teste não existe: mandar para ele viraria devolução — bounce — e sujaria o remetente dos convites de hoje).
+ * Para onde o e-mail vai de verdade. Endereço real → ele mesmo. Conta de TESTE, ou qualquer endereço do domínio sem caixa
+ * (DOMINIO_SEM_CAIXA) → a caixa de teste do Resend (mandar para lá viraria devolução — bounce — e sujaria o remetente).
  */
 export function destinoDoEmail(email: string): { para: string; teste: boolean } {
   const e = email.trim().toLowerCase();
-  return emailDeTesteDoPhysiq(e) ? { para: CAIXA_DE_TESTE_RESEND, teste: true } : { para: e, teste: false };
+  const semCaixa = e.endsWith(`@${DOMINIO_SEM_CAIXA}`);
+  return emailDeTesteDoPhysiq(e) || semCaixa ? { para: CAIXA_DE_TESTE_RESEND, teste: true } : { para: e, teste: false };
 }
 
 /** Endereço do site no link do e-mail: o do ambiente (o do APK e o do dev local não servem para quem recebe). */

@@ -11,11 +11,11 @@ const botoes = (html: string) => [...html.matchAll(/<a href="([^"]*)" style="dis
 describe("função aluno-enviar (W17) — regras do e-mail ao aluno", () => {
   it("STAGING manda SEMPRE para a caixa de teste do Resend, mesmo com e-mail real no cadastro", () => {
     expect(destinoDoEnvio("staging", "fulano@gmail.com")).toEqual({ para: "delivered@resend.dev", teste: true });
-    expect(destinoDoEnvio("staging", "w17.aluno.teste.claude@physiqnutri.app")).toEqual({ para: "delivered@resend.dev", teste: true });
+    expect(destinoDoEnvio("staging", "w17.aluno.teste.claude@physiqcalc.com.br")).toEqual({ para: "delivered@resend.dev", teste: true });
   });
 
   it("produção: conta de teste vai para a caixa de teste; pessoa real recebe no próprio e-mail", () => {
-    expect(destinoDoEnvio("public", "w17.aluno.teste.claude@physiqnutri.app")).toEqual({ para: "delivered@resend.dev", teste: true });
+    expect(destinoDoEnvio("public", "w17.aluno.teste.claude@physiqcalc.com.br")).toEqual({ para: "delivered@resend.dev", teste: true });
     expect(destinoDoEnvio("public", "Fulano@Gmail.com")).toEqual({ para: "fulano@gmail.com", teste: false });
   });
 

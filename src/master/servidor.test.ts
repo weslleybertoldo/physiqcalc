@@ -19,14 +19,17 @@ describe("funções do master (W27) — quem é master e o que cada ação receb
     expect(schemaDoPedido(null)).toBe("public");
     expect(schemaDoPedido("STAGING")).toBe("staging");
     expect(schemaDoPedido("outro")).toBeNull();
-    expect(emailDeTeste("w27.dono.a.teste.claude@physiqnutri.app")).toBe(true);
-    expect(emailDeTeste("teste@teste.com")).toBe(true);
+    expect(emailDeTeste("w27.dono.a.teste.claude@physiqcalc.com.br")).toBe(true);
+    expect(emailDeTeste("w27.dono.a.teste.claude@physiqnutri.app")).toBe(false); // 31/10/2026: os domínios .app saíram
+    expect(emailDeTeste("teste@teste.com")).toBe(false);
     expect(emailDeTeste("pessoa@gmail.com")).toBe(false);
   });
   it("Nova conta: e-mail, nome, tipo, plano, senha e motivo da isenção", () => {
-    const base = { email: "Novo.Teste.Claude@physiqnutri.app", nome: "Ana", tipo: "personal", plano: "treino", faixa: "f30", modo: "senha", senha: "abcd1234" };
+    const base = { email: "Novo.Teste.Claude@physiqcalc.com.br", nome: "Ana", tipo: "personal", plano: "treino", faixa: "f30", modo: "senha", senha: "abcd1234" };
     const ok = lerPedidoCriarConta(base, "staging");
-    expect(ok.ok && ok.pedido.email).toBe("novo.teste.claude@physiqnutri.app");
+    expect(ok.ok && ok.pedido.email).toBe("novo.teste.claude@physiqcalc.com.br");
+    // 31/10/2026: o domínio .app saiu da regra — no staging vira conta real
+    expect(lerPedidoCriarConta({ ...base, email: "novo.teste.claude@physiqnutri.app" }, "staging")).toEqual({ ok: false, erro: "conta_real_no_staging" });
     expect(ok.ok && ok.pedido.nome_conta).toBe("Ana");
     expect(lerPedidoCriarConta({ ...base, email: "real@gmail.com" }, "staging")).toEqual({ ok: false, erro: "conta_real_no_staging" });
     expect(lerPedidoCriarConta({ ...base, email: "real@gmail.com" }, "public").ok).toBe(true);

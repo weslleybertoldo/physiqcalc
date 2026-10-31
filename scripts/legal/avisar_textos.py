@@ -10,8 +10,9 @@ versão nova → todos aceitam no próximo acesso → e-mail). Molde: scripts/av
                        nova — todos os logins reais recebem; o texto diz a data de início (docs/textos-legais.md › processo 8)
 
 Quem conta: os logins do Auth (o mesmo para os 2 schemas) que não foram excluídos e que
-  - não são de teste (teste@teste.com e *teste*@physiqcalc.app / *teste*@physiqnutri.app, a regra de src/nucleo/contasTeste.ts);
-  - não estão nos domínios de teste physiqcalc.app e physiqnutri.app (não existem: o e-mail voltaria — ex.: as contas da Play);
+  - não são de teste (*teste*@physiqcalc.com.br, a regra de src/nucleo/contasTeste.ts — 31/10/2026);
+  - não estão nos domínios sem caixa de e-mail: physiqcalc.com.br (o domínio próprio não tem MX — ex.: as contas da Play,
+    revisao.*@physiqcalc.com.br) e os antigos physiqcalc.app / physiqnutri.app (não existem): o e-mail voltaria;
   - têm o e-mail confirmado e não estão bloqueados no login;
   - e não têm o aceite dos textos (aceites: documento 'textos', evento 'aceitou') da versão do app (VERSAO_TEXTOS de
     src/publico/legal/versao.ts) no schema do alvo.
@@ -104,8 +105,8 @@ _CLASSES = """
   ),
   c as (
     select u.*,
-           (u.email = 'teste@teste.com' or u.email ~ '^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiq(calc|nutri)\\.app$') as teste,
-           (u.email ~ '@physiq(calc|nutri)\\.app$') as dominio_de_teste
+           (u.email ~ '^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\\.com\\.br$') as teste,
+           (u.email ~ '@(physiqcalc\\.com\\.br|physiq(calc|nutri)\\.app)$') as dominio_de_teste
       from u
   ),
   a as (
