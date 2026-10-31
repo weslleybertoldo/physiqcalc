@@ -21,7 +21,9 @@ const botoes = (html: string) => [...html.matchAll(/<a href="[^"]*" style="displ
 describe("função agenda-avisar (W20) — o e-mail \"consulta marcada\" no molde C (H3)", () => {
   it("STAGING manda SEMPRE para a caixa de teste do Resend; produção: teste → caixa de teste, pessoa real → o e-mail dela", () => {
     expect(destinoDoEmailAgenda("staging", "fulano@gmail.com")).toEqual({ para: "delivered@resend.dev", teste: true });
-    expect(destinoDoEmailAgenda("public", "w20.aluno.teste.claude@physiqnutri.app")).toEqual({ para: "delivered@resend.dev", teste: true });
+    expect(destinoDoEmailAgenda("public", "w20.aluno.teste.claude@physiqcalc.com.br")).toEqual({ para: "delivered@resend.dev", teste: true });
+    // 31/10/2026: o domínio próprio não tem caixa de e-mail — nem a conta da revisão da Play (que não é de teste) recebe de verdade
+    expect(destinoDoEmailAgenda("public", "revisao.aluno@physiqcalc.com.br")).toEqual({ para: "delivered@resend.dev", teste: true });
     expect(destinoDoEmailAgenda("public", "Fulano@Gmail.com")).toEqual({ para: "fulano@gmail.com", teste: false });
   });
 

@@ -14,11 +14,15 @@ import {
 } from "../../../../supabase-principal/functions/_shared/convites-regras";
 
 describe("função convites (W5) — regras do e-mail do convite de membro", () => {
-  it("conta de TESTE (domínios physiq*.app, que não existem) vai para a caixa de teste do Resend; pessoa real, para ela mesma", () => {
-    expect(emailDeTesteDoPhysiq("w5.personal.teste.claude@physiqnutri.app")).toBe(true);
+  it("conta de TESTE (*teste*@physiqcalc.com.br) e todo @physiqcalc.com.br (sem caixa de e-mail) vão para a caixa de teste do Resend; pessoa real, para ela mesma", () => {
+    expect(emailDeTesteDoPhysiq("w5.personal.teste.claude@physiqcalc.com.br")).toBe(true);
+    expect(emailDeTesteDoPhysiq("w5.personal.teste.claude@physiqnutri.app")).toBe(false); // 31/10/2026: os domínios .app saíram
+    expect(emailDeTesteDoPhysiq("teste@teste.com")).toBe(false);
     expect(emailDeTesteDoPhysiq("fulano@gmail.com")).toBe(false);
-    expect(destinoDoEmail("W5.Nutri.Teste.Claude@physiqnutri.app")).toEqual({ para: CAIXA_DE_TESTE_RESEND, teste: true });
+    expect(destinoDoEmail("W5.Nutri.Teste.Claude@PhysiqCalc.com.br")).toEqual({ para: CAIXA_DE_TESTE_RESEND, teste: true });
+    expect(destinoDoEmail("revisao.profissional@physiqcalc.com.br")).toEqual({ para: CAIXA_DE_TESTE_RESEND, teste: true });
     expect(destinoDoEmail("Fulano@Gmail.com")).toEqual({ para: "fulano@gmail.com", teste: false });
+    expect(destinoDoEmail("fulano@physiqcalc.com.br.evil.com")).toEqual({ para: "fulano@physiqcalc.com.br.evil.com", teste: false });
   });
   it("o link do e-mail é o site do ambiente, com ?convite=1 (aceita mesmo para quem já estava logado)", () => {
     expect(siteDoConvite("staging")).toBe("https://physiqcalc-staging.vercel.app");

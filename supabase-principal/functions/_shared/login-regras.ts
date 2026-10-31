@@ -52,11 +52,16 @@ export function ehLoginGoogle(claims: Record<string, unknown> | null, u: Usuario
   });
 }
 
-/** Staging só aceita conta de teste (P26): os e-mails de teste dos 2 apps. */
+/**
+ * Staging só aceita conta de teste (P26). Conta de teste = SÓ *teste*@physiqcalc.com.br (a parte antes do @ contém "teste" e o
+ * domínio é exatamente physiqcalc.com.br, do dono). 31/10/2026: saíram o teste@teste.com (domínio de terceiros) e os domínios
+ * physiqcalc.app / physiqnutri.app (não registrados) — achado médio da 2ª revisão de segurança do restaurar-login. Cópias que
+ * têm de concordar (src/nucleo/loginRegras.test.ts): master-regras.ts, convites-regras.ts, o Treino (espelho/regras.ts), o app
+ * (src/nucleo/contasTeste.ts) e o banco ({schema}.email_de_teste, migração 20261031150000).
+ */
 export function emailDeTeste(email: string | null | undefined): boolean {
   const e = (email || "").trim().toLowerCase();
-  if (e === "teste@teste.com") return true;
-  return /^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiq(calc|nutri)\.app$/.test(e);
+  return /^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\.com\.br$/.test(e);
 }
 
 export function temIdentidade(u: UsuarioAuth, provedor: string): boolean {

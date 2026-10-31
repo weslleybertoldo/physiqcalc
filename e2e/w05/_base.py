@@ -78,7 +78,8 @@ CONTAS: dict[str, tuple[str, str]] = {
 def email_de_teste(email: str) -> bool:
     """Trava da W5: convite só para endereço de TESTE (nenhum e-mail para pessoa real)."""
     e = (email or "").strip().lower()
-    return e.endswith(".teste.claude" + DOMINIO_TESTE) or e.endswith("teste.claude@physiqcalc.app") or e == "teste@teste.com"
+    # 31/10/2026: só o domínio próprio (e2e/CONTAS_DE_TESTE.md) — as contas antigas deste arquivo (DOMINIO_TESTE) não existem mais
+    return e.endswith(".teste.claude@physiqcalc.com.br")
 
 
 def schema() -> str:

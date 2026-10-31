@@ -129,7 +129,7 @@ def conferir_virada(s: str, relatorio: str, falhas: list[str], avisos: list[str]
                        "valor_travado": vt, "faturas": c["faturas"], "assinatura": c["preapproval"]}})
     sobrou = sql_principal(f"""select count(*)::int as n from {s}.contas c join auth.users u on u.id = c.dono_id
         where c.origem in ('legado_calc', 'legado_nutri') and c.cobranca_legada
-          {"and lower(u.email) similar to '%teste%@physiq(calc|nutri).app'" if s == "staging" else ""}""")[0]["n"]
+          {"and lower(u.email) similar to '%teste%@physiqcalc.com.br'" if s == "staging" else ""}""")[0]["n"]
     ok(sobrou == 0, f"contas legadas ainda na cobrança antiga: {sobrou}")
     return linhas
 
@@ -248,7 +248,7 @@ def main() -> int:
            f"{n['email']} é dona+nutricionista de uma conta legado_nutri")
     sem_conta = sql_principal(f"""select count(*)::int as n from {s}.pacientes p join {s}.profiles pr on pr.id = p.nutricionista_id
         where p.deleted_at is null and p.conta_id is null and pr.role in ('nutricionista', 'master')
-          {"and lower(pr.email) similar to '%teste%@physiq(calc|nutri).app'" if so_testes else ""}""")[0]["n"]
+          {"and lower(pr.email) similar to '%teste%@physiqcalc.com.br'" if so_testes else ""}""")[0]["n"]
     ok(sem_conta == 0, f"pacientes do Nutri sem conta: {sem_conta}")
 
     # duplicidades e master

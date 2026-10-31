@@ -84,15 +84,13 @@ def registrar_par_w8b() -> tuple[bool, str]:
 
 
 # ───────────────────────── o aluno de TESTE (SQL só leitura) ─────────────────────────
-EMAIL_DE_TESTE_SQL = ("(lower(coalesce(p.email, '')) like '%.teste.claude@physiqnutri.app' or lower(coalesce(p.email, '')) like '%teste.claude@physiqcalc.app' "
-                      "or lower(coalesce(p.email, '')) = 'teste@teste.com')")
+EMAIL_DE_TESTE_SQL = "(lower(coalesce(p.email, '')) like '%.teste.claude@physiqcalc.com.br')"  # 31/10/2026: e2e/CONTAS_DE_TESTE.md
 
 
 # F5 da 21c: o e-mail de teste também pelo LOGIN do aluno (o auth.users do user_id) — a matrícula com o pacientes.email nulo e o login de
 # teste (os 9 alunos da conta de teste da w5p-nutri têm o e-mail do cadastro nulo; o contrato prevê a da w5p-aluna: "se for ela, só fora das
 # janelas de E2E da W-A"). Só os 2 domínios de teste (o teste@teste.com do cadastro não vale para um login do Auth, que é o da produção).
-EMAIL_DE_TESTE_LOGIN_SQL = ("(lower(coalesce(u.email, '')) like '%.teste.claude@physiqnutri.app' "
-                            "or lower(coalesce(u.email, '')) like '%teste.claude@physiqcalc.app')")
+EMAIL_DE_TESTE_LOGIN_SQL = "(lower(coalesce(u.email, '')) like '%.teste.claude@physiqcalc.com.br')"
 
 
 def sql_alunos_de_teste(s: str, conta: str, uid_nutri: str, uid_aluna: str | None) -> str:

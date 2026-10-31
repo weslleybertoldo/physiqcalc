@@ -50,7 +50,7 @@ SAIDA = Path.home() / "projetos" / "physiqcalc-scratch" / "hml" / "hml09"
 PRINTS = Path.home() / "projetos" / "physiqcalc-scratch" / "prints" / "hml09"
 ORIGEM_STAGING = "https://physiqcalc-staging.vercel.app"
 ORIGEM_PROD = "https://physiqcalc.com.br"
-SUFIXO_TESTE = ".teste.claude@physiqnutri.app"
+SUFIXO_TESTE = ".teste.claude@physiqcalc.com.br"  # 31/10/2026: as contas de teste mudaram para o domínio próprio (e2e/CONTAS_DE_TESTE.md)
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 # os campos de uma resposta que podem ir para a saída (códigos e marcas; nada de nome, e-mail, lista ou contagem de outra pessoa)
 CAMPOS_DE_CODIGO = ("ok", "erro", "error", "motivo", "simulacao", "perfil", "sem_vinculo", "papel", "vinculo", "login", "code")
@@ -121,7 +121,7 @@ def nome_sql(v: str) -> str:
 
 
 def eh_email_de_teste(email: str) -> bool:
-    """P26: só *.teste.claude@physiqnutri.app — e nunca as contas demo da Play (revisao.*)."""
+    """P26: só *.teste.claude@physiqcalc.com.br — e nunca as contas demo da Play (revisao.*)."""
     e = (email or "").strip().lower()
     return e.endswith(SUFIXO_TESTE) and "revisao" not in e
 

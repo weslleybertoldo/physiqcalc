@@ -11,6 +11,8 @@ import {
   type ProfessorCalc,
 } from "../../supabase-principal/functions/_shared/login-regras";
 import * as treino from "../../supabase/functions/_shared/espelho/regras";
+import { emailDeTeste as emailDeTesteDoMaster } from "../../supabase-principal/functions/_shared/master-regras";
+import { emailDeTesteDoPhysiq } from "../../supabase-principal/functions/_shared/convites-regras";
 import { emailDeTeste as emailDeTesteDoStaging } from "./contasTeste";
 
 // Regras do pos-login e do vincular-aluno (banco principal, W3). As de sessão são cópias das da trocar-token do Treino:
@@ -32,15 +34,25 @@ describe("sessão (igual à trocar-token)", () => {
       expect(f(oauth, { ...usuarioGoogle, identities: [{ provider: "google", identity_data: { email: "rafa@gmail.com", email_verified: false } }] })).toBe(false);
     }
   });
-  it("contas de teste do staging (P26): as 3 cópias concordam", () => {
-    const casos = ["teste@teste.com", "aluno.teste.claude@physiqnutri.app", "admin.teste.claude@physiqcalc.app", "rafa@gmail.com",
-      "teste@gmail.com", "x.teste@physiqcalc.app.evil.com", "TESTE@TESTE.COM"];
+  it("contas de teste do staging (P26): as 5 cópias concordam — 31/10/2026: SÓ *teste*@physiqcalc.com.br", () => {
+    const casos = ["teste@physiqcalc.com.br", " W30.Aluno.TESTE.Claude@PhysiqCalc.com.br ", "revisao.aluno@physiqcalc.com.br",
+      "teste@teste.com", "aluno.teste.claude@physiqnutri.app", "admin.teste.claude@physiqcalc.app", "rafa@gmail.com",
+      "teste@gmail.com", "x.teste@physiqcalc.app.evil.com", "teste@physiqcalc.com.br.evil.com", "teste@sub.physiqcalc.com.br",
+      "TESTE@TESTE.COM", "", null, undefined];
     for (const e of casos) {
-      expect(emailDeTeste(e)).toBe(treino.emailDeTeste(e));
-      expect(emailDeTesteDoStaging(e)).toBe(treino.emailDeTeste(e));
+      const esperado = treino.emailDeTeste(e);
+      expect(emailDeTeste(e), String(e)).toBe(esperado);
+      expect(emailDeTesteDoStaging(e), String(e)).toBe(esperado);
+      expect(emailDeTesteDoMaster(e), String(e)).toBe(esperado);
+      expect(emailDeTesteDoPhysiq(e), String(e)).toBe(esperado);
     }
     expect(emailDeTeste("rafa@gmail.com")).toBe(false);
-    expect(emailDeTeste("aluno.teste.claude@physiqnutri.app")).toBe(true);
+    expect(emailDeTeste("teste@physiqcalc.com.br")).toBe(true);
+    expect(emailDeTeste("revisao.profissional@physiqcalc.com.br")).toBe(false); // a conta da revisão da Play NÃO é de teste
+    // os de antes saíram: teste.com é de outra pessoa; physiqcalc.app e physiqnutri.app não são registrados
+    expect(emailDeTeste("teste@teste.com")).toBe(false);
+    expect(emailDeTeste("aluno.teste.claude@physiqnutri.app")).toBe(false);
+    expect(emailDeTeste("admin.teste.claude@physiqcalc.app")).toBe(false);
   });
 });
 

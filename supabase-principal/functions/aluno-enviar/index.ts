@@ -8,8 +8,8 @@
 // 200 → { ok, avisado, repetido, sem_login, email: { enviado, motivo?, teste, id?, erro? } } · 4xx → { ok: false, erro }
 //   (erros do banco: sem_login, sem_acesso, aluno_inexistente, sem_modulo).
 // E-mail: só para aluno com login e com e-mail no cadastro. STAGING → sempre a caixa de teste do Resend
-// (delivered@resend.dev, com "[teste → <e-mail>]" no assunto); produção → conta de teste (physiq*.app) também vai para a
-// caixa de teste, pessoa real recebe no próprio e-mail.
+// (delivered@resend.dev, com "[teste → <e-mail>]" no assunto); produção → conta de teste e todo @physiqcalc.com.br (sem caixa)
+// também vão para a caixa de teste, pessoa real recebe no próprio e-mail.
 // verify_jwt = true (chamada com o login da pessoa). Publicar:
 //   scripts/deploy_function.sh hkxvtsbwctxkrqzkkdoz supabase-principal/functions aluno-enviar true
 // Segredos: RESEND_API_KEY, RESEND_FROM, SITE_URL (+ os automáticos).
