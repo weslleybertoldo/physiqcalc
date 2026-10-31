@@ -10,6 +10,8 @@ Etapas (uma rodada = um prefixo `f<n>`; as contas são SÓ as temporárias da ro
   caso1    o aluno2: simular 200 → EXCLUI (palavra errada) 400 e nada muda → EXCLUIR: --antes espera o 500 (o defeito) e o login
            que fica; sem --antes espera 200 e confere tudo (login fora, matrículas desligadas e vivas, Treino, os outros iguais)
   caso2    o exmembro: o mesmo, pelo caminho do ALUNO (sem `fluxo`, como o APK antigo e a volta da folha nova)
+  caso3    o profaluno (dono da própria conta E aluno com 2 matrículas vivas) pelo caminho do PROFISSIONAL ({fluxo: "profissional"}):
+           a excluir_conta_profissional zera o user_id das matrículas de aluno dele — o mesmo gatilho do caso 1
   repetir  pede de novo com a sessão de antes (401, nada quebra) e confere que o login não entra mais
   limpar   apaga o que sobrou da rodada pelo PRÓPRIO "Excluir minha conta" (vizinho pelo caminho do aluno; prof pelo do profissional)
            e as senhas locais
@@ -28,7 +30,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 import _base as B  # noqa: E402
 
 p = B.p
-NOMES = {"prof": "Fabio Prof", "aluno2": "Flavia Duas Matriculas", "vizinho": "Felipe Vizinho", "exmembro": "Fernanda Ex Membro"}
+NOMES = {"prof": "Fabio Prof", "aluno2": "Flavia Duas Matriculas", "vizinho": "Felipe Vizinho", "exmembro": "Fernanda Ex Membro",
+         "profaluno": "Fausto Prof Aluno"}
 
 
 def nome(rodada: str, papel: str) -> str:
@@ -46,11 +49,13 @@ def conta_do_prof(s: str, uid_prof: str) -> dict:
                      where c.dono_id = '{uid_prof}' and c.origem = 'nova' order by c.criado_em limit 1""")
 
 
-def massa(s: str, r: str) -> dict:
+def massa(s: str, r: str, papeis: tuple[str, ...] = tuple(NOMES)) -> dict:
+    """A rodada inteira (sem `papeis`) ou só uma parte (a tela usa prof + aluno2 + vizinho). O prof sempre."""
     assert B.saude(s), "a saúde dos bancos não está boa — parei"
+    papeis = tuple(dict.fromkeys(("prof",) + tuple(papeis)))
     est = B.ler_estado(s, r)
     ids = est.setdefault("ids", {})
-    for papel in NOMES:
+    for papel in papeis:
         ids[papel] = B.criar_login(r, papel, nome(r, papel))
     B.gravar_estado(s, r, est)
     # o prof: a conta (o onboarding do painel)
@@ -62,6 +67,24 @@ def massa(s: str, r: str) -> dict:
         c = conta_do_prof(s, ids["prof"])
     est["conta"] = c["id"]
     B.gravar_estado(s, r, est)
+    tokens = [tp]
+    if "aluno2" in papeis:
+        tokens.append(massa_aluno2(s, r, ids, c))
+    if "vizinho" in papeis:
+        tokens.append(massa_vizinho(s, r, ids, c))
+    if "exmembro" in papeis:
+        massa_exmembro(s, r, ids, c, tp)
+    if "profaluno" in papeis:
+        tokens.append(massa_profaluno(s, r, ids, c))
+    for t in tokens:
+        B.sair_local(t)
+    est["fim_massa"] = estado(s, r)
+    B.gravar_estado(s, r, est)
+    print(json.dumps(est["fim_massa"], ensure_ascii=False, indent=1, default=str))
+    return est
+
+
+def massa_aluno2(s: str, r: str, ids: dict, c: dict) -> str:
     # o aluno2: aluno do app → entra na lista do prof pelo código (P7: a do app fica inativa, viva)
     ta = token(r, "aluno2")
     vivas = B.ro(f"select id::text, conta_id::text, ativo from {s}.pacientes where user_id = '{ids['aluno2']}' and deleted_at is null")
@@ -74,11 +97,19 @@ def massa(s: str, r: str) -> dict:
         p.check(st == 200 and res.get("ok"), f"[massa] aluno2 entrou na lista do prof pelo código ({st} {str(res)[:120]})")
     st, res = B.trocar_token(ta, s)
     p.check(st == 200, f"[massa] aluno2: troca de token (login e vínculo no Treino) {st}")
+    return ta
+
+
+def massa_vizinho(s: str, r: str, ids: dict, c: dict) -> str:
     # o vizinho: aluno do prof (só olha)
     tv = token(r, "vizinho")
     if not B.ro(f"select 1 from {s}.pacientes where user_id = '{ids['vizinho']}' and conta_id = '{c['id']}' and deleted_at is null"):
         st, res = B.funcao(tv, s, "vincular-aluno", {"codigo": c["codigo"]})
         p.check(st == 200 and res.get("ok"), f"[massa] vizinho entrou na lista do prof ({st} {str(res)[:120]})")
+    return tv
+
+
+def massa_exmembro(s: str, r: str, ids: dict, c: dict, tp: str) -> None:
     # o exmembro: convidado → entra (pos-login aceita) → removido pelo dono
     m = B.um(f"select id::text, status from {s}.conta_membros where conta_id = '{c['id']}' and user_id = '{ids['exmembro']}'")
     if not m:
@@ -90,12 +121,23 @@ def massa(s: str, r: str) -> dict:
     if m.get("status") != "removido":
         st, res = B.rpc(tp, s, "remover_membro", {"p_membro": m["id"]})
         p.check(st == 200 and isinstance(res, dict) and res.get("ok"), f"[massa] prof removeu o exmembro da equipe ({st} {str(res)[:120]})")
-    for t in (tp, ta, tv):
-        B.sair_local(t)
-    est["fim_massa"] = estado(s, r)
-    B.gravar_estado(s, r, est)
-    print(json.dumps(est["fim_massa"], ensure_ascii=False, indent=1, default=str))
-    return est
+
+
+def massa_profaluno(s: str, r: str, ids: dict, c: dict) -> str:
+    # o profaluno: dono da PRÓPRIA conta e aluno com 2 matrículas vivas (aluno do app → a lista do prof) — o caminho do PROFISSIONAL
+    # zera o user_id das matrículas de aluno dele (o mesmo gatilho do caso 1)
+    tpa = token(r, "profaluno")
+    if not conta_do_prof(s, ids["profaluno"]):
+        st, res = B.rpc(tpa, s, "criar_minha_conta", {"p_nome": f"Consultoria {nome(r, 'profaluno')}", "p_tipo": "personal", "p_registro": "CREF F-TESTE"})
+        p.check(st == 200 and isinstance(res, dict) and res.get("ok"), f"[massa] profaluno criou a própria conta ({st} {str(res)[:120]})")
+    if not B.ro(f"select 1 from {s}.pacientes where user_id = '{ids['profaluno']}' and deleted_at is null"):
+        st, res = B.rpc(tpa, s, "entrar_sem_profissional", {"p_objetivo": "ganhar_massa", "p_plano": "app_treino_alimentacao",
+                        "p_nascimento": "1990-05-20", "p_consentimento": versao_textos(), "p_origem": "site"})
+        p.check(st == 200 and isinstance(res, dict) and res.get("ok"), f"[massa] profaluno entrou no app como aluno ({st} {str(res)[:120]})")
+    if not B.ro(f"select 1 from {s}.pacientes where user_id = '{ids['profaluno']}' and conta_id = '{c['id']}' and deleted_at is null"):
+        st, res = B.funcao(tpa, s, "vincular-aluno", {"codigo": c["codigo"]})
+        p.check(st == 200 and res.get("ok"), f"[massa] profaluno entrou na lista do prof como aluno ({st} {str(res)[:120]})")
+    return tpa
 
 
 def versao_textos() -> str:
@@ -107,6 +149,14 @@ def versao_textos() -> str:
 # ───────────────────────── o que conferir (só leitura) ─────────────────────────
 def md5(v) -> str:
     return hashlib.md5(json.dumps(v, sort_keys=True, default=str).encode()).hexdigest()[:12]
+
+
+def lit(uid: str | None) -> str:
+    """O id como literal SQL (uuid conferido) ou NULL quando o papel não existe na rodada."""
+    if not uid:
+        return "null::uuid"
+    import uuid as _u
+    return f"'{_u.UUID(uid)}'::uuid"
 
 
 def estado(s: str, r: str) -> dict:
@@ -121,31 +171,35 @@ def estado(s: str, r: str) -> dict:
         out[papel] = {
             "login": ("soft" if u.get("soft") else "vivo") if u else "sumiu",
             "email_igual": u.get("email_igual"), "tem_senha": u.get("tem_senha"),
-            "matriculas": B.ro(f"""select id::text, conta_id::text = '{conta}' as do_prof, ativo, deleted_at is not null as lixeira,
+            "matriculas": B.ro(f"""select id::text, conta_id::text = '{conta}' as do_prof, ativo, deleted_at is not null as lixeira, user_id is null as sem_login,
                                           coalesce(config, '{{}}'::jsonb) ? 'conta_excluida_em' as marcada, lower(email) = '{B.email_de(r, papel)}' as email
                                      from {s}.pacientes where user_id = '{uid}' or (email ilike '{B.email_de(r, papel)}') order by created_at"""),
             "equipe": B.ro(f"select status, removido_motivo, user_id::text = '{uid}' as ligado from {s}.conta_membros where conta_id = '{conta}' and (user_id = '{uid}' or user_id is null)") if conta else [],
             "perfil": B.um(f"select (email is not null) as tem_email, nome, ativo, coalesce(config, '{{}}'::jsonb) ? 'conta_excluida_em' as marcado from {s}.profiles where id = '{uid}'"),
             "avisos": B.um(f"select count(*)::int as n from {s}.avisos where destino_user_id = '{uid}'").get("n"),
+            "conta_dele": B.um(f"select situacao from {s}.contas where dono_id = '{uid}' order by criado_em limit 1").get("situacao"),
             "treino_vinculo": B.ro_treino(f"select count(*)::int as n from {s}.physiq_identidades where principal_user_id = '{uid}'")[0]["n"],
         }
+    sujeitos = ", ".join(f"'{B.email_de(r, k)}'" for k in ("aluno2", "exmembro", "profaluno"))
     if conta:
         out["impressao"] = {
             "conta": md5(B.ro(f"select * from {s}.contas where id = '{conta}'")),
-            "equipe_sem_exmembro": md5(B.ro(f"select * from {s}.conta_membros where conta_id = '{conta}' and user_id is distinct from '{ids.get('exmembro')}' order by id")),
-            "prof_login": md5(B.ro(f"select id, email, encrypted_password, raw_user_meta_data, raw_app_meta_data, deleted_at from auth.users where id = '{ids.get('prof')}'")),
-            "prof_perfil": md5(B.ro(f"select * from {s}.profiles where id = '{ids.get('prof')}'")),
-            "vizinho_login": md5(B.ro(f"select id, email, encrypted_password, raw_user_meta_data, deleted_at from auth.users where id = '{ids.get('vizinho')}'")),
-            "vizinho_matricula": md5(B.ro(f"select * from {s}.pacientes where user_id = '{ids.get('vizinho')}' order by id")),
-            "vizinho_perfil": md5(B.ro(f"select * from {s}.profiles where id = '{ids.get('vizinho')}'")),
-            "alunos_do_prof_menos_aluno2": md5(B.ro(f"select id, user_id, nome, email, cpf, ativo, deleted_at from {s}.pacientes where conta_id = '{conta}' and user_id is distinct from '{ids.get('aluno2')}' and lower(coalesce(email,'')) <> '{B.email_de(r, 'aluno2')}' order by id")),
+            "equipe_sem_exmembro": md5(B.ro(f"select * from {s}.conta_membros where conta_id = '{conta}' and user_id is distinct from {lit(ids.get('exmembro'))} order by id")),
+            "prof_login": md5(B.ro(f"select id, email, encrypted_password, raw_user_meta_data, raw_app_meta_data, deleted_at from auth.users where id = {lit(ids.get('prof'))}")),
+            "prof_perfil": md5(B.ro(f"select * from {s}.profiles where id = {lit(ids.get('prof'))}")),
+            "vizinho_login": md5(B.ro(f"select id, email, encrypted_password, raw_user_meta_data, deleted_at from auth.users where id = {lit(ids.get('vizinho'))}")),
+            "vizinho_matricula": md5(B.ro(f"select * from {s}.pacientes where user_id = {lit(ids.get('vizinho'))} order by id")),
+            "vizinho_perfil": md5(B.ro(f"select * from {s}.profiles where id = {lit(ids.get('vizinho'))}")),
+            "alunos_do_prof_menos_sujeitos": md5(B.ro(f"select id, user_id, nome, email, cpf, ativo, deleted_at from {s}.pacientes where conta_id = '{conta}' and lower(coalesce(email,'')) not in ({sujeitos}) order by id")),
         }
     return out
 
 
 # ───────────────────────── os casos ─────────────────────────
 def caso(s: str, r: str, papel: str, antes: bool) -> int:
-    rot = {"aluno2": "caso 1 (2 matrículas vivas, mesmo e-mail)", "exmembro": "caso 2 (ex-membro de equipe, caminho do aluno)"}[papel]
+    rot = {"aluno2": "caso 1 (2 matrículas vivas, mesmo e-mail)", "exmembro": "caso 2 (ex-membro de equipe, caminho do aluno)",
+           "profaluno": "caso 3 (profissional que é aluno com 2 matrículas vivas, caminho do profissional)"}[papel]
+    extra = {"fluxo": "profissional"} if papel == "profaluno" else {}
     assert B.saude(s), "a saúde dos bancos não está boa — parei"
     est = B.ler_estado(s, r)
     uid = est["ids"][papel]
@@ -156,18 +210,20 @@ def caso(s: str, r: str, papel: str, antes: bool) -> int:
     sess = B.sessao(r, papel)
     tok = sess["access_token"]
     assert sess["user"]["id"] == uid, "a sessão é de OUTRA pessoa — parei"
-    st, sim = B.funcao(tok, s, "excluir-minha-conta", {"simular": True})
+    st, sim = B.funcao(tok, s, "excluir-minha-conta", {**extra, "simular": True})
     mp = ((sim.get("mantem") or {}).get("principal") or {})
     p.check(st == 200 and sim.get("ok") and sim.get("simulacao"), f"[{rot}] simular → 200 ({st} {str({k: sim.get(k) for k in ('ok', 'erro', 'motivo', 'perfil')})})")
+    if papel == "profaluno":
+        p.check(((sim.get("aluno") or {}).get("matriculas")) == 2, f"[{rot}] a simulação mostra as 2 matrículas de aluno dele ({(sim.get('aluno') or {}).get('matriculas')})")
     if papel == "aluno2":
         p.check(mp.get("matriculas") == 2, f"[{rot}] a simulação mostra as 2 matrículas que ficam desligadas ({mp.get('matriculas')})")
     # negativo: sem a palavra certa nada sai
-    st_n, neg = B.funcao(tok, s, "excluir-minha-conta", {"confirmacao": "EXCLUI"})
+    st_n, neg = B.funcao(tok, s, "excluir-minha-conta", {**extra, "confirmacao": "EXCLUI"})
     f1 = estado(s, r)
     p.check(st_n == 400 and neg.get("erro") == "confirmacao_invalida", f"[{rot}] palavra errada (EXCLUI) → 400 confirmacao_invalida ({st_n} {neg.get('erro')})")
     p.check(f1 == f0, f"[{rot}] palavra errada: NADA mudou (a foto é a mesma)")
     t0 = time.time()
-    st_e, fim = B.funcao(tok, s, "excluir-minha-conta", {"confirmacao": "EXCLUIR"})
+    st_e, fim = B.funcao(tok, s, "excluir-minha-conta", {**extra, "confirmacao": "EXCLUIR"})
     seg = round(time.time() - t0, 1)
     f2 = estado(s, r)
     resumo = {"status": st_e, "segundos": seg, **{k: fim.get(k) for k in ("ok", "erro", "motivo", "perfil", "play_cancelada")}}
@@ -181,6 +237,10 @@ def caso(s: str, r: str, papel: str, antes: bool) -> int:
     else:
         p.check(st_e == 200 and fim.get("ok") is True, f"[{rot}] EXCLUIR → 200 ok ({st_e} em {seg} s · {str(resumo)[:160]})")
         conferir_depois(s, r, papel, f0, f2, rot)
+        # repetir com a MESMA sessão: o login já saiu → 401, nada quebra nem muda
+        st_r, rep = B.funcao(tok, s, "excluir-minha-conta", {**extra, "confirmacao": "EXCLUIR"})
+        f3 = estado(s, r)
+        p.check(st_r == 401 and f3 == f2, f"[{rot}] repetir com a sessão de antes → 401 ({st_r} {rep.get('erro')}) e nada mudou")
     p.check(f2["impressao"] == f0["impressao"], f"[{rot}] NENHUM dado de outra pessoa mudou (conta, equipe, prof, vizinho, os outros alunos)")
     if f2["impressao"] != f0["impressao"]:
         print("   diferenças:", {k: (f0["impressao"][k], f2["impressao"][k]) for k in f0["impressao"] if f0["impressao"][k] != f2["impressao"][k]})
@@ -195,6 +255,13 @@ def conferir_depois(s: str, r: str, papel: str, f0: dict, f2: dict, rot: str) ->
         p.check(len(vivas) == 2 and all(m["marcada"] and not m["ativo"] and m["email"] for m in vivas),
                 f"[{rot}] as 2 matrículas FICAM com o profissional: vivas, desligadas, inativas, marcadas, e-mail mantido ({vivas})")
         p.check(not d["perfil"], f"[{rot}] o perfil saiu junto com o login ({d['perfil']})")
+    elif papel == "profaluno":
+        p.check(d["login"] == "soft" and not d["email_igual"] and not d["tem_senha"],
+                f"[{rot}] o login FECHOU por soft delete (sem senha, e-mail embaralhado) ({d['login']})")
+        vivas = [m for m in d["matriculas"] if not m["lixeira"]]
+        p.check(len(vivas) == 2 and all(m["sem_login"] and m["marcada"] and not m["ativo"] and m["email"] for m in vivas),
+                f"[{rot}] as 2 matrículas de aluno dele: DESLIGADAS do login (user_id vazio), vivas, inativas, marcadas ({vivas})")
+        p.check(d.get("conta_dele") == "cancelada", f"[{rot}] a conta dele ficou cancelada ({d.get('conta_dele')})")
     else:
         p.check(d["login"] == "soft" and not d["email_igual"] and not d["tem_senha"],
                 f"[{rot}] o login FECHOU por soft delete (sem senha, e-mail embaralhado) ({d['login']}, e-mail igual {d['email_igual']}, senha {d['tem_senha']})")
@@ -222,11 +289,11 @@ def limpar(s: str, r: str) -> int:
     est = B.ler_estado(s, r)
     ids = est.get("ids", {})
     f = estado(s, r)
-    for papel in ("aluno2", "exmembro", "vizinho", "prof"):
+    for papel in ("aluno2", "exmembro", "profaluno", "vizinho", "prof"):
         if papel not in ids or f[papel]["login"] != "vivo":
             continue
         tok = token(r, papel)
-        corpo_sim, corpo = ({"fluxo": "profissional", "simular": True}, {"fluxo": "profissional", "confirmacao": "EXCLUIR"}) if papel == "prof" \
+        corpo_sim, corpo = ({"fluxo": "profissional", "simular": True}, {"fluxo": "profissional", "confirmacao": "EXCLUIR"}) if papel in ("prof", "profaluno") \
             else ({"simular": True}, {"confirmacao": "EXCLUIR"})
         st, sim = B.funcao(tok, s, "excluir-minha-conta", corpo_sim)
         p.check(st == 200 and sim.get("ok"), f"[limpar] {papel}: simular {st} {str({k: sim.get(k) for k in ('erro', 'motivo', 'perfil')})}")
@@ -249,7 +316,7 @@ def limpar(s: str, r: str) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("etapa", choices=["massa", "caso1", "caso2", "repetir1", "repetir2", "foto", "limpar"])
+    ap.add_argument("etapa", choices=["massa", "caso1", "caso2", "caso3", "repetir1", "repetir2", "repetir3", "foto", "limpar"])
     ap.add_argument("--schema", required=True, choices=["staging", "public"])
     ap.add_argument("--rodada", required=True)
     ap.add_argument("--antes", action="store_true", help="espera o defeito (500, o login fica)")
@@ -262,6 +329,10 @@ def main() -> int:
         caso(s, r, "aluno2", a.antes)
     elif a.etapa == "caso2":
         caso(s, r, "exmembro", a.antes)
+    elif a.etapa == "caso3":
+        caso(s, r, "profaluno", a.antes)
+    elif a.etapa == "repetir3":
+        repetir(s, r, "profaluno")
     elif a.etapa == "repetir1":
         repetir(s, r, "aluno2")
     elif a.etapa == "repetir2":
