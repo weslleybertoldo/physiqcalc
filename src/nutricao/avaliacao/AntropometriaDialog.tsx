@@ -42,8 +42,9 @@ const schema = z.object({
     return n !== null && Number.isInteger(n) && n >= 0 && n <= 130;
   }, "Idade inválida"),
   protocolo: z.enum(["nenhum", "pollock3", "pollock7", "faulkner", "guedes"]),
-  circunferencias: z.record(medida(1000, "Medida em cm")),
-  dobras: z.record(medida(200, "Dobra em mm")),
+  // zod 4: a tipagem do z.record pede a chave e o valor (o zod 3 aceitava só o valor, com a chave texto — o mesmo de agora)
+  circunferencias: z.record(z.string(), medida(1000, "Medida em cm")),
+  dobras: z.record(z.string(), medida(200, "Dobra em mm")),
   observacao: z.string().max(OBSERVACAO_MAX, "Observação muito longa"),
 });
 type Valores = z.infer<typeof schema>;

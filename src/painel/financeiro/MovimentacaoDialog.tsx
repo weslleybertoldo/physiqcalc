@@ -20,13 +20,15 @@ import {
   textoValor, valorValido, type FormMovimentacao,
 } from "./financeiroUtil";
 
+// @hookform/resolvers 5 tipa a ENTRADA e a SAÍDA do esquema separadas: o refine com type predicate (ehTipo/ehMetodo) estreitava só a
+// saída e o useForm<Valores> deixava de fechar. A seta com ": boolean" valida igual e mantém o formulário em texto (o montarForm estreita).
 const schema = z.object({
-  tipo: z.string().refine(ehTipo, "Tipo inválido"),
+  tipo: z.string().refine((v): boolean => ehTipo(v), "Tipo inválido"),
   descricao: z.string().refine((v) => v.trim().length >= 2, "Informe a descrição").refine((v) => v.trim().length <= DESCRICAO_MAX, "Descrição muito longa"),
   valor: z.string().refine(valorValido, "Informe um valor maior que zero (ex.: 150,00)"),
   data: z.string().refine(dataValida, "Data inválida"),
   categoriaId: z.string(),
-  metodo: z.string().refine(ehMetodo, "Forma inválida"),
+  metodo: z.string().refine((v): boolean => ehMetodo(v), "Forma inválida"),
   pacienteId: z.string().nullable(),
   observacao: z.string().max(OBSERVACAO_MAX, "Observação muito longa"),
 });
