@@ -1,10 +1,15 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { Check, Minus, Plus, Undo2 } from "lucide-react";
-import { calcularPace, formatPace, formatTempo, parseTempo } from "@/lib/corrida";
+import { toast } from "sonner";
+import { calcularPace, formatPace, formatTempo, parseTempo, partesDaCorrida } from "@/lib/corrida";
 import { cn } from "@/lib/utils";
 import { formatarSegundos } from "../porTempo";
 import type { SerieComMemoria } from "../tipos";
+import { FolhaRoletaTempo } from "./RoletaTempo";
 import { LinhaSerieTempo } from "./SerieTempo";
+
+/** O teto da roleta da corrida: 9 h 59 min 59 s. */
+const TEMPO_MAX_CORRIDA = 9 * 3600 + 59 * 60 + 59;
 
 const CLASSE_CAMPO =
   "h-10 min-w-0 rounded-xl border border-linha-2 bg-superficie px-2 text-center text-[15px] font-semibold tabular-nums text-texto outline-none transition-colors placeholder:text-texto-4 focus:border-violeta-2";
@@ -101,16 +106,17 @@ const LinhaSerie = memo(function LinhaSerie({
   const [reps, setReps] = useState(serie.reps > 0 ? String(serie.reps) : "");
   const [tempo, setTempo] = useState(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
   const [dist, setDist] = useState(serie.distancia_km ? String(serie.distancia_km) : "");
+  const [roleta, setRoleta] = useState(false);
   const feita = !!serie.concluida;
   const iniciou = useRef(false);
   const campoPeso = useRef<HTMLInputElement>(null);
   const campoReps = useRef<HTMLInputElement>(null);
-  const campoTempo = useRef<HTMLInputElement>(null);
   const campoDist = useRef<HTMLInputElement>(null);
 
   // 1ª vez sempre sincroniza; depois só quando a série foi gravada (não passa por cima do que a pessoa digita). Peso 0 vira
   // campo vazio (a troca de academia zera séries sem referência). O campo em foco nunca é refeito (22/10/2026): o km digitado
-  // enquanto o Tempo ainda gravava sumia quando a série voltava salva, e o salvamento do km saía sem a distância.
+  // enquanto o Tempo ainda gravava sumia quando a série voltava salva, e o salvamento do km saía sem a distância. O Tempo da
+  // corrida não é mais digitado (a roleta, 09/11/2026): ele sempre acompanha o que foi gravado.
   useEffect(() => {
     const emFoco = (c: { current: HTMLInputElement | null }) => !!c.current && c.current === document.activeElement;
     if (!corrida) {
@@ -118,7 +124,7 @@ const LinhaSerie = memo(function LinhaSerie({
       if (!emFoco(campoReps) && !serie.concluida && serie.reps > 0 && (!iniciou.current || serie.salva)) setReps(String(serie.reps));
       iniciou.current = true;
     } else {
-      if (!emFoco(campoTempo)) setTempo(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
+      setTempo(serie.tempo_segundos ? formatTempo(serie.tempo_segundos) : "");
       if (!emFoco(campoDist)) setDist(serie.distancia_km ? String(serie.distancia_km) : "");
     }
   }, [serie.peso, serie.reps, serie.tempo_segundos, serie.distancia_km, serie.concluida, serie.salva, corrida]);
@@ -128,16 +134,22 @@ const LinhaSerie = memo(function LinhaSerie({
   );
 
   if (feita) {
+    // corrida: o tempo e os km numa linha e o pace embaixo (numa linha só o pace era cortado no celular)
+    const daCorrida = corrida && !porTempo ? partesDaCorrida(serie) : null;
     return (
-      <div data-serie={serie.numero_serie} data-serie-feita className="flex h-11 items-center gap-2 rounded-xl border border-verde/25 bg-verde/10 px-3">
+      <div data-serie={serie.numero_serie} data-serie-feita
+        className={cn("flex items-center gap-2 rounded-xl border border-verde/25 bg-verde/10 px-3", daCorrida?.pace ? "min-h-11 py-1.5" : "h-11")}>
         <Check aria-hidden className="h-3.5 w-3.5 flex-none text-verde-2" strokeWidth={3} />
         {rotulo}
-        <span className="min-w-0 flex-1 truncate text-[14px] font-semibold tabular-nums text-forte">
-          {porTempo
-            ? formatarSegundos(serie.tempo_segundos)
-            : corrida && serie.tempo_segundos
-            ? `${formatTempo(serie.tempo_segundos)} · ${serie.distancia_km ?? 0} km${serie.pace_segundos_km ? ` · pace ${formatPace(serie.pace_segundos_km)}` : ""}`
-            : `${serie.peso} kg × ${serie.reps}`}
+        <span className="min-w-0 flex-1 text-[14px] font-semibold tabular-nums text-forte">
+          {daCorrida ? (
+            <>
+              <span className="block truncate">{daCorrida.principal}</span>
+              {daCorrida.pace && <span className="block truncate text-[11.5px] font-medium text-texto-2">{daCorrida.pace}</span>}
+            </>
+          ) : (
+            <span className="block truncate">{porTempo ? formatarSegundos(serie.tempo_segundos) : `${serie.peso} kg × ${serie.reps}`}</span>
+          )}
         </span>
         <button type="button" onClick={aoDesfazer} data-serie-refazer className="flex h-8 items-center gap-1 rounded-lg px-2 text-[12px] font-semibold text-texto-2 hover:text-texto">
           <Undo2 aria-hidden className="h-3.5 w-3.5" /> Refazer
@@ -170,15 +182,35 @@ const LinhaSerie = memo(function LinhaSerie({
     const t = parseTempo(tempo);
     const d = parseFloat(dist);
     const pace = t && d > 0 ? formatPace(calcularPace(t, d)) : null;
+    // a roleta confirmou: grava o tempo com o km que já estiver no campo (zero = sem tempo)
+    const escolherTempo = (s: number) => {
+      setTempo(s > 0 ? formatTempo(s) : "");
+      const dd = parseFloat(dist);
+      if (s > 0 || dd) aoSalvar(0, 0, s || undefined, dd || undefined);
+    };
+    // sem tempo e sem km a série não fecha (antes fechava vazia e aparecia "0 kg × 0")
+    const concluir = () => {
+      const tt = parseTempo(tempo) || undefined;
+      const dd = parseFloat(dist) || undefined;
+      if (!tt && !dd) {
+        toast.error("Marque o tempo ou os km da corrida.");
+        return;
+      }
+      aoConcluir(0, 0, tt, dd);
+    };
     return (
       <div data-serie={serie.numero_serie} className="flex items-center gap-2">
         {rotulo}
-        <label className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-[10.5px] font-medium text-texto-3">Tempo</span>
-          <input ref={campoTempo} type="text" inputMode="numeric" value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="00:00"
-            onBlur={() => { const tt = parseTempo(tempo); const dd = parseFloat(dist); if (tt) aoSalvar(0, 0, tt, dd || undefined); }}
-            aria-label={`Tempo da série ${serie.numero_serie} de ${nome} (MM:SS)`} className={CLASSE_CAMPO} />
-        </label>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span aria-hidden className="text-[10.5px] font-medium text-texto-3">Tempo</span>
+          <button type="button" onClick={() => setRoleta(true)} data-campo-tempo
+            aria-label={`Tempo da série ${serie.numero_serie} de ${nome}: ${tempo || "sem tempo"}. Toque para escolher`}
+            className={cn(CLASSE_CAMPO, "flex items-center justify-center", !tempo && "text-texto-4")}>
+            {tempo || "00:00"}
+          </button>
+          <FolhaRoletaTempo aberto={roleta} aoMudar={setRoleta} titulo="Tempo da corrida" descricao={`Série ${serie.numero_serie} · ${nome}`}
+            segundos={t} comHoras maxSegundos={TEMPO_MAX_CORRIDA} aoConfirmar={escolherTempo} />
+        </div>
         <label className="flex w-[74px] flex-none flex-col gap-0.5">
           <span className="text-[10.5px] font-medium text-texto-3">Km</span>
           <input ref={campoDist} type="number" inputMode="decimal" step="0.1" min="0" value={dist} onChange={(e) => setDist(e.target.value)} placeholder="0,0"
@@ -188,7 +220,7 @@ const LinhaSerie = memo(function LinhaSerie({
         <div className="flex flex-none flex-col items-end gap-0.5">
           <span className="text-[10.5px] font-medium text-violeta-3">{pace ? `pace ${pace}` : " "}</span>
           <div className="flex items-center gap-1">
-            <BotaoOk aoTocar={() => aoConcluir(0, 0, parseTempo(tempo) || undefined, parseFloat(dist) || undefined)} />
+            <BotaoOk aoTocar={concluir} />
             {aoRemover && <BotaoMenos aoTocar={aoRemover} />}
           </div>
         </div>

@@ -26,3 +26,29 @@ export function calcularPace(tempoSegundos: number, distanciaKm: number): number
   if (!distanciaKm || distanciaKm <= 0) return 0;
   return Math.round(tempoSegundos / distanciaKm);
 }
+
+/** "2,2 km" — vírgula e até 2 casas, como o campo mostra no celular. */
+export function formatKm(km: number): string {
+  return `${km.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} km`;
+}
+
+type SerieDeCorrida = { tempo_segundos?: number | null; distancia_km?: number | null; pace_segundos_km?: number | null };
+
+/**
+ * A série de corrida feita em 2 pedaços — "19:00 · 2,2 km" e "pace 8:38 /km" (a linha da série no celular mostra um embaixo do outro;
+ * numa linha só o pace era cortado em 390 px). Só o que existe (só o tempo, só os km); nada → "—". O pace só com tempo E km.
+ * Nunca "0 kg × 0" (09/11/2026: a corrida sem tempo caía no texto da musculação).
+ */
+export function partesDaCorrida(s: SerieDeCorrida): { principal: string; pace: string } {
+  const tempo = s.tempo_segundos && s.tempo_segundos > 0 ? s.tempo_segundos : 0;
+  const km = s.distancia_km && s.distancia_km > 0 ? s.distancia_km : 0;
+  const pace = tempo && km ? (s.pace_segundos_km && s.pace_segundos_km > 0 ? s.pace_segundos_km : calcularPace(tempo, km)) : 0;
+  const principal = [tempo ? formatTempo(tempo) : "", km ? formatKm(km) : ""].filter(Boolean).join(" · ");
+  return { principal: principal || "—", pace: pace ? `pace ${formatPace(pace)}` : "" };
+}
+
+/** A série de corrida feita numa linha: "19:00 · 2,2 km · pace 8:38 /km". */
+export function resumoDaCorrida(s: SerieDeCorrida): string {
+  const p = partesDaCorrida(s);
+  return p.pace ? `${p.principal} · ${p.pace}` : p.principal;
+}

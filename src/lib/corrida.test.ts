@@ -1,5 +1,28 @@
 import { describe, it, expect } from "vitest";
-import { parseTempo, formatTempo, formatPace, calcularPace } from "./corrida";
+import { parseTempo, formatTempo, formatPace, calcularPace, formatKm, partesDaCorrida, resumoDaCorrida } from "./corrida";
+
+describe("resumoDaCorrida (a série feita, 09/11/2026)", () => {
+  it("tempo · km · pace (o pace calculado quando não veio gravado)", () => {
+    expect(resumoDaCorrida({ tempo_segundos: 1140, distancia_km: 2.2 })).toBe("19:00 · 2,2 km · pace 8:38 /km");
+    expect(resumoDaCorrida({ tempo_segundos: 1500, distancia_km: 5, pace_segundos_km: 300 })).toBe("25:00 · 5 km · pace 5:00 /km");
+  });
+  it("só o que existe — e nunca '0 kg × 0'", () => {
+    expect(resumoDaCorrida({ distancia_km: 2.2 })).toBe("2,2 km");
+    expect(resumoDaCorrida({ tempo_segundos: 3930 })).toBe("01:05:30");
+    expect(resumoDaCorrida({ tempo_segundos: 0, distancia_km: 0 })).toBe("—");
+    expect(resumoDaCorrida({ tempo_segundos: null, distancia_km: null, pace_segundos_km: null })).toBe("—");
+  });
+  it("em 2 pedaços para a linha da série (o pace embaixo); o pace só com tempo E km", () => {
+    expect(partesDaCorrida({ tempo_segundos: 1140, distancia_km: 2.2 })).toEqual({ principal: "19:00 · 2,2 km", pace: "pace 8:38 /km" });
+    expect(partesDaCorrida({ distancia_km: 2.2, pace_segundos_km: 300 })).toEqual({ principal: "2,2 km", pace: "" });
+    expect(partesDaCorrida({})).toEqual({ principal: "—", pace: "" });
+  });
+  it("km com vírgula e até 2 casas", () => {
+    expect(formatKm(2.2)).toBe("2,2 km");
+    expect(formatKm(10)).toBe("10 km");
+    expect(formatKm(3.456)).toBe("3,46 km");
+  });
+});
 
 describe("parseTempo", () => {
   it("aceita MM:SS", () => {
