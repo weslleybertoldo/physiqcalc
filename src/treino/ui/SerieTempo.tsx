@@ -4,8 +4,9 @@ import { toast } from "sonner";
 import { deveVibrar, lerSomDescanso, temSom, tocarSom, vibrarNoNavegador } from "@/lib/somDescanso";
 import { cn } from "@/lib/utils";
 import { chaveDaSerie, lerCronometroSerie as lerSalvo, salvarCronometroSerie as salvar, type CronometroSalvo } from "../cronometroSerie";
-import { estadoDoCronometro, lerSegundos, relogio } from "../porTempo";
+import { estadoDoCronometro, lerSegundos, relogio, TEMPO_MAX_SEGUNDOS } from "../porTempo";
 import type { SerieComMemoria } from "../tipos";
+import { FolhaRoletaTempo } from "./RoletaTempo";
 
 const CLASSE_CAMPO =
   "h-10 min-w-0 rounded-xl border border-linha-2 bg-superficie px-2 text-center text-[15px] font-semibold tabular-nums text-texto outline-none transition-colors placeholder:text-texto-4 focus:border-violeta-2";
@@ -23,10 +24,11 @@ async function pedirTelaAcesa(): Promise<Trava> {
 }
 
 /**
- * Uma série por TEMPO (Prancha e Prancha Lateral, decisão do Weslley 21/10/2026): o campo Tempo (o aluno corrige na mão:
- * "45", "0:45", "1:30") e o ▶ que liga o cronômetro — com meta do profissional conta pra BAIXO a partir dela e, no fim, apita
- * (o mesmo som do descanso) e conclui a série com a meta; sem meta conta pra CIMA até o Parar, que conclui com o tempo segurado.
- * Parar antes da meta conclui com o que segurou; o × cancela sem gravar. A série grava só o tempo.
+ * Uma série por TEMPO (Prancha e Prancha Lateral, decisão do Weslley 21/10/2026): o campo Tempo e o ▶ que liga o cronômetro.
+ * Desde 09/11/2026 (pedido dele: "eu seleciono um tempo 1 min e vai na contagem regressiva") o campo abre a roleta (min · seg)
+ * e o ▶ conta pra BAIXO a partir do tempo do campo — que já vem com a meta do profissional, quando tem — e, no fim, apita (o
+ * mesmo som do descanso) e conclui a série com esse tempo; campo vazio conta pra CIMA até o Parar, que conclui com o tempo
+ * segurado. Parar antes do fim conclui com o que segurou; o × cancela sem gravar. A série grava só o tempo.
  */
 export function LinhaSerieTempo({
   serie,
@@ -52,6 +54,7 @@ export function LinhaSerieTempo({
   const chave = chaveDaSerie(exercicioId, serie.slot_idx, serie.numero_serie);
   const inicial = serie.salva && serie.tempo_segundos ? serie.tempo_segundos : meta ?? serie.tempo_segundos ?? null;
   const [tempo, setTempo] = useState(inicial ? relogio(inicial) : "");
+  const [roleta, setRoleta] = useState(false);
   const [rodando, setRodando] = useState<CronometroSalvo | null>(() => {
     const s = lerSalvo();
     return s && s.chave === chave ? s : null;
@@ -155,7 +158,9 @@ export function LinhaSerieTempo({
     } catch {
       audioRef.current = null;
     }
-    const novo: CronometroSalvo = { chave, inicio: Date.now(), meta: meta && meta > 0 ? meta : null };
+    // conta pra baixo a partir do tempo do campo (a meta do profissional ou o escolhido na roleta); vazio = pra cima
+    const alvo = lerSegundos(tempo);
+    const novo: CronometroSalvo = { chave, inicio: Date.now(), meta: alvo && alvo > 0 ? alvo : null };
     terminouRef.current = false;
     salvar(novo);
     setRodando(novo);
@@ -174,21 +179,20 @@ export function LinhaSerieTempo({
     encerrar(null);
   };
 
-  const gravarCampo = () => {
-    const s = lerSegundos(tempo);
-    if (s) {
+  // a roleta confirmou: o campo fica com o tempo (e grava, como o campo digitado gravava); zero = campo vazio (o ▶ conta pra cima)
+  const escolherTempo = (s: number) => {
+    if (s > 0) {
       setTempo(relogio(s));
       if (s !== serie.tempo_segundos) aoSalvar(s);
     } else {
-      const v = serie.salva && serie.tempo_segundos ? serie.tempo_segundos : meta ?? serie.tempo_segundos ?? null;
-      setTempo(v ? relogio(v) : "");
+      setTempo("");
     }
   };
 
   const concluirComOCampo = () => {
     const s = lerSegundos(tempo);
     if (!s) {
-      toast.error("Marque o tempo da série: toque no ▶ ou digite (ex.: 45 ou 1:30).");
+      toast.error("Marque o tempo da série: toque no ▶ ou no Tempo.");
       return;
     }
     if (lerSalvo()?.chave === chave) salvar(null);
@@ -221,17 +225,23 @@ export function LinhaSerieTempo({
     );
   }
 
+  const alvo = lerSegundos(tempo);
   return (
     <div data-serie={serie.numero_serie} data-serie-tempo className="flex items-center gap-2">
       {rotulo}
-      <label className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-[10.5px] font-medium text-texto-3">{meta ? `Tempo · meta ${relogio(meta)}` : "Tempo"}</span>
-        <input type="text" inputMode="numeric" value={tempo} onChange={(ev) => setTempo(ev.target.value)} onBlur={gravarCampo} placeholder="00:00"
-          aria-label={`Tempo da série ${serie.numero_serie} de ${nome} (segundos ou MM:SS)`} className={CLASSE_CAMPO} />
-      </label>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span aria-hidden className="text-[10.5px] font-medium text-texto-3">{meta ? `Tempo · meta ${relogio(meta)}` : "Tempo"}</span>
+        <button type="button" onClick={() => setRoleta(true)} data-campo-tempo
+          aria-label={`Tempo da série ${serie.numero_serie} de ${nome}: ${tempo || "sem tempo"}. Toque para escolher`}
+          className={cn(CLASSE_CAMPO, "flex items-center justify-center", !tempo && "text-texto-4")}>
+          {tempo || "00:00"}
+        </button>
+        <FolhaRoletaTempo aberto={roleta} aoMudar={setRoleta} titulo="Tempo da série" descricao={`Série ${serie.numero_serie} · ${nome}`}
+          segundos={alvo} maxSegundos={TEMPO_MAX_SEGUNDOS} aoConfirmar={escolherTempo} />
+      </div>
       <div className="flex flex-none items-center gap-1 self-end">
         <button type="button" onClick={iniciar} data-serie-iniciar aria-label={`Iniciar o cronômetro da série ${serie.numero_serie}`}
-          title={meta ? `Contar ${relogio(meta)} pra baixo` : "Contar o tempo"}
+          title={alvo ? `Contar ${relogio(alvo)} pra baixo` : "Contar o tempo"}
           className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-violeta/40 bg-violeta/12 text-violeta-3 hover:bg-violeta/20">
           <Play aria-hidden className="h-4 w-4" strokeWidth={2.6} />
         </button>

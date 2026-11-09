@@ -222,13 +222,15 @@ describe("Prancha por tempo na aba Treino", () => {
     expect(tons).toBe(0);
   });
 
-  it("corrigir na mão grava só o tempo; o Escalador segue gravando peso × reps e o peso na academia", async () => {
+  it("escolher na roleta grava só o tempo; o Escalador segue gravando peso × reps e o peso na academia", async () => {
     comCore();
     abrir();
     const painel = await abrirExercicio(PRANCHA_ID);
-    const campo = painel.querySelector('[data-serie="2"] input') as HTMLInputElement;
-    fireEvent.change(campo, { target: { value: "50" } });
-    fireEvent.blur(campo);
+    fireEvent.click(painel.querySelector('[data-serie="2"] [data-campo-tempo]')!);
+    const roleta = await screen.findByRole("spinbutton", { name: "Seg" });
+    fireEvent.click(screen.getByRole("spinbutton", { name: "Min" }).querySelector('[data-roleta-item="0"]')!);
+    fireEvent.click(roleta.querySelector('[data-roleta-item="50"]')!);
+    fireEvent.click(document.querySelector("[data-roleta-confirmar]")!);
     await waitFor(() => expect(gravacoesDaSerie().find((g) => g.numero_serie === 2)).toMatchObject({ peso: null, reps: null, tempo_segundos: 50 }));
     expect(tocouAcademia()).toBe(false);
 
