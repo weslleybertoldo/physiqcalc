@@ -102,7 +102,7 @@ Neste texto, "Physiq" e "nós" são quem oferece o aplicativo.
 | Pagamentos ao Physiq | plano, valor, situação, vencimento e o identificador do pagamento no Mercado Pago ou do pedido na Google Play (o número do cartão não passa pelo Physiq) | cobrar o plano do profissional e o plano do app |
 | Profissional | registro no conselho (CRN, CREF), WhatsApp, endereço, carimbo, chave Pix de recebimento e, quando ele liga as mensagens automáticas, a conexão do WhatsApp dele | o perfil profissional, os recibos e os avisos aos alunos |
 | Aceite e consentimentos | data, hora e versão aceita dos Termos e desta política; o consentimento do dado de saúde; e, para quem tem 16 ou 17 anos, o consentimento do responsável (nome, vínculo e como consentiu, registrados pelo profissional); e de onde veio cada aceite (site, app ou Google Play) | provar o aceite e o consentimento |
-| Técnicos | identificador do usuário, datas, o código do aparelho para as notificações, um código feito a partir do endereço IP (não o IP) para limitar tentativas, e os avisos de erro, sem dado pessoal | segurança, notificações e correção de erros |
+| Técnicos | identificador do usuário, datas, o código do aparelho para as notificações, um código feito a partir do endereço IP (não o IP) para limitar tentativas, e os avisos de erro (seção 13) | segurança, notificações e correção de erros |
 | Entrada no celular novo | só no app Android: a parte pública da chave de entrada (seção 12), ligada à sua conta (sozinha, ela não serve para entrar); o código da chave; a marca e o modelo do celular; as versões do Android e do app; se o app veio da Google Play ou do site; se a chave foi criada com o backup do Google ou só no celular; o acesso (a sessão de login) em que ela foi criada; as datas de criação e do último uso e quantas vezes ela entrou; os dados técnicos que o Android devolve com ela; os códigos de uso único de cada criação e de cada entrada; e, se ela for desligada, quando e por quê. A parte privada da chave não vem para o Physiq | entrar sozinho na sua conta no celular novo, com segurança, e saber de que aparelho e versão do app é cada chave, para corrigir erros |
 
 Não usamos os seus dados para publicidade e não vendemos dados. Não há rastreadores de terceiros no site nem no app (como Google
@@ -283,9 +283,10 @@ recursos próprios do navegador.
 - Os comprovantes e as fotos ficam num armazenamento privado e são abertos por links que valem pouco tempo.
 - O login tem captcha e limite de tentativas.
 - O acesso administrativo existe só pelo site.
-- Os registros do servidor e os avisos de erro servem só para a segurança e para corrigir erros: levam códigos técnicos, como o
-  identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro. O serviço de login (Supabase) tem
-  registros próprios de cada entrada (seção 9).
+- Os registros do servidor servem só para a segurança e para corrigir erros: levam códigos técnicos, como o identificador da conta
+  ou o começo do código da chave de entrada, e o texto técnico do erro. Os avisos de erro levam esse texto limpo de e-mail,
+  telefone, CPF e IP, e nunca o identificador da conta. O serviço de login (Supabase) tem registros próprios de cada entrada
+  (seção 9).
 - As notificações não mostram nome nem valor. Os lembretes das rotinas mostram o nome da rotina e a dose; o de remédio mostra só
   a hora, e o nome do remédio aparece ao abrir o app.
 - Há uma cópia de segurança diária, cifrada.

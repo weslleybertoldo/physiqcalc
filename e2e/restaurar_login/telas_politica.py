@@ -37,6 +37,7 @@ FRASES: dict[str, list[str]] = {
         "entrar sozinho na sua conta no celular novo, com segurança",
         "e saber de que aparelho e versão do app é cada chave, para corrigir erros",
         "Os técnicos e os da entrada no celular novo, o Physiq registra sozinho.",
+        "para limitar tentativas, e os avisos de erro (seção 13)",
     ],
     "base_legal": ["legítimo interesse, num serviço que beneficia você: voltar à sua conta no celular novo sem entrar de novo"],
     "servicos": [
@@ -59,6 +60,7 @@ FRASES: dict[str, list[str]] = {
         "o código da chave e o da sessão, o identificador da conta, datas e se já tentou entrar",
         "As chaves secretas do Physiq nunca vão para o app nem para o site",
         "levam códigos técnicos, como o identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro",
+        "Os avisos de erro levam esse texto limpo de e-mail, telefone, CPF e IP, e nunca o identificador da conta",
         "O serviço de login (Supabase) tem registros próprios de cada entrada",
     ],
 }

@@ -249,8 +249,11 @@ describe("Política de Privacidade × o app", () => {
     // §13: só o que o código garante (os registros levam o id da conta e o texto técnico do erro; o login do Supabase tem os seus)
     expect(tudo).toContain("As chaves secretas do Physiq nunca vão para o app nem para o site (a chave de entrada no celular novo é outra: seção 12).");
     expect(tudo).toContain(
-      "Os registros do servidor e os avisos de erro servem só para a segurança e para corrigir erros: levam códigos técnicos, como o identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro. O serviço de login (Supabase) tem registros próprios de cada entrada (seção 9).",
+      "Os registros do servidor servem só para a segurança e para corrigir erros: levam códigos técnicos, como o identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro. Os avisos de erro levam esse texto limpo de e-mail, telefone, CPF e IP, e nunca o identificador da conta. O serviço de login (Supabase) tem registros próprios de cada entrada (seção 9).",
     );
+    // o §3 (Técnicos) aponta para o §13 em vez de prometer "sem dado pessoal"
+    expect(tudo).toContain("para limitar tentativas, e os avisos de erro (seção 13) | segurança, notificações e correção de erros");
+    expect(tudo).not.toContain("e os avisos de erro, sem dado pessoal");
     expect(tudo).not.toContain("não levam nome, e-mail, telefone, CPF nem dado de saúde");
   });
 });
