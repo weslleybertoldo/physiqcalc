@@ -35,7 +35,7 @@ FRASES: dict[str, list[str]] = {
         "só no app Android: a parte pública da chave de entrada (seção 12), ligada à sua conta (sozinha, ela não serve para entrar)",
         "A parte privada da chave não vem para o Physiq",
         "entrar sozinho na sua conta no celular novo, com segurança",
-        "e saber de que aparelho e versão do app é cada chave, para corrigir erros",
+        "e saber como cada chave foi criada, usada e desligada, para corrigir erros",
         "Os técnicos e os da entrada no celular novo, o Physiq registra sozinho.",
         "para limitar tentativas, e os avisos de erro (seção 13)",
     ],
@@ -48,20 +48,23 @@ FRASES: dict[str, list[str]] = {
     "prazos": [
         "vale no máximo 13 meses depois de criada",
         "o registro dela é apagado cerca de 90 dias depois (na exclusão da conta de quem é só aluno, na hora)",
-        "e, na conta, as senhas erradas seguidas e o bloqueio, até o próximo login certo ou até ela ser destravada",
+        "salvo os prazos desta tabela (como o da chave de entrada no celular novo)",
+        "uma senha nova criada pelo profissional ou pelo suporte, ou entrar com o Google",
         "entrar com o Google ou com a chave de entrada no celular novo continua funcionando",
     ],
     "exclusao": [
         "no app Android, a chave de entrada no celular novo deixa de entrar na hora",
-        "a chave de entrada no celular novo deixa de entrar na hora, e o registro dela sai do servidor cerca de 90 dias depois",
+        "no celular em que você exclui, na hora; em cada outro celular com o app, quando ele abrir de novo com internet",
+        "o registro dela sai do servidor cerca de 90 dias depois, como o de toda chave desligada",
     ],
     "aparelho": [
         "ele pede ao Android que apague a chave do celular e do backup, e cria outra quando você entra de novo",
         "o código da chave e o da sessão, o identificador da conta, datas e se já tentou entrar",
+        "o app não tem opção para desligar essa chave",
         "As chaves secretas do Physiq nunca vão para o app nem para o site",
         "levam códigos técnicos, como o identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro",
-        "Os avisos de erro levam esse texto limpo de e-mail, telefone, CPF e IP, e nunca o identificador da conta",
-        "O serviço de login (Supabase) tem registros próprios de cada entrada",
+        "Os avisos de erro levam o texto técnico do erro sem o e-mail, o telefone, o CPF e o IP que o sistema reconhece pelo formato",
+        "O Supabase também tem registros próprios de cada entrada e de cada pedido",
     ],
 }
 TODAS = [f for lista in FRASES.values() for f in lista]
