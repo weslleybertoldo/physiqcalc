@@ -77,7 +77,8 @@ Os códigos Pn e Dn desta página são as perguntas (com o padrão seguido) e as
 - Mora no banco, por schema: `app_config`, chave `textos_legais`, valor `{"versao": "AAAA-MM-DD"}`. A virada liga a versão
   `2026-10-29` nos 2 schemas pela migração `supabase-principal/migrations/20261029200000_virada_textos_legais.sql` (o staging
   antes; o `public` SÓ depois do front publicado). Antes dela, o staging estava em `2026-10-08` e a produção com a versão nula, que
-  desliga tudo: sem a tela do aceite, sem a regra de idade, e as funções de antes respondem igual.
+  desliga tudo: sem a tela do aceite, sem a regra de idade, e as funções de antes respondem igual. A versão de 22/12/2026 (D8 da
+  restauração de login) vem pela `supabase-principal/migrations/20261121120000_versao_textos_2026_12_22.sql`, no `public` só na data.
 - O app manda a versão que a pessoa leu (`VERSAO_TEXTOS`, em `src/publico/legal/versao.ts`). O banco recusa outra
   (`versao_desatualizada`): um app antigo não grava o aceite de um texto velho.
 - As 2 têm que ser iguais: o `src/publico/legal/textos.test.ts` confere a versão do `versao.ts` com a da migração da virada; no
@@ -105,7 +106,7 @@ Os códigos Pn e Dn desta página são as perguntas (com o padrão seguido) e as
 
 1. Versão nova: `VERSAO_TEXTOS` e `DATA_DOS_TEXTOS` (`src/publico/legal/versao.ts`). Uma versão vale para os 3 documentos.
 2. Rascunho em Markdown, com as marcas do que conferir.
-3. O advogado confere.
+3. O advogado confere, se houver; sem advogado, o dono decide, versão por versão.
 4. Staging. A faixa "em revisão" saiu na virada e a guarda de CI hoje recusa a marca dela até no `src/`: para mostrar uma versão
    em revisão no staging de novo, a faixa volta só no build de staging E a guarda muda junto (as marcas do texto em revisão).
 5. A virada (abaixo).
@@ -159,6 +160,7 @@ migração no `staging`; o resto (o merge, a migração no `public`, o e-mail, a
 | 08/10/2026 | `2026-10-08` | o aceite registrado, os consentimentos e a regra de idade (hml-12): no staging; na produção, só o banco, com a versão nula | pendente |
 | 13/10/2026 | `2026-10-08` (em revisão) | W-A: as rotinas e lembretes e o que o aluno registra com a dieta liberada — os dados, os sensíveis, quem vê, o que sai ao excluir, o aparelho e os lembretes: no staging (a Política em vigor não muda) | pendente |
 | 29/10/2026 | `2026-10-29` (publicada) | **a virada**: a Política, os Termos de Uso e os Termos de assinatura publicados como estavam no código (a revisão de 08/10 + W-A + play-W6), com o aceite no próximo acesso, o consentimento de saúde e a regra de idade (hml-12), em todo build; a faixa "em revisão" saiu; a Política de antes (`Privacidade.tsx`) saiu; na versão da Google Play, a `/assinatura` sem o que só vale no site (só tira linhas) | **não — sem advogado: decisão do dono em 29/10/2026** ("Não tenho advogado" → "Sim, como estão") |
+| 21/11/2026 | `2026-12-22` (vale em 22/12/2026; o aviso por e-mail sai 30 dias antes) | **D8 da restauração de login** ("entrar já logado no celular novo"): a Política diz o que a chave de entrada guarda e onde — §3 (a linha "Entrada no celular novo" e a frase de baixo), §5 (a base legal), §7 (a chave no item do Google e o backup do Google), §9 (o prazo da chave e o login por senha bloqueado), §10 (a chave na exclusão), §12 (a chave no aparelho) e §13 (as chaves do sistema e os registros do servidor); a /excluir-conta ganha a chave em "O que fica guardado"; no app, a chave só nasce com a porta do aceite livre | **não — sem advogado** (o dono não tem advogado; esta versão: o OK dele no texto, pendente) |
 
 ## Os processos à mão que os textos prometem
 
@@ -255,10 +257,17 @@ A Política diz que o consentimento do dado de saúde se retira pelo e-mail de c
 
 1. O texto novo: rascunho → (o advogado confere, se houver) → o staging (ver "Como mudar um texto legal", passo 4) (`VERSAO_TEXTOS` e `DATA_DOS_TEXTOS` novas, e
    a mesma versão no `staging` do banco, por 1 migração de 1 linha).
+   - O staging é de todos: o PR da versão nova fica ABERTO até a data (o merge publica na produção). Depois da prova no staging, a
+     reversa da migração volta o `staging` do banco à versão de antes e a branch `staging` volta à `main` — senão o front da `main`
+     fica atrás do banco do staging e ninguém consegue aceitar por lá (versão nova de 22/12/2026: assim). Nessa prova, o staging
+     mostra a versão nova sem a faixa "em revisão" (lá as contas são de teste); a guarda de CI não muda.
 2. 30 dias antes da data (P2): o e-mail, com o texto dizendo a data de início ("A partir de …"):
    `python3 scripts/legal/avisar_textos.py prod --previo` só simula → o dono aprova o texto → `--enviar --previo`. O `--previo` só
-   envia com a versão de antes ainda valendo no banco.
-3. Na data: a virada da versão, na ordem front → banco (1 linha) → conferir, como nos passos 5 e 6 da virada.
+   envia com a versão de antes ainda valendo no banco. O script lê a versão nova do `versao.ts` da pasta onde roda: rodar na
+   worktree do PR da versão nova. O link da Política no e-mail abre a versão de antes até a data: o e-mail mesmo diz o que muda.
+3. Na data: a virada da versão, na ordem front → banco (1 linha) → conferir, como nos passos 5 e 6 da virada: o merge do PR
+   (rebase na `main` do dia antes), o site, o APK e o AAB na Alpha; depois a migração no `public` e de novo no `staging`. O APK e a
+   loja de antes, com o banco já na versão nova, dizem "Atualize o app" na tela do aceite; o site diz "Recarregue".
 4. Cada pessoa aceita a versão nova no próximo acesso. Quem não concordar pode excluir a conta.
 5. Para saber quantos faltam: `python3 scripts/legal/avisar_textos.py prod` (só simula; só números). Rodar com `--enviar` manda
    de novo para quem ainda não aceitou.

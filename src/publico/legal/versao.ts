@@ -7,12 +7,16 @@ import { CONTATO_SUPORTE } from "@/nucleo/suporte";
  * valem em todo build (site, APK e Google Play); a revisão no staging (8/10/2026) ficou no histórico (docs/textos-legais.md).
  *
  * A versão é UMA para os 3 documentos e é a data da publicação (AAAA-MM-DD): é o que a hml-12 grava no aceite, e o banco tem que ter a
- * MESMA (app_config.textos_legais, a migração supabase-principal/migrations/20261029200000_virada_textos_legais.sql — o textos.test.ts
- * confere). A data da publicação mudou? Troque as 2 constantes abaixo e a data da migração, juntas. Mudou o texto de forma relevante →
- * data nova aqui + 1 migração de 1 linha + o aviso de 30 dias (P8; docs/textos-legais.md, processo 8).
+ * MESMA (app_config.textos_legais, ligada pela migração mais nova dos textos — hoje supabase-principal/migrations/
+ * 20261121120000_versao_textos_2026_12_22.sql; o textos.test.ts confere). A data da publicação mudou? Troque as 2 constantes abaixo e a
+ * data da migração, juntas. Mudou o texto de forma relevante → data nova aqui + 1 migração de 1 linha + o aviso de 30 dias (P8;
+ * docs/textos-legais.md, processo 8).
+ *
+ * 2026-12-22 (D8 da restauração de login): a Política passa a dizer o que o "entrar já logado no celular novo" guarda e onde. O e-mail
+ * sai 30 dias antes; em 22/12/2026, o merge e, depois do front publicado, a migração no public.
  */
-export const VERSAO_TEXTOS = "2026-10-29";
-export const DATA_DOS_TEXTOS = "29 de outubro de 2026";
+export const VERSAO_TEXTOS = "2026-12-22";
+export const DATA_DOS_TEXTOS = "22 de dezembro de 2026";
 
 /**
  * Quem vende (Decreto 7.962/2013, art. 2º: nome, CPF, endereço físico e eletrônico, em destaque): os dados do MEI do dono, os

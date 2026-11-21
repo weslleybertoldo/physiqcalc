@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -61,11 +61,13 @@ const ANCORAS: Record<string, string[]> = {
 };
 
 describe("a versão dos textos (uma só para os 3)", () => {
-  // A virada (29/10/2026): a versão é a data da publicação. Ela mora em versao.ts (VERSAO_TEXTOS e a mesma data por extenso) e a
-  // migração da virada liga a MESMA versão no banco (app_config.textos_legais, que o aceite confere: outra = versao_desatualizada). Se a
-  // data mudar, muda nos 2 juntos — estes testes acusam a diferença.
-  const MIGRACAO = "supabase-principal/migrations/20261029200000_virada_textos_legais.sql";
-  const REVERSA = "supabase-principal/reversas/20261029200000_virada_textos_legais_reversa.sql";
+  // A versão é a data da publicação. Ela mora em versao.ts (VERSAO_TEXTOS e a mesma data por extenso) e a migração MAIS NOVA dos textos
+  // liga a MESMA versão no banco (app_config.textos_legais, que o aceite confere: outra = versao_desatualizada). Se a data mudar, muda
+  // nos 2 juntos — estes testes acusam a diferença. A virada (29/10/2026) ligou 2026-10-29; a versão de 22/12/2026 (D8 da restauração
+  // de login) vem pela 20261121120000.
+  const MIGRACAO = "supabase-principal/migrations/20261121120000_versao_textos_2026_12_22.sql";
+  const REVERSA = "supabase-principal/reversas/20261121120000_versao_textos_2026_12_22_reversa.sql";
+  const VERSAO_ANTERIOR = "2026-10-29";
   /** As datas 'AAAA-MM-DD' do SQL de verdade (sem as linhas de comentário). */
   const datasDoSql = (caminho: string) =>
     [...readFileSync(resolve(RAIZ, caminho), "utf8").split("\n").filter((l) => !l.trim().startsWith("--")).join("\n").matchAll(/'(\d{4}-\d{2}-\d{2})'/g)].map((m) => m[1]);
@@ -76,21 +78,30 @@ describe("a versão dos textos (uma só para os 3)", () => {
     expect(DATA_DOS_TEXTOS).toBe(porExtenso);
   });
 
-  it("a versão publicada vem depois da que ficou em revisão no staging (2026-10-08)", () => {
-    expect(VERSAO_TEXTOS > "2026-10-08").toBe(true);
+  it("a versão do app vem depois da que está no ar desde a virada (2026-10-29)", () => {
+    expect(VERSAO_TEXTOS > VERSAO_ANTERIOR).toBe(true);
   });
 
-  it("a migração da virada liga no banco a versão do app (nos 2 schemas) e só ela", () => {
+  it("a migração da versão liga no banco a versão do app (nos 2 schemas) e só ela", () => {
     const sql = readFileSync(resolve(RAIZ, MIGRACAO), "utf8");
     expect(sql).toContain(`set valor = jsonb_build_object('versao', '${VERSAO_TEXTOS}')`);
     expect(sql).toContain("where chave = 'textos_legais'");
     expect(new Set(datasDoSql(MIGRACAO))).toEqual(new Set([VERSAO_TEXTOS]));
   });
 
-  it("a reversa volta o staging à versão de revisão e o public à nula (desligado)", () => {
+  it("nenhuma migração mais nova mexe na versão dos textos (a do teste é a vigente)", () => {
+    const pasta = resolve(RAIZ, "supabase-principal/migrations");
+    const mexem = readdirSync(pasta)
+      .filter((f) => f.endsWith(".sql"))
+      .filter((f) => /set valor = jsonb_build_object\('versao'/.test(readFileSync(resolve(pasta, f), "utf8")))
+      .sort();
+    expect(`supabase-principal/migrations/${mexem.at(-1)}`).toBe(MIGRACAO);
+  });
+
+  it("a reversa volta os 2 schemas à versão de antes (2026-10-29)", () => {
     const sql = readFileSync(resolve(RAIZ, REVERSA), "utf8");
-    expect(sql).toContain("jsonb_build_object('versao', case when '{schema}' = 'staging' then '2026-10-08' end)");
-    expect(new Set(datasDoSql(REVERSA))).toEqual(new Set(["2026-10-08"]));
+    expect(sql).toContain(`set valor = jsonb_build_object('versao', '${VERSAO_ANTERIOR}')`);
+    expect(new Set(datasDoSql(REVERSA))).toEqual(new Set([VERSAO_ANTERIOR]));
   });
 });
 
@@ -193,10 +204,33 @@ describe("Política de Privacidade × o app", () => {
     );
     expect(tudo).toContain("O seu nutricionista vê o que você muda na dieta do seu dia. O seu personal também vê esse dia a dia, só para ler.");
     expect(tudo).toContain(
-      "as rotinas (inclusive as criadas pelos seus profissionais, com o que você marcou e o histórico), os alimentos e receitas que você criou, o que você mudou na dieta do seu dia, a foto do perfil, os avisos, a cópia do treino guardada no aparelho e os lembretes das rotinas agendados nele;",
+      "as rotinas (inclusive as criadas pelos seus profissionais, com o que você marcou e o histórico), os alimentos e receitas que você criou, o que você mudou na dieta do seu dia, a foto do perfil, os avisos, a cópia do treino guardada no aparelho, os lembretes das rotinas agendados nele e, no app Android, a chave de entrada no celular novo (do aparelho e do backup);",
     );
     expect(tudo).toContain("os lembretes das suas rotinas, agendados no aparelho pelo app Android; saem quando você sai da conta;");
     expect(tudo).toContain("Os lembretes das rotinas mostram o nome da rotina e a dose; o de remédio mostra só a hora, e o nome do remédio aparece ao abrir o app.");
+  });
+
+  // D8 da restauração de login (versão de 22/12/2026): o que a chave de entrada no celular novo guarda e onde — cada frase conferida no
+  // código (migração 20261030010000_restaurar_login.sql, as funções chave-restauracao e restaurar-login, o RestaurarLoginPlugin, o
+  // restaurarLogin.ts e o sessao.tsx) e nas páginas do Google; vale nos 2 builds (o plugin está no APK do site e no da Google Play).
+  it.each([
+    ["site e APK", false],
+    ["Google Play", true],
+  ] as const)("D8: a Política diz o que a chave de entrada no celular novo guarda e onde (%s)", (_versao, loja) => {
+    const tudo = textoVisivel(lerMarkdown(politicaDePrivacidade(loja))).join("\n");
+    expect(tudo).toContain(
+      "Entrada no celular novo | só no app Android: a parte pública da chave de entrada (seção 12), ligada à sua conta (sozinha, ela não serve para entrar); o código da chave; a marca e o modelo do celular;",
+    );
+    expect(tudo).toContain("A parte privada da chave não vem para o Physiq | entrar sozinho na sua conta no celular novo, com segurança");
+    expect(tudo).toContain("Os técnicos e os da entrada no celular novo, o app registra sozinho.");
+    expect(tudo).toContain("Conta, login (inclusive a entrada no celular novo, no app Android), perfil e as funções do app | execução do contrato");
+    expect(tudo).toContain("No app Android, a chave de entrada no celular novo (seção 12) fica guardada pelo Android (Google Play services) no celular");
+    expect(tudo).toContain("cifrada de ponta a ponta, segundo o Google.");
+    expect(tudo).toContain("Backup do Google: no app Android (do site ou da Google Play), a cópia da chave de entrada no celular novo");
+    expect(tudo).toContain("Chave de entrada no celular novo | vale no máximo 13 meses depois de criada;");
+    expect(tudo).toContain("o registro da chave de entrada no celular novo, desligado, sai do servidor em até 90 dias;");
+    expect(tudo).toContain("quando você sai da conta no app, ele apaga a chave do celular e do backup, e cria outra quando você entra de novo;");
+    expect(tudo).toContain("As chaves secretas do sistema ficam só no servidor.");
   });
 });
 

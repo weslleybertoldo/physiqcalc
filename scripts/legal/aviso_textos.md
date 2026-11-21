@@ -1,30 +1,40 @@
 ---
 aprovado: não
-assunto: Physiq: aceite dos Termos de Uso e da Política de Privacidade
+assunto: Physiq: versão nova da Política de Privacidade a partir de 22 de dezembro de 2026
 ---
 <!--
-hml-12 (H-30) — o texto do e-mail do aviso dos textos legais, enviado por scripts/legal/avisar_textos.py.
-- Só sai com "aprovado: sim" no topo (o dono aprova o texto antes do --enviar, P11) e com a confirmação digitada na hora.
-- Marcas que o script troca: {ola} ("Olá, Ana!" ou "Olá!"), {data_dos_textos}, {link_termos}, {link_privacidade},
-  {link_assinatura}, {link_excluir} e {contato}. Os links são os do site do ambiente (nunca localhost).
+D8 da restauração de login (versão de 22/12/2026) — o texto do aviso de 30 dias ANTES de uma versão nova dos textos legais (P2; a
+Política, seção 15), enviado por scripts/legal/avisar_textos.py prod --previo. Rodar na worktree do PR da versão nova: o script lê a
+versão e a data do versao.ts da pasta onde roda.
+- Só sai com "aprovado: sim" no topo (o dono aprova o texto final antes do --enviar, P11; no orquestrador, o ok_id da caixa) e com a
+  confirmação digitada na hora ("ENVIAR <n>"; a trava 4 exige um terminal de verdade: rodar num tmux/pty, e quem digita é quem tem o
+  ok_id, com o texto montado e o n da simulação escritos no caso).
+- Rodar o --enviar --previo UMA vez: ninguém consegue aceitar a versão nova antes da data, então rodar de novo manda em dobro para todos.
+- Logo depois do envio, o topo volta para "aprovado: não" no mesmo PR: depois da data, este texto fica vencido ("A partir de…"). O
+  lembrete depois da data é texto novo e OK novo.
+- Marcas que o script troca (só no corpo): {ola} ("Olá, Ana!" ou "Olá!"), {data_dos_textos}, {link_termos}, {link_privacidade},
+  {link_assinatura}, {link_excluir} e {contato}. Os links são os do site do ambiente (nunca localhost). O assunto não troca marca:
+  a data dele é escrita à mão e tem de ser a do DATA_DOS_TEXTOS.
 - Linha em branco separa parágrafos; linha que começa com "- " vira item de lista. Este comentário não vai no e-mail.
-- Este texto é o da 1ª publicação (a virada: o e-mail sai no dia, P1). Nas próximas versões, o aviso sai 30 dias antes (P2):
-  trocar o 2º parágrafo por "A partir de <data>, …".
+- Até a data, o {link_privacidade} abre a versão de antes (a nova só entra no ar no dia): por isso o próprio e-mail diz o que muda.
+- O 1º texto (a virada de 29/10/2026) saiu no dia (P1); desde então, cada versão nova avisa 30 dias antes ("A partir de …").
 -->
 {ola}
 
-O Physiq tem uma versão nova dos Termos de Uso e da Política de Privacidade (versão de {data_dos_textos}).
+A partir de {data_dos_textos}, vale uma versão nova da Política de Privacidade do Physiq. Os Termos de Uso e os Termos de assinatura não mudam: só passam a ter a mesma data.
 
-No seu próximo acesso, o Physiq vai pedir que você leia e aceite os textos. Depois do aceite, tudo abre normalmente. Se você treina no plano sem profissional, ele também vai pedir o seu consentimento para os dados de saúde e a sua data de nascimento.
+O que muda: no app do Physiq para Android, quando você trocar de celular, ele pode abrir já na sua conta, sem você precisar entrar de novo. Para isso, quando você entra ou abre o app já conectado, o app cria sozinho uma chave de entrada. O próprio Android guarda essa chave no celular e, se o backup do Google e o bloqueio de tela estiverem ligados, também no backup da sua conta Google, criptografada de ponta a ponta, segundo o Google. Quando você passa os seus apps para o celular novo, pelo backup do Google ou pela cópia direta de um celular para o outro, o Android pode levar essa chave junto.
 
-No celular Android, atualize o app do Physiq para a versão mais nova.
+No servidor do Physiq ficam a parte pública dessa chave (sozinha, ela não serve para entrar), ligada à sua conta, e alguns dados técnicos, como a marca e o modelo do celular e as datas de uso. A chave não leva o seu e-mail. No site, essa função não existe. Ao sair da conta no app (Sair), a chave sai do celular e do backup; quando você entrar de novo, o app cria outra. O app não tem opção para desligar essa função.
 
-Os textos completos:
-- Termos de Uso: {link_termos}
+No 1º acesso a partir de {data_dos_textos}, no app ou no site, o Physiq vai pedir que você leia e aceite a versão nova. Depois do aceite, tudo abre normalmente. No celular Android, a partir dessa data, atualize o app do Physiq.
+
+Os textos de hoje estão nos links abaixo. A versão nova entra no mesmo endereço em {data_dos_textos}.
 - Política de Privacidade: {link_privacidade}
+- Termos de Uso: {link_termos}
 - Termos de assinatura: {link_assinatura}
 
-Se não concordar, você pode excluir a sua conta pelo app (Perfil › Excluir minha conta) ou pela página {link_excluir}.
+Se não concordar, antes dessa data você pode excluir a sua conta, pelo app ou pela página {link_excluir}, e quem é profissional pode cancelar o plano sem multa.
 
 Dúvidas? Escreva para {contato}.
 
