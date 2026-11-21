@@ -35,9 +35,10 @@ FRASES: dict[str, list[str]] = {
         "só no app Android: a parte pública da chave de entrada (seção 12), ligada à sua conta (sozinha, ela não serve para entrar)",
         "A parte privada da chave não vem para o Physiq",
         "entrar sozinho na sua conta no celular novo, com segurança",
-        "Os técnicos e os da entrada no celular novo, o app registra sozinho.",
+        "e saber de que aparelho e versão do app é cada chave, para corrigir erros",
+        "Os técnicos e os da entrada no celular novo, o Physiq registra sozinho.",
     ],
-    "base_legal": ["Conta, login (inclusive a entrada no celular novo, no app Android), perfil e as funções do app"],
+    "base_legal": ["legítimo interesse, num serviço que beneficia você: voltar à sua conta no celular novo sem entrar de novo"],
     "servicos": [
         "fica guardada pelo Android (Google Play services) no celular",
         "cifrada de ponta a ponta, segundo o Google",
@@ -45,15 +46,20 @@ FRASES: dict[str, list[str]] = {
     ],
     "prazos": [
         "vale no máximo 13 meses depois de criada",
-        "o registro dela é apagado cerca de 90 dias depois (na exclusão da conta do aluno, na hora)",
+        "o registro dela é apagado cerca de 90 dias depois (na exclusão da conta de quem é só aluno, na hora)",
+        "e, na conta, as senhas erradas seguidas e o bloqueio, até o próximo login certo ou até ela ser destravada",
+        "entrar com o Google ou com a chave de entrada no celular novo continua funcionando",
     ],
     "exclusao": [
-        "e, no app Android, a chave de entrada no celular novo (do aparelho e do backup)",
-        "o registro da chave de entrada no celular novo, desligado, sai do servidor em até 90 dias",
+        "no app Android, a chave de entrada no celular novo deixa de entrar na hora",
+        "a chave de entrada no celular novo deixa de entrar na hora, e o registro dela sai do servidor cerca de 90 dias depois",
     ],
     "aparelho": [
-        "ele apaga a chave do celular e do backup, e cria outra quando você entra de novo",
-        "As chaves secretas do sistema ficam só no servidor.",
+        "ele pede ao Android que apague a chave do celular e do backup, e cria outra quando você entra de novo",
+        "o código da chave e o da sessão, o identificador da conta, datas e se já tentou entrar",
+        "As chaves secretas do Physiq nunca vão para o app nem para o site",
+        "levam códigos técnicos, como o identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro",
+        "O serviço de login (Supabase) tem registros próprios de cada entrada",
     ],
 }
 TODAS = [f for lista in FRASES.values() for f in lista]

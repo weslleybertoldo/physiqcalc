@@ -103,13 +103,13 @@ Neste texto, "Physiq" e "nós" são quem oferece o aplicativo.
 | Profissional | registro no conselho (CRN, CREF), WhatsApp, endereço, carimbo, chave Pix de recebimento e, quando ele liga as mensagens automáticas, a conexão do WhatsApp dele | o perfil profissional, os recibos e os avisos aos alunos |
 | Aceite e consentimentos | data, hora e versão aceita dos Termos e desta política; o consentimento do dado de saúde; e, para quem tem 16 ou 17 anos, o consentimento do responsável (nome, vínculo e como consentiu, registrados pelo profissional); e de onde veio cada aceite (site, app ou Google Play) | provar o aceite e o consentimento |
 | Técnicos | identificador do usuário, datas, o código do aparelho para as notificações, um código feito a partir do endereço IP (não o IP) para limitar tentativas, e os avisos de erro, sem dado pessoal | segurança, notificações e correção de erros |
-| Entrada no celular novo | só no app Android: a parte pública da chave de entrada (seção 12), ligada à sua conta (sozinha, ela não serve para entrar); o código da chave; a marca e o modelo do celular; as versões do Android e do app; se o app veio da Google Play ou do site; se a chave foi criada com o backup do Google ou só no celular; o acesso (a sessão de login) em que ela foi criada; as datas de criação e do último uso e quantas vezes ela entrou; os dados técnicos que o Android devolve com ela; os códigos de uso único de cada criação e de cada entrada; e, se ela for desligada, quando e por quê. A parte privada da chave não vem para o Physiq | entrar sozinho na sua conta no celular novo, com segurança |
+| Entrada no celular novo | só no app Android: a parte pública da chave de entrada (seção 12), ligada à sua conta (sozinha, ela não serve para entrar); o código da chave; a marca e o modelo do celular; as versões do Android e do app; se o app veio da Google Play ou do site; se a chave foi criada com o backup do Google ou só no celular; o acesso (a sessão de login) em que ela foi criada; as datas de criação e do último uso e quantas vezes ela entrou; os dados técnicos que o Android devolve com ela; os códigos de uso único de cada criação e de cada entrada; e, se ela for desligada, quando e por quê. A parte privada da chave não vem para o Physiq | entrar sozinho na sua conta no celular novo, com segurança, e saber de que aparelho e versão do app é cada chave, para corrigir erros |
 
 Não usamos os seus dados para publicidade e não vendemos dados. Não há rastreadores de terceiros no site nem no app (como Google
 Analytics ou Facebook Pixel).
 
 **Os dados da conta são necessários para usar o Physiq:** sem nome e e-mail não dá para criar a conta. Os outros dados são
-preenchidos por você ou pelo seu profissional, conforme o uso. Os técnicos e os da entrada no celular novo, o app registra sozinho.
+preenchidos por você ou pelo seu profissional, conforme o uso. Os técnicos e os da entrada no celular novo, o Physiq registra sozinho.
 
 ## 4. Dados de saúde
 
@@ -135,7 +135,8 @@ obter vantagem econômica (art. 11, § 4º).
 
 | Uso | Base legal |
 |---|---|
-| Conta, login (inclusive a entrada no celular novo, no app Android), perfil e as funções do app | execução do contrato, que são os Termos de Uso (art. 7º, V) |
+| Conta, login, perfil e as funções do app | execução do contrato, que são os Termos de Uso (art. 7º, V) |
+| Entrada no celular novo, no app Android | legítimo interesse, num serviço que beneficia você: voltar à sua conta no celular novo sem entrar de novo, com segurança, e corrigir os erros dessa entrada (art. 7º, IX, e art. 10, II) |
 | Dado de saúde no atendimento pelo profissional | tutela da saúde, em procedimento feito por profissional de saúde (art. 11, II, "f"). Decide o profissional |
 | Dado de saúde de quem treina sem profissional, e as respostas da pré-consulta | consentimento específico e em destaque (art. 11, I) |
 | Cadastro pelo link do profissional | procedimentos preliminares do contrato com o profissional (art. 7º, V). Decide o profissional |
@@ -197,8 +198,8 @@ A transferência segue o art. 33 da LGPD e as garantias de proteção de dados q
 | Aluno removido pelo profissional | o cadastro e o histórico ficam guardados com o profissional; a lixeira não apaga |
 | Quando você exclui a conta | o login e os seus dados próprios saem na hora (seção 10); o que o profissional registrou no atendimento fica com ele |
 | Prontuário do nutricionista | 20 anos a partir do último registro (Res. CFN nº 594/2017 e Lei nº 13.787/2018) |
-| Contagem de tentativas | só um código feito a partir do IP: 1 dia nas páginas sem login e 2 dias no login com senha. A conta bloqueada por excesso de tentativas fica com o login por senha bloqueado até ser destravada (senha nova ou entrar com o Google) |
-| Chave de entrada no celular novo | vale no máximo 13 meses depois de criada; quando você abre o app depois de 6 meses, ele troca a chave, e a de antes é desligada. Ela é desligada antes disso quando você sai da conta (com internet), quando a senha é trocada ou quando a conta é excluída. Desligada, ela não entra mais, e o registro dela é apagado cerca de 90 dias depois (na exclusão da conta do aluno, na hora). Os códigos de uso único de cada criação e de cada entrada ficam até cerca de 2 horas, para conferir a chave e limitar as tentativas |
+| Contagem de tentativas | um código feito a partir do IP (não o IP): 1 dia nas páginas sem login e 2 dias no login com senha; e, na conta, as senhas erradas seguidas e o bloqueio, até o próximo login certo ou até ela ser destravada. Depois de muitas senhas erradas, o login por senha fica bloqueado, primeiro por um tempo e depois até ser destravado (uma senha nova criada pelo profissional, ou entrar com o Google); entrar com o Google ou com a chave de entrada no celular novo continua funcionando |
+| Chave de entrada no celular novo | vale no máximo 13 meses depois de criada; quando você abre o app depois de 6 meses, ele troca a chave, e a de antes é desligada. Ela é desligada antes disso quando você sai da conta (com internet), quando a senha é trocada ou quando a conta é excluída. Desligada, ela não entra mais, e o registro dela é apagado cerca de 90 dias depois (na exclusão da conta de quem é só aluno, na hora). Os códigos de uso único de cada criação e de cada entrada ficam até cerca de 2 horas, para conferir a chave e limitar as tentativas |
 | Avisos de erro | 30 dias |
 | Registros dos serviços (login e servidor) | poucos dias, conforme cada serviço |
 | Cópias de segurança do banco | ${FRASE_BACKUPS} |
@@ -221,8 +222,10 @@ Você pode pedir, a qualquer momento e sem custo:
   - **aluno** (Perfil › Excluir minha conta):
     - saem o seu login e os seus dados de treino, o diário, as refeições e metas marcadas, as rotinas (inclusive as criadas pelos
       seus profissionais, com o que você marcou e o histórico), os alimentos e receitas que você criou, o que você mudou na dieta do
-      seu dia, a foto do perfil, os avisos, a cópia do treino guardada no aparelho, os lembretes das rotinas agendados nele e, no app
-      Android, a chave de entrada no celular novo (do aparelho e do backup);
+      seu dia, a foto do perfil, os avisos, a cópia do treino guardada no aparelho e os lembretes das rotinas agendados nele;
+    - no app Android, a chave de entrada no celular novo deixa de entrar na hora; o app pede ao Android que apague a cópia do celular
+      e do backup quando você exclui por ele e, se você excluir pelo site ou por outro celular, quando o app daquele celular abrir de
+      novo com internet;
     - no banco do treino fica só um registro técnico, sem e-mail, sem senha e sem sessão, para o histórico do profissional não
       perder a referência;
     - o que o profissional registrou no seu atendimento fica com ele, desligado do seu login;
@@ -231,7 +234,7 @@ Você pode pedir, a qualquer momento e sem custo:
     - o login é desativado e fica sem e-mail;
     - a conta é encerrada, a equipe perde o acesso e a cobrança automática do plano é cancelada;
     - o histórico de cada aluno fica guardado com ele;
-    - o registro da chave de entrada no celular novo, desligado, sai do servidor em até 90 dias;
+    - a chave de entrada no celular novo deixa de entrar na hora, e o registro dela sai do servidor cerca de 90 dias depois;
   - **nos dois casos:** o registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite;
 - **informação** sobre com quem compartilhamos os seus dados (seção 7);
 - **informação** sobre a possibilidade de não dar o consentimento e o que acontece se você não der, e **revogação** do
@@ -264,8 +267,9 @@ Usamos só o necessário:
 - a cópia do treino no aparelho, para funcionar sem internet;
 - os lembretes das suas rotinas, agendados no aparelho pelo app Android; saem quando você sai da conta;
 - no app Android, a chave de entrada no celular novo, que o app cria sozinho quando você entra ou abre o app já conectado e que o
-  Android guarda (seção 7), e algumas marcas do app (datas e se já tentou entrar) para controlar essa entrada; quando você sai da
-  conta no app, ele apaga a chave do celular e do backup, e cria outra quando você entra de novo;
+  Android guarda (seção 7), e algumas marcas do app (o código da chave e o da sessão, o identificador da conta, datas e se já tentou
+  entrar) para controlar essa entrada; quando você sai da conta no app, ele pede ao Android que apague a chave do celular e do
+  backup, e cria outra quando você entra de novo;
 - as preferências (como o tema) e os avisos que você já fechou.
 
 Não usamos cookies de publicidade nem de análise. O captcha da Cloudflare e o formulário de pagamento do Mercado Pago podem usar
@@ -275,12 +279,13 @@ recursos próprios do navegador.
 
 - Cada pessoa só vê o que pode ver: há regras de acesso no banco, linha por linha.
 - A conexão é sempre cifrada (HTTPS).
-- As chaves secretas do sistema ficam só no servidor.
+- As chaves secretas do Physiq nunca vão para o app nem para o site (a chave de entrada no celular novo é outra: seção 12).
 - Os comprovantes e as fotos ficam num armazenamento privado e são abertos por links que valem pouco tempo.
 - O login tem captcha e limite de tentativas.
 - O acesso administrativo existe só pelo site.
-- Os registros do servidor e os avisos de erro não levam nome, e-mail, telefone, CPF nem dado de saúde; levam, no máximo,
-  códigos internos, como o identificador da conta ou o começo do código da chave de entrada.
+- Os registros do servidor e os avisos de erro servem só para a segurança e para corrigir erros: levam códigos técnicos, como o
+  identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro. O serviço de login (Supabase) tem
+  registros próprios de cada entrada (seção 9).
 - As notificações não mostram nome nem valor. Os lembretes das rotinas mostram o nome da rotina e a dose; o de remédio mostra só
   a hora, e o nome do remédio aparece ao abrir o app.
 - Há uma cópia de segurança diária, cifrada.

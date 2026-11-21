@@ -25,7 +25,9 @@ A partir de {data_dos_textos}, vale uma versão nova da Política de Privacidade
 
 O que muda: no app do Physiq para Android, quando você trocar de celular, ele pode abrir já na sua conta, sem você precisar entrar de novo. Para isso, quando você entra ou abre o app já conectado, o app cria sozinho uma chave de entrada. O próprio Android guarda essa chave no celular e, se o backup do Google e o bloqueio de tela estiverem ligados, também no backup da sua conta Google, criptografada de ponta a ponta, segundo o Google. Quando você passa os seus apps para o celular novo, pelo backup do Google ou pela cópia direta de um celular para o outro, o Android pode levar essa chave junto.
 
-No servidor do Physiq ficam a parte pública dessa chave (sozinha, ela não serve para entrar), ligada à sua conta, e alguns dados técnicos, como a marca e o modelo do celular e as datas de uso. A chave não leva o seu e-mail. No site, essa função não existe. Ao sair da conta no app (Sair), a chave sai do celular e do backup; quando você entrar de novo, o app cria outra. O app não tem opção para desligar essa função.
+No servidor do Physiq ficam a parte pública dessa chave (sozinha, ela não serve para entrar), ligada à sua conta, e alguns dados técnicos, como a marca e o modelo do celular e as datas de uso. A chave não leva o seu e-mail. No site, essa função não existe. Ao sair da conta no app (Sair), ele pede ao Android que apague a chave do celular e do backup; quando você entrar de novo, o app cria outra. O app não tem opção para desligar essa função.
+
+A versão nova também deixa mais claros 2 pontos: o que os registros do servidor e os avisos de erro levam, como o identificador da conta e o texto técnico do erro (seção 13); e que a conta guarda as senhas erradas seguidas até o próximo login certo, e o bloqueio por senhas erradas vale só para o login por senha (seção 9).
 
 No 1º acesso a partir de {data_dos_textos}, no app ou no site, o Physiq vai pedir que você leia e aceite a versão nova. Depois do aceite, tudo abre normalmente. No celular Android, a partir dessa data, atualize o app do Physiq.
 

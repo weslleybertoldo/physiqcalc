@@ -204,7 +204,7 @@ describe("Política de Privacidade × o app", () => {
     );
     expect(tudo).toContain("O seu nutricionista vê o que você muda na dieta do seu dia. O seu personal também vê esse dia a dia, só para ler.");
     expect(tudo).toContain(
-      "as rotinas (inclusive as criadas pelos seus profissionais, com o que você marcou e o histórico), os alimentos e receitas que você criou, o que você mudou na dieta do seu dia, a foto do perfil, os avisos, a cópia do treino guardada no aparelho, os lembretes das rotinas agendados nele e, no app Android, a chave de entrada no celular novo (do aparelho e do backup);",
+      "as rotinas (inclusive as criadas pelos seus profissionais, com o que você marcou e o histórico), os alimentos e receitas que você criou, o que você mudou na dieta do seu dia, a foto do perfil, os avisos, a cópia do treino guardada no aparelho e os lembretes das rotinas agendados nele;",
     );
     expect(tudo).toContain("os lembretes das suas rotinas, agendados no aparelho pelo app Android; saem quando você sai da conta;");
     expect(tudo).toContain("Os lembretes das rotinas mostram o nome da rotina e a dose; o de remédio mostra só a hora, e o nome do remédio aparece ao abrir o app.");
@@ -222,15 +222,36 @@ describe("Política de Privacidade × o app", () => {
       "Entrada no celular novo | só no app Android: a parte pública da chave de entrada (seção 12), ligada à sua conta (sozinha, ela não serve para entrar); o código da chave; a marca e o modelo do celular;",
     );
     expect(tudo).toContain("A parte privada da chave não vem para o Physiq | entrar sozinho na sua conta no celular novo, com segurança");
-    expect(tudo).toContain("Os técnicos e os da entrada no celular novo, o app registra sozinho.");
-    expect(tudo).toContain("Conta, login (inclusive a entrada no celular novo, no app Android), perfil e as funções do app | execução do contrato");
+    expect(tudo).toContain("com segurança, e saber de que aparelho e versão do app é cada chave, para corrigir erros");
+    expect(tudo).toContain("Os técnicos e os da entrada no celular novo, o Physiq registra sozinho.");
+    // §5: a chave não está nos Termos (o contrato) → linha própria, com legítimo interesse (2ª rodada, 21/11)
+    expect(tudo).toContain("Conta, login, perfil e as funções do app | execução do contrato");
+    expect(tudo).toContain(
+      "Entrada no celular novo, no app Android | legítimo interesse, num serviço que beneficia você: voltar à sua conta no celular novo sem entrar de novo, com segurança, e corrigir os erros dessa entrada (art. 7º, IX, e art. 10, II)",
+    );
+    expect(tudo).not.toContain("Conta, login (inclusive a entrada no celular novo");
     expect(tudo).toContain("No app Android, a chave de entrada no celular novo (seção 12) fica guardada pelo Android (Google Play services) no celular");
     expect(tudo).toContain("cifrada de ponta a ponta, segundo o Google.");
     expect(tudo).toContain("Backup do Google: no app Android (do site ou da Google Play), a cópia da chave de entrada no celular novo");
     expect(tudo).toContain("Chave de entrada no celular novo | vale no máximo 13 meses depois de criada;");
-    expect(tudo).toContain("o registro da chave de entrada no celular novo, desligado, sai do servidor em até 90 dias;");
-    expect(tudo).toContain("quando você sai da conta no app, ele apaga a chave do celular e do backup, e cria outra quando você entra de novo;");
-    expect(tudo).toContain("As chaves secretas do sistema ficam só no servidor.");
+    // §9: a chave entra com o login por senha bloqueado; destrava a senha criada pelo profissional ou o Google; "só aluno" = na hora
+    expect(tudo).toContain("e, na conta, as senhas erradas seguidas e o bloqueio, até o próximo login certo ou até ela ser destravada.");
+    expect(tudo).toContain("(uma senha nova criada pelo profissional, ou entrar com o Google); entrar com o Google ou com a chave de entrada no celular novo continua funcionando");
+    expect(tudo).toContain("(na exclusão da conta de quem é só aluno, na hora)");
+    // §10: a chave deixa de entrar na hora; o app só apaga a cópia do celular em que a pessoa exclui; o job apaga DEPOIS dos 90 dias
+    expect(tudo).toContain(
+      "no app Android, a chave de entrada no celular novo deixa de entrar na hora; o app pede ao Android que apague a cópia do celular e do backup quando você exclui por ele e, se você excluir pelo site ou por outro celular, quando o app daquele celular abrir de novo com internet;",
+    );
+    expect(tudo).toContain("a chave de entrada no celular novo deixa de entrar na hora, e o registro dela sai do servidor cerca de 90 dias depois;");
+    expect(tudo).not.toContain("em até 90 dias");
+    expect(tudo).toContain("algumas marcas do app (o código da chave e o da sessão, o identificador da conta, datas e se já tentou entrar)");
+    expect(tudo).toContain("quando você sai da conta no app, ele pede ao Android que apague a chave do celular e do backup, e cria outra quando você entra de novo;");
+    // §13: só o que o código garante (os registros levam o id da conta e o texto técnico do erro; o login do Supabase tem os seus)
+    expect(tudo).toContain("As chaves secretas do Physiq nunca vão para o app nem para o site (a chave de entrada no celular novo é outra: seção 12).");
+    expect(tudo).toContain(
+      "Os registros do servidor e os avisos de erro servem só para a segurança e para corrigir erros: levam códigos técnicos, como o identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro. O serviço de login (Supabase) tem registros próprios de cada entrada (seção 9).",
+    );
+    expect(tudo).not.toContain("não levam nome, e-mail, telefone, CPF nem dado de saúde");
   });
 });
 
