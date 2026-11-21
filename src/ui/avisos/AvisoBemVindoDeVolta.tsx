@@ -10,7 +10,7 @@ function primeiroNome(nome: string | null | undefined): string {
 
 /**
  * restaurar-login (D5): depois de entrar sozinho no celular novo com a chave de volta do Android (src/nucleo/restaurarLogin.ts), a pessoa
- * vê UMA vez "Bem-vindo de volta, Nome — entramos sozinhos pelo backup do Google." (é o "identity context" que a Google cita). A marca é
+ * vê UMA vez "Bem-vindo de volta, Nome — entramos sozinhos com a chave do seu celular antigo." (é o "identity context" que a Google cita). A marca é
  * gravada só na restauração e sai quando o aviso aparece.
  */
 export default function AvisoBemVindoDeVolta() {
@@ -23,7 +23,7 @@ export default function AvisoBemVindoDeVolta() {
     if (avisou.current || !uid || nome === null || !bemVindoPendente(uid)) return;
     avisou.current = true;
     bemVindoMostrado();
-    toast.success(`Bem-vindo de volta${nome ? `, ${nome}` : ""} — entramos sozinhos pelo backup do Google.`, { duration: 8000 });
+    toast.success(`Bem-vindo de volta${nome ? `, ${nome}` : ""} — entramos sozinhos com a chave do seu celular antigo.`, { duration: 8000 });
   }, [uid, nome]);
   return null;
 }

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { LegalSituacao } from "./situacao";
 
 // restaurar-login (30/10/2026) — o lado do APP da chave de volta do Android (src/nucleo/restaurarLogin.ts), com o plugin nativo, o fetch da
 // função sem login e o cliente do principal FALSOS. Positivo e negativo: entrar, sem chave, 401, 403, sem rede (sem marca), desligado,
@@ -50,6 +51,7 @@ import {
   RENOVAR_MS,
   _zerarParaTestes,
   bemVindoMostrado,
+  portaLivreParaAChave,
   bemVindoPendente,
   chaveInvalidadaPelaSenha,
   esquecerChave,
@@ -130,6 +132,35 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+});
+
+const legal = (o: Partial<LegalSituacao> = {}): LegalSituacao => ({
+  versao: "2026-12-22",
+  aceite_pendente: false,
+  saude_pendente: false,
+  nascimento_pendente: false,
+  menor: null,
+  ...o,
+});
+
+describe("portaLivreParaAChave (D8: a chave de entrada no celular novo espera a porta)", () => {
+  it("sem legal (servidor antigo) ou com a versão nula (desligado): livre", () => {
+    expect(portaLivreParaAChave(null)).toBe(true);
+    expect(portaLivreParaAChave(undefined)).toBe(true);
+    expect(portaLivreParaAChave(legal({ versao: null, aceite_pendente: true }))).toBe(true);
+  });
+
+  it("tudo em dia: livre", () => {
+    expect(portaLivreParaAChave(legal())).toBe(true);
+  });
+
+  it("o aceite, a saúde ou a data pendentes, ou a trava de idade: segura", () => {
+    expect(portaLivreParaAChave(legal({ aceite_pendente: true }))).toBe(false);
+    expect(portaLivreParaAChave(legal({ saude_pendente: true }))).toBe(false);
+    expect(portaLivreParaAChave(legal({ nascimento_pendente: true }))).toBe(false);
+    expect(portaLivreParaAChave(legal({ menor: "menor_16" }))).toBe(false);
+    expect(portaLivreParaAChave(legal({ menor: "sem_responsavel" }))).toBe(false);
+  });
 });
 
 describe("tentarRestaurar — a 1ª abertura no celular novo", () => {

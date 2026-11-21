@@ -25,6 +25,7 @@ import {
   esquecerChave,
   garantirChave,
   ouvirChaveInvalidada,
+  portaLivreParaAChave,
   PRAZO_RESTAURAR_MS,
   semSessaoNaAbertura,
   sessaoDerrubada,
@@ -440,15 +441,18 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   // aparelho é criada em segundo plano (logo depois de entrar e na abertura de quem já está logado, sem a marca, com ela > 6 meses ou de
   // outra sessão — o servidor amarra a chave à sessão que a criou). Só no APK Android com o plugin; falha = só log. A sessão restaurada
   // também passa aqui: a chave nova substitui a que veio no backup. A senha trocada pelo app invalida a chave: recria na hora.
+  // D8 (textos de 22/12/2026): só com a porta do aceite livre — o aceite, a saúde e a data em dia e sem a trava de idade; quando a
+  // pessoa aceita, a situação recarregada libera e a chave nasce.
   const situacaoPronta = Boolean(situacao) && !carregandoSituacao;
   const ehMaster = situacao?.master === true;
+  const portaLivre = portaLivreParaAChave(situacao?.legal);
   const sessaoId = idDaSessao(sessao);
   const [pedidoChave, setPedidoChave] = useState(0);
   useEffect(() => ouvirChaveInvalidada(() => setPedidoChave((n) => n + 1)), []);
   useEffect(() => {
-    if (!uid || !situacaoPronta || ehMaster) return;
+    if (!uid || !situacaoPronta || ehMaster || !portaLivre) return;
     void garantirChave(uid, sessaoId);
-  }, [uid, situacaoPronta, ehMaster, sessaoId, pedidoChave]);
+  }, [uid, situacaoPronta, ehMaster, portaLivre, sessaoId, pedidoChave]);
 
   // quando a internet volta: refaz o que ficou pendente
   useEffect(() => {

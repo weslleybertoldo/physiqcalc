@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { MARCA_BEM_VINDO } from "@/nucleo/restaurarLogin";
 
-// restaurar-login (D5) — o "Bem-vindo de volta, Nome — entramos sozinhos pelo backup do Google." aparece UMA vez depois de entrar sozinho
+// restaurar-login (D5) — o "Bem-vindo de volta, Nome — entramos sozinhos com a chave do seu celular antigo." aparece UMA vez depois de entrar sozinho
 // no celular novo (a marca que a restauração grava), com o 1º nome da situação; sem a marca (o login de sempre), nada.
 const h = vi.hoisted(() => ({ usuario: null as unknown, situacao: null as unknown }));
 vi.mock("@/nucleo/sessao", () => ({ useSessao: () => ({ usuario: h.usuario, situacao: h.situacao }) }));
@@ -25,7 +25,7 @@ describe("aviso 'Bem-vindo de volta' (restaurar-login, D5)", () => {
     localStorage.setItem(MARCA_BEM_VINDO, UID);
     const r = render(<AvisoBemVindoDeVolta />);
     expect(toast.success).toHaveBeenCalledTimes(1);
-    expect(toast.success).toHaveBeenCalledWith("Bem-vindo de volta, Lia — entramos sozinhos pelo backup do Google.", { duration: 8000 });
+    expect(toast.success).toHaveBeenCalledWith("Bem-vindo de volta, Lia — entramos sozinhos com a chave do seu celular antigo.", { duration: 8000 });
     expect(localStorage.getItem(MARCA_BEM_VINDO)).toBeNull();
     r.unmount();
     render(<AvisoBemVindoDeVolta />);
@@ -39,7 +39,7 @@ describe("aviso 'Bem-vindo de volta' (restaurar-login, D5)", () => {
     expect(toast.success).not.toHaveBeenCalled();
     h.situacao = { user_id: UID, nome: null, master: false };
     r.rerender(<AvisoBemVindoDeVolta />);
-    expect(toast.success).toHaveBeenCalledWith("Bem-vindo de volta — entramos sozinhos pelo backup do Google.", { duration: 8000 });
+    expect(toast.success).toHaveBeenCalledWith("Bem-vindo de volta — entramos sozinhos com a chave do seu celular antigo.", { duration: 8000 });
   });
 
   it("sem a marca (o login de sempre) ou com a marca de OUTRA pessoa: nada", () => {
