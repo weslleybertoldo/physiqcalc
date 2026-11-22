@@ -1,0 +1,32 @@
+-- Physiq bcode-0021, item 4 (decisão do dono 22/11/2026: «corrigir no código até 18/12»; o caso: «4: apagar as sessões ou o IP»).
+-- As sessões do login (auth.sessions) guardavam o IP do aparelho sem prazo, e a Política não cita o IP da sessão: em 22/11/2026
+-- o Conferente contou 173 sessões antigas com IP de fora da nuvem (principal: 140, de 20/09 a 14/10; Treino: 33, de 21/03 a 06/10),
+-- nenhuma usada em 30 dias. Desde ~15/10 o Auth só vê o IP do Worker da Cloudflare ou do servidor (medido, não travado).
+-- O que faz: apaga SÓ o IP das sessões (ip = null), uma vez, nos 2 bancos. Ninguém sai: a sessão, o refresh e a chave de entrada
+-- no celular novo seguem iguais; no próximo refresh o Auth grava de novo o IP de quem chamou (hoje o do Worker ou do servidor).
+-- Sem reversa, de propósito: o IP apagado não volta (e a cópia diária não leva as sessões, docs/backup.md).
+-- auth.sessions é uma só para os schemas staging e public: por isso o bloco é o compartilhado (roda 1 vez por projeto).
+--
+-- Antes e depois, só leitura (pela Management API; nunca imprimir IP):
+--   select count(*) as sessoes,
+--          count(*) filter (where s.ip is not null) as com_ip,
+--          count(*) filter (where s.ip is not null
+--                             and coalesce(s.refreshed_at::timestamptz, s.updated_at, s.created_at) < now() - interval '30 days')
+--            as com_ip_paradas_30d
+--     from auth.sessions s;
+--   Depois: com_ip_paradas_30d = 0 (o com_ip volta a crescer com os refresh de agora, com o IP do Worker ou do servidor).
+--
+-- Ensaio (staging, só as contas de teste do domínio próprio, src/nucleo/contasTeste.ts): troque o update abaixo por
+--   update auth.sessions s set ip = null from auth.users u
+--    where u.id = s.user_id and s.ip is not null
+--      and lower(u.email) ~ '^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\.com\.br$';
+--
+-- Rodar (com o OK de produção; um projeto por vez; o dry-run antes):
+--   PRINCIPAL_REF=hkxvtsbwctxkrqzkkdoz python3 scripts/apply_migration_principal.py scripts/legal/bcode0021_ip_das_sessoes.sql --compartilhado --dry-run
+--   PRINCIPAL_REF=hkxvtsbwctxkrqzkkdoz python3 scripts/apply_migration_principal.py scripts/legal/bcode0021_ip_das_sessoes.sql --compartilhado
+--   PRINCIPAL_REF=uxwpwdbbnlticxgtzcsb python3 scripts/apply_migration_principal.py scripts/legal/bcode0021_ip_das_sessoes.sql --compartilhado --dry-run
+--   PRINCIPAL_REF=uxwpwdbbnlticxgtzcsb python3 scripts/apply_migration_principal.py scripts/legal/bcode0021_ip_das_sessoes.sql --compartilhado
+-- NUNCA sem o --compartilhado (sem ele o script também roda o bloco de cima, vazio, nos 2 schemas).
+-- @@ compartilhado
+select set_config('lock_timeout', '5s', true);
+update auth.sessions set ip = null where ip is not null;
