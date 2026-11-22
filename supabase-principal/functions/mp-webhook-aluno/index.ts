@@ -34,7 +34,7 @@ import { avisarErro } from "../_shared/avisar-erro.ts";
 import { criarLog } from "../_shared/log.ts";
 import { preapprovalDoPagamento, type AssinaturaMp, type PagamentoMp } from "../_shared/cobranca-regras.ts";
 import { buscarNoMp, credencialDoSchema } from "../_shared/cobranca-mp.ts";
-import { ipDoPedido } from "../_shared/entrar-senha-regras.ts";
+import { chaveDoFreio, ipDoPedido } from "../_shared/entrar-senha-regras.ts";
 import { lerAvisoDaConta } from "../_shared/mp-conta-regras.ts";
 import { cancelarAssinaturasDasMatriculas, matriculaEncerradaPeloVinculo } from "../_shared/app-sem-profissional.ts";
 import { lerReferenciaAluno, lerReferenciaCalc, type Schema } from "../_shared/financeiro-regras.ts";
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
       corpo = {}; // IPN antigo: tudo na query
     }
     // W2: o aviso NA CONTA do personal (./conta.ts)
-    const ip = ipDoPedido(req.headers, PROXY_SEGREDO) ?? "sem-ip";
+    const ip = await chaveDoFreio(ipDoPedido(req.headers, PROXY_SEGREDO));
     const daConta = lerAvisoDaConta(url, corpo);
     if (daConta) {
       if (!schema) return ok("schema_invalido");

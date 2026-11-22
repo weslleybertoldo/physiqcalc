@@ -40,7 +40,7 @@ import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supa
 import { verifyAuthenticationResponse, verifyRegistrationResponse } from "jsr:@simplewebauthn/server@13.3.3";
 import { decodeCredentialPublicKey } from "jsr:@simplewebauthn/server@13.3.3/helpers";
 import { avisarErro } from "../_shared/avisar-erro.ts";
-import { ipDoPedido } from "../_shared/entrar-senha-regras.ts";
+import { chaveDoFreio, ipDoPedido } from "../_shared/entrar-senha-regras.ts";
 import { criarLog } from "../_shared/log.ts";
 import { origemPermitida } from "../_shared/login-regras.ts";
 import { schemaDoPedido, type Schema } from "../_shared/master-regras.ts";
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
   const schema = schemaDoPedido(req.headers.get("x-schema"));
   if (!schema) return json({ ok: false, erro: "schema_invalido" }, 400, origin);
   const ip = ipDoPedido(req.headers, PROXY_SEGREDO);
-  if (!permitido(`${schema}:${ip ?? "sem-ip"}`)) {
+  if (!permitido(`${schema}:${await chaveDoFreio(ip)}`)) {
     log.aviso({ codigo: "muitas_tentativas", schema });
     return recusa("muitas_tentativas", origin);
   }

@@ -22,7 +22,7 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { chaveDoAmbiente, dadoAssociado, decifrar } from "../_shared/cifra-mp.ts";
-import { ipDoPedido } from "../_shared/entrar-senha-regras.ts";
+import { chaveDoFreio, ipDoPedido } from "../_shared/entrar-senha-regras.ts";
 import { criarLog } from "../_shared/log.ts";
 import { guardarParaConfirmar, oauthDoAmbiente, pkceLigado, schemaTemW2, trocarCodigo, type ContextoMpConta } from "../_shared/mp-conta.ts";
 import { destinoDoRetorno, ehEstado, sha256Hex, type ResultadoDoRetorno, type Schema } from "../_shared/mp-conta-regras.ts";
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
   const ultimo = (url.pathname.split("/").filter(Boolean).pop() || "").toLowerCase();
   const schema: Schema | null = ultimo === "public" || ultimo === "staging" ? ultimo : null;
   if (req.method !== "GET" || !schema) return voltar(schema, "invalido");
-  if (!permitido(ipDoPedido(req.headers, PROXY_SEGREDO) ?? "sem-ip")) {
+  if (!permitido(await chaveDoFreio(ipDoPedido(req.headers, PROXY_SEGREDO)))) {
     return new Response("muitos pedidos", { status: 429, headers: { "Content-Type": "text/plain; charset=utf-8", ...SEM_CACHE } });
   }
   const estado = url.searchParams.get("state");
