@@ -86,6 +86,8 @@ def ler_opcoes(args: list[str]) -> tuple[Path, str | None, bool, bool]:
             raise SystemExit(f"opção não aceita: {a!r} (aceito só: --so staging|public, --compartilhado, --dry-run, cada uma 1 vez e "
                              f"sem '='); nada foi aplicado")
         i += 1
+    if so and so_compartilhado:
+        raise SystemExit("--so e --compartilhado juntos: escolha um (o --so seria ignorado calado); nada foi aplicado")
     return Path(args[0]), so, so_compartilhado, dry_run
 
 
