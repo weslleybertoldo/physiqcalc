@@ -118,4 +118,19 @@ describe("item 4: o IP guardado nas sessões do login", () => {
     expect(compartilhado).not.toMatch(/\b(delete|drop|truncate)\b/i);
     expect(compartilhado).not.toMatch(/user_agent|refresh_token/);
   });
+
+  it("o alvo vem na mesma chamada: 'teste' só as contas de teste, 'todas' só com ele escrito; sem alvo, para sem mexer", () => {
+    const sql = compartilhado.replace(/\s+/g, " ");
+    expect(sql).toContain("v_alvo text := current_setting('physiq.bcode0021_ip', true);");
+    const teste = sql.indexOf("if v_alvo = 'teste' then update auth.sessions s set ip = null from auth.users u where u.id = s.user_id and s.ip is not null and lower(u.email) ~ '^[a-z0-9._+-]*teste[a-z0-9._+-]*@physiqcalc\\.com\\.br$';");
+    const todas = sql.indexOf("elsif v_alvo = 'todas' then update auth.sessions set ip = null where ip is not null;");
+    const senao = sql.indexOf("else raise exception 'bcode-0021 item 4: escolha o alvo");
+    expect(teste).toBeGreaterThan(0);
+    expect(todas).toBeGreaterThan(teste);
+    expect(senao).toBeGreaterThan(todas);
+    // nenhum update fora do if: sem o alvo, nada roda
+    expect(sql.match(/update auth\.sessions/g)).toHaveLength(2);
+    // o alvo não fica na conexão depois (o pooler reaproveita a sessão)
+    expect(sql.trim().endsWith("reset physiq.bcode0021_ip;")).toBe(true);
+  });
 });

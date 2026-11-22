@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Physiq bcode-0021, item 4 (22/11/2026) — apagar o IP das sessões não tira ninguém do login: o ENSAIO do
-scripts/legal/bcode0021_ip_das_sessoes.sql (o update do cabeçalho, só conta de teste), numa conta temporária, nos 2 bancos.
+scripts/legal/bcode0021_ip_das_sessoes.sql (o update do alvo 'teste', só conta de teste), numa conta temporária, nos 2 bancos.
 
 Passos (uma rodada = um prefixo f<n>; a conta é SÓ a temporária f<n>.sessoes.teste.claude@physiqcalc.com.br, e2e/excluir_conta/_base.py):
   1. cria a conta (API admin do Auth, sem e-mail), entra por e-mail e senha e troca o token (o login e o vínculo no Treino);
   2. conta as sessões dela nos 2 bancos e quantas têm IP (o que o ensaio apaga; no principal, a entrada direta grava o IP do notebook);
-  3. o ENSAIO, pela Management API: o update do cabeçalho do SQL do item 4, lido do arquivo, com mais uma trava — só as sessões DESTA
+  3. o ENSAIO, pela Management API: o update do alvo 'teste' do SQL do item 4, lido do arquivo, com mais uma trava — só as sessões DESTA
      conta (user_id). Antes, a leitura confere que ele alcança só as sessões dela com IP; depois, que o IP delas sumiu;
   4. o refresh pelo api-principal funciona e é a MESMA sessão (o session_id do JWT); o refresh da sessão do Treino de antes funciona;
      a trocar-token funciona; o número de sessões dela não cai em nenhum banco;
   5. no fim (sempre, mesmo com ❌ no meio), apaga a conta pelo próprio «Excluir minha conta» e a senha local.
-Não roda o ensaio nas outras contas de teste nem nas reais: o ensaio inteiro (B) e o de todas (C) são da General, pelo
-apply_migration_principal.py --compartilhado (o cabeçalho do SQL). Imprime só ✅/❌, status e contagens (nenhum e-mail, IP, id ou token).
+Não roda o ensaio nas outras contas de teste nem nas reais: o ensaio inteiro (B, set physiq.bcode0021_ip = 'teste') e o de todas (C,
+'todas', só com o OK de produção) são da General, pela Management API (o cabeçalho do SQL). Imprime só ✅/❌, status e contagens
+(nenhum e-mail, IP, id ou token).
 Uso: python3 e2e/bcode0021/sessoes.py --schema staging|public --rodada f30 [--seco]   (rodada nova a cada vez: a conta sai no fim)
 """
 from __future__ import annotations
@@ -38,12 +39,13 @@ IP_DO_WORKER = "2a06:98c0:3600::103"
 
 
 def ensaio(uid: str) -> tuple[str, str]:
-    """(o update, o mesmo WHERE para a leitura de antes): o ensaio do cabeçalho do SQL do item 4, com a trava desta conta."""
-    m = re.search(r"^--\s+(update auth\.sessions s set ip = null from auth\.users u)\s*\n"
-                  r"--\s+where (u\.id = s\.user_id and s\.ip is not null)\s*\n"
-                  r"--\s+(and lower\(u\.email\) ~ '[^'\n]+');", ITEM4.read_text(encoding="utf-8"), re.M)
+    """(o update, o mesmo WHERE para a leitura de antes): o update do alvo 'teste' do SQL do item 4, com a trava desta conta."""
+    m = re.search(r"^\s*if v_alvo = 'teste' then\s*\n"
+                  r"\s*(update auth\.sessions s set ip = null from auth\.users u)\s*\n"
+                  r"\s*where (u\.id = s\.user_id and s\.ip is not null)\s*\n"
+                  r"\s*(and lower\(u\.email\) ~ '[^'\n]+');", ITEM4.read_text(encoding="utf-8"), re.M)
     if not m:
-        raise SystemExit(f"o ensaio do cabeçalho de {ITEM4.relative_to(REPO)} mudou: confira antes de rodar")
+        raise SystemExit(f"o update do alvo 'teste' de {ITEM4.relative_to(REPO)} mudou: confira antes de rodar")
     onde = f"{m.group(2)} {m.group(3)} and s.user_id = '{uuid.UUID(uid)}'::uuid"
     return f"select set_config('lock_timeout', '5s', true);\n{m.group(1)} where {onde}", onde
 

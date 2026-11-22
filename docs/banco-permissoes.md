@@ -560,7 +560,9 @@ executa (revoke de `public`, `anon` e `authenticated`); os jobs rodam no pg_cron
     de e-mail), essa contagem não sai na exclusão (a `delete-my-account` responde `sem_vinculo` antes) — sai pelo prazo, em até 23 h — e
     não vem no «Exportar meus dados». Fechar em código é caso próprio (mexe na `delete-my-account` e na `exportar-meus-dados`).
 - **Os 2 bancos, 1 vez** (`scripts/legal/bcode0021_ip_das_sessoes.sql`, bloco compartilhado): `auth.sessions.ip = null` (só o IP;
-  ninguém sai). Sem reversa, de propósito.
+  ninguém sai). Sem reversa, de propósito. O alvo vai na mesma chamada pela Management API (`set physiq.bcode0021_ip = 'teste'`, o
+  ensaio só nas contas de teste, ou `'todas'`, a produção); sem ele, o arquivo para sem mexer em nada (o `apply_migration_principal.py`
+  não passa o alvo).
 - **Prova**: um Postgres local (PGlite, Postgres 18, com um stub do pg_cron) com as migrações do jeito do `apply_migration_principal.py`
   (itens 1 e 7: 94/94; itens 2, 3 e 4: 30/30) e os contratos `src/lib/bcode0021ContagensMigracoes.test.ts` e
   `src/lib/bcode0021LimpezasMigracoes.test.ts`; no staging:
