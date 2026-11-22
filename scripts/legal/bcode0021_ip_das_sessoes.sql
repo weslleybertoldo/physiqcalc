@@ -15,8 +15,9 @@
 --   produção (só com o OK dele no caso da produção; todas as sessões):
 --     begin; set physiq.bcode0021_ip = 'todas'; <este arquivo>; rollback;      ← dry-run
 --     set physiq.bcode0021_ip = 'todas'; <este arquivo>
--- Pelo apply_migration_principal.py não há como passar o alvo: o arquivo para (é de propósito). O alvo sai da conexão no fim
--- (reset), porque o pooler reaproveita a sessão do Postgres.
+-- Pelo apply_migration_principal.py não há como passar o alvo: com --compartilhado ou sem opção, o arquivo para; com --so, ele
+-- imprime «ok» sem rodar nada (o bloco de cima é só comentário). Não use o apply aqui. O alvo sai da conexão no fim (reset), porque o
+-- pooler reaproveita a sessão do Postgres.
 --
 -- Antes e depois, só leitura (pela Management API; nunca imprimir IP):
 --   select count(*) as sessoes,

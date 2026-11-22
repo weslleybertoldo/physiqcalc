@@ -561,10 +561,11 @@ executa (revoke de `public`, `anon` e `authenticated`); os jobs rodam no pg_cron
     não vem no «Exportar meus dados». Fechar em código é caso próprio (mexe na `delete-my-account` e na `exportar-meus-dados`).
 - **Os 2 bancos, 1 vez** (`scripts/legal/bcode0021_ip_das_sessoes.sql`, bloco compartilhado): `auth.sessions.ip = null` (só o IP;
   ninguém sai). Sem reversa, de propósito. O alvo vai na mesma chamada pela Management API (`set physiq.bcode0021_ip = 'teste'`, o
-  ensaio só nas contas de teste, ou `'todas'`, a produção); sem ele, o arquivo para sem mexer em nada (o `apply_migration_principal.py`
-  não passa o alvo).
+  ensaio só nas contas de teste, ou `'todas'`, a produção); sem ele, o arquivo para sem mexer em nada. Não use o
+  `apply_migration_principal.py` aqui: ele não passa o alvo (com `--compartilhado` ou sem opção, o arquivo para; com `--so`, imprime
+  «ok» sem rodar nada).
 - **Prova**: um Postgres local (PGlite, Postgres 18, com um stub do pg_cron) com as migrações do jeito do `apply_migration_principal.py`
-  (itens 1 e 7: 94/94; itens 2, 3 e 4: 30/30) e os contratos `src/lib/bcode0021ContagensMigracoes.test.ts` e
+  (itens 1 e 7: 94/94; itens 2, 3 e 4: 34/34) e os contratos `src/lib/bcode0021ContagensMigracoes.test.ts` e
   `src/lib/bcode0021LimpezasMigracoes.test.ts`; no staging:
   - `python3 e2e/bcode0021/banco.py leitura|provas|jobs --banco principal|treino --schema staging|public` — antes de aplicar, só
     leitura (as lacunas); depois, as provas de cada item numa transação que termina em exceção (nada fica); e as rodadas dos jobs.

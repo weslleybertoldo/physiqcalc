@@ -1,8 +1,9 @@
 -- bcode-0021, item 1 no PRINCIPAL, schema {schema}: as provas em transação DESFEITA (e2e/bcode0021/banco.py provas).
 -- O bloco termina SEMPRE em exceção ('R:' + um JSON só de booleanos): nada do que ele insere fica e o job de verdade nunca vê as
 -- linhas (molde: desfeito(), e2e/restaurar_login/api.py). O prazo roda pelo COMANDO lido de cron.job, como o pg_cron rodaria.
--- Os logins são FALSOS (e-mail @prova.invalid, domínio que não existe), criados e mexidos aqui dentro: o gatilho do cadastro e os da
--- restauração rodam e voltam junto. Só toca {schema}.login_bloqueios e auth.users (o outro schema fica de fora).
+-- Os logins são FALSOS (e-mail @prova.invalid, domínio que não existe), criados e mexidos aqui dentro. O gatilho do cadastro grava
+-- também em public.profiles; o delete e o soft delete passam pelos 2 schemas (as cascatas e os gatilhos da restauração). Tudo volta
+-- na exceção: nada fica.
 -- O mesmo texto roda no PGlite (~/projetos/physiqcalc-scratch/bcode0021/harness_e2e.mjs).
 do $t$
 declare

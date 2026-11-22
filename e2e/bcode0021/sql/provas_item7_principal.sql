@@ -1,8 +1,8 @@
 -- bcode-0021, item 7 no PRINCIPAL, schema {schema}: o «Exportar meus dados» traz a contagem de senha errada (login_bloqueios) —
 -- as provas em transação DESFEITA (e2e/bcode0021/banco.py provas). O bloco termina SEMPRE em exceção ('R:' + um JSON): nada do que
 -- ele insere fica. Devolve o md5 do corpo vivo (o banco.py compara com a constante da migração) e só booleanos.
--- Os logins são FALSOS (e-mail @prova.invalid), criados aqui dentro (o gatilho do cadastro roda e volta junto).
--- Só toca {schema}.login_bloqueios e auth.users. O mesmo texto roda no PGlite (harness_e2e.mjs).
+-- Os logins são FALSOS (e-mail @prova.invalid), criados aqui dentro. O gatilho do cadastro grava também em public.profiles; o delete
+-- e o soft delete passam pelos 2 schemas. Tudo volta na exceção: nada fica. O mesmo texto roda no PGlite (harness_e2e.mjs).
 do $t$
 declare
   v_k text := substr(md5(random()::text || clock_timestamp()::text), 1, 12);
