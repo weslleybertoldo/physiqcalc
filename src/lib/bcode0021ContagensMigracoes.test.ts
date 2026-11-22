@@ -37,8 +37,8 @@ function corpoEntre(texto: string, abre: string, fecha: string): string {
   return texto.slice(a + abre.length, texto.indexOf(fecha, a + abre.length));
 }
 const porSchema = (corpo: string, marca: string) => ({
-  staging: md5(corpo.replaceAll(marca, "staging")),
-  public: md5(corpo.replaceAll(marca, "public")),
+  staging: md5(corpo.split(marca).join("staging")),
+  public: md5(corpo.split(marca).join("public")),
 });
 
 // os minutos em que um job roda (o 1º campo do cron: "*", "*/N", "N" ou "a,b")
