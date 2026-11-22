@@ -96,7 +96,8 @@ def rodar(s: str, r: str) -> None:
             return
         a_p, a_t = sessoes("principal", uid), sessoes("treino", tid)
         p.check(a_p["n"] >= 1 and a_p["com_ip"] >= 1, f"[antes] principal: {a_p['n']} sessão(ões) dela, {a_p['com_ip']} com IP")
-        print(f"ℹ️  [antes] Treino: {a_t['n']} sessão(ões) dela, {a_t['com_ip']} com IP")
+        p.check(a_t["n"] >= 1 and a_t["com_ip"] >= 1,
+                f"[antes] Treino: {a_t['n']} sessão(ões) dela, {a_t['com_ip']} com IP (sem IP, o ensaio do Treino não prova nada)")
 
         # o ensaio, com a trava desta conta: antes, ele só alcança as sessões dela com IP; depois, nenhuma delas tem IP
         for banco, quem, antes in (("principal", uid, a_p), ("treino", tid, a_t)):
@@ -128,11 +129,15 @@ def rodar(s: str, r: str) -> None:
         p.check(d_t["n"] >= a_t["n"], f"[depois] Treino: o número de sessões dela não caiu ({a_t['n']} → {d_t['n']})")
     finally:
         if tok is None:
-            tok = B.sessao(r, PAPEL)["access_token"]
-        excluir(s, tok)
-        conta = B.login_por_email(B.email_de(r, PAPEL))
-        if p.check(conta is None or conta["soft"], f"[fim] a conta temporária saiu ({'sumiu' if conta is None else 'soft' if conta['soft'] else 'viva'})"):
-            B.apagar_senha(r, PAPEL)
+            try:
+                tok = B.sessao(r, PAPEL)["access_token"]
+            except Exception:  # noqa: BLE001 — sem a mensagem: ela leva o e-mail de teste e o corpo do Auth
+                p.check(False, "[fim] não entrou para excluir: rode de novo a MESMA rodada (ela reaproveita a conta e apaga)")
+        if tok is not None:
+            excluir(s, tok)
+            conta = B.login_por_email(B.email_de(r, PAPEL))
+            if p.check(conta is None or conta["soft"], f"[fim] a conta temporária saiu ({'sumiu' if conta is None else 'soft' if conta['soft'] else 'viva'})"):
+                B.apagar_senha(r, PAPEL)
 
 
 def main() -> int:
@@ -146,10 +151,13 @@ def main() -> int:
     if a.seco:
         sql, _ = ensaio(str(uuid.UUID(int=0)))
         print(f"seco: conta temporária {r}.{PAPEL}.teste.claude@… no schema {s} (login, troca de token, «Excluir minha conta» no fim)")
-        print("seco: o ensaio nos 2 bancos (lido do cabeçalho do SQL do item 4, com a trava da conta):\n"
+        print("seco: o ensaio nos 2 bancos (o update do alvo 'teste' do SQL do item 4, com a trava da conta):\n"
               + sql.replace(str(uuid.UUID(int=0)), "<id da conta>"))
         return 0
-    rodar(s, r)
+    try:
+        rodar(s, r)
+    except Exception as e:  # noqa: BLE001 — só o tipo (e a frase fixa do assert): a mensagem pode levar e-mail de teste ou o corpo do Auth
+        p.check(False, f"parou: {type(e).__name__}" + (f" — {e}" if isinstance(e, AssertionError) else ""))
     return p.fim()
 
 
