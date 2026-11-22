@@ -13,6 +13,10 @@ import { describe, expect, it } from "vitest";
 // fecham em todo arquivo lido).
 // hml-14 (H-51 item 7, D10): master-financeiro e master-planos viraram CASCAS (410 "migrado" a tudo, sem import, segredo, banco
 // nem log — o molde da mp-assinar do principal) e saem da lista das 12; a guarda delas é a de baixo (e a do console continua).
+// bcode-0021 (item 6): os 11 console.* que sobravam saíram. A painel-resumo-treino e a treino-leitura entram nas PUBLICADAS (com o
+// catch final); as 7 admin-* do FORA viram SEM_CONSOLE, com o fecho delas (doSemConsole) só nas guardas do console, do corpo no log
+// e do log com o próprio nome — o catch final delas segue calado (caso próprio). Sem função com console, o controle positivo do
+// detector de console passa a ser por amostra.
 const raiz = resolve(__dirname, "../..");
 const FUNCOES = resolve(raiz, "supabase/functions");
 const LOG = resolve(FUNCOES, "_shared/log.ts");
@@ -35,27 +39,28 @@ const PUBLICADAS = [
   "treino-acessos", // W-A P2 (nova): a linha "Treino — séries" da aba Acessos, com o login do principal — nasce com o log da hml-10
   "treinos", // hml-21d (nova): o jeito 2 do Treino (a porta _shared/porta-treino.ts) — nasce com o log da hml-10 e o catch final no index.ts
   "admin-semana-treinos", // hml-24 (H-127): o catch final com o log.excecao e os 2 console (b) viraram log.aviso, só com o código
+  "painel-resumo-treino", // bcode-0021 (item 6): o console do catch final virou log.excecao (com o schema)
+  "treino-leitura", // bcode-0021 (item 6): o console das fotos virou log.aviso e o do catch final, log.excecao (com a ação e o schema)
 ] as const;
 
 /** hml-14 (D10): respondem 410 {"error":"migrado"} a qualquer pedido (fora o preflight, com o CORS de antes). */
 const CASCAS = ["master-financeiro", "master-planos"] as const;
 
 /**
- * As 10 do Treino que esta W NÃO publica (P4, spec §2 D1) — 9 desde a hml-24 (a admin-semana-treinos foi para as PUBLICADAS): só têm console com a mensagem do erro (b: nada de corpo de resposta,
- * objeto inteiro ou dado pessoal) e o app as chama — o 5xx delas chega pelo aviso do app (D5). Ficam fora da guarda até a W que
- * as publicar; aí elas trocam o console pelo log e vêm para a lista de cima.
+ * bcode-0021 (item 6): as 7 admin-* que eram do FORA (as que a hml-10 não publicou: P4, spec §2 D1). O console delas (a mensagem do
+ * erro das RPCs pode_ver_aluno_treino_por e contas_onde_sou_dono_treino) virou log.aviso, só com o código. O catch final delas segue
+ * calado (ex.: admin-get-user) — fora do pedido, vira caso próprio: por isso ficam fora do doTreino (a guarda do catch final) e têm o
+ * fecho delas (doSemConsole), só com as guardas do console, do corpo no log e do log com o próprio nome.
  */
-const FORA: Record<string, string> = {
-  "admin-avaliacoes": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
-  "admin-get-overrides": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
-  "admin-get-user": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
-  "admin-get-workout-plan": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
-  "admin-relatorio": "2 console (b): a mensagem do erro das RPCs pode_ver_aluno_treino_por e contas_onde_sou_dono_treino",
-  "admin-tags": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
-  "admin-update-user": "1 console (b): a mensagem do erro da RPC pode_ver_aluno_treino_por",
-  "painel-resumo-treino": "1 console (b): a mensagem do erro do catch final, cortada em 300",
-  "treino-leitura": "2 console (b): a mensagem do erro ao assinar as fotos e a do catch final, com a ação",
-};
+const SEM_CONSOLE = [
+  "admin-avaliacoes",
+  "admin-get-overrides",
+  "admin-get-user",
+  "admin-get-workout-plan",
+  "admin-relatorio",
+  "admin-tags",
+  "admin-update-user",
+] as const;
 
 /**
  * A resposta do catch final de cada uma — a MESMA de antes da hml-10 (D6: só o log muda), fora as 2 que a hml-14 (H-32) trocou de
@@ -77,6 +82,8 @@ const RESPOSTA_DO_CATCH_FINAL: Record<(typeof PUBLICADAS)[number], string> = {
   "treino-acessos": 'return json({ ok: false, erro: "erro_interno" }, 500, origin);',
   treinos: 'return json({ ok: false, erro: "erro_interno" }, 500, origin);',
   "admin-semana-treinos": 'return jsonErr("internal", 500, origin);',
+  "painel-resumo-treino": 'return erro("erro_interno", 500, origin);',
+  "treino-leitura": 'return erro("erro_interno", 500, origin);',
 };
 
 // ───────────────────────── o leitor ─────────────────────────
@@ -260,16 +267,18 @@ function arquivosDa(slug: string): string[] {
 
 const doTreino = [...new Set([...PUBLICADAS, ...CASCAS].flatMap(arquivosDa))].sort();
 const semOLog = doTreino.filter((a) => a !== LOG);
+/** bcode-0021 (item 6): o fecho das 7 SEM_CONSOLE (o index.ts e o que ele carrega) que o doTreino ainda não cobre. */
+const doSemConsole = [...new Set(SEM_CONSOLE.flatMap(arquivosDa))].filter((a) => a !== LOG && !doTreino.includes(a)).sort();
 
 // ───────────────────────── os testes ─────────────────────────
 
-describe("hml-10: toda função do Treino está numa das listas (as publicadas na hml-10, as cascas da hml-14 ou as 10 que ficam, com o porquê)", () => {
-  it("as pastas de supabase/functions são exatamente as 10 publicadas + as 2 cascas + as 10", () => {
+describe("hml-10: toda função do Treino está numa das listas (as publicadas, as cascas da hml-14 ou as 7 admin-* sem console do bcode-0021)", () => {
+  it("as pastas de supabase/functions são exatamente as publicadas + as 2 cascas + as 7 sem console", () => {
     const pastas = readdirSync(FUNCOES)
       .filter((p) => p !== "_shared" && statSync(resolve(FUNCOES, p)).isDirectory())
       .sort();
-    expect(pastas).toEqual([...PUBLICADAS, ...CASCAS, ...Object.keys(FORA)].sort());
-    expect([...PUBLICADAS, ...CASCAS].filter((p) => p in FORA)).toEqual([]);
+    expect(pastas).toEqual([...PUBLICADAS, ...CASCAS, ...SEM_CONSOLE].sort());
+    expect([...PUBLICADAS, ...CASCAS].filter((p) => (SEM_CONSOLE as readonly string[]).includes(p))).toEqual([]);
     expect(PUBLICADAS.filter((p) => (CASCAS as readonly string[]).includes(p))).toEqual([]);
   });
 
@@ -303,7 +312,7 @@ describe("hml-10: toda função do Treino está numa das listas (as publicadas n
   });
 
   it("o leitor confere o próprio trabalho: em cada arquivo lido, sem texto e sem comentário, parênteses, chaves e colchetes fecham", () => {
-    for (const arquivo of [...doTreino, ...Object.keys(FORA).map(indice)]) {
+    for (const arquivo of [...doTreino, ...doSemConsole]) {
       const fonte = ler(arquivo);
       const est = estrutura(fonte);
       expect(est.length, rel(arquivo)).toBe(fonte.length);
@@ -315,12 +324,12 @@ describe("hml-10: toda função do Treino está numa das listas (as publicadas n
   });
 });
 
-describe("hml-10 (H-24, D1): nenhum console.* nas publicadas, nas cascas nem nos arquivos que elas carregam (fora o _shared/log.ts)", () => {
-  it.each(semOLog.map(rel))("%s", (arquivo) => {
+describe("hml-10 (H-24, D1): nenhum console.* nas publicadas, nas cascas, nas 7 sem console nem nos arquivos que elas carregam (fora o _shared/log.ts)", () => {
+  it.each([...semOLog, ...doSemConsole].map(rel))("%s", (arquivo) => {
     expect(consoles(ler(resolve(raiz, arquivo)))).toBe(0);
   });
 
-  it.each(PUBLICADAS)("%s cria o log com o próprio nome e o aviso do Treino (que manda ao principal)", (slug) => {
+  it.each([...PUBLICADAS, ...SEM_CONSOLE])("%s cria o log com o próprio nome e o aviso do Treino (que manda ao principal)", (slug) => {
     const fonte = ler(indice(slug));
     expect(fonte).toMatch(/^import \{[^}]*\bcriarLog\b[^}]*\} from "\.\.\/_shared\/log\.ts";$/m);
     expect(fonte).toContain('import { avisarErro } from "../_shared/avisar-erro.ts";');
@@ -338,7 +347,7 @@ describe("hml-10 (H-24, D1): nenhum console.* nas publicadas, nas cascas nem nos
 });
 
 describe("hml-10 (H-24, D2): corpo de resposta nunca vai para o log", () => {
-  it.each(semOLog.map(rel))("%s: nenhum JSON.stringify( nem .text( dentro de uma chamada de log", (arquivo) => {
+  it.each([...semOLog, ...doSemConsole].map(rel))("%s: nenhum JSON.stringify( nem .text( dentro de uma chamada de log", (arquivo) => {
     const chamadas = chamadasDeLog(ler(resolve(raiz, arquivo)));
     expect(chamadas.filter(corpoNoLog).map((c) => c.fonte)).toEqual([]);
   });
@@ -420,8 +429,14 @@ describe("hml-14 (H-51 item 7, D10): as cascas respondem 410 migrado a tudo, com
 });
 
 describe("hml-10: controle positivo (os detectores acham o que procuram — senão a guarda ficaria oca e passaria sempre)", () => {
-  it.each(Object.entries(FORA))("%s ainda tem console (%s): o detector acha", (slug) => {
-    expect(consoles(ler(indice(slug)))).toBeGreaterThan(0);
+  it("console é achado por amostra (as linhas que as 9 tinham até o bcode-0021); a mesma frase em comentário ou entre aspas não conta", () => {
+    // bcode-0021 (item 6): nenhuma função do Treino tem console — o controle é por amostra
+    expect(consoles('    console.error("pode_ver_aluno_treino_por", error.message);')).toBe(1);
+    expect(consoles('    if (ea) console.warn("treino-leitura avaliacoes: assinar fotos", ea.message);')).toBe(1);
+    expect(consoles('    console.error("treino-leitura", action, String((e as { message?: string })?.message || e).slice(0, 300));')).toBe(1);
+    expect(consoles("console . log(a);\nconsole.info(b);")).toBe(2);
+    expect(consoles('// console.error("pode_ver_aluno_treino_por", error.message);\nconst a = 1;')).toBe(0);
+    expect(consoles('/* console.warn("x") */ const t = "console.error(e)"; const u = `console.log(${a})`;')).toBe(0);
   });
 
   it("chamada de log com corpo de resposta é achada; a mesma palavra dentro de texto ou de comentário não conta", () => {

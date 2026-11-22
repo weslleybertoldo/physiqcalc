@@ -18,6 +18,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { chaveDoFreio } from "../_shared/freio-ip.ts";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+
+// bcode-0021 (item 6): log em JSON sem dado pessoal (_shared/log.ts); o catch final avisa (log.excecao) e devolve o mesmo 500
+const log = criarLog("painel-resumo-treino", { avisar: avisarErro });
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -115,7 +120,7 @@ Deno.serve(async (req) => {
     if (r.ok !== true) return erro(r.erro === "sem_acesso" ? "sem_acesso" : "erro_interno", r.erro === "sem_acesso" ? 403 : 500, origin);
     return json(r, 200, origin);
   } catch (e) {
-    console.error("painel-resumo-treino", String((e as { message?: string })?.message || e).slice(0, 300));
+    log.excecao(e, { schema });
     return erro("erro_interno", 500, origin);
   }
 });

@@ -29,7 +29,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { treinoVisivelPelaConta } from "../_shared/espelho/regras.ts";
 import { chaveDoFreio } from "../_shared/freio-ip.ts";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
 import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
+
+// bcode-0021 (item 6): log em JSON sem dado pessoal (_shared/log.ts); o catch final avisa (log.excecao, com a ação) e devolve o mesmo 500
+const log = criarLog("treino-leitura", { avisar: avisarErro });
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -325,7 +330,7 @@ async function lerAvaliacoes(admin: any, userId: string, schema: string) {
     // o bucket privado do schema (o staging tem o espelho dele, como o app: src/lib/registrosFotos.ts)
     const bucket = schema === "staging" ? "registros-staging" : "registros";
     const { data: ass, error: ea } = await admin.storage.from(bucket).createSignedUrls(fotos.map((f) => f.storage_path), 3600);
-    if (ea) console.warn("treino-leitura avaliacoes: assinar fotos", ea.message);
+    if (ea) log.aviso({ codigo: "assinar_fotos_falhou", schema, n: fotos.length });
     for (const a of (ass as any[]) || []) if (a?.path && a?.signedUrl && !a?.error) urls[a.path] = a.signedUrl;
   }
   return {
@@ -403,7 +408,7 @@ Deno.serve(async (req) => {
     if (action === "avaliacoes") return json({ ...(await lerAvaliacoes(admin, treinoUserId, schema)), treino_user_id: treinoUserId }, 200, origin);
     return json(await lerVolume(admin, treinoUserId), 200, origin);
   } catch (e) {
-    console.error("treino-leitura", action, String((e as { message?: string })?.message || e).slice(0, 300));
+    log.excecao(e, { acao: action.replace(/[A-Z]/g, (l) => `_${l.toLowerCase()}`), schema });
     return erro("erro_interno", 500, origin);
   }
 });

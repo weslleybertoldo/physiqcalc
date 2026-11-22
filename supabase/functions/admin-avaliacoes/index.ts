@@ -10,8 +10,8 @@ import {
   erroDoBanco, erroDoStorage, foiTempo, lerExclusaoDeFoto, lerPedidoDeFoto, mesRef, parteDaEvolucao, schemaDaFoto, statusDaFoto, urlsAssinadas,
   type AcaoFoto,
 } from "./regras.ts";
-// hml-14 (H-51 item 2): log em JSON sem dado pessoal (_shared/log.ts) — por enquanto só o GoTrue que não responde (os
-// console.error de antes ficam para o resto do H-48)
+// hml-14 (H-51 item 2): log em JSON sem dado pessoal (_shared/log.ts) — o GoTrue que não responde; bcode-0021 (item 6): o console.error
+// de antes (o erro da RPC pode_ver_aluno_treino_por) virou log.aviso, só com o código
 const log = criarLog("admin-avaliacoes", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
@@ -124,7 +124,7 @@ async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise
   const { data, error } = await admin.rpc("pode_ver_aluno_treino_por", { p_aluno: alunoId, p_usuario: user.id });
   if (error) {
     // schema ainda sem a função da W3 (a migração entra 1 schema de cada vez): vale a regra de antes
-    console.error("pode_ver_aluno_treino_por", error.message);
+    log.aviso({ codigo: "pode_ver_aluno_falhou", schema: currentSchema(), pg: error.code });
     const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
     return (perfil as { professor_id?: string } | null)?.professor_id === user.id;
   }
