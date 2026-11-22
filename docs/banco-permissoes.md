@@ -559,4 +559,7 @@ executa (revoke de `public`, `anon` e `authenticated`); os jobs rodam no pg_cron
   ninguém sai). Sem reversa, de propósito.
 - **Prova**: um Postgres local (PGlite, Postgres 18, com um stub do pg_cron) com as migrações do jeito do `apply_migration_principal.py`
   (itens 1 e 7: 94/94; itens 2, 3 e 4: 30/30) e os contratos `src/lib/bcode0021ContagensMigracoes.test.ts` e
-  `src/lib/bcode0021LimpezasMigracoes.test.ts`; no staging, `e2e/bcode0021/`.
+  `src/lib/bcode0021LimpezasMigracoes.test.ts`; no staging:
+  - `python3 e2e/bcode0021/banco.py leitura|provas|jobs --banco principal|treino --schema staging|public` — antes de aplicar, só
+    leitura (as lacunas); depois, as provas de cada item numa transação que termina em exceção (nada fica); e as rodadas dos jobs.
+  - `python3 e2e/bcode0021/sessoes.py --schema staging --rodada f<n>` — o ensaio do item 4 numa conta temporária: ninguém sai.
