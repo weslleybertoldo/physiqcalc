@@ -12,7 +12,7 @@ Contas: SÓ temporárias `f<rodada>.<papel>.teste.claude@physiqcalc.com.br` (a r
 apagadas no fim pelo PRÓPRIO "Excluir minha conta". Senha aleatória em ~/.physiq-teste-f-<rodada>-<papel> (600), nunca impressa.
 SQL: SÓ LEITURA (`set transaction read only` na frente — escrita vira erro do Postgres). Tudo o que muda dado vai pelos caminhos do
 app: o Auth admin, as RPCs como a pessoa (PostgREST com o JWT dela) e as funções (pos-login, vincular-aluno, trocar-token,
-excluir-minha-conta).
+excluir-minha-conta). A única exceção é o gravar_contagens (bcode-0021, item 1): as contagens de teste que a exclusão tem de levar.
 """
 from __future__ import annotations
 
@@ -68,6 +68,30 @@ def ro_treino(query: str) -> list:
 def um(query: str) -> dict:
     r = ro(query)
     return r[0] if r else {}
+
+
+# ───────────────────────── bcode-0021 (item 1): as contagens de teste (a ÚNICA escrita por SQL) ─────────────────────────
+ENDPOINTS_DE_TESTE = ("admin-update-user", "trocar-token")
+
+
+def gravar_contagens(schema: str, emails: list[str], limites: list[tuple[str, str]]) -> dict[str, int]:
+    """Grava as contagens que a exclusão tem de levar: a linha de senha errada (login_bloqueios, erros 2) de cada e-mail — SÓ conta de
+    teste — no principal e 1 linha de limite (edge_rate_limits) por (id, endpoint) no Treino. Nenhum caminho do app grava essas linhas
+    sem o captcha do login ou um master. Devolve {id da pessoa: id da linha de limite} (nunca impresso)."""
+    import uuid as _u
+    if schema not in ("staging", "public") or not all(RE_TESTE.match(e) for e in emails):
+        raise SystemExit("gravar_contagens: só staging/public e só conta de teste")
+    if any(e not in ENDPOINTS_DE_TESTE for _, e in limites):
+        raise SystemExit(f"gravar_contagens: endpoint fora de {ENDPOINTS_DE_TESTE}")
+    if emails:
+        C.sql_principal(f"insert into {schema}.login_bloqueios (email, erros, atualizado_em) values "
+                        + ", ".join(f"('{e}', 2, now())" for e in emails)
+                        + " on conflict (email) do update set erros = excluded.erros, atualizado_em = excluded.atualizado_em")
+    if not limites:
+        return {}
+    r = C.sql_mgmt(TREINO_REF, f"insert into {schema}.edge_rate_limits (user_id, endpoint) values "
+                   + ", ".join(f"('{_u.UUID(i)}'::uuid, '{e}')" for i, e in limites) + " returning id, user_id::text as u")
+    return {x["u"]: x["id"] for x in r}
 
 
 # ───────────────────────── Auth (API admin) e sessões ─────────────────────────
