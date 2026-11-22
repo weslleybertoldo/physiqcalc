@@ -17,6 +17,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- função Deno: payload do JWT e resposta da RPC sem os tipos gerados */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
+import { chaveDoFreio } from "../_shared/freio-ip.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -86,8 +87,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return erro("metodo", 405, origin);
 
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "sem-ip";
-  if (!freio(`ip:${ip}`, 90)) return erro("rate_limited", 429, origin);
+  if (!freio(`ip:${await chaveDoFreio(req.headers)}`, 90)) return erro("rate_limited", 429, origin);
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return erro("schema_invalido", 400, origin);
   const auth = req.headers.get("Authorization") || "";

@@ -3,11 +3,12 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { semComentarios } from "@/test/fonte";
 
-// bcode-0021 (item 8) — o contrato das funções com freio por IP em memória: a chave do Map do freio sempre passa pela chaveDoFreio
-// (um código feito a partir do IP, com o sal da instância — nunca o IP); nenhum `ip ?? "sem-ip"` (o balde "sem-ip" só nasce dentro
-// da chaveDoFreio); e só o _shared que faz a chave lê cabeçalho de IP. As funções rodam no Deno: aqui se lê o código, sem os
-// comentários. O comportamento da chave: src/nucleo/entrarSenhaRegras.test.ts; o freio que conta igual, com a função rodando:
-// src/nucleo/restaurarLoginFuncoes.test.ts.
+// bcode-0021 (item 8) — o contrato das 10 funções com freio por IP em memória (6 do principal e 4 do Treino): a chave do Map do freio
+// sempre passa pela chaveDoFreio (um código feito a partir do IP, com o sal da instância — nunca o IP); nenhum `ip ?? "sem-ip"` (o
+// balde "sem-ip" só nasce dentro da chaveDoFreio); e só o _shared que faz a chave lê cabeçalho de IP (no Treino, o x-forwarded-for só
+// no _shared/freio-ip.ts). As funções rodam no Deno: aqui se lê o código, sem os comentários. O comportamento da chave:
+// src/nucleo/entrarSenhaRegras.test.ts (principal) e src/treino/freioIp.test.ts (Treino); o freio que conta igual, com a função
+// rodando: src/nucleo/restaurarLoginFuncoes.test.ts.
 const raiz = resolve(__dirname, "../..");
 const codigoDe = (arquivo: string) => semComentarios(readFileSync(resolve(raiz, arquivo), "utf-8"));
 
@@ -26,6 +27,11 @@ const ARVORES = [
     pasta: "supabase-principal/functions",
     ajuda: "supabase-principal/functions/_shared/entrar-senha-regras.ts",
     funcoes: ["entrar-senha", "restaurar-login", "alunos", "mp-conectar-retorno", "infinitepay-webhook-aluno", "mp-webhook-aluno"],
+  },
+  {
+    pasta: "supabase/functions",
+    ajuda: "supabase/functions/_shared/freio-ip.ts",
+    funcoes: ["treino-leitura", "treino-acessos", "trocar-token", "painel-resumo-treino"],
   },
 ];
 const FUNCOES = ARVORES.flatMap((a) => a.funcoes.map((slug) => [slug, `${a.pasta}/${slug}`] as const));
@@ -109,6 +115,17 @@ describe("bcode-0021 (item 8): a chave do freio por IP sempre passa pela chaveDo
     const esperado = arvore.funcoes.map((slug) => `${arvore.pasta}/${slug}/index.ts`).sort();
     expect(outros.filter((a) => /\bipDoPedido\(/.test(codigoDe(a)))).toEqual(esperado);
     expect(outros.filter((a) => /\bchaveDoFreio\(/.test(codigoDe(a)))).toEqual(esperado);
+  });
+
+  it("Treino: quem faz a chave (a chaveDoFreio do _shared/freio-ip.ts, com o pedido inteiro) são exatamente as 4", () => {
+    const arvore = ARVORES[1];
+    const outros = arquivosDe(arvore.pasta).filter((a) => a !== arvore.ajuda);
+    const esperado = arvore.funcoes.map((slug) => `${arvore.pasta}/${slug}/index.ts`).sort();
+    expect(outros.filter((a) => /\bchaveDoFreio\(/.test(codigoDe(a)))).toEqual(esperado);
+    for (const a of esperado) {
+      expect(codigoDe(a), a).toContain('import { chaveDoFreio } from "../_shared/freio-ip.ts";');
+      expect(codigoDe(a), a).toContain("await chaveDoFreio(req.headers)");
+    }
   });
 });
 

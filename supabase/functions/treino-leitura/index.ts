@@ -28,6 +28,7 @@
 // no eslint.config.js (hml-14d: a diretiva eslint-disable daqui não tinha efeito e virava aviso)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { treinoVisivelPelaConta } from "../_shared/espelho/regras.ts";
+import { chaveDoFreio } from "../_shared/freio-ip.ts";
 import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -341,8 +342,7 @@ Deno.serve(async (req) => {
   const p = prazo(ORCAMENTO_MS.usuario); // hml-14 (H-32, D3): o prazo do pedido inteiro (as 2 idas ao principal)
   if (!PRINCIPAL_URL || !PRINCIPAL_ANON_KEY) return erro("nao_configurada", 500, origin);
 
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "sem-ip";
-  if (!freio(`ip:${ip}`, 120)) return erro("rate_limited", 429, origin);
+  if (!freio(`ip:${await chaveDoFreio(req.headers)}`, 120)) return erro("rate_limited", 429, origin);
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return erro("schema_invalido", 400, origin);
   const auth = req.headers.get("Authorization") || "";
