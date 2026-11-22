@@ -20,6 +20,8 @@ import { Boom } from "@hapi/boom";
 import makeWASocket, { DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } from "@whiskeysockets/baileys";
 import QRCode from "qrcode";
 import pino from "pino";
+// bcode-0021 (item 5): o log não guarda número de telefone e só fica DIAS_LOG dias (copiar junto pro celular: sem ele o import cai)
+import { linhaDoLog, podarLinhas } from "./registro.mjs";
 
 const CASA = os.homedir();
 const RAIZ = path.join(CASA, "whatsapp-pn");
@@ -30,6 +32,8 @@ const SCHEMAS = (process.env.PN_SCHEMAS || "public,staging").split(",").map((s) 
 const INTERVALO_MS = Number(process.env.PN_INTERVALO_MS || 5000);
 const PING_MS = 60_000;
 const ARQ_LOG = path.join(RAIZ, "agente.log");
+const DIAS_LOG = Number(process.env.PN_LOG_DIAS || 7);
+const PODA_MS = 24 * 60 * 60 * 1000;
 // a biblioteca exige um logger no formato do pino; o NOSSO log é append direto no arquivo (o destino assíncrono do pino
 // quebrava no encerramento do Termux: "sonic boom is not ready yet")
 const silencioso = pino({ level: "silent" });
@@ -43,13 +47,22 @@ const log = {
 };
 
 function escreverLog(linha) {
-  try { fs.appendFileSync(ARQ_LOG, `${new Date().toISOString()} ${linha}\n`); } catch { /* log é melhor esforço */ }
+  try { fs.appendFileSync(ARQ_LOG, `${new Date().toISOString()} ${linhaDoLog(linha)}\n`); } catch { /* log é melhor esforço */ }
 }
 
 function aviso(...partes) {
-  const linha = partes.join(" ");
+  const linha = linhaDoLog(partes.join(" "));
   escreverLog(linha);
   console.log(new Date().toISOString().slice(11, 19), linha);
+}
+
+/** bcode-0021 (item 5): o log fica só com as linhas dos últimos DIAS_LOG dias (na partida e a cada 24 h) */
+function podarLog() {
+  try {
+    const antes = fs.readFileSync(ARQ_LOG, "utf8");
+    const depois = podarLinhas(antes, Date.now(), DIAS_LOG);
+    if (depois !== antes) fs.writeFileSync(ARQ_LOG, depois);
+  } catch { /* sem log ainda: nada a podar */ }
 }
 
 /** fala com a Edge Function; devolve o corpo JSON ou lança */
@@ -140,7 +153,7 @@ async function abrir(schema, nutri, instanciaId, { limpar = false } = {}) {
         const numero = (sock.user?.id || "").split(":")[0].replace(/\D/g, "");
         tentativas.delete(k);
         await api(schema, { acao: "conectado", instancia_id: instanciaId, nutricionista_id: nutri, numero_conectado: numero });
-        aviso("conectado", schema, nutri.slice(0, 8), numero);
+        aviso("conectado", schema, nutri.slice(0, 8));
       }
       if (connection === "close") {
         const motivo = new Boom(lastDisconnect?.error)?.output?.statusCode;
@@ -227,11 +240,17 @@ async function rodada(schema) {
 
 async function loop() {
   if (!TOKEN) throw new Error("falta ~/.physiqnutri-agente-token");
+  podarLog();
   aviso("agente no ar", URL, "schemas:", SCHEMAS.join("+"));
   let ultimoPing = 0;
+  let ultimaPoda = Date.now();
   for (;;) {
     for (const schema of SCHEMAS) {
       try { await rodada(schema); } catch (e) { log.error({ e: String(e) }, `rodada ${schema}`); }
+    }
+    if (Date.now() - ultimaPoda > PODA_MS) {
+      ultimaPoda = Date.now();
+      podarLog();
     }
     if (Date.now() - ultimoPing > PING_MS) {
       ultimoPing = Date.now();
@@ -271,4 +290,9 @@ async function provar() {
 }
 
 const alvo = process.argv.includes("--provar") ? provar : loop;
-alvo().catch((e) => { console.error("agente parou:", e); process.exit(1); });
+alvo().catch((e) => {
+  const linha = linhaDoLog(`agente parou: ${String(e)}`);
+  escreverLog(linha);
+  console.error(linha);
+  process.exit(1);
+});
