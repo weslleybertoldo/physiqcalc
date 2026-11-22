@@ -25,7 +25,7 @@
 // Log: _shared/log.ts — o id da cobrança e o resultado; nunca o corpo, a InfiniteTag, a url do recibo, o NSU ou o slug.
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
-import { ipDoPedido } from "../_shared/entrar-senha-regras.ts";
+import { chaveDoFreio, ipDoPedido } from "../_shared/entrar-senha-regras.ts";
 import { criarLog, emSegundoPlano } from "../_shared/log.ts";
 import type { Schema } from "../_shared/financeiro-regras.ts";
 import { IP_LIMITE_CORPO, lerAvisoDoWebhook } from "../_shared/infinitepay-regras.ts";
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     }
     const daRodada = url.searchParams.get("origem") === "rodada";
     // I6: a InfinitePay chama o supabase.co direto (sem o proxy): vale o cf-connecting-ip; sem IP conhecido, um balde só
-    if (!permitido(ipDoPedido(req.headers, null) ?? "sem-ip")) return responder(429, "limite", inicio);
+    if (!permitido(await chaveDoFreio(ipDoPedido(req.headers, null)))) return responder(429, "limite", inicio);
     if (Number(req.headers.get("content-length") || 0) > IP_LIMITE_CORPO) return responder(413, "corpo_grande", inicio);
     const bruto = await req.text();
     if (bruto.length > IP_LIMITE_CORPO) return responder(413, "corpo_grande", inicio);

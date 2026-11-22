@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ErroParaAviso, SchemaAviso } from "../../supabase-principal/functions/_shared/erros";
 import { criarLog, emSegundoPlano } from "../../supabase-principal/functions/_shared/log";
+import { criarLog as criarLogDoTreino } from "../../supabase/functions/_shared/log";
 // Token falso montado aqui: o literal no formato de token do Telegram dispara o secret scanning do GitHub.
 const TOKEN_TELEGRAM_FALSO = ["1234567890", "AA" + "Hk3j4k5l6m7n8o9p0qRsTuVwXyZ12345"].join(":");
 
@@ -337,6 +338,31 @@ describe("o aviso: log.erro e log.excecao avisam em segundo plano; info e aviso 
     emSegundoPlano(undefined);
     emSegundoPlano(Promise.reject(new Error("x")));
     await expect(Promise.all(pendentes)).resolves.toEqual([undefined, undefined]);
+  });
+});
+
+describe("bcode-0021 (item 6): o que as linhas que trocaram os console.* do Treino gravam", () => {
+  it("o catch final sai sem o valor ecoado (nem o e-mail) e avisa; o log.aviso só com o código não avisa; a mensagem técnica do PostgREST fica legível", () => {
+    const chamadas: Array<{ erro: ErroParaAviso; schema: SchemaAviso | null }> = [];
+    const log = criarLogDoTreino("treino-leitura", { avisar: (erro, schema) => void chamadas.push({ erro, schema }) });
+    // o catch final (log.excecao): o Postgres ecoa o valor recusado — sai ": "?"", sem o e-mail
+    log.excecao(new Error('invalid input syntax for type uuid: "ana@exemplo.com"'), { acao: "semana_atual", schema: "staging" });
+    expect(ultima()).toEqual({
+      nivel: "erro", funcao: "treino-leitura", codigo: "excecao", schema: "staging", acao: "semana_atual", name: "Error",
+      msg: 'invalid input syntax for type uuid: "?"',
+    });
+    expect(saidas[0].texto).not.toContain("@");
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0].erro.mensagem).toBe('Error · invalid input syntax for type uuid: "?"');
+    // a RPC da W3 que falha (log.aviso com o pg): sai no console.warn, só com o código, e não avisa
+    log.aviso({ codigo: "pode_ver_aluno_falhou", schema: "public", pg: "22P02" });
+    expect(saidas[1]).toMatchObject({ metodo: "warn", linha: { nivel: "aviso", funcao: "treino-leitura", codigo: "pode_ver_aluno_falhou", schema: "public", pg: "22P02" } });
+    expect(chamadas).toHaveLength(1);
+    // negativo: a limpeza não come a mensagem técnica (o schema ainda sem a função da W3)
+    const tecnica = "Could not find the function staging.pode_ver_aluno_treino_por(p_aluno, p_usuario) in the schema cache";
+    log.excecao({ message: tecnica, code: "PGRST202", details: null, hint: null }, { schema: "staging" });
+    expect(ultima()).toMatchObject({ name: "PostgrestError", pg: "PGRST202", msg: tecnica });
+    expect(chamadas[1].erro.mensagem).toBe(`PostgrestError · pg PGRST202 · ${tecnica}`);
   });
 });
 

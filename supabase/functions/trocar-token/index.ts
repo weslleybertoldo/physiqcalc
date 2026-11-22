@@ -39,6 +39,7 @@ import {
   type ResumoNucleo,
   type UsuarioPrincipal,
 } from "../_shared/espelho/regras.ts";
+import { chaveDoFreio } from "../_shared/freio-ip.ts";
 import { criarLog } from "../_shared/log.ts";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
@@ -200,8 +201,7 @@ Deno.serve(async (req) => {
   const p = prazo(ORCAMENTO_LOGIN_MS); // hml-14 (H-32, D3): o prazo do login inteiro (todas as chamadas para fora)
   if (!PRINCIPAL_URL || !PRINCIPAL_ANON_KEY || !SEGREDO_ESPELHO_RESUMO) return erro("nao_configurada", 500, origin);
 
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "sem-ip";
-  if (!freioPorIp(ip)) return erro("rate_limited", 429, origin);
+  if (!freioPorIp(await chaveDoFreio(req.headers))) return erro("rate_limited", 429, origin);
 
   const schema = (req.headers.get("x-schema") || "public").toLowerCase();
   if (!SCHEMAS.includes(schema)) return erro("schema_invalido", 400, origin);

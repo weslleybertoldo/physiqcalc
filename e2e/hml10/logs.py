@@ -29,7 +29,7 @@ from _logs_supabase import LogsFora, Saida, agora, consulta, funcoes, iso, janel
 
 PRINCIPAL_REF = "hkxvtsbwctxkrqzkkdoz"
 TREINO_REF = "uxwpwdbbnlticxgtzcsb"
-# as 35 da W (spec §3.1 e §4): 22 do principal publicadas + a erro-avisar nova; 12 do Treino
+# as 35 da W (spec §3.1 e §4): 22 do principal publicadas + a erro-avisar nova; 12 do Treino (+ as 9 do bcode-0021, item 6)
 DA_W = {
     PRINCIPAL_REF: (
         "agenda-avisar", "aluno-enviar", "alunos", "convites", "cobranca-conta", "entrar-senha", "espelho-enviar",
@@ -40,6 +40,9 @@ DA_W = {
     TREINO_REF: (
         "trocar-token", "admin-delete-user", "admin-list-users", "mp-webhook", "master-financeiro", "master-planos",
         "master-professores", "professor-convites", "vincular-professor", "mp-payments", "espelho-nucleo", "delete-my-account",
+        # bcode-0021 (item 6): as 9 que trocaram os console.* pelo log em JSON
+        "admin-avaliacoes", "admin-get-overrides", "admin-get-user", "admin-get-workout-plan", "admin-relatorio", "admin-tags",
+        "admin-update-user", "painel-resumo-treino", "treino-leitura",
     ),
 }
 NOME = {PRINCIPAL_REF: "principal", TREINO_REF: "Treino"}
