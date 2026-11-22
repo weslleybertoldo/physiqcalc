@@ -556,6 +556,9 @@ executa (revoke de `public`, `anon` e `authenticated`); os jobs rodam no pg_cron
   - `physiq_limites_vinculo_saiu()` + o gatilho `physiq_limites_vinculo_<schema>` (after delete em `physiq_identidades`): sai a contagem
     gravada pelo id do principal (a `trocar-token` conta por ele; as `physiq_excluir_*` apagam pelo id do Treino).
   - `physiq_exportar_aluno` traz `edge_rate_limits` dos 2 ids da pessoa, com a mesma guarda por md5 (o corpo da w07).
+  - ⚠️ Resíduo conhecido: sem vínculo (a `trocar-token` contou pelo id do principal e recusou antes de criar o vínculo, ex.: o conflito
+    de e-mail), essa contagem não sai na exclusão (a `delete-my-account` responde `sem_vinculo` antes) — sai pelo prazo, em até 23 h — e
+    não vem no «Exportar meus dados». Fechar em código é caso próprio (mexe na `delete-my-account` e na `exportar-meus-dados`).
 - **Os 2 bancos, 1 vez** (`scripts/legal/bcode0021_ip_das_sessoes.sql`, bloco compartilhado): `auth.sessions.ip = null` (só o IP;
   ninguém sai). Sem reversa, de propósito.
 - **Prova**: um Postgres local (PGlite, Postgres 18, com um stub do pg_cron) com as migrações do jeito do `apply_migration_principal.py`
