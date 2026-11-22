@@ -176,6 +176,8 @@ export default function ExcluirConta() {
                   ? "os alunos com login continuam usando o app, sem profissional;"
                   : "os alunos com login continuam no app, sem profissional, com 7 dias grátis;"} o histórico fica com cada aluno.</li>
                 <li>Quando um <strong>membro de equipe</strong> exclui: ele sai da equipe e os alunos dele ficam com o dono da conta.</li>
+                {/* D8 da restauração de login (textos de 22/12/2026) */}
+                <li data-frase-chave-restauracao>No app Android, a chave de entrada no celular novo é desligada na exclusão. O registro dela sai na hora para quem é só aluno e cerca de 90 dias depois para quem é ou já foi profissional, como o de toda chave desligada.</li>
                 {/* hml-12 (H-30, P3): a prova do aceite fica depois da exclusão — em todo build desde a virada */}
                 <li data-frase-aceites>O registro dos seus aceites e consentimentos fica guardado por 5 anos, só para provar o aceite.</li>
                 <li data-frase-backups>{FRASE_BACKUPS}</li>

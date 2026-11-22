@@ -48,7 +48,7 @@ FRASES: dict[str, list[str]] = {
     "exclusao": [
         "as rotinas (inclusive as criadas pelos seus profissionais, com o que você marcou e o histórico), os alimentos e receitas que "
         "você criou, o que você mudou na dieta do seu dia",
-        "a cópia do treino guardada no aparelho e os lembretes das rotinas agendados nele",
+        "a cópia do treino guardada no aparelho, os lembretes das rotinas agendados nele",
     ],
     "aparelho": [
         "os lembretes das suas rotinas, agendados no aparelho pelo app Android; saem quando você sai da conta",

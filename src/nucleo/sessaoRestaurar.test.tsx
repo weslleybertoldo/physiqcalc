@@ -267,6 +267,21 @@ describe("SessaoProvider — com sessão: criar a chave, o Sair e a sessão derr
     expect(h.ordem).toEqual(["chave-restauracao:opcoes", "criar", "chave-restauracao:registrar"]);
   });
 
+  it.each([
+    ["o aceite pendente", { versao: "2026-12-22", aceite_pendente: true, saude_pendente: false, nascimento_pendente: false, menor: null }],
+    ["a trava de idade", { versao: "2026-12-22", aceite_pendente: false, saude_pendente: false, nascimento_pendente: false, menor: "menor_16" }],
+  ] as const)("D8: %s segura a chave (a porta do aceite não está livre)", async (_caso, legal) => {
+    h.sessaoInicial = sessaoDe(UID);
+    h.situacao = situacao({ user_id: UID, master: false, legal: legal as never });
+    montar();
+    await waitFor(() => expect(atual?.situacao?.legal).toBeTruthy());
+    await act(async () => {
+      await new Promise((ok) => setTimeout(ok, 50));
+    });
+    expect(h.chave).not.toHaveBeenCalled();
+    expect(h.plugin.criar).not.toHaveBeenCalled();
+  });
+
   it("o master (sai do app) não ganha chave", async () => {
     h.sessaoInicial = sessaoDe(UID);
     h.situacao = situacao({ user_id: UID, master: true });

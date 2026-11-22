@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -61,11 +61,13 @@ const ANCORAS: Record<string, string[]> = {
 };
 
 describe("a versão dos textos (uma só para os 3)", () => {
-  // A virada (29/10/2026): a versão é a data da publicação. Ela mora em versao.ts (VERSAO_TEXTOS e a mesma data por extenso) e a
-  // migração da virada liga a MESMA versão no banco (app_config.textos_legais, que o aceite confere: outra = versao_desatualizada). Se a
-  // data mudar, muda nos 2 juntos — estes testes acusam a diferença.
-  const MIGRACAO = "supabase-principal/migrations/20261029200000_virada_textos_legais.sql";
-  const REVERSA = "supabase-principal/reversas/20261029200000_virada_textos_legais_reversa.sql";
+  // A versão é a data da publicação. Ela mora em versao.ts (VERSAO_TEXTOS e a mesma data por extenso) e a migração MAIS NOVA dos textos
+  // liga a MESMA versão no banco (app_config.textos_legais, que o aceite confere: outra = versao_desatualizada). Se a data mudar, muda
+  // nos 2 juntos — estes testes acusam a diferença. A virada (29/10/2026) ligou 2026-10-29; a versão de 22/12/2026 (D8 da restauração
+  // de login) vem pela 20261121120000.
+  const MIGRACAO = "supabase-principal/migrations/20261121120000_versao_textos_2026_12_22.sql";
+  const REVERSA = "supabase-principal/reversas/20261121120000_versao_textos_2026_12_22_reversa.sql";
+  const VERSAO_ANTERIOR = "2026-10-29";
   /** As datas 'AAAA-MM-DD' do SQL de verdade (sem as linhas de comentário). */
   const datasDoSql = (caminho: string) =>
     [...readFileSync(resolve(RAIZ, caminho), "utf8").split("\n").filter((l) => !l.trim().startsWith("--")).join("\n").matchAll(/'(\d{4}-\d{2}-\d{2})'/g)].map((m) => m[1]);
@@ -76,21 +78,30 @@ describe("a versão dos textos (uma só para os 3)", () => {
     expect(DATA_DOS_TEXTOS).toBe(porExtenso);
   });
 
-  it("a versão publicada vem depois da que ficou em revisão no staging (2026-10-08)", () => {
-    expect(VERSAO_TEXTOS > "2026-10-08").toBe(true);
+  it("a versão do app vem depois da que está no ar desde a virada (2026-10-29)", () => {
+    expect(VERSAO_TEXTOS > VERSAO_ANTERIOR).toBe(true);
   });
 
-  it("a migração da virada liga no banco a versão do app (nos 2 schemas) e só ela", () => {
+  it("a migração da versão liga no banco a versão do app (nos 2 schemas) e só ela", () => {
     const sql = readFileSync(resolve(RAIZ, MIGRACAO), "utf8");
     expect(sql).toContain(`set valor = jsonb_build_object('versao', '${VERSAO_TEXTOS}')`);
     expect(sql).toContain("where chave = 'textos_legais'");
     expect(new Set(datasDoSql(MIGRACAO))).toEqual(new Set([VERSAO_TEXTOS]));
   });
 
-  it("a reversa volta o staging à versão de revisão e o public à nula (desligado)", () => {
+  it("nenhuma migração mais nova mexe na versão dos textos (a do teste é a vigente)", () => {
+    const pasta = resolve(RAIZ, "supabase-principal/migrations");
+    const mexem = readdirSync(pasta)
+      .filter((f) => f.endsWith(".sql"))
+      .filter((f) => /set valor = jsonb_build_object\('versao'/.test(readFileSync(resolve(pasta, f), "utf8")))
+      .sort();
+    expect(`supabase-principal/migrations/${mexem.at(-1)}`).toBe(MIGRACAO);
+  });
+
+  it("a reversa volta os 2 schemas à versão de antes (2026-10-29)", () => {
     const sql = readFileSync(resolve(RAIZ, REVERSA), "utf8");
-    expect(sql).toContain("jsonb_build_object('versao', case when '{schema}' = 'staging' then '2026-10-08' end)");
-    expect(new Set(datasDoSql(REVERSA))).toEqual(new Set(["2026-10-08"]));
+    expect(sql).toContain(`set valor = jsonb_build_object('versao', '${VERSAO_ANTERIOR}')`);
+    expect(new Set(datasDoSql(REVERSA))).toEqual(new Set([VERSAO_ANTERIOR]));
   });
 });
 
@@ -197,6 +208,55 @@ describe("Política de Privacidade × o app", () => {
     );
     expect(tudo).toContain("os lembretes das suas rotinas, agendados no aparelho pelo app Android; saem quando você sai da conta;");
     expect(tudo).toContain("Os lembretes das rotinas mostram o nome da rotina e a dose; o de remédio mostra só a hora, e o nome do remédio aparece ao abrir o app.");
+  });
+
+  // D8 da restauração de login (versão de 22/12/2026): o que a chave de entrada no celular novo guarda e onde — cada frase conferida no
+  // código (migração 20261030010000_restaurar_login.sql, as funções chave-restauracao e restaurar-login, o RestaurarLoginPlugin, o
+  // restaurarLogin.ts e o sessao.tsx) e nas páginas do Google; vale nos 2 builds (o plugin está no APK do site e no da Google Play).
+  it.each([
+    ["site e APK", false],
+    ["Google Play", true],
+  ] as const)("D8: a Política diz o que a chave de entrada no celular novo guarda e onde (%s)", (_versao, loja) => {
+    const tudo = textoVisivel(lerMarkdown(politicaDePrivacidade(loja))).join("\n");
+    expect(tudo).toContain(
+      "Entrada no celular novo | só no app Android: a parte pública da chave de entrada (seção 12), ligada à sua conta (sozinha, ela não serve para entrar); o código da chave; a marca e o modelo do celular;",
+    );
+    expect(tudo).toContain("A parte privada da chave não vem para o Physiq | entrar sozinho na sua conta no celular novo, com segurança");
+    expect(tudo).toContain("com segurança, e saber como cada chave foi criada, usada e desligada, para corrigir erros");
+    expect(tudo).toContain("Os técnicos e os da entrada no celular novo, o Physiq registra sozinho.");
+    // §5: a chave não está nos Termos (o contrato) → linha própria, com legítimo interesse (2ª rodada, 21/11)
+    expect(tudo).toContain("Conta, login, perfil e as funções do app | execução do contrato");
+    expect(tudo).toContain(
+      "Entrada no celular novo, no app Android | legítimo interesse, num serviço que beneficia você: voltar à sua conta no celular novo sem entrar de novo, com segurança, e corrigir os erros dessa entrada (art. 7º, IX, e art. 10, II)",
+    );
+    expect(tudo).not.toContain("Conta, login (inclusive a entrada no celular novo");
+    expect(tudo).toContain("No app Android, a chave de entrada no celular novo (seção 12) fica guardada pelo Android (Google Play services) no celular");
+    expect(tudo).toContain("cifrada de ponta a ponta, segundo o Google.");
+    expect(tudo).toContain("Backup do Google: no app Android (do site ou da Google Play), a cópia da chave de entrada no celular novo");
+    expect(tudo).toContain("Chave de entrada no celular novo | vale no máximo 13 meses depois de criada;");
+    // §9: a chave entra com o login por senha bloqueado; destrava a senha criada pelo profissional ou o Google; "só aluno" = na hora
+    expect(tudo).toContain("(uma senha nova criada pelo profissional ou pelo suporte, ou entrar com o Google); entrar com o Google ou com a chave de entrada no celular novo continua funcionando");
+    expect(tudo).toContain("o login e os seus dados próprios saem na hora, salvo os prazos desta tabela (como o da chave de entrada no celular novo) e o que diz a seção 10;");
+    expect(tudo).toContain("(na exclusão da conta de quem é só aluno, na hora)");
+    // §10: a chave deixa de entrar na hora; o app só apaga a cópia do celular em que a pessoa exclui; o job apaga DEPOIS dos 90 dias
+    expect(tudo).toContain(
+      "no app Android, a chave de entrada no celular novo deixa de entrar na hora; o app pede ao Android que apague a cópia do celular e do backup: no celular em que você exclui, na hora; em cada outro celular com o app, quando ele abrir de novo com internet e notar que a conta saiu (até lá, a cópia fica, mas não entra mais);",
+    );
+    expect(tudo).toContain(
+      "a chave de entrada no celular novo deixa de entrar na hora, o app pede ao Android que apague a cópia do celular e do backup (como no caso do aluno), e o registro dela sai do servidor cerca de 90 dias depois, como o de toda chave desligada;",
+    );
+    expect(tudo).not.toContain("em até 90 dias");
+    expect(tudo).toContain("algumas marcas do app (o código da chave e o da sessão, o identificador da conta, datas e se já tentou entrar)");
+    expect(tudo).toContain("quando você sai da conta no app, ele pede ao Android que apague a chave do celular e do backup, e cria outra quando você entra de novo; o app não tem opção para desligar essa chave;");
+    // §13: só o que o código garante (os registros levam o id da conta e o texto técnico do erro; o login do Supabase tem os seus)
+    expect(tudo).toContain("As chaves secretas do Physiq nunca vão para o app nem para o site (a chave de entrada no celular novo é outra: seção 12).");
+    expect(tudo).toContain(
+      "Os registros das funções do servidor servem só para a segurança e para corrigir erros: levam códigos técnicos, como o identificador da conta ou o começo do código da chave de entrada, e o texto técnico do erro. Os avisos de erro levam o texto técnico do erro sem o e-mail, o telefone, o CPF e o IP que o sistema reconhece pelo formato, e nunca o identificador da conta. O Supabase também tem registros próprios de cada entrada e de cada pedido.",
+    );
+    // o §3 (Técnicos) aponta para o §13 em vez de prometer "sem dado pessoal"
+    expect(tudo).toContain("para limitar tentativas, e os avisos de erro (seção 13) | segurança, notificações e correção de erros");
+    expect(tudo).not.toContain("e os avisos de erro, sem dado pessoal");
+    expect(tudo).not.toContain("não levam nome, e-mail, telefone, CPF nem dado de saúde");
   });
 });
 

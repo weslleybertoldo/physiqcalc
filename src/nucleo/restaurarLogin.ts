@@ -30,6 +30,19 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import type { Session } from "@supabase/supabase-js";
 // o principal aqui só chama as FUNÇÕES (jeito 2); a sessão restaurada é gravada pelo SessaoProvider (o arquivo do login)
 import { principal, PRINCIPAL_ANON, PRINCIPAL_SCHEMA, PRINCIPAL_STORAGE_KEY, PRINCIPAL_URL } from "@/integrations/principal/client";
+import type { LegalSituacao } from "./situacao";
+
+/**
+ * D8 da restauração de login (versão dos textos de 22/12/2026): a chave de entrada no celular novo só nasce com a porta livre — sem o
+ * aceite, a saúde ou a data pendentes e sem a trava de idade (a conta "suspensa" da Política, seção 11, não ganha chave). Sem `legal`
+ * (servidor antigo, cache de antes) ou com a versão nula (desligado) → livre, como na porta. Quem chama: o gancho da chave (sessao.tsx).
+ * O critério é o da porta (decisaoDaPorta, src/publico/legal/aceite/regras.ts), repetido aqui: o sessao.tsx não pode importar de
+ * @/publico/legal (o texto legal iria para o JS inicial — guarda.test.ts).
+ */
+export function portaLivreParaAChave(legal: LegalSituacao | null | undefined): boolean {
+  if (!legal || legal.versao === null) return true;
+  return !legal.aceite_pendente && !legal.saude_pendente && !legal.nascimento_pendente && !legal.menor;
+}
 
 // ───────────────────────── o plugin nativo ─────────────────────────
 
@@ -86,7 +99,7 @@ export const MARCA_PAUSA = "physiq_chave_restauracao_pausa";
  */
 export const MARCA_ESPERA = "physiq_restauracao_espera";
 
-/** A chave se renova a cada ~6 meses (o servidor vence a que não é usada há 13). */
+/** A chave se renova a cada ~6 meses, quando o app abre (o servidor vence a chave 13 meses depois de CRIADA, usada ou não). */
 export const RENOVAR_MS = 182 * 24 * 60 * 60 * 1000;
 /** A pausa depois de um "não dá" definitivo (o Android sem a API, a recusa do servidor): 7 dias. */
 export const PAUSA_MS = 7 * 24 * 60 * 60 * 1000;

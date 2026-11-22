@@ -67,10 +67,16 @@ export const SERVICOS_TERCEIROS: readonly ServicoTerceiro[] = [
   },
   // src/lib/capacitorAuth.ts (signInWithOAuth, provider google) · supabase-principal/functions/push-enviar e _shared/push-regras.ts
   // (fcm.googleapis.com) · src/push/aparelho.ts (o código do aparelho) · android/app/build.gradle (google-services)
+  // D8 da restauração de login (versão de 22/12/2026): RestaurarLoginPlugin.java (criar com isCloudBackupEnabled = true; sem conta
+  // Google, backup ou bloqueio de tela → E2eeUnavailableException → só no aparelho; o apagar = TYPE_CLEAR_RESTORE_CREDENTIAL) ·
+  // _shared/restaurar-login-regras.ts (opcoesDeRegistro: rp physiqcalc.com.br; user.id = os 16 bytes do id da conta; name "Physiq",
+  // sem e-mail) · as páginas do Google lidas em 21/11/2026: identity/sign-in/restore-credentials (no aparelho e, conforme o backup, na
+  // nuvem; conta Google + backup + bloqueio de tela) e restore-credentials-implementation ("end-to-end encrypted cloud backup"); a
+  // referência do ClearCredentialStateRequest ("from the device and the backup")
   {
     id: "google",
     nome: "Google",
-    texto: "o login com o Google, que envia ao Physiq o seu nome, e-mail e foto quando você autoriza, e as notificações do app no Android (Firebase Cloud Messaging), que recebem o código do aparelho e um texto curto, fixo para cada tipo de aviso (por exemplo, \"Tem novidade na sua agenda.\"), sem nome nem valor; o aviso completo fica só dentro do app.",
+    texto: "o login com o Google, que envia ao Physiq o seu nome, e-mail e foto quando você autoriza, e as notificações do app no Android (Firebase Cloud Messaging), que recebem o código do aparelho e um texto curto, fixo para cada tipo de aviso (por exemplo, \"Tem novidade na sua agenda.\"), sem nome nem valor; o aviso completo fica só dentro do app. No app Android, a chave de entrada no celular novo (seção 12) fica guardada pelo Android (Google Play services) no celular e, com o backup do Google e o bloqueio de tela ligados, também no backup da sua conta Google, cifrada de ponta a ponta, segundo o Google. Além da própria chave, vão nela o endereço do Physiq e o código da sua conta, sem o seu e-mail nem o seu nome.",
   },
   // play-W6: android/app/src/playRelease/java/…/PlayBillingPlugin.java (a Play Billing Library: setObfuscatedAccountId = a matrícula, um uuid
   // sem dado pessoal) · supabase-principal/functions/play-compras e play-conferir (_shared/play-api.ts: androidpublisher.googleapis.com; a
