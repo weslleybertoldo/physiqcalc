@@ -92,12 +92,13 @@ PROVAS: dict[tuple[str, str], tuple[str, str, list[tuple[str, str]]]] = {
     ]),
     ("principal", "3"): ("provas_item3_principal.sql", "item 3a · avisos de erro", [
         ("job", "o job physiq-avisos-erro-limpeza-{s}: minuto 47, o comando da migração, ativo"),
-        ("insercao", "as 5 assinaturas sorteadas entraram (nenhuma bateu com uma de verdade)"),
+        ("insercao", "as 6 assinaturas sorteadas entraram (nenhuma bateu com uma de verdade)"),
         ("a_31d", "A: o primeiro há 31 d → sai"),
         ("e_29d23h30", "E: há 29 d 23 h 30 min → sai"),
         ("b_ultimo_recente", "B: o primeiro há 40 d, o último aviso há 2 d → fica"),
         ("c_agora", "C: agora → fica"),
-        ("d_29d22h", "D: há 29 d 22 h → fica"),
+        ("d_29d21h", "D: há 29 d 21 h → fica"),
+        ("f_29d22h30", "F: há 29 d 22 h 30 min → sai (o corte é 29 d 22 h)"),
         ("h1_31d", "H1: a hora de 31 d → sai"),
         ("h2_29d", "H2: a hora de 29 d → fica"),
     ]),
@@ -272,7 +273,7 @@ def linhas_leitura(banco: str, s: str, r: dict, jobs: dict | None) -> list[tuple
         out.append((None, f"{pre} item 2 · login_tentativas_ip: {n(r.get('ip_login_total'))} ({n(r.get('ip_login_vencidas'))} paradas há mais "
                           f"de 46 h, a mais velha de {hora(r.get('ip_login_mais_velha'))}) · publico_pedidos_ip: {n(r.get('ip_publico_total'))} "
                           f"({n(r.get('ip_publico_vencidas'))} com mais de 22 h, a mais velha de {hora(r.get('ip_publico_mais_velha'))})"))
-        out.append((None, f"{pre} item 3a · avisos_erro: {n(r.get('avisos_total'))} ({n(r.get('avisos_vencidos'))} com mais de 29 d 23 h, o "
+        out.append((None, f"{pre} item 3a · avisos_erro: {n(r.get('avisos_total'))} ({n(r.get('avisos_vencidos'))} com mais de 29 d 22 h, o "
                           f"mais velho de {hora(r.get('avisos_mais_velho'))}) · avisos_erro_hora: {n(r.get('avisos_hora_total'))} "
                           f"({n(r.get('avisos_hora_vencidas'))} vencidas)"))
         out.append((r.get("pode_gatilho_auth_users") is True,

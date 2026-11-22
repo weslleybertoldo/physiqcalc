@@ -69,21 +69,22 @@ describe("item 2: os códigos do IP saem no prazo, sem sorteio", () => {
 describe("item 3: os avisos de erro saem em até 30 dias", () => {
   const sql = semComentario(ler(M3));
 
-  it("um job de hora em hora (minuto 47) apaga as 2 tabelas com corte de 29 dias e 23 horas", () => {
+  it("um job de hora em hora (minuto 47) apaga as 2 tabelas com corte de 29 dias e 22 horas (aguenta 1 rodada perdida)", () => {
     const [job, ...outros] = jobs(ler(M3));
     expect(outros).toEqual([]);
     expect(job.nome).toBe("physiq-avisos-erro-limpeza-{schema}");
     expect(job.horario).toBe("47 * * * *");
     expect(job.comando).toContain(
-      "delete from {schema}.avisos_erro where coalesce(ultimo_aviso_em, primeiro_em) < now() - interval '29 days 23 hours'");
-    expect(job.comando).toContain("delete from {schema}.avisos_erro_hora where hora < now() - interval '29 days 23 hours'");
+      "delete from {schema}.avisos_erro where coalesce(ultimo_aviso_em, primeiro_em) < now() - interval '29 days 22 hours'");
+    expect(job.comando).toContain("delete from {schema}.avisos_erro_hora where hora < now() - interval '29 days 22 hours'");
+    expect(job.comando).not.toContain("29 days 23 hours");
   });
 
   it("a migração apaga uma vez o que já passou e confere que nada ficou com mais de 30 dias", () => {
     const fora = sql.replace(/\$\$[\s\S]*?\$\$/, "");
     expect(fora).toContain(
-      "delete from {schema}.avisos_erro where coalesce(ultimo_aviso_em, primeiro_em) < now() - interval '29 days 23 hours';");
-    expect(fora).toContain("delete from {schema}.avisos_erro_hora where hora < now() - interval '29 days 23 hours';");
+      "delete from {schema}.avisos_erro where coalesce(ultimo_aviso_em, primeiro_em) < now() - interval '29 days 22 hours';");
+    expect(fora).toContain("delete from {schema}.avisos_erro_hora where hora < now() - interval '29 days 22 hours';");
     expect(fora).toMatch(/sobrou aviso de erro com mais de 30 dias/);
   });
 

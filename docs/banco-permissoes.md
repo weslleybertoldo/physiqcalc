@@ -547,7 +547,8 @@ executa (revoke de `public`, `anon` e `authenticated`); os jobs rodam no pg_cron
   - `limite_ip_limpar()` + job `physiq-limite-ip-limpeza-<schema>` (minuto 19): os códigos feitos a partir do IP — o login parado há mais
     de 46 h e a hora pública começada há mais de 22 h. Pula a tabela que não existir. O sorteio de antes segue em `login_iniciar` e
     `limite_publico`, sem efeito.
-  - job `physiq-avisos-erro-limpeza-<schema>` (minuto 47, o comando inteiro no job): os avisos de erro com mais de 29 dias e 23 horas.
+  - job `physiq-avisos-erro-limpeza-<schema>` (minuto 47, o comando inteiro no job): os avisos de erro com mais de 29 dias e 22 horas
+    (nada passa de 30 dias, nem com 1 rodada perdida do pg_cron).
   - `exportar_dados_aluno` traz `login_bloqueios` (só a linha do e-mail do login da pessoa). A migração só troca o corpo se o md5 do corpo
     vivo for o da wa3 (ou já o novo); a reversa volta o corpo da wa3 com a mesma guarda.
 - **Treino, por schema** (a migração exige `set physiq.schemas = 'staging'` ou `'public'` na mesma chamada; liga o pg_cron se faltar):

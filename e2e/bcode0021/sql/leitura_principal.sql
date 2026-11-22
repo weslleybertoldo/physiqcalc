@@ -22,13 +22,13 @@ select
   (select count(*) from {schema}.publico_pedidos_ip) as ip_publico_total,
   (select count(*) from {schema}.publico_pedidos_ip q where q.janela < now() - interval '22 hours') as ip_publico_vencidas,
   (select min(q.janela) from {schema}.publico_pedidos_ip q) as ip_publico_mais_velha,
-  -- item 3a: os avisos de erro (mais de 29 d 23 h)
+  -- item 3a: os avisos de erro (mais de 29 d 22 h)
   (select count(*) from {schema}.avisos_erro) as avisos_total,
   (select count(*) from {schema}.avisos_erro a
-    where coalesce(a.ultimo_aviso_em, a.primeiro_em) < now() - interval '29 days 23 hours') as avisos_vencidos,
+    where coalesce(a.ultimo_aviso_em, a.primeiro_em) < now() - interval '29 days 22 hours') as avisos_vencidos,
   (select min(coalesce(a.ultimo_aviso_em, a.primeiro_em)) from {schema}.avisos_erro a) as avisos_mais_velho,
   (select count(*) from {schema}.avisos_erro_hora) as avisos_hora_total,
-  (select count(*) from {schema}.avisos_erro_hora h where h.hora < now() - interval '29 days 23 hours') as avisos_hora_vencidas,
+  (select count(*) from {schema}.avisos_erro_hora h where h.hora < now() - interval '29 days 22 hours') as avisos_hora_vencidas,
   -- item 4 (o projeto inteiro: auth.sessions é uma só para os 2 schemas)
   (select count(*) from auth.sessions) as sessoes,
   (select count(*) from auth.sessions s where s.ip is not null) as sessoes_com_ip,
