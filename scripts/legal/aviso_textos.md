@@ -29,7 +29,7 @@ No servidor do Physiq ficam a parte pública dessa chave (sozinha, ela não serv
 
 A chave vale no máximo 13 meses e é trocada quando você abre o app depois de 6 meses. Desligada (ao sair da conta com internet, ao trocar a senha ou ao excluir a conta), ela não entra mais, e o registro dela sai do servidor cerca de 90 dias depois (na exclusão da conta de quem é só aluno, na hora). A base legal é o legítimo interesse, num serviço que beneficia você (seção 5).
 
-A versão nova também muda 2 pontos que valem para todos: os registros das funções do servidor levam códigos técnicos, como o identificador da conta, e o texto técnico do erro; os avisos de erro levam o texto técnico do erro sem o e-mail, o telefone, o CPF e o IP que o sistema reconhece, e nunca o identificador da conta. A versão de hoje dizia que eles não levavam dado pessoal (seção 13). E o bloqueio por senhas erradas vale só para o login por senha: entrar com o Google ou com a chave continua funcionando (seção 9).
+A versão nova também muda 2 pontos principais que valem para todos: os registros das funções do servidor levam códigos técnicos, como o identificador da conta, e o texto técnico do erro; os avisos de erro levam o texto técnico do erro sem o e-mail, o telefone, o CPF e o IP que o sistema reconhece, e nunca o identificador da conta. A versão de hoje dizia que eles não levavam dado pessoal (seção 13). E o bloqueio por senhas erradas vale só para o login por senha: entrar com o Google ou com a chave continua funcionando (seção 9).
 
 No 1º acesso a partir de {data_dos_textos}, no app ou no site, o Physiq vai pedir que você leia e aceite a versão nova. Depois do aceite, tudo abre normalmente. No celular Android, a partir dessa data, atualize o app do Physiq.
 
