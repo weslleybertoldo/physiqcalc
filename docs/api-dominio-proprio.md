@@ -73,6 +73,16 @@ o segredo certo; o que o aparelho mandar nesses 2 cabeçalhos é descartado pelo
 `cf-connecting-ip` (a Cloudflare recusa esse cabeçalho vindo do cliente). Quem usa: `entrar-senha` (limite de tentativas por IP).
 O `deploy.sh` publica o código mantendo os secrets (`keep_bindings`) e grava o `PROXY_SEGREDO` de `~/.physiq-proxy-segredo`.
 
+**O freio em memória guarda o código do IP, nunca o IP (bcode-0021, item 8, 22/11/2026).** O freio de cada instância (o `Map`
+em memória das funções) usa como chave o `chaveDoFreio`: o SHA-256 do IP com um sal aleatório que nasce na instância e morre com
+ela (não é o `LOGIN_IP_SAL` e não fica em secret nem em banco). Sem IP conhecido, o balde `sem-ip` de sempre; tetos, janelas e
+respostas não mudam. No principal, as 6 funções que leem o IP (`entrar-senha`, `restaurar-login`, `alunos`, `mp-conectar-retorno`,
+`infinitepay-webhook-aluno` e `mp-webhook-aluno`) usam o de `supabase-principal/functions/_shared/entrar-senha-regras.ts`; no
+Treino, as 4 que freiam por IP (`treino-leitura`, `treino-acessos`, `trocar-token` e `painel-resumo-treino`) usam o de
+`supabase/functions/_shared/freio-ip.ts` (o 1º IP do `x-forwarded-for`; o único lugar do Treino que lê esse cabeçalho). O IP puro
+segue só para o captcha (Turnstile) e, na `entrar-senha`, para o `hashDoIp` (o código do banco, com o `LOGIN_IP_SAL`). Guarda:
+`src/lib/freioSemIp.test.ts`.
+
 ### Troca da anon legada pela publishable no principal (hml-16, H-35, 09/10/2026)
 
 A mesma troca do `physiqcalc-api` (acima), agora no `physiq-principal-api`. Os APKs instalados desde a v3.2 (não atualizam
