@@ -9,7 +9,9 @@ Passos (uma rodada = um prefixo f<n>; a conta é SÓ a temporária f<n>.sessoes.
      conta (user_id). Antes, a leitura confere que ele alcança só as sessões dela com IP; depois, que o IP delas sumiu;
   4. o refresh pelo api-principal funciona e é a MESMA sessão (o session_id do JWT); o refresh da sessão do Treino de antes funciona;
      a trocar-token funciona; o número de sessões dela não cai em nenhum banco;
-  5. no fim (sempre, mesmo com ❌ no meio), apaga a conta pelo próprio «Excluir minha conta» e a senha local.
+  5. no fim (sempre, mesmo com ❌ no meio, até com o criar_login caindo), apaga a conta pelo próprio «Excluir minha conta» e a senha
+     local, e SEMPRE sai uma linha «[fim]»: ✅ «a conta temporária saiu» ou ❌ com o que fazer (erro de rede no fim = ❌ «não deu pra
+     confirmar»: aí decide a contagem do roteiro). Só apaga com o token da PRÓPRIA conta temporária (o sub do JWT = o id dela).
 Não roda o ensaio nas outras contas de teste nem nas reais: o ensaio inteiro (B, set physiq.bcode0021_ip = 'teste') e o de todas (C,
 'todas', só com o OK de produção) são da General, pela Management API (o cabeçalho do SQL). Imprime só ✅/❌, status e contagens
 (nenhum e-mail, IP, id ou token).
@@ -38,6 +40,11 @@ ITEM4 = REPO / "scripts" / "legal" / "bcode0021_ip_das_sessoes.sql"
 IP_DO_WORKER = "2a06:98c0:3600::103"
 
 
+class Parou(SystemExit):
+    """Parada daqui, com frase FIXA (sem e-mail, IP, id ou token): o main imprime a frase. O que vem de fora (rede, Auth, _base) sai
+    só com o tipo: a mensagem de lá pode levar o e-mail de teste ou o corpo do Auth. No --seco, sai com a frase, como o SystemExit."""
+
+
 def ensaio(uid: str) -> tuple[str, str]:
     """(o update, o mesmo WHERE para a leitura de antes): o update do alvo 'teste' do SQL do item 4, com a trava desta conta."""
     m = re.search(r"^\s*if v_alvo = 'teste' then\s*\n"
@@ -45,7 +52,7 @@ def ensaio(uid: str) -> tuple[str, str]:
                   r"\s*where (u\.id = s\.user_id and s\.ip is not null)\s*\n"
                   r"\s*(and lower\(u\.email\) ~ '[^'\n]+');", ITEM4.read_text(encoding="utf-8"), re.M)
     if not m:
-        raise SystemExit(f"o update do alvo 'teste' de {ITEM4.relative_to(REPO)} mudou: confira antes de rodar")
+        raise Parou(f"o update do alvo 'teste' de {ITEM4.relative_to(REPO)} mudou: confira antes de rodar")
     onde = f"{m.group(2)} {m.group(3)} and s.user_id = '{uuid.UUID(uid)}'::uuid"
     return f"select set_config('lock_timeout', '5s', true);\n{m.group(1)} where {onde}", onde
 
@@ -81,14 +88,37 @@ def excluir(s: str, tok: str) -> None:
     p.check(st == 200 and fim.get("ok") is True, f"[fim] «Excluir minha conta» → {st} {str({k: fim.get(k) for k in ('erro', 'motivo')})}")
 
 
+def fim(s: str, r: str, tok: str | None) -> None:
+    """O fim do rodar (sempre): apaga a conta temporária, se viva, pelo «Excluir minha conta» e diz SEMPRE numa linha «[fim]» se ela
+    saiu. Erro aqui (rede, timeout, Management API) não escapa nem esconde o erro do meio: vira ❌ com a frase fixa do que fazer."""
+    try:
+        conta = B.login_por_email(B.email_de(r, PAPEL))
+        if conta is not None and not conta["soft"]:
+            if tok is None:
+                tok = B.sessao(r, PAPEL)["access_token"]
+            if claims(tok).get("sub") != conta["id"]:
+                p.check(False, "[fim] não apaguei: o token não é da conta temporária — confira pela contagem do roteiro")
+                return
+            excluir(s, tok)
+            conta = B.login_por_email(B.email_de(r, PAPEL))
+    except Exception as e:  # noqa: BLE001 — só o tipo: a mensagem pode levar o e-mail de teste ou o corpo do Auth
+        p.check(False, f"[fim] não deu pra confirmar que a conta temporária saiu ({type(e).__name__}): confira pela contagem do "
+                       "roteiro e, viva, rode de novo a MESMA rodada (ela reaproveita a conta e apaga)")
+        return
+    if p.check(conta is None or conta["soft"], f"[fim] a conta temporária saiu ({'sumiu' if conta is None else 'soft' if conta['soft'] else 'viva'})"):
+        B.apagar_senha(r, PAPEL)
+
+
 def rodar(s: str, r: str) -> None:
-    assert B.saude(s), "a saúde dos bancos não está boa — parei"
-    uid = B.criar_login(r, PAPEL, f"Sessoes {r.upper()}")
+    if not B.saude(s):
+        raise Parou("a saúde dos bancos não está boa — parei")
     tok = None
     try:
+        uid = B.criar_login(r, PAPEL, f"Sessoes {r.upper()}")  # dentro do try: a conta criada com a resposta perdida também sai no fim
         s1 = B.sessao(r, PAPEL)
         tok = s1["access_token"]
-        assert s1["user"]["id"] == uid, "a sessão é de OUTRA pessoa — parei"
+        if s1["user"]["id"] != uid:
+            raise Parou("a sessão é de OUTRA pessoa — parei")
         sid = claims(tok).get("session_id")
         st, t1 = B.trocar_token(tok, s)
         tid = t1.get("treino_user_id")
@@ -128,16 +158,7 @@ def rodar(s: str, r: str) -> None:
         p.check(d_p["n"] >= a_p["n"], f"[depois] principal: o número de sessões dela não caiu ({a_p['n']} → {d_p['n']})")
         p.check(d_t["n"] >= a_t["n"], f"[depois] Treino: o número de sessões dela não caiu ({a_t['n']} → {d_t['n']})")
     finally:
-        if tok is None:
-            try:
-                tok = B.sessao(r, PAPEL)["access_token"]
-            except Exception:  # noqa: BLE001 — sem a mensagem: ela leva o e-mail de teste e o corpo do Auth
-                p.check(False, "[fim] não entrou para excluir: rode de novo a MESMA rodada (ela reaproveita a conta e apaga)")
-        if tok is not None:
-            excluir(s, tok)
-            conta = B.login_por_email(B.email_de(r, PAPEL))
-            if p.check(conta is None or conta["soft"], f"[fim] a conta temporária saiu ({'sumiu' if conta is None else 'soft' if conta['soft'] else 'viva'})"):
-                B.apagar_senha(r, PAPEL)
+        fim(s, r, tok)
 
 
 def main() -> int:
@@ -156,8 +177,10 @@ def main() -> int:
         return 0
     try:
         rodar(s, r)
-    except Exception as e:  # noqa: BLE001 — só o tipo (e a frase fixa do assert): a mensagem pode levar e-mail de teste ou o corpo do Auth
-        p.check(False, f"parou: {type(e).__name__}" + (f" — {e}" if isinstance(e, AssertionError) else ""))
+    except Parou as e:  # as paradas daqui: frase fixa
+        p.check(False, f"parou: {e}")
+    except (Exception, SystemExit) as e:  # noqa: BLE001 — de fora daqui: só o tipo (a mensagem pode levar o e-mail de teste ou o corpo do Auth)
+        p.check(False, f"parou: {type(e).__name__}")
     return p.fim()
 
 
