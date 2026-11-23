@@ -1,8 +1,10 @@
 -- bcode-0021, item 1 no BANCO DO TREINO, schema {schema}: as provas em transação DESFEITA (e2e/bcode0021/banco.py provas).
 -- O bloco termina SEMPRE em exceção ('R:' + um JSON só de booleanos): nada do que ele insere fica e o job de verdade nunca vê as
 -- linhas. O prazo roda pelo COMANDO lido de cron.job (sem o pg_cron, o job sai falso e o prazo não roda).
--- Os ids são inventados aqui e os logins do Treino são FALSOS (e-mail @prova.invalid), criados e apagados aqui dentro (o gatilho do
--- cadastro roda e volta junto). Só toca {schema}.edge_rate_limits, {schema}.physiq_identidades e auth.users.
+-- Os ids são inventados aqui e os logins do Treino são FALSOS (e-mail @prova.invalid), criados e apagados aqui dentro. O gatilho do
+-- cadastro grava em {schema}.physiq_profiles (o ambiente vai no login) e o delete passa pelas cascatas (o perfil, o vínculo e, pelo
+-- gatilho, o limite). Toca {schema}.edge_rate_limits, {schema}.physiq_identidades, {schema}.physiq_profiles e auth.users, no mesmo
+-- schema; tudo volta na exceção.
 -- O mesmo texto roda no PGlite (~/projetos/physiqcalc-scratch/bcode0021/harness_e2e.mjs).
 do $t$
 declare
