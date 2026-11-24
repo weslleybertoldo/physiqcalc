@@ -12,6 +12,11 @@ Etapas (uma rodada = um prefixo `f<n>`; as contas são SÓ as temporárias da ro
   caso2    o exmembro: o mesmo, pelo caminho do ALUNO (sem `fluxo`, como o APK antigo e a volta da folha nova)
   caso3    o profaluno (dono da própria conta E aluno com 2 matrículas vivas) pelo caminho do PROFISSIONAL ({fluxo: "profissional"}):
            a excluir_conta_profissional zera o user_id das matrículas de aluno dele — o mesmo gatilho do caso 1
+           bcode-0021 (item 1), nos 3 casos (sem --antes): antes do EXCLUIR grava as contagens da pessoa — a de senha errada do e-mail
+           (login_bloqueios, erros 2) e, com vínculo no Treino (só o aluno2: a massa não troca o token dos outros), as de limite pelo id
+           de lá (admin-update-user) e pelo do principal (trocar-token) — e as mesmas do vizinho; depois do 200, as dela saíram e as do
+           vizinho ficaram. Pede as migrações do item 1 aplicadas no schema (principal e Treino). A linha de limite do vizinho (sem
+           vínculo) sai só pelo prazo (≤ 23 h)
   repetir  pede de novo com a sessão de antes (401, nada quebra) e confere que o login não entra mais
   limpar   apaga o que sobrou da rodada pelo PRÓPRIO "Excluir minha conta" (vizinho pelo caminho do aluno; prof pelo do profissional)
            e as senhas locais
@@ -24,6 +29,7 @@ import hashlib
 import json
 import sys
 import time
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -222,6 +228,12 @@ def caso(s: str, r: str, papel: str, antes: bool) -> int:
     f1 = estado(s, r)
     p.check(st_n == 400 and neg.get("erro") == "confirmacao_invalida", f"[{rot}] palavra errada (EXCLUI) → 400 confirmacao_invalida ({st_n} {neg.get('erro')})")
     p.check(f1 == f0, f"[{rot}] palavra errada: NADA mudou (a foto é a mesma)")
+    cont = None if antes else contagens_gravar(s, r, papel, uid)
+    if cont:
+        c0 = contagens_ler(s, cont)
+        p.check(c0["login"] == 1 and (not cont["tid"] or (c0["treino"] >= 1 and c0["principal"] >= 1))
+                and (not cont["viz_email"] or c0["viz_login"] == 1) and (not cont["viz_limite"] or c0["viz_limite"] == 1),
+                f"[{rot}] bcode-0021: antes do EXCLUIR, as contagens dela e as do vizinho estão no banco ({c0})")
     t0 = time.time()
     st_e, fim = B.funcao(tok, s, "excluir-minha-conta", {**extra, "confirmacao": "EXCLUIR"})
     seg = round(time.time() - t0, 1)
@@ -237,6 +249,7 @@ def caso(s: str, r: str, papel: str, antes: bool) -> int:
     else:
         p.check(st_e == 200 and fim.get("ok") is True, f"[{rot}] EXCLUIR → 200 ok ({st_e} em {seg} s · {str(resumo)[:160]})")
         conferir_depois(s, r, papel, f0, f2, rot)
+        contagens_conferir(s, rot, cont)
         # repetir com a MESMA sessão: o login já saiu → 401, nada quebra nem muda
         st_r, rep = B.funcao(tok, s, "excluir-minha-conta", {**extra, "confirmacao": "EXCLUIR"})
         f3 = estado(s, r)
@@ -269,6 +282,51 @@ def conferir_depois(s: str, r: str, papel: str, f0: dict, f2: dict, rot: str) ->
         p.check(d["perfil"] and not d["perfil"]["tem_email"] and d["perfil"]["marcado"], f"[{rot}] o perfil ficou anônimo (sem e-mail, marcado) ({d['perfil']})")
     p.check(d["avisos"] == 0, f"[{rot}] os avisos dele saíram ({d['avisos']})")
     p.check(d["treino_vinculo"] == 0, f"[{rot}] o vínculo do Treino saiu ({d['treino_vinculo']})")
+
+
+# ───────────────────────── bcode-0021 (item 1): as contagens saem com a conta ─────────────────────────
+def contagens_gravar(s: str, r: str, papel: str, uid: str) -> dict:
+    """Antes do EXCLUIR: a linha de senha errada do e-mail da conta e, se ela tem vínculo no Treino, as de limite pelo id de lá e pelo
+    do principal (a da troca da massa pode já ter saído pelo prazo de 22 h); as mesmas do vizinho, se a rodada tem vizinho."""
+    viz = B.ler_estado(s, r).get("ids", {}).get("vizinho")
+    v = B.ro_treino(f"select treino_user_id::text as t from {s}.physiq_identidades where principal_user_id = {lit(uid)}")
+    tid = v[0]["t"] if v else None
+    emails = [B.email_de(r, papel)] + ([B.email_de(r, "vizinho")] if viz else [])
+    limites = ([(tid, "admin-update-user"), (uid, "trocar-token")] + ([(viz, "trocar-token")] if viz else [])) if tid else []
+    ids = B.gravar_contagens(s, emails, limites)
+    return {"uid": uid, "tid": tid, "email": emails[0], "viz_email": emails[1] if viz else None,
+            "viz_limite": ids.get(str(uuid.UUID(viz))) if viz and tid else None}
+
+
+def contagens_ler(s: str, c: dict) -> dict:
+    """Só contagens: a linha de senha errada dela (e a do vizinho) e as de limite dela pelos 2 ids (e a do vizinho)."""
+    out = {"login": B.um(f"select count(*)::int as n from {s}.login_bloqueios where email = '{c['email']}'").get("n")}
+    if c["viz_email"]:
+        out["viz_login"] = B.um(f"select count(*)::int as n from {s}.login_bloqueios where email = '{c['viz_email']}'").get("n")
+    if c["tid"]:
+        out.update(B.ro_treino(f"""select count(*) filter (where user_id = {lit(c['tid'])})::int as treino,
+                                          count(*) filter (where user_id = {lit(c['uid'])})::int as principal,
+                                          count(*) filter (where id = {int(c['viz_limite'] or 0)})::int as viz_limite
+                                     from {s}.edge_rate_limits
+                                    where user_id in ({lit(c['tid'])}, {lit(c['uid'])}) or id = {int(c['viz_limite'] or 0)}""")[0])
+    return out
+
+
+def contagens_conferir(s: str, rot: str, c: dict | None) -> None:
+    """Depois do 200: as contagens dela saíram (o gatilho em auth.users; no Treino, as physiq_excluir_* e o gatilho do vínculo); as do
+    vizinho ficaram."""
+    if not c:
+        return
+    c1 = contagens_ler(s, c)
+    p.check(c1["login"] == 0, f"[{rot}] bcode-0021: a contagem de senha errada do e-mail dela saiu com o login ({c1['login']})")
+    if c["tid"]:
+        p.check(c1["treino"] == 0 and c1["principal"] == 0,
+                f"[{rot}] bcode-0021: as contagens de limite dela no Treino saíram — pelo id de lá e pelo do principal ({c1['treino']}/{c1['principal']})")
+    else:
+        print(f"   [{rot}] bcode-0021: sem vínculo no Treino (a massa não troca o token deste papel): só a contagem do login")
+    if c["viz_email"]:
+        p.check(c1["viz_login"] == 1 and (not c["viz_limite"] or c1["viz_limite"] == 1),
+                f"[{rot}] bcode-0021: as contagens do vizinho ficaram ({ {k: v for k, v in c1.items() if k.startswith('viz')} })")
 
 
 def repetir(s: str, r: str, papel: str) -> int:

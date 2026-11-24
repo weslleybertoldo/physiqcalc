@@ -26,6 +26,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { avisarErro } from "../_shared/avisar-erro.ts";
 import { treinoVisivelPelaConta } from "../_shared/espelho/regras.ts";
+import { chaveDoFreio } from "../_shared/freio-ip.ts";
 import { criarLog } from "../_shared/log.ts";
 import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo, tempoEsgotado, type Prazo } from "../_shared/tempo.ts";
 import {
@@ -111,8 +112,7 @@ Deno.serve(async (req) => {
       log.erro({ codigo: "sem_configuracao", schema });
       return erro("erro_interno", origin);
     }
-    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "sem-ip";
-    if (!freio(`ip:${ip}`, FREIO.porIp)) return erro("muitas_acoes", origin);
+    if (!freio(`ip:${await chaveDoFreio(req.headers)}`, FREIO.porIp)) return erro("muitas_acoes", origin);
     if (!schema) return erro("schema_invalido", origin);
     const auth = req.headers.get("Authorization") || "";
     if (!auth.startsWith("Bearer ") || auth.length < 20) return erro("sem_login", origin);

@@ -531,3 +531,42 @@ select 'funcao', p.proname || '(' || pg_get_function_identity_arguments(p.oid) |
   derem 500): `setSeriesPadrao`, `aplicarSeriesTreino` e `aplicarPrescricaoDoModelo`.
 - Prova: um Postgres local com o DDL e as policies do catálogo do Treino (a corrida N = 2, 5 e 8 × 50 rodadas → 0 erro e 1 linha; o
   caminho de antes → 23505 em toda rodada), `e2e/hml24/corrida.py` (o staging: `--antes` × o verde) e o `e2e/hml01/banco.py`.
+
+## Principal e Treino: os prazos da Política no banco (bcode-0021, 22/11/2026)
+
+Decisão do dono (22/11/2026): «corrigir no código até 18/12; texto do 1 numa versão seguinte». O código passa a cumprir os prazos da
+Política em vigor (versão 2026-10-29) sem texto novo. Toda função nova é SECURITY DEFINER com `search_path` vazio e só a `service_role`
+executa (revoke de `public`, `anon` e `authenticated`); os jobs rodam no pg_cron, de hora em hora, com 1 h de folga contra o prazo.
+- **Principal, por schema** (staging e public):
+  - `login_bloqueios_limpar()` + job `physiq-login-bloqueios-limpeza-<schema>` (minuto 53): a contagem de senha errada parada há mais de
+    46 h, sem bloqueio de vez e com o bloqueio por tempo vencido (nada passa de 47 h; o prazo é de 2 dias). O bloqueio de vez fica.
+  - `login_bloqueios_saiu()` + os gatilhos `physiq_login_bloqueios_apagado_<schema>` (after delete) e `physiq_login_bloqueios_mudou_<schema>`
+    (after update of email, deleted_at) em `auth.users`: o login apagado, o soft delete e a troca de e-mail levam a contagem do e-mail de
+    antes. Sem a tabela, sai sem fazer nada (nunca derruba o Auth). ⚠️ `auth.users` é um só: os gatilhos do schema staging também rodam
+    nas exclusões reais (apagam só no `staging.login_bloqueios`).
+  - `limite_ip_limpar()` + job `physiq-limite-ip-limpeza-<schema>` (minuto 19): os códigos feitos a partir do IP — o login parado há mais
+    de 46 h e a hora pública começada há mais de 22 h. Pula a tabela que não existir. O sorteio de antes segue em `login_iniciar` e
+    `limite_publico`, sem efeito.
+  - job `physiq-avisos-erro-limpeza-<schema>` (minuto 47, o comando inteiro no job): os avisos de erro com mais de 29 dias e 22 horas
+    (nada passa de 30 dias, nem com 1 rodada perdida do pg_cron).
+  - `exportar_dados_aluno` traz `login_bloqueios` (só a linha do e-mail do login da pessoa). A migração só troca o corpo se o md5 do corpo
+    vivo for o da wa3 (ou já o novo); a reversa volta o corpo da wa3 com a mesma guarda.
+- **Treino, por schema** (a migração exige `set physiq.schemas = 'staging'` ou `'public'` na mesma chamada; liga o pg_cron se faltar):
+  - `physiq_limites_limpar()` + job `physiq-limites-limpeza-<schema>` (minuto 17): `edge_rate_limits` com mais de 22 h (a maior janela é 1 h).
+  - `physiq_limites_vinculo_saiu()` + o gatilho `physiq_limites_vinculo_<schema>` (after delete em `physiq_identidades`): sai a contagem
+    gravada pelo id do principal (a `trocar-token` conta por ele; as `physiq_excluir_*` apagam pelo id do Treino).
+  - `physiq_exportar_aluno` traz `edge_rate_limits` dos 2 ids da pessoa, com a mesma guarda por md5 (o corpo da w07).
+  - ⚠️ Resíduo conhecido: sem vínculo (a `trocar-token` contou pelo id do principal e recusou antes de criar o vínculo, ex.: o conflito
+    de e-mail), essa contagem não sai na exclusão (a `delete-my-account` responde `sem_vinculo` antes) — sai pelo prazo, em até 23 h — e
+    não vem no «Exportar meus dados». Fechar em código é caso próprio (mexe na `delete-my-account` e na `exportar-meus-dados`).
+- **Os 2 bancos, 1 vez** (`scripts/legal/bcode0021_ip_das_sessoes.sql`, bloco compartilhado): `auth.sessions.ip = null` (só o IP;
+  ninguém sai). Sem reversa, de propósito. O alvo vai na mesma chamada pela Management API (`set physiq.bcode0021_ip = 'teste'`, o
+  ensaio só nas contas de teste, ou `'todas'`, a produção); sem ele, o arquivo para sem mexer em nada. Não use o
+  `apply_migration_principal.py` aqui: ele não passa o alvo (com `--compartilhado` ou sem opção, o arquivo para; com `--so`, imprime
+  «ok» sem rodar nada).
+- **Prova**: um Postgres local (PGlite, Postgres 18, com um stub do pg_cron) com as migrações do jeito do `apply_migration_principal.py`
+  (itens 1 e 7: 94/94; itens 2, 3 e 4: 34/34) e os contratos `src/lib/bcode0021ContagensMigracoes.test.ts` e
+  `src/lib/bcode0021LimpezasMigracoes.test.ts`; no staging:
+  - `python3 e2e/bcode0021/banco.py leitura|provas|jobs --banco principal|treino --schema staging|public` — antes de aplicar, só
+    leitura (as lacunas); depois, as provas de cada item numa transação que termina em exceção (nada fica); e as rodadas dos jobs.
+  - `python3 e2e/bcode0021/sessoes.py --schema staging --rodada f<n>` — o ensaio do item 4 numa conta temporária: ninguém sai.

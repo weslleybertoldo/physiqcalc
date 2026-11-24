@@ -6,6 +6,8 @@
 -- Aplicar: python3 scripts/apply_migration_principal.py <este arquivo> --so staging [--dry-run]
 --          python3 scripts/apply_migration_principal.py <este arquivo> --so public  [--dry-run]
 
+-- bcode-0021 (item 3): o job da limpeza dos 30 dias sai antes das tabelas (sem as tabelas, ele falharia de hora em hora)
+select cron.unschedule(j.jobid) from cron.job j where j.jobname = 'physiq-avisos-erro-limpeza-{schema}';
 drop function if exists {schema}.registrar_aviso_erro(text, text, text, text);
 drop table if exists {schema}.avisos_erro_hora;
 drop table if exists {schema}.avisos_erro;

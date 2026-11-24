@@ -10,7 +10,8 @@ Formato do arquivo (o mesmo do physiqnutri):
 
 Sem opções roda staging → public → compartilhado (nessa ordem; cada bloco é uma transação: se um comando falha, o bloco
 inteiro volta). --so roda só o bloco de UM schema; --compartilhado roda só o bloco compartilhado; --dry-run executa dentro
-de BEGIN … ROLLBACK (valida a SQL e não grava nada).
+de BEGIN … ROLLBACK (valida a SQL e não grava nada). Qualquer outra opção (ou com '=', ex. --so=staging) para antes de
+tocar no banco: nada é aplicado.
 
 Credenciais: PAT pessoal em ~/.pc-pat (o mesmo dos 2 projetos). Ref: variável PRINCIPAL_REF ou o padrão abaixo.
 A Management API exige User-Agent (sem ele a Cloudflare devolve 1010).
@@ -63,16 +64,35 @@ def embrulhar(sql: str, dry_run: bool) -> str:
     return f"begin;\n{sql}\n;\nrollback;" if dry_run else sql
 
 
-def main() -> None:
-    args = sys.argv[1:]
+def ler_opcoes(args: list[str]) -> tuple[Path, str | None, bool, bool]:
+    """(arquivo, --so, --compartilhado, --dry-run). Recusa qualquer outra coisa ANTES de tocar no banco: uma opção digitada
+    errado (--so=staging, --dryrun) era ignorada calada e o script rodava staging → public sem dry-run (bcode-0021, conf-0051)."""
     if not args or args[0].startswith("-"):
         raise SystemExit(__doc__)
-    arquivo = Path(args[0])
-    so = args[args.index("--so") + 1] if "--so" in args else None
-    if so is not None and so not in SCHEMAS:
-        raise SystemExit(f"--so precisa ser um de {SCHEMAS}")
-    so_compartilhado = "--compartilhado" in args
-    dry_run = "--dry-run" in args
+    so, so_compartilhado, dry_run = None, False, False
+    resto = args[1:]
+    i = 0
+    while i < len(resto):
+        a = resto[i]
+        if a == "--so" and so is None and i + 1 < len(resto) and resto[i + 1] in SCHEMAS:
+            so = resto[i + 1]
+            i += 2
+            continue
+        if a == "--compartilhado" and not so_compartilhado:
+            so_compartilhado = True
+        elif a == "--dry-run" and not dry_run:
+            dry_run = True
+        else:
+            raise SystemExit(f"opção não aceita: {a!r} (aceito só: --so staging|public, --compartilhado, --dry-run, cada uma 1 vez e "
+                             f"sem '='); nada foi aplicado")
+        i += 1
+    if so and so_compartilhado:
+        raise SystemExit("--so e --compartilhado juntos: escolha um (o --so seria ignorado calado); nada foi aplicado")
+    return Path(args[0]), so, so_compartilhado, dry_run
+
+
+def main() -> None:
+    arquivo, so, so_compartilhado, dry_run = ler_opcoes(sys.argv[1:])
     principal, compartilhado = separar(arquivo.read_text(encoding="utf-8"))
     pat, ref = credenciais()
     rotulo = " (dry-run: BEGIN … ROLLBACK)" if dry_run else ""

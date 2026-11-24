@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   IP_DO_WORKER,
   captchaAceito,
   categoriaGoTrue,
+  chaveDoFreio,
   corpoRecusa,
   corpoSenhaErrada,
   hashDoIp,
@@ -52,6 +53,45 @@ describe("entrar-senha — o IP de quem chama", () => {
     const t = await hashDoToken("0.abc.def");
     expect(t).toMatch(/^[0-9a-f]{64}$/);
     expect(t).not.toBe(await hashDoToken("0.abc.deg"));
+  });
+});
+
+// bcode-0021 (item 8): o freio em memória das 6 funções do principal guarda um código feito a partir do IP, nunca o IP
+describe("bcode-0021 (item 8): a chave do freio em memória", () => {
+  const IP = "187.65.18.77";
+
+  it("é um código de 64 hex sem o IP, o mesmo para o mesmo IP na instância (o freio conta igual) e outro para outro IP", async () => {
+    const chave = await chaveDoFreio(IP);
+    expect(chave).toMatch(/^[0-9a-f]{64}$/);
+    expect(chave).not.toContain(IP);
+    expect(chave).not.toContain("187.65");
+    expect(await chaveDoFreio(IP)).toBe(chave);
+    expect(await chaveDoFreio("187.65.18.78")).not.toBe(chave);
+    const v6 = await chaveDoFreio("2804:14c::1");
+    expect(v6).toMatch(/^[0-9a-f]{64}$/);
+    expect(v6).not.toContain("2804");
+  });
+
+  it("não é o código do banco (o hashDoIp com o LOGIN_IP_SAL): os 2 não se cruzam", async () => {
+    const chave = await chaveDoFreio(IP);
+    expect(chave).not.toBe(await hashDoIp(IP, "sal-do-login-de-teste-0123456789"));
+    expect(chave).not.toBe(await hashDoIp(IP, ""));
+  });
+
+  it("o sal é da instância: outra instância (o módulo carregado de novo) dá outro código para o mesmo IP", async () => {
+    vi.resetModules();
+    const outra = await import("../../supabase-principal/functions/_shared/entrar-senha-regras");
+    const daOutra = await outra.chaveDoFreio(IP);
+    expect(daOutra).toMatch(/^[0-9a-f]{64}$/);
+    expect(daOutra).not.toBe(await chaveDoFreio(IP));
+    expect(await outra.chaveDoFreio(IP)).toBe(daOutra);
+  });
+
+  it("sem IP conhecido (null, o que o ipDoPedido devolve para o IP do Worker sem o segredo) → o balde \"sem-ip\" de sempre", async () => {
+    expect(await chaveDoFreio(null)).toBe("sem-ip");
+    expect(await chaveDoFreio("")).toBe("sem-ip");
+    expect(await chaveDoFreio(ipDoPedido(cabecalhos({ "cf-connecting-ip": IP_DO_WORKER }), SEGREDO))).toBe("sem-ip");
+    expect(await chaveDoFreio(ipDoPedido(cabecalhos({ "cf-connecting-ip": IP }), SEGREDO))).toBe(await chaveDoFreio(IP));
   });
 });
 

@@ -4,6 +4,11 @@ import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { emLotes, todasAsPaginas } from "../_shared/paginas.ts";
 import { fatiar, ordemDoHistorico, ordemDoMes, paginaPedida } from "./regras.ts";
+import { criarLog } from "../_shared/log.ts";
+import { avisarErro } from "../_shared/avisar-erro.ts";
+// bcode-0021 (item 6): log em JSON sem dado pessoal (_shared/log.ts) — o erro das RPCs pode_ver_aluno_treino_por e
+// contas_onde_sou_dono_treino vai só com o código
+const log = criarLog("admin-relatorio", { avisar: avisarErro });
 // Ambiente: schema "public" (prod) ou "staging", resolvido por request via header x-schema.
 const _ALLOWED_SCHEMAS = ["public", "staging"];
 function resolveSchema(req: Request): string {
@@ -107,7 +112,7 @@ async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise
   const { data, error } = await admin.rpc("pode_ver_aluno_treino_por", { p_aluno: alunoId, p_usuario: user.id });
   if (error) {
     // schema ainda sem a função da W3 (a migração entra 1 schema de cada vez): vale a regra de antes
-    console.error("pode_ver_aluno_treino_por", error.message);
+    log.aviso({ codigo: "pode_ver_aluno_falhou", schema: currentSchema(), pg: error.code });
     const { data: perfil } = await admin.from("physiq_profiles").select("professor_id").eq("id", alunoId).maybeSingle();
     return (perfil as { professor_id?: string } | null)?.professor_id === user.id;
   }
@@ -116,11 +121,11 @@ async function alunoDoProfessor(admin: any, user: any, alunoId: string): Promise
 
 // Physiq W3: contas em que o usuário é DONO no espelho (a lista soma os alunos delas — spec 8.2, P1)
 const _UUID_W3 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type _ClienteRpcW3 = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }> };
+type _ClienteRpcW3 = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }> };
 async function contasOndeSouDono(admin: _ClienteRpcW3, userId: string): Promise<string[]> {
   const { data, error } = await admin.rpc("contas_onde_sou_dono_treino", { p_usuario: userId });
   if (error) {
-    console.error("contas_onde_sou_dono_treino", error.message);
+    log.aviso({ codigo: "contas_dono_falhou", schema: currentSchema(), pg: error.code });
     return [];
   }
   return ((data as unknown[]) || [])

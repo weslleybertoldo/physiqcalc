@@ -917,7 +917,9 @@ describe("contrato do código — a index.ts da mp-webhook-aluno (o Deno.serve n
     expect(serve.indexOf("await pelaContaDoUserId(deps, req, url, schema, corpo)")).toBeGreaterThan(serve.indexOf("lerAvisoDaConta(url, corpo)"));
     expect(serve.indexOf("await pelaContaDoUserId(deps, req, url, schema, corpo)")).toBeLessThan(serve.indexOf("const dados ="));
     expect(index).toContain('const PROXY_SEGREDO = Deno.env.get("PROXY_SEGREDO") ?? null;');
-    expect(serve).toContain('ipDoPedido(req.headers, PROXY_SEGREDO) ?? "sem-ip"');
+    // bcode-0021 (item 8): o teto por IP guarda o código do IP (chaveDoFreio), nunca o IP; sem IP conhecido, o "sem-ip" sai de lá
+    expect(serve).toContain("const ip = await chaveDoFreio(ipDoPedido(req.headers, PROXY_SEGREDO));");
+    expect(serve).not.toContain('?? "sem-ip"');
   });
   it("W1b M4 também no caminho de hoje: mensalidade/avulsa sem o id da cobrança não vira cobrança (antes do carregarMatricula)", () => {
     const corpo = index.slice(index.indexOf("async function tratarPagamento"), index.indexOf("async function tratarAssinatura"));

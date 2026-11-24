@@ -1,6 +1,7 @@
 // Physiq W8b — regras PURAS da função entrar-senha (banco principal): sem Deno, sem rede e sem banco — testadas no Vitest
 // (src/nucleo/entrarSenhaRegras.test.ts). A escada de bloqueio mora no banco (login_iniciar/login_concluir, migração W8b); aqui
-// ficam a leitura do pedido, o IP de quem chama, a resposta do GoTrue e o formato da resposta para o app.
+// ficam a leitura do pedido, o IP de quem chama, a resposta do GoTrue e o formato da resposta para o app — e a chave do freio em
+// memória (chaveDoFreio, bcode-0021), que as 6 funções do principal que leem o IP usam.
 
 /** IP que a Cloudflare põe nos pedidos que um Worker repassa (o proxy api-principal): não é o do aparelho. */
 export const IP_DO_WORKER = "2a06:98c0:3600::103";
@@ -141,5 +142,21 @@ export async function hashDoIp(ip: string, sal: string): Promise<string> {
 /** Hash do token do captcha (o banco guarda só o hash dos tokens usados — cada um vale uma tentativa). */
 export async function hashDoToken(token: string): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`physiq-captcha:${token}`));
+  return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** bcode-0021 (item 8): o sal do freio — 16 bytes aleatórios que nascem na 1ª chamada e morrem com a instância (não é o LOGIN_IP_SAL). */
+let salDoFreio: string | null = null;
+
+/**
+ * bcode-0021 (item 8): a chave do freio em memória das funções (o `permitido` de cada uma) é um código feito a partir do IP, nunca o
+ * IP — SHA-256 do IP com o sal desta instância, em hex. O mesmo IP dá a mesma chave enquanto a instância vive (o freio conta igual);
+ * outra instância, outro sal. Sem IP conhecido (null) → "sem-ip", o balde de sempre. O IP puro segue só para o captcha e, na
+ * entrar-senha, para o hashDoIp (o código do banco, com o LOGIN_IP_SAL).
+ */
+export async function chaveDoFreio(ip: string | null): Promise<string> {
+  if (!ip) return "sem-ip";
+  if (!salDoFreio) salDoFreio = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`physiq-freio:${salDoFreio}:${ip}`));
   return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, "0")).join("");
 }

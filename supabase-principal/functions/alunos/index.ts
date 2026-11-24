@@ -28,7 +28,7 @@ import { origemPermitida } from "../_shared/login-regras.ts";
 import { segredoAceito } from "../_shared/segredo-servidor.ts";
 import { type Schema } from "../_shared/convites-regras.ts";
 import { destinoDoEnvio, faltaNoEmail } from "../_shared/enviar-aluno-regras.ts";
-import { captchaAceito, hashDoToken, ipDoPedido, motivoDoCaptcha } from "../_shared/entrar-senha-regras.ts";
+import { captchaAceito, chaveDoFreio, hashDoToken, ipDoPedido, motivoDoCaptcha } from "../_shared/entrar-senha-regras.ts";
 import { credencialDoSchema } from "../_shared/cobranca-mp.ts";
 import { cancelarAssinaturasDoAppEncerrado } from "../_shared/app-sem-profissional.ts";
 import { ORCAMENTO_MS, TEMPO_MS, buscarComTempo, prazo, type Prazo } from "../_shared/tempo.ts";
@@ -163,7 +163,7 @@ async function publico(req: Request, schema: Schema, corpo: Record<string, unkno
   const acao = acaoPublica(corpo.acao)!;
   const codigo = String(corpo.codigo ?? "").trim().slice(0, 60);
   const ip = ipDoPedido(req.headers, PROXY_SEGREDO);
-  if (!permitido(`pub:${schema}:${ip ?? "sem-ip"}`, 30, 60_000)) return json({ ok: false, erro: "muitos_cadastros" }, 429, origin);
+  if (!permitido(`pub:${schema}:${await chaveDoFreio(ip)}`, 30, 60_000)) return json({ ok: false, erro: "muitos_cadastros" }, 429, origin);
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { db: { schema }, auth: { persistSession: false } });
   if (acao === "cadastro_info") {
     const r = await rpcObjeto(db, "cadastro_link_info", { p_codigo: codigo });

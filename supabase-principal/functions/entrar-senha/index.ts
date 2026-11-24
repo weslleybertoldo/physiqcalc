@@ -30,6 +30,7 @@ import { emailDeTeste, origemPermitida } from "../_shared/login-regras.ts";
 import {
   captchaAceito,
   categoriaGoTrue,
+  chaveDoFreio,
   corpoRecusa,
   corpoSenhaErrada,
   hashDoIp,
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
   if (schema === "staging" && !emailDeTeste(email)) return json({ ok: false, erro: "conta_real_no_staging" }, 403, origin);
 
   const ip = ipDoPedido(req.headers, PROXY_SEGREDO);
-  if (!permitido(`${schema}:${ip ?? "sem-ip"}`)) {
+  if (!permitido(`${schema}:${await chaveDoFreio(ip)}`)) {
     return json({ ok: false, erro: "muitas_tentativas_rede", bloqueado_ate: new Date(Date.now() + 60_000).toISOString(), agora: new Date().toISOString() }, 423, origin);
   }
 
