@@ -1,0 +1,380 @@
+{
+ "uuid": "ca204b6d-66c3-59ea-be79-0ee17d247841",
+ "nome": "Supino Declinado Sentado Articulado",
+ "cena": "supino_declinado_sentado_articulado",
+ "grupo": "Peitoral",
+ "subgrupo": "Peitoral inferior (fibras esternais/costais) · tríceps",
+ "padrao_movimento": "supino_declinado",
+ "equipamento": "maquina",
+ "variacao": "sentado, articulado",
+ "alvos": [
+  "peitoral"
+ ],
+ "auxiliares": [
+  "deltoide",
+  "triceps"
+ ],
+ "camera": {
+  "az": 6,
+  "el": 14,
+  "dist": 4.9,
+  "alvo": [
+   0.0,
+   0.0,
+   0.95
+  ]
+ },
+ "camera_vistas": {
+  "dist": 4.6,
+  "alvo": [
+   0.0,
+   0.05,
+   1.0
+  ]
+ },
+ "ida_s": 1.5,
+ "movimento": "Sentado na máquina articulada de supino declinado (de anilhas, com os 2 braços independentes), com o glúteo, as costas e a cabeça encostados no encosto bem reclinado e os pés chapados no chão, afastados; o assento regulado para os pegadores ficarem do lado da parte de baixo do peito. Cada braço da máquina fica pendurado de um eixo no alto, em cima de um poste, e desce em \"V\" até o pegador. Segura os pegadores inclinados com a pegada entre a pronada e a neutra (a mão meio de lado, o polegar para dentro e para cima) e o punho quase reto. Começa com as mãos do lado da parte de baixo do peito, abertas (cerca de 1,5 vez a distância entre os ombros), os cotovelos dobrados, para trás e para o lado, abaixo da linha dos ombros, e empurra os pegadores para a frente e para o meio até os cotovelos ficarem quase esticados, sem travar, com as mãos na frente da parte de baixo do peito e mais perto uma da outra; volta devagar até as mãos ficarem de novo do lado da parte de baixo do peito. Cada braço da máquina gira em volta do seu eixo, lá em cima: o pegador faz um arco para a frente, sobe um pouco e os 2 pegadores se aproximam no fim. Com o encosto reclinado, o empurrão fica inclinado para baixo em relação ao tronco (para as coxas): é o declinado. O tronco, o quadril, a cabeça e os pés ficam parados, com as escápulas puxadas para trás e para baixo, encostadas no encosto (sem levar os ombros para a frente no fim).",
+ "cinesiologia": {
+  "plano": "sagital e transverso, inclinado para baixo em relação ao tronco: flexão e adução horizontal do ombro com extensão do cotovelo (o braço vai do lado do tronco para a frente e para o meio e termina ~32° abaixo da perpendicular ao tronco reclinado — na direção das coxas); cadeia cinética aberta",
+  "articulacoes": "ombro (flexão e adução horizontal na ida — as mãos se aproximam, de ~1,5 para ~0,8 vez a distância entre os ombros —, extensão e abdução horizontal na volta; o braço termina ~32° abaixo da perpendicular ao tronco reclinado ~40°), cotovelo (extensão na ida, de ~127° de flexão até ~12°, sem travar; flexão na volta); punho quase neutro, com a pegada entre a pronada e a neutra; escápulas retraídas e deprimidas (para trás e para baixo), paradas no encosto; quadril (~129° entre o tronco e a coxa), joelhos e tornozelos parados, com os pés no chão",
+  "agonistas": "peitoral maior, porção esternocostal (a parte de baixo do peitoral; ExRx: Target \"Pectoralis Major, Sternal\"; Life Fitness, IL-DCP: \"primarily targets the lower portion of the pectoralis major\"), em contração concêntrica na ida e excêntrica na volta",
+  "sinergistas": "deltoide anterior e tríceps braquial (ExRx, Lever Decline Chest Press: Synergists \"Deltoid, Anterior\", \"Triceps Brachii\", além de \"Pectoralis Major, Clavicular\" e \"Coracobrachialis\"; Rodríguez-Ridao et al. 2020: \"The muscles most involved in these activities are the pectoralis major, the anterior deltoid, and the triceps brachii.\"; o vídeo do Weslley diz o mesmo: ênfase na porção inferior do peitoral maior, com os deltoides anteriores e o tríceps)",
+  "estabilizadores": "bíceps braquial, cabeça curta (ExRx: Dynamic Stabilizers \"Biceps Brachii, Short Head\")",
+  "fases": "concêntrica (empurra os pegadores para a frente e para o meio até os cotovelos quase esticarem — ExRx: \"Press lever until arms are extended\"; ACE: \"extending your arms forward towards your thighs\") e excêntrica (volta devagar até as mãos ficarem do lado da parte de baixo do peito — ExRx: \"Return weight until chest muscles are slightly stretched\"; ACE: \"moving the handles back towards your lower chest, stopping when they lightly touch, or are close to, the lower portion of your chest\")"
+ },
+ "referencias": [
+  "ExRx.net — Lever Decline Chest Press (https://exrx.net/WeightExercises/PectoralSternal/LVDeclineChestPress; na cópia do Internet Archive de 03/08/2026 o título é \"Lever Isolateral Decline Chest Press\"; em 24/11/2026 a página respondeu 403 direto e o Internet Archive não abriu (tempo esgotado): as frases são as lidas pra ficha do Supino Declinado na Máquina (fefee8d3), conferidas lá; a versão de anilhas existe — \"Lever Decline Chest Press (plate loaded)\", .../LVDeclineChestPressPL, vista na busca — mas também respondeu 403): Preparation: \"Sit on seat with lever grips lower chest height. Grasp grips with wide overhand grip; elbows out to sides just below shoulders.\"; Execution: \"Press lever until arms are extended. Return weight until chest muscles are slightly stretched. Repeat.\"; Comments: \"Range of motion will be compromised if grip is too wide.\"; músculos: Target \"Pectoralis Major, Sternal\", Synergists \"Pectoralis Major, Clavicular\", \"Deltoid, Anterior\", \"Triceps Brachii\", \"Coracobrachialis\", Dynamic Stabilizers \"Biceps Brachii, Short Head\"",
+  "ExRx.net — Bench Press Analyses (https://exrx.net/Kinesiology/BenchPress; em 24/11/2026 a página respondeu 403 direto e o Internet Archive não abriu (tempo esgotado): as frases são as lidas pra ficha do Supino Declinado na Máquina (fefee8d3), conferidas lá): \"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\"; \"Scapula Retraction Keep the scapula back and down.\"",
+  "ACE — Seated Decline Cable Press (https://www.acefitness.org/resources/everyone/exercise-library/166/seated-decline-cable-press/, \"Equipment: Resistance Bands/Cables, Weight Machines / Selectorized\"; em 24/11/2026 a página respondeu 403 direto e o Internet Archive não abriu (tempo esgotado): as frases são as lidas pra ficha do Supino Declinado na Máquina (fefee8d3), conferidas lá): \"Sit with your back firmly supported against the backrest.\"; \"Grasp the handles and position your hands just below chest level, maintaining a neutral wrist position (i.e., wrists in line with your forearms). Position your feet firmly on the floor to stabilize your body.\"; \"Maintain the natural arch in your low back and avoid arching your back throughout the exercise. Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\"; \"Gently exhale and perform a pressing movement, extending your arms forward towards your thighs. Continue to maintain a neutral wrist position, and contact with your back and shoulder blades against the backrest. Do not allow your back to bend or your shoulder blades to round forward and maintain stability of your head during the movement.\"; \"Continue pressing until your elbows are fully extended, but not locked. Pause momentarily then slowly return to your starting position, allowing your elbows to flex (bend) in a slow, controlled manner, moving the handles back towards your lower chest, stopping when they lightly touch, or are close to, the lower portion of your chest.\"",
+  "NSCA — Exercise technique (Essentials of Strength Training and Conditioning), no resumo do Achievable CSCS, cap. 15 (posição de 5 pontos, a mesma citação das fichas de supino na máquina): \"Head on the bench or pad\", \"Shoulders/upper back on the bench\", \"Buttocks on the bench or seat\", \"Right foot flat on the floor\", \"Left foot flat on the floor\" — aqui a cabeça encosta (a almofada da cabeça no alto do encosto)",
+  "Life Fitness — Hammer Strength Plate Loaded Iso-Lateral Decline Chest Press, IL-DCP (https://www.lifefitness.com/en-us/catalog/strength-training/plate-loaded/iso-lateral-decline-chest-press e https://www.lifefitness.com.au/product/iso-lateral-decline-press-ilcdp/, lidos em 24/11/2026): \"the ultimate decline press experience in an upright, seated position.\"; \"follows a natural, downward pressing path, mimicking the mechanics of a decline press\"; \"greater lower-pec activation, a deeper stretch, and a stronger contraction\"; \"primarily targets the lower portion of the pectoralis major\"; \"train each side of the body independently\"; \"57 in x 67 in x 68 in (145 cm x 170 cm x 173 cm)\"; Max Load \"4 x 45 lb plates (4 x 20 kg plates)\"; Storage Weight Horns \"6\"",
+  "Life Fitness — Plate Loaded Decline Chest Press, SPLDCP (https://www.lifefitness.com/en-eu/catalog/strength-training/plate-loaded/life-fitness-decline-chest-press, lido em 24/11/2026): \"It also features converging and iso lateral movements for a natural forward pressing motion and equal strength development.\"; \"independent converging and diverging movements for an instinctively natural experience\"; \"51 in x 69 in x 76 in (130 cm x 176 cm x 194 cm)\" (a altura da máquina daqui: o cubo dos braços a 1,85 m, o topo a ~1,92 m)",
+  "Panatta — Seated Decline Chest Press 1HP541 (https://www.panattagymequipment.com.au/product/seated-decline-chest-press-1hp541/, o distribuidor australiano, lido em 24/11/2026): \"Our decline chest press provides an angle that places your upper body on a downward movement, which activates the lower pectoral muscles as you push weights away from your body.\"; \"Independent levers: Unilateral or bilateral exercise\"; \"Multiple hand grips\"",
+  "Life Fitness — Hammer Strength Plate-Loaded Iso-Lateral Incline Press, IL-IP (a mesma linha de anilhas; citação da ficha do Supino Inclinado na Máquina, lida em 12/10/2026): \"The ergonomic handles of our Hammer Strength Iso-Lateral Incline Press are thoughtfully designed to sit perfectly between a neutral and overhand grip.\"",
+  "Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM. Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise. Int J Environ Res Public Health 2020;17(19):7339 (https://pmc.ncbi.nlm.nih.gov/articles/PMC7579505/, lido em 24/11/2026): \"Previous studies demonstrated that the decline bench press activates the lower pectoralis major\"; \"Their results showed significantly greater lower pectoral activation with a decline bench press\" (Glass e Armstrong 1997, +30° × −15°); \"The muscles most involved in these activities are the pectoralis major, the anterior deltoid, and the triceps brachii.\"",
+  "Fotos de loja e vídeo do Weslley (24/11/2026; só pra entender a máquina e o movimento — nada disso vai pro app): as 2 fotos (\"Supino Declinado Sentado Angular Anilhado\", \"Supino Sentado Declinado Profissional\") mostram os 2 braços em \"V\" independentes, pendurados de um eixo no alto, em cima de um poste de cada lado, o joelho do \"V\" pra frente com o pino de anilha virado pra fora, o pegador inclinado na ponta de baixo do braço, o assento numa coluna com regulagem e o encosto comprido e reclinado (sem medida de fabricante: a escala das fotos dá de ~36° a ~47° da vertical; a fábrica usa 40°); o vídeo (de frente) mostra as mãos do lado da parte de baixo do peito no começo, ~1,5 vez a distância entre os ombros, os cotovelos pra trás e pro lado, e no fim os braços quase esticados, as mãos na frente da parte de baixo do peito, ~0,8 vez, a cabeça apoiada no encosto e os pés afastados no chão",
+  "Anilha de 10 kg: Ø 350 mm (Eleiko Grip Plate Rubber 10 kg, ficha oficial: \"Diameter 350 mm\" — a mesma da anilha solta da fábrica); 40 mm de espessura (escolha da fábrica)"
+ ],
+ "checagens": {
+  "pes_no_chao": true,
+  "eixos_motivo": "sem regra de eixo × junta: no supino a alavanca não fica alinhada com uma junta só (o empurrão é do ombro e do cotovelo juntos); a regulagem certa é a altura do assento, que põe os pegadores do lado da parte de baixo do peito no começo (ExRx: \"Sit on seat with lever grips lower chest height.\"; ACE: \"position your hands just below chest level\"). O eixo de cada braço da máquina fica no ALTO (1,85 m do chão, ~1 m acima dos ombros), em cima de um poste do seu lado, com o braço em \"V\" pendurado até o pegador: o pegador anda num arco em volta dele, pra frente e um pouco pra cima (sobe ~13 cm), e cada eixo vira 26° no plano do chão (a ponta de fora pra frente), então os pegadores CONVERGEM no fim (\"converging and iso lateral movements for a natural forward pressing motion\", Life Fitness SPLDCP). O declinado vem do encosto reclinado 40° com o empurrão pra frente: o braço termina ~32° abaixo da perpendicular ao tronco, pras coxas (\"extending your arms forward towards your thighs\", ACE; \"a natural, downward pressing path\", Life Fitness IL-DCP)",
+  "zonas": [
+   {
+    "nome": "glúteo e coxas sentados no assento",
+    "equipamento": "decl_art_assento",
+    "partes": [
+     "Hips",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — posição de 5 pontos (\"Buttocks on the bench or seat\")"
+   },
+   {
+    "nome": "escápulas (parte de cima das costas) no encosto",
+    "equipamento": "decl_art_encosto",
+    "partes": [
+     "Spine2",
+     "LeftShoulder",
+     "RightShoulder"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"contact with your back and shoulder blades against the backrest\")"
+   },
+   {
+    "nome": "glúteo encostado no encosto",
+    "equipamento": "decl_art_encosto",
+    "partes": [
+     "Hips"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"Sit with your back firmly supported against the backrest.\")"
+   },
+   {
+    "nome": "cabeça encostada no encosto (na almofada da cabeça)",
+    "equipamento": "decl_art_encosto",
+    "partes": [
+     "Head"
+    ],
+    "mm": [
+     -20,
+     3
+    ],
+    "fonte": "NSCA (Achievable CSCS) — posição de 5 pontos (\"Head on the bench or pad\"); vídeo do Weslley (a cabeça apoiada no encosto)"
+   }
+  ],
+  "contatos": [
+   {
+    "nome": "mãos e antebraços sem entrar no corpo nem nas coxas",
+    "partes": [
+     "LeftHand",
+     "LeftHandThumb1",
+     "LeftHandThumb2",
+     "LeftHandThumb3",
+     "LeftHandIndex1",
+     "LeftHandIndex2",
+     "LeftHandIndex3",
+     "LeftHandMiddle1",
+     "LeftHandMiddle2",
+     "LeftHandMiddle3",
+     "LeftHandRing1",
+     "LeftHandRing2",
+     "LeftHandRing3",
+     "LeftHandPinky1",
+     "LeftHandPinky2",
+     "LeftHandPinky3",
+     "RightHand",
+     "RightHandThumb1",
+     "RightHandThumb2",
+     "RightHandThumb3",
+     "RightHandIndex1",
+     "RightHandIndex2",
+     "RightHandIndex3",
+     "RightHandMiddle1",
+     "RightHandMiddle2",
+     "RightHandMiddle3",
+     "RightHandRing1",
+     "RightHandRing2",
+     "RightHandRing3",
+     "RightHandPinky1",
+     "RightHandPinky2",
+     "RightHandPinky3",
+     "LeftForeArm",
+     "RightForeArm"
+    ],
+    "com": [
+     "Hips",
+     "Spine",
+     "Spine1",
+     "Spine2",
+     "Neck",
+     "Head",
+     "LeftUpLeg",
+     "RightUpLeg"
+    ],
+    "mm": [
+     -2,
+     2000
+    ],
+    "fonte": "o corpo não atravessa o próprio corpo (regra da fábrica); −2 mm = PENETRA_MM"
+   }
+  ],
+  "angulos": [
+   {
+    "nome": "cotovelo dobrado no começo (mãos do lado da parte de baixo do peito)",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 0.0,
+    "graus": [
+     100,
+     140
+    ],
+    "fonte": "ExRx — Lever Decline Chest Press (\"Return weight until chest muscles are slightly stretched\"); ACE — Seated Decline Cable Press (\"moving the handles back towards your lower chest, stopping when they lightly touch, or are close to, the lower portion of your chest\")"
+   },
+   {
+    "nome": "braços quase esticados no fim, sem travar",
+    "medida": "flexao",
+    "junta": "ForeArm",
+    "t": 1.0,
+    "graus": [
+     5,
+     20
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"Continue pressing until your elbows are fully extended, but not locked\"); ExRx — Lever Decline Chest Press (\"Press lever until arms are extended\")"
+   },
+   {
+    "nome": "cotovelos abertos pro lado no começo (45–70° do tronco)",
+    "medida": "braco_abertura",
+    "t": 0.0,
+    "graus": [
+     45,
+     70
+    ],
+    "fonte": "ExRx — Lever Decline Chest Press (\"elbows out to sides just below shoulders\"); ExRx — Bench Press Analyses (\"Lowering the bar between the lower to mid-chest will typically result in a 45º to 70º angle between the shoulder and torso\")"
+   },
+   {
+    "nome": "cotovelos pro lado na 1ª metade da ida (sem passar de 70° do tronco nem colar nele)",
+    "medida": "braco_abertura",
+    "t": [
+     0.0,
+     0.5
+    ],
+    "graus": [
+     40,
+     72
+    ],
+    "fonte": "ExRx — Lever Decline Chest Press (\"elbows out to sides just below shoulders\"); ExRx — Bench Press Analyses (\"45º to 70º\")"
+   },
+   {
+    "nome": "cotovelo atrás do tronco no começo sem passar da abdução horizontal normal do ombro",
+    "medida": "braco_plano",
+    "t": 0.0,
+    "graus": [
+     -40,
+     15
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"moving the handles back towards your lower chest, stopping when they lightly touch, or are close to, the lower portion of your chest\"); ExRx — Lever Decline Chest Press (\"Return weight until chest muscles are slightly stretched\"): o começo fica perto da parte de baixo do peito, sem levar o cotovelo mais pra trás; a fábrica trava o braço a no máximo 40° atrás do plano do tronco (visto de cima do tronco: 0 = pro lado, − = atrás) — o boneco começa em ~−30°"
+   },
+   {
+    "nome": "cotovelos abaixo da linha dos ombros (o braço não passa da horizontal do ombro)",
+    "medida": "braco_elevacao",
+    "t": "todos",
+    "graus": [
+     20,
+     85
+    ],
+    "fonte": "ExRx — Lever Decline Chest Press (\"elbows out to sides just below shoulders\"): 90 = cotovelo na altura do ombro"
+   },
+   {
+    "nome": "braços pra frente e pra baixo do tronco no fim (declinado: 15–40° abaixo da perpendicular ao tronco)",
+    "medida": "braco_frente",
+    "t": 1.0,
+    "graus": [
+     50,
+     75
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"extending your arms forward towards your thighs\"); Life Fitness — IL-DCP (\"follows a natural, downward pressing path, mimicking the mechanics of a decline press\"); Rodríguez-Ridao et al. 2020 (\"significantly greater lower pectoral activation with a decline bench press\", Glass e Armstrong: −15°): com o tronco reclinado ~40° o braço termina ~32° abaixo da perpendicular ao tronco, com as mãos na frente da parte de baixo do peito; 90 = perpendicular"
+   },
+   {
+    "nome": "mãos abertas no começo (~1,5 vez a distância entre os ombros)",
+    "medida": "pegada_largura",
+    "t": 0.0,
+    "faixa": [
+     1.3,
+     1.65
+    ],
+    "fonte": "vídeo do Weslley (de frente: no começo as mãos do lado da parte de baixo do peito, ~1,5 vez a distância entre os ombros, medido no quadro de 9 s); ExRx — Lever Decline Chest Press (\"Grasp grips with wide overhand grip\"; \"Range of motion will be compromised if grip is too wide\")"
+   },
+   {
+    "nome": "mãos mais perto do meio no fim (os pegadores convergem)",
+    "medida": "pegada_largura",
+    "t": 1.0,
+    "faixa": [
+     0.6,
+     0.95
+    ],
+    "fonte": "vídeo do Weslley (no fim as mãos na frente da parte de baixo do peito, ~0,8 vez a distância entre os ombros, medido no quadro de 10 s); Life Fitness — Plate Loaded Decline Chest Press (\"converging and iso lateral movements for a natural forward pressing motion\"; \"independent converging and diverging movements\")"
+   },
+   {
+    "nome": "pegada entre a pronada e a neutra (palma meio virada pro meio do corpo)",
+    "medida": "palma_dentro",
+    "t": "todos",
+    "graus": [
+     25,
+     70
+    ],
+    "fonte": "Life Fitness — Hammer Strength IL-IP, a mesma linha de anilhas (\"The ergonomic handles ... sit perfectly between a neutral and overhand grip.\"); fotos de loja e vídeo do Weslley (o pegador inclinado, a ponta de baixo pra fora: a mão meio de lado)"
+   },
+   {
+    "nome": "punho quase reto",
+    "medida": "flexao",
+    "junta": "Hand",
+    "t": "todos",
+    "graus": [
+     0,
+     30
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"maintaining a neutral wrist position (i.e., wrists in line with your forearms)\")"
+   },
+   {
+    "nome": "punho dobrando de lado dentro da amplitude normal (radial até 20°, ulnar até 30°)",
+    "medida": "punho_desvio",
+    "t": "todos",
+    "graus": [
+     -30,
+     20
+    ],
+    "fonte": "limites.py (Norkin & White, valores da AAOS): desvio radial 20°, ulnar 30°"
+   },
+   {
+    "nome": "tronco parado, encostado e reclinado como o encosto",
+    "medida": "tronco",
+    "t": "todos",
+    "graus": [
+     34,
+     46
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"Sit with your back firmly supported against the backrest.\"); encosto 40° atrás da vertical (\"o apoio é mais inclinado\" que os 30° da MTS, Weslley; fotos de loja: ~36–47°)"
+   },
+   {
+    "nome": "coluna neutra, sem arquear",
+    "medida": "coluna",
+    "t": "todos",
+    "graus": [
+     0,
+     15
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"Maintain the natural arch in your low back and avoid arching your back throughout the exercise.\")"
+   },
+   {
+    "nome": "quadril parado (sentado, reclinado)",
+    "medida": "flexao",
+    "junta": "UpLeg",
+    "t": "todos",
+    "graus": [
+     40,
+     62
+    ],
+    "fonte": "a medida da fábrica é coxa × prolongamento do tronco pra baixo (90 − inclinação do tronco pra trás): coxas na horizontal com o encosto a 40°"
+   },
+   {
+    "nome": "joelhos a ~90°, pés chapados no chão",
+    "medida": "flexao",
+    "junta": "Leg",
+    "t": "todos",
+    "graus": [
+     80,
+     100
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"Position your feet firmly on the floor to stabilize your body.\")"
+   },
+   {
+    "nome": "pelve nivelada",
+    "medida": "pelve_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "tronco sem girar (ombros nivelados)",
+    "medida": "ombros_nivel",
+    "t": "todos",
+    "graus": [
+     -2,
+     2
+    ]
+   },
+   {
+    "nome": "escápulas pra trás e paradas no encosto (o ombro não vai pra frente no fim)",
+    "medida": "escapula_frente",
+    "t": "todos",
+    "mm": [
+     -25,
+     0
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"Depress and retract your scapulae (pull shoulders back and down) and attempt to hold this position throughout the exercise.\")"
+   },
+   {
+    "nome": "cabeça na linha do tronco",
+    "medida": "cabeca_tronco",
+    "t": "todos",
+    "graus": [
+     -20,
+     0
+    ],
+    "fonte": "ACE — Seated Decline Cable Press (\"maintain stability of your head during the movement\"); o boneco em pé, no repouso, mede ~−11° (tecnica3d.cabeca_tronco)"
+   }
+  ]
+ }
+}
