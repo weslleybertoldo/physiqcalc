@@ -3078,6 +3078,30 @@
    "ida_s": 10.0,
    "ciclo": true
   },
+  "ca204b6d-66c3-59ea-be79-0ee17d247841": {
+   "v": "1795574186",
+   "movimento": "/exercicios3d/ca204b6d-66c3-59ea-be79-0ee17d247841-1795574186.glb",
+   "foto": "/exercicios3d/ca204b6d-66c3-59ea-be79-0ee17d247841-1795574186.webp",
+   "bytes": 142960,
+   "alvos": [
+    12
+   ],
+   "auxiliares": [
+    6,
+    19
+   ],
+   "camera": {
+    "az": 6,
+    "el": 14,
+    "dist": 4.9,
+    "alvo": [
+     0.0,
+     0.0,
+     0.95
+    ]
+   },
+   "ida_s": 1.5
+  },
   "ca81c43e-1360-44a6-a8d4-784ed0dd6fa0": {
    "v": "1791515679",
    "movimento": "/exercicios3d/ca81c43e-1360-44a6-a8d4-784ed0dd6fa0-1791515679.glb",
