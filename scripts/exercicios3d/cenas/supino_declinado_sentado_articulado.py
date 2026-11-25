@@ -70,9 +70,9 @@ GEO_MEIO = 9.0            # e inclinado do perpendicular ao antebraço até o de
                           # lado do mindinho) e o fim (pro lado do polegar): asin(antebraço · pegador) com o meio em GEO_MEIO° (a
                           # cena acha a inclinação; o pegador é fixo no braço da máquina e o antebraço vira mais que ele no arco)
 ABRE0 = 58.0              # abertura do braço no começo (vista de frente do tronco): cotovelos pro lado e abaixo dos ombros
-DECL = 32.0               # fim: a reta ombro → punho 32° abaixo da perpendicular ao tronco (declinado; "extending your arms forward
-                          # towards your thighs", ACE): as mãos terminam na frente da parte de baixo do peito / começo do abdome, perto
-                          # da altura dos ombros (vídeo, de frente) — a cena acha quanto o pegador fica à frente da vertical do eixo
+DECL = 37.0               # fim: a reta ombro → punho 37° abaixo da perpendicular ao tronco (declinado; "extending your arms forward
+                          # towards your thighs", ACE): o braço quase na horizontal e as mãos na frente da parte de baixo do peito /
+                          # começo do abdome, como no vídeo de frente — a cena acha quanto o pegador fica à frente da vertical do eixo
 COTOVELO1 = 12.0          # flexão do cotovelo no fim: quase esticado, sem travar
 Z_EIXO = 1.85             # eixo dos braços no alto: 1,85 m do chão (nas fotos o cubo fica no topo da máquina, bem acima da cabeça)
 X_EIXO = 0.50             # cubo de cada braço em |x| = 0,50
